@@ -1,0 +1,293 @@
+"""
+Exporta los parquets procesados a JSON optimizados para el dashboard web.
+Genera archivos en docs/data/ que son leídos por GitHub Pages.
+"""
+from __future__ import annotations
+import json
+import os
+import sys
+from pathlib import Path
+
+import pandas as pd
+import numpy as np
+
+ROOT = Path(__file__).parent.parent
+DATA_DIR = ROOT / "backtest" / "data" / "processed"
+OUT_DIR  = ROOT / "docs" / "data"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def clean(obj):
+    """Convierte NaN/inf/Timestamp a tipos JSON válidos."""
+    if isinstance(obj, (pd.Timestamp,)):
+        return str(obj.date())
+    if isinstance(obj, float):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return round(obj, 4)
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        v = float(obj)
+        return None if (np.isnan(v) or np.isinf(v)) else round(v, 4)
+    if isinstance(obj, (np.bool_,)):
+        return bool(obj)
+    if isinstance(obj, (pd.NaT.__class__,)):
+        return None
+    return obj
+
+
+def df_to_records(df: pd.DataFrame) -> list[dict]:
+    records = []
+    for idx, row in df.iterrows():
+        rec = {"date": str(idx.date()) if hasattr(idx, "date") else str(idx)}
+        for col in df.columns:
+            rec[col] = clean(row[col])
+        records.append(rec)
+    return records
+
+
+# ── 1. MacroScore history ────────────────────────────────────────────────────
+def export_macro():
+    path = DATA_DIR / "macro_history.parquet"
+    if not path.exists():
+        print("  ⚠ macro_history.parquet no encontrado, saltando")
+        return
+
+    df = pd.read_parquet(path)
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+
+    # Columnas esenciales para el dashboard
+    cols_macro = [c for c in [
+        "macro_score", "regime",
+        "hy_pts", "netliq_pts", "vol_pts", "curva_pts", "cfnai_pts",
+        "flag_credit_complacency", "flag_inflation_overlay",
+        "flag_term_premium_extreme", "flag_emergency_mode",
+    ] if c in df.columns]
+
+    # Exportar modo A (principal) si existe columna de modo
+    if "mode" in df.columns:
+        df_a = df[df["mode"] == "A"][cols_macro].copy()
+    else:
+        df_a = df[cols_macro].copy()
+
+    out = {
+        "updated": str(df_a.index[-1].date()),
+        "latest": {
+            "score": clean(df_a["macro_score"].iloc[-1]) if "macro_score" in df_a.columns else None,
+            "regime": str(df_a["regime"].iloc[-1]) if "regime" in df_a.columns else None,
+        },
+        "history": df_to_records(df_a),
+    }
+    write_json(out, "macro_history.json")
+    print(f"  ✓ macro_history.json  ({len(df_a)} semanas)")
+
+
+# ── 2. Rotation signals ──────────────────────────────────────────────────────
+def export_rotation():
+    path = DATA_DIR / "rotation_history.parquet"
+    if not path.exists():
+        print("  ⚠ rotation_history.parquet no encontrado, saltando")
+        return
+
+    df = pd.read_parquet(path)
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+
+    # Usar solo Modo A
+    if "mode" in df.columns:
+        df = df[df["mode"] == "A"]
+
+    # Usar la última fecha con el conjunto completo de tickers (evita fechas parciales)
+    ticker_counts = df.groupby(df.index)["ticker"].count()
+    max_tickers = ticker_counts.max()
+    complete_dates = ticker_counts[ticker_counts == max_tickers].index
+    latest_date = complete_dates.max()
+
+    # Señales más recientes por ticker
+    latest = df[df.index == latest_date].copy()
+    cols_rot = [c for c in [
+        "ticker", "rot_score", "signal", "fit", "regime", "cluster",
+        "rs_13w_pts", "rs_4w_pts", "trend_abs_pts", "cmf_pts", "obv_pts",
+        "vol_rel_pts", "macd_pts", "rsi_pts", "is_early_rotation",
+        "ret_4w_vs_spy", "ret_13w_vs_spy",
+    ] if c in latest.columns]
+    latest_records = []
+    for _, row in latest[cols_rot].iterrows():
+        rec = {}
+        for c in cols_rot:
+            v = row[c]
+            if c in ("ticker", "signal", "regime", "cluster"):
+                rec[c] = str(v) if pd.notna(v) else None
+            else:
+                rec[c] = clean(v)
+        latest_records.append(rec)
+
+    # Heatmap rot_score: últimas 52 semanas × todos los tickers
+    cutoff = latest_date - pd.Timedelta(weeks=52)
+    hist = df[(df.index >= cutoff) & ("rot_score" in df.columns or True)]
+    score_col = "rot_score" if "rot_score" in hist.columns else "score"
+    if score_col in hist.columns and "ticker" in hist.columns:
+        pivot = hist.pivot_table(index=hist.index, columns="ticker", values=score_col, aggfunc="first")
+        pivot.index = pivot.index.strftime("%Y-%m-%d")
+        heatmap = {
+            "dates": list(pivot.index),
+            "tickers": list(pivot.columns),
+            "scores": [[clean(v) for v in row] for row in pivot.values],
+        }
+    else:
+        heatmap = {}
+
+    out = {
+        "updated": str(latest_date.date()),
+        "latest_signals": latest_records,
+        "heatmap_52w": heatmap,
+    }
+    write_json(out, "rotation_signals.json")
+    print(f"  ✓ rotation_signals.json  ({len(latest_records)} tickers)")
+
+
+# ── 3. Portfolio equity curves ───────────────────────────────────────────────
+def export_portfolio():
+    path_hist = DATA_DIR / "portfolio_rot_temprana_history.parquet"
+    path_metrics = DATA_DIR / "portfolio_metrics.parquet"
+
+    metrics_records = []
+    if path_metrics.exists():
+        df_m = pd.read_parquet(path_metrics)
+        for _, row in df_m.iterrows():
+            rec = {col: clean(row[col]) if not isinstance(row[col], str) else str(row[col])
+                   for col in df_m.columns}
+            metrics_records.append(rec)
+
+    equity_curves = {}
+    if path_hist.exists():
+        df_h = pd.read_parquet(path_hist)
+        df_h["date"] = pd.to_datetime(df_h["date"])
+        df_h = df_h.sort_values("date")
+
+        # Normalizar equity a base 100
+        df_h["equity_norm"] = df_h.groupby("strategy")["equity"].transform(lambda x: x / x.iloc[0] * 100)
+
+        # Usar solo Modo A, período completo, sin BTC para comparabilidad limpia
+        mask = (df_h["mode"] == "A") & (df_h["period"] == "2005-2026") & (df_h["include_btc"] == False)
+        if mask.sum() == 0:
+            mask = (df_h["mode"] == "A") & (df_h["period"] == "2005-2026")
+        df_filt = df_h[mask].copy()
+
+        # Top estrategias por Sharpe
+        top_strats = []
+        if metrics_records and path_metrics.exists():
+            df_m2 = pd.read_parquet(path_metrics)
+            mask_m = (df_m2["mode"] == "A") & (df_m2["period"] == "2005-2026")
+            if mask_m.sum() > 0:
+                top_strats = df_m2[mask_m].nlargest(5, "sharpe")["strategy"].tolist()
+
+        if not top_strats:
+            top_strats = df_filt["strategy"].unique()[:5].tolist()
+
+        # Agregar SPY benchmark
+        spy_mask = df_h["strategy"] == "spy_benchmark"
+        if spy_mask.any():
+            top_strats = ["spy_benchmark"] + [s for s in top_strats if s != "spy_benchmark"][:4]
+
+        curves = {}
+        dates = None
+        for strat in top_strats:
+            sub = df_filt[df_filt["strategy"] == strat].set_index("date")
+            # Muestrear semanalmente (viernes)
+            sub_w = sub["equity_norm"].resample("W-FRI").last().dropna()
+            if dates is None:
+                dates = [str(d.date()) for d in sub_w.index]
+            curves[strat] = [clean(v) for v in sub_w.tolist()]
+
+        equity_curves = {
+            "dates": dates or [],
+            "strategies": curves,
+        }
+
+    out = {
+        "updated": str(pd.Timestamp.now().date()),
+        "metrics": metrics_records,
+        "equity_curves": equity_curves,
+    }
+    write_json(out, "portfolio.json")
+    print(f"  ✓ portfolio.json  ({len(metrics_records)} estrategias, {len(equity_curves.get('dates', []))} semanas)")
+
+
+# ── 4. Confluence ────────────────────────────────────────────────────────────
+def export_confluence():
+    path_hist = DATA_DIR / "confluence_history.parquet"
+    path_alerts = DATA_DIR / "confluence_alerts.parquet"
+
+    history_records = []
+    if path_hist.exists():
+        df = pd.read_parquet(path_hist)
+        df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+        cols = [c for c in df.columns if c in [
+            "confluence_score", "macro_tension", "sector_tension",
+            "alert_structural", "alert_tactical", "regime_label"
+        ]]
+        history_records = df_to_records(df[cols]) if cols else df_to_records(df)
+
+    alerts_records = []
+    if path_alerts.exists():
+        df_a = pd.read_parquet(path_alerts)
+        df_a.index = pd.to_datetime(df_a.index)
+        df_a = df_a.sort_index()
+        alerts_records = df_to_records(df_a)
+
+    out = {
+        "updated": str(pd.Timestamp.now().date()),
+        "history": history_records,
+        "alerts": alerts_records,
+    }
+    write_json(out, "confluence.json")
+    print(f"  ✓ confluence.json  ({len(history_records)} semanas, {len(alerts_records)} alertas)")
+
+
+# ── 5. Prices weekly (relative strength) ────────────────────────────────────
+def export_prices():
+    path = DATA_DIR / "prices_weekly.parquet"
+    if not path.exists():
+        print("  ⚠ prices_weekly.parquet no encontrado, saltando")
+        return
+
+    df = pd.read_parquet(path)
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+
+    # Solo últimos 3 años para el dashboard de relative strength
+    cutoff = df.index.max() - pd.Timedelta(weeks=156)
+    df = df[df.index >= cutoff]
+
+    # Normalizar a base 100 desde el inicio del período
+    df_norm = (df / df.iloc[0] * 100).round(2)
+
+    out = {
+        "updated": str(df.index.max().date()),
+        "dates": [str(d.date()) for d in df_norm.index],
+        "tickers": list(df_norm.columns),
+        "prices": {col: [clean(v) for v in df_norm[col].tolist()] for col in df_norm.columns},
+    }
+    write_json(out, "prices_relative.json")
+    print(f"  ✓ prices_relative.json  ({len(df_norm)} semanas, {len(df_norm.columns)} tickers)")
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+def write_json(data: dict, filename: str):
+    path = OUT_DIR / filename
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+
+
+if __name__ == "__main__":
+    print("Exportando datos para dashboard...")
+    export_macro()
+    export_rotation()
+    export_portfolio()
+    export_confluence()
+    export_prices()
+    print(f"\nDatos exportados en: {OUT_DIR}")
