@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flujos & Rotación v2 — Market Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; }
+    .wrap { padding: 14px 20px; min-width: 980px; overflow-x: auto; }
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      background:#27ae60; color:white; padding:10px 22px; border-radius:20px;
+      font-size:13px; box-shadow:0 4px 12px rgba(0,0,0,.2); z-index:999;
+      animation:fin .2s ease; }
+    @keyframes fin { from{opacity:0;transform:translateX(-50%) translateY(8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+// ── Macro config v2 ───────────────────────────────────────────────────────
+const MACRO_ITEMS = [
+  { id:'hy', label:'HY Spread', weight:25, src:'fred', series:'BAMLH0A0HYM2',
+    score: v => { const b=v*100; return b<300?25:b<375?18.75:b<475?12.5:b<600?6.25:0; },
+    fmt:   v => Math.round(v*100)+' bps',
+    status:v => { const b=v*100; return b<300?'Comprimido':b<375?'Normal':b<475?'Elevado':b<600?'Alto':'Crisis'; },
+    bg:    v => { const b=v*100; return b<300?'#c8e6c9':b<375?'#f0f4f8':b<475?'#fff9c4':b<600?'#ffe0b2':'#ffcdd2'; },
+    fg:    v => { const b=v*100; return b<300?'#1b5e20':b<375?'#555':b<475?'#e65100':b<600?'#bf360c':'#b71c1c'; } },
+
+  { id:'netliq', label:'Net Liq. Δ13w', weight:25, src:'fred3', series:['WALCL','RRPONTSYD','WTREGEN'],
+    isDelta:true,
+    score: v => v>500?25:v>100?18.75:v>-100?12.5:v>-500?6.25:0,
+    fmt:   v => (v>0?'+':'')+Math.round(v)+'B',
+    status:v => v>500?'Expansión fuerte':v>100?'Expansión':v>-100?'Neutral':v>-500?'Contracción':'Contr. fuerte',
+    bg:    v => v>500?'#c8e6c9':v>100?'#dcedc8':v>-100?'#f0f4f8':v>-500?'#ffe0b2':'#ffcdd2',
+    fg:    v => v>500?'#1b5e20':v>100?'#33691e':v>-100?'#555':v>-500?'#bf360c':'#b71c1c' },
+
+  { id:'vol', label:'VolScore', weight:20, src:'vol_multi',
+    score: v => v,
+    fmt:   v => v.toFixed(0)+'/20',
+    status:v => v>=15?'Calma':v>=10?'Cautela':v>=5?'Estrés':'Pánico',
+    bg:    v => v>=15?'#c8e6c9':v>=10?'#fff9c4':v>=5?'#ffe0b2':'#ffcdd2',
+    fg:    v => v>=15?'#1b5e20':v>=10?'#e65100':v>=5?'#bf360c':'#b71c1c' },
+
+  { id:'curve', label:'Curva 10Y–3M', weight:15, src:'fred', series:'T10Y3M', needsDelta:true,
+    score: (v, d13w) => {
+      const bps = v*100;
+      const base = bps>75?20:bps>25?15:bps>-25?10:bps>-75?5:0;
+      const pen  = (v<0 && d13w!=null && d13w*100>50) ? 5 : 0;
+      return Math.max(0, base-pen)*0.75;
+    },
+    fmt:   v => (v>0?'+':'')+Math.round(v*100)+' bps',
+    status:v => v>0.75?'Empinada':v>0.25?'Normal':v>-0.25?'Aplanada':v>-0.75?'Invertida':'Inv. profunda',
+    bg:    v => v>0.75?'#c8e6c9':v>0.25?'#f0f4f8':v>-0.25?'#fff9c4':v>-0.75?'#ffe0b2':'#ffcdd2',
+    fg:    v => v>0.75?'#1b5e20':v>0.25?'#555':v>-0.25?'#e65100':v>-0.75?'#bf360c':'#b71c1c' },
+
+  { id:'cfnai', label:'CFNAI', weight:15, src:'fred', series:'CFNAI', monthly:true,
+    score: v => v>0.20?15:v>=0?11.25:v>=-0.35?7.5:v>=-0.70?3.75:0,
+    fmt:   v => (v>0?'+':'')+v.toFixed(2),
+    status:v => v>0.20?'Expansión fuerte':v>=0?'Expansión':v>=-0.35?'Neutral':v>=-0.70?'Contr. leve':'Contracción',
+    bg:    v => v>0.20?'#c8e6c9':v>=0?'#dcedc8':v>=-0.35?'#f0f4f8':v>=-0.70?'#fff9c4':'#ffcdd2',
+    fg:    v => v>0.20?'#1b5e20':v>=0?'#33691e':v>=-0.35?'#555':v>=-0.70?'#e65100':'#b71c1c' },
+];
+
+// ── Regimes ───────────────────────────────────────────────────────────────
+const REGIMES = [
+  { min:80, label:'Bull Pleno',   color:'#1b5e20', bg:'#e8f5e9', border:'#4caf50',
+    desc:'Expansión con apetito de riesgo alto. Growth y cíclicos lideran.',
+    defaultLeaders:['XLK','XLC','XLY','QQQ','BTC-USD','IWM','EEM'] },
+  { min:60, label:'Bull Maduro',  color:'#33691e', bg:'#f1f8e9', border:'#8bc34a',
+    desc:'Crecimiento decelerando. Rota hacia value, financials, energía.',
+    defaultLeaders:['XLF','XLI','XLB','XLE','GC=F','SI=F','BZ=F'] },
+  { min:40, label:'Transición',   color:'#e65100', bg:'#fff3e0', border:'#ff9800',
+    desc:'Ciclo tardío. Defensivos y oro acumulan. Reducir growth.',
+    defaultLeaders:['XLP','XLU','XLV','XLRE','GC=F','TLT'] },
+  { min:20, label:'Risk-OFF',     color:'#bf360c', bg:'#fbe9e7', border:'#ff5722',
+    desc:'Contracción. Refugios y liquidez. Monitorear señal de giro.',
+    defaultLeaders:['TLT','GC=F','XLP','XLU'] },
+  { min:0,  label:'Capitulación', color:'#b71c1c', bg:'#ffebee', border:'#f44336',
+    desc:'VIX extremo, spreads máximos. Zona de compra de largo plazo.',
+    defaultLeaders:['TLT','GC=F'] },
+];
+
+// ── Universe ──────────────────────────────────────────────────────────────
+const UNIVERSE = [
+  { name:'Technology',       ticker:'XLK',     cat:'US Sector',  goodIn:[80,60] },
+  { name:'Comm. Services',   ticker:'XLC',     cat:'US Sector',  goodIn:[80,60] },
+  { name:'Consumer Disc.',   ticker:'XLY',     cat:'US Sector',  goodIn:[80,60] },
+  { name:'Financials',       ticker:'XLF',     cat:'US Sector',  goodIn:[60,40] },
+  { name:'Industrials',      ticker:'XLI',     cat:'US Sector',  goodIn:[60,40] },
+  { name:'Materials',        ticker:'XLB',     cat:'US Sector',  goodIn:[60,40] },
+  { name:'Energy',           ticker:'XLE',     cat:'US Sector',  goodIn:[60,40] },
+  { name:'Healthcare',       ticker:'XLV',     cat:'US Sector',  goodIn:[40,20] },
+  { name:'Real Estate',      ticker:'XLRE',    cat:'US Sector',  goodIn:[40,20] },
+  { name:'Consumer Staples', ticker:'XLP',     cat:'US Sector',  goodIn:[40,20,0] },
+  { name:'Utilities',        ticker:'XLU',     cat:'US Sector',  goodIn:[40,20,0] },
+  { name:'S&P 500',          ticker:'SPY',     cat:'Índice',     goodIn:[80,60,40] },
+  { name:'NASDAQ 100',       ticker:'QQQ',     cat:'Índice',     goodIn:[80] },
+  { name:'Russell 2000',     ticker:'IWM',     cat:'Índice',     goodIn:[80,60] },
+  { name:'MSCI EM',          ticker:'EEM',     cat:'Índice',     goodIn:[60,40] },
+  { name:'Long Bonds',       ticker:'TLT',     cat:'Renta Fija', goodIn:[0,20] },
+  { name:'Gold',             ticker:'GC=F',    cat:'Commodity',  goodIn:[60,40,20,0] },
+  { name:'Silver',           ticker:'SI=F',    cat:'Commodity',  goodIn:[60,40] },
+  { name:'Oil (Brent)',      ticker:'BZ=F',    cat:'Commodity',  goodIn:[60,40] },
+  { name:'Bitcoin',          ticker:'BTC-USD', cat:'Crypto',     goodIn:[80] },
+];
+
+// ── Clusters categoriales (para Rotación Temprana) ───────────────────────
+const CLUSTERS = {
+  Growth:        ['XLK','XLC','XLY','QQQ','BTC-USD'],
+  ValueCyclical: ['XLF','XLI','XLB','XLE'],
+  Defensive:     ['XLP','XLU','XLV','XLRE'],
+  Duration:      ['TLT'],          // un solo miembro → nunca dispara (intencional)
+  Commodities:   ['GC=F','SI=F','BZ=F'],
+  SmallEM:       ['IWM','EEM'],
+};
+
+function getTickerCluster(ticker) {
+  return Object.entries(CLUSTERS).find(([,m]) => m.includes(ticker))?.[0] ?? null;
+}
+
+// Condición 1: streak ≥3 | Condición 2: ≥2 del mismo clúster | Condición 3: benchmark
+function isEarlyRotation(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
+  const entry = candidates?.[ticker];
+  if (!entry || entry.streak < 3) return false;
+  if (spyAboveSma200 !== true && netLiqDeltaB <= 300) return false;
+  const cluster = getTickerCluster(ticker);
+  if (!cluster) return false;
+  const qualifying = CLUSTERS[cluster].filter(t => {
+    const e = candidates[t]; return e && e.streak >= 3;
+  });
+  return qualifying.length >= 2;
+}
+
+function getEarlyRotMeta(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
+  const cluster = getTickerCluster(ticker);
+  const qualifying = cluster
+    ? CLUSTERS[cluster].filter(t => { const e = candidates[t]; return e && e.streak >= 3; })
+    : [];
+  return {
+    streak:        candidates?.[ticker]?.streak ?? 0,
+    cluster,
+    clusterPeers:  qualifying.filter(t => t !== ticker),
+    benchmarkSPY:  spyAboveSma200 === true,
+    benchmarkNetLiq: netLiqDeltaB > 300,
+    netLiqDeltaB,
+  };
+}
+
+const DEFAULT_STATE = {
+  current_regime:null, regime_entered_date:null,
+  pending_regime:null, pending_since_count:0,
+  flags:{
+    CREDIT_COMPLACENCY:  {active:false,streak_weeks:0},
+    INFLATION_OVERLAY:   {active:false,streak_weeks:0},
+    TERM_PREMIUM_EXTREME:{active:false,streak_weeks:0},
+    EMERGENCY_MODE:      {active:false,activated_at:null,expires_date:null},
+  },
+  early_rotation_candidates:{},
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function getRegime(score) {
+  return REGIMES.find(r => score >= r.min) || REGIMES[REGIMES.length-1];
+}
+
+function calcMacroScore(macroData) {
+  let absolute = 0, maxPossible = 0;
+  for (const it of MACRO_ITEMS) {
+    const entry = macroData[it.id];
+    if (!entry || entry.value == null) continue;
+    maxPossible += it.weight;
+    absolute += it.needsDelta
+      ? it.score(entry.value, entry.delta13w ?? null)
+      : it.score(entry.value);
+  }
+  const scaled = maxPossible > 0 ? Math.round(absolute * 100 / maxPossible) : 0;
+  return { scaled, absolute: Math.round(absolute * 10) / 10, maxPossible };
+}
+
+// Returns { total, blockA, blockB, blockC, breakdown, w1Rel, m1Rel, m3Rel }
+function calcRotScore(data, spyData) {
+  if (!data || !spyData) return { total:0, blockA:0, blockB:0, blockC:0, w1Rel:null, m1Rel:null, m3Rel:null, bd:{} };
+  const rs4w  = (data.m1 ?? 0) - (spyData.m1 ?? 0);
+  const rs13w = (data.m3 ?? 0) - (spyData.m3 ?? 0);
+  const rs1w  = (data.w1 ?? 0) - (spyData.w1 ?? 0);
+
+  const bd = {
+    rs13w: rs13w > 2.0,
+    rs4w:  rs4w  > 1.0,
+    sma200: data.closeAboveSma200 === true,
+    cmf:   data.konAzul != null && data.konAzul > 0,
+    obv:   data.obvAboveSma50 === true,
+    vol:   data.volRatio != null && data.volRatio > 1.10,
+    macd:  data.macdBull === true,
+    rsi:   data.rsi != null && data.rsi >= 40 && data.rsi <= 70,
+    antiExt: data.antiExt === true,
+  };
+
+  const blockA = (bd.rs13w ? 2 : 0) + (bd.rs4w ? 1 : 0) + (bd.sma200 ? 1 : 0);
+  const blockB = (bd.cmf   ? 1 : 0) + (bd.obv   ? 1 : 0) + (bd.vol    ? 1 : 0);
+  const blockC = (bd.macd  ? 1 : 0) + (bd.rsi   ? 1 : 0) + (bd.antiExt? 1 : 0);
+  return { total:blockA+blockB+blockC, blockA, blockB, blockC, bd, w1Rel:rs1w, m1Rel:rs4w, m3Rel:rs13w };
+}
+
+function toStars(score) {
+  if (score >= 9) return 5;
+  if (score >= 7) return 4;
+  if (score >= 5) return 3;
+  if (score >= 3) return 2;
+  return 1;
+}
+
+function getSignal(rotTotal, fit, flags, spyAboveSma200, isEarlyRot = false) {
+  const creditFlag = flags?.CREDIT_COMPLACENCY?.active;
+  const emergency  = flags?.EMERGENCY_MODE?.active;
+  const buyThreshold = creditFlag ? 8 : 7;
+
+  if (emergency) {
+    if (fit && rotTotal >= 6) return { label:'ACUMULAR*',   color:'#33691e', bg:'#f1f8e9', note:'emergencia' };
+    return { label:'—', color:'#ccc', bg:'transparent' };
+  }
+
+  let level;
+  if      (fit && rotTotal >= buyThreshold) level = 'COMPRA';
+  else if (fit && rotTotal >= 5)            level = 'ACUMULAR';
+  else if (isEarlyRot)                      level = 'ROT. TEMPRANA';
+  else if (rotTotal >= 3)                   level = 'VIGILAR';
+  else                                      level = null;
+
+  // Master Filter: SPY < SMA200 → degrade 1 nivel
+  // ROT. TEMPRANA queda excluida: ya lleva su propio filtro de benchmark (SPY>SMA200 OR NetLiq>300B)
+  if (spyAboveSma200 === false && level && level !== 'ROT. TEMPRANA') {
+    const downgrade = { 'COMPRA':'ACUMULAR', 'ACUMULAR':'VIGILAR', 'VIGILAR':null };
+    level = downgrade[level] ?? null;
+  }
+
+  const colors = {
+    'COMPRA':         { color:'#1b5e20', bg:'#e8f5e9' },
+    'ACUMULAR':       { color:'#33691e', bg:'#f1f8e9' },
+    'ROT. TEMPRANA':  { color:'#e65100', bg:'#fff3e0' },
+    'VIGILAR':        { color:'#888',    bg:'#f5f5f5' },
+  };
+  return level ? { label:level, ...colors[level] } : { label:'—', color:'#ccc', bg:'transparent' };
+}
+
+// Applies inflation overlay and conditionals to leader list
+function getEffectiveLeaders(regime, macroData, flags, quotes) {
+  let leaders = [...regime.defaultLeaders];
+  const hyBps       = (macroData.hy?.value ?? 999)*100;
+  const t10y3m      = macroData.curve?.value ?? 0;
+  const curveDelta  = macroData.curve?.delta13w ?? 0;
+  const dfii10      = macroData.dfii10?.value ?? 99;
+  const dxyM3       = quotes['DX-Y.NYB']?.m3 ?? 0;
+  const netLiqDelta = macroData.netliq?.value ?? 0;
+
+  // IWM conditional
+  const iwmOk = hyBps < 375 && (t10y3m > 0 || curveDelta > 0);
+  if (!iwmOk) leaders = leaders.filter(t => t !== 'IWM');
+
+  // Gold conditional
+  const goldOk = dfii10 < 1.0 || dxyM3 < 0;
+  if (!goldOk) leaders = leaders.filter(t => t !== 'GC=F');
+
+  // Inflation overlay
+  if (flags?.INFLATION_OVERLAY?.active) {
+    const durationBlock = netLiqDelta > 300 ? false : true;
+    if (durationBlock) leaders = leaders.filter(t => !['TLT','QQQ','XLK'].includes(t));
+    if (!['XLE','XLB','GC=F','SI=F'].every(t => leaders.includes(t))) {
+      ['XLE','XLB','GC=F','SI=F'].forEach(t => { if (!leaders.includes(t)) leaders.push(t); });
+    }
+  }
+
+  return leaders;
+}
+
+function updateStateFromData(prev, macroScore, macroData, rawRegime, vixVal, rotScores) {
+  const s = JSON.parse(JSON.stringify(prev || DEFAULT_STATE));
+  const now = new Date().toISOString().slice(0,10);
+
+  // Emergency Mode: VIX ≥ 35
+  if (vixVal >= 35) {
+    if (!s.flags.EMERGENCY_MODE.active) {
+      const exp = new Date(); exp.setDate(exp.getDate()+14);
+      s.flags.EMERGENCY_MODE = { active:true, activated_at:now, expires_date:exp.toISOString().slice(0,10) };
+    }
+  }
+  if (s.flags.EMERGENCY_MODE.active && s.flags.EMERGENCY_MODE.expires_date) {
+    if (new Date(s.flags.EMERGENCY_MODE.expires_date) <= new Date()) {
+      s.flags.EMERGENCY_MODE.active = false;
+    }
+  }
+
+  // Histéresis: régimen solo cambia cuando cruza >5 pts Y persiste ≥2 lecturas
+  if (!s.current_regime) {
+    s.current_regime = rawRegime.label;
+    s.regime_entered_date = now;
+    s.pending_regime = null;
+    s.pending_since_count = 0;
+  } else {
+    const cur = REGIMES.find(r => r.label === s.current_regime);
+    const curIdx = cur ? REGIMES.indexOf(cur) : -1;
+    const upperBound = curIdx > 0 ? REGIMES[curIdx - 1].min : 101;
+    const inRange = cur && macroScore >= cur.min && macroScore < upperBound;
+    if (!inRange) {
+      // Medir cruce contra el borde correcto:
+      // ascendente (score >= upperBound) → distancia al borde superior
+      // descendente (score < cur.min)    → distancia al borde inferior
+      let diff = 0;
+      if (cur) {
+        diff = macroScore >= upperBound
+          ? macroScore - upperBound
+          : cur.min - macroScore;
+      } else {
+        diff = 999;
+      }
+      if (rawRegime.label !== s.pending_regime) {
+        s.pending_regime = rawRegime.label;
+        s.pending_since_count = 1;
+      } else {
+        s.pending_since_count = (s.pending_since_count||0)+1;
+      }
+      if (diff >= 5 && s.pending_since_count >= 2) {
+        s.current_regime = rawRegime.label;
+        s.regime_entered_date = now;
+        s.pending_regime = null;
+        s.pending_since_count = 0;
+      }
+    } else {
+      s.pending_regime = null;
+      s.pending_since_count = 0;
+    }
+  }
+
+  // CREDIT_COMPLACENCY: HY < 275 bps ≥ 8 semanas
+  const hyBps = (macroData.hy?.value ?? 999)*100;
+  if (hyBps < 275) {
+    s.flags.CREDIT_COMPLACENCY.streak_weeks = (s.flags.CREDIT_COMPLACENCY.streak_weeks||0)+1;
+    s.flags.CREDIT_COMPLACENCY.active = s.flags.CREDIT_COMPLACENCY.streak_weeks >= 8;
+  } else {
+    s.flags.CREDIT_COMPLACENCY.streak_weeks = 0;
+    s.flags.CREDIT_COMPLACENCY.active = false;
+  }
+
+  // INFLATION_OVERLAY: T5YIE ≥ 2.8% ≥ 4 semanas
+  const t5yie = macroData.t5yie?.value ?? 0;
+  if (t5yie >= 2.8) {
+    s.flags.INFLATION_OVERLAY.streak_weeks = (s.flags.INFLATION_OVERLAY.streak_weeks||0)+1;
+    s.flags.INFLATION_OVERLAY.active = s.flags.INFLATION_OVERLAY.streak_weeks >= 4;
+  } else {
+    s.flags.INFLATION_OVERLAY.streak_weeks = 0;
+    s.flags.INFLATION_OVERLAY.active = false;
+  }
+
+  // TERM_PREMIUM_EXTREME: THREEFYTP10 < -0.75 ≥ 13 semanas
+  const tp10 = macroData.termPremium?.value ?? 99;
+  if (tp10 < -0.75) {
+    s.flags.TERM_PREMIUM_EXTREME.streak_weeks = (s.flags.TERM_PREMIUM_EXTREME.streak_weeks||0)+1;
+    s.flags.TERM_PREMIUM_EXTREME.active = s.flags.TERM_PREMIUM_EXTREME.streak_weeks >= 13;
+  } else {
+    s.flags.TERM_PREMIUM_EXTREME.streak_weeks = 0;
+    s.flags.TERM_PREMIUM_EXTREME.active = false;
+  }
+
+  // Early rotation streaks: incrementar solo una vez por día (protección multi-refresh)
+  // Cada entry guarda last_updated_date; si ya se actualizó hoy, se omite el incremento.
+  if (rotScores) {
+    for (const [ticker, score] of Object.entries(rotScores)) {
+      const entry = s.early_rotation_candidates[ticker] || { streak: 0, last_score: null, last_updated_date: null };
+      if (entry.last_updated_date !== now) {
+        // Primera actualización del día: incrementar o resetear streak
+        entry.streak = score >= 8 ? (entry.streak || 0) + 1 : 0;
+        entry.last_updated_date = now;
+      }
+      // Si ya se actualizó hoy, solo refrescar last_score (sin tocar streak)
+      entry.last_score = score;
+      s.early_rotation_candidates[ticker] = entry;
+    }
+  }
+
+  return s;
+}
+
+// ── API ───────────────────────────────────────────────────────────────────
+async function fetchQ(ticker) {
+  try { return await fetch(`/api/quote/${encodeURIComponent(ticker)}`).then(r=>r.json()); }
+  catch { return null; }
+}
+
+// ── FRED cache + fail log ─────────────────────────────────────────────────
+const _CACHE_PFX = 'rotacion_v1_';
+const _FAIL_KEY  = 'rotacion_fred_fails';
+
+function _readCache(key) {
+  try {
+    const raw = localStorage.getItem(_CACHE_PFX + key);
+    if (!raw) return null;
+    const { d, ts } = JSON.parse(raw);
+    return { d, ts, age_h: (Date.now() - ts) / 3600000 };
+  } catch { return null; }
+}
+
+function _writeCache(key, data) {
+  try { localStorage.setItem(_CACHE_PFX + key, JSON.stringify({ d: data, ts: Date.now() })); }
+  catch {}
+}
+
+function _logFail(key) {
+  try {
+    const raw = localStorage.getItem(_FAIL_KEY);
+    const log = raw ? JSON.parse(raw) : {};
+    const e = log[key] ?? { count: 0 };
+    log[key] = { count: e.count + 1, last: new Date().toISOString() };
+    localStorage.setItem(_FAIL_KEY, JSON.stringify(log));
+  } catch {}
+}
+
+function printFredFailLog() {
+  try {
+    const raw = localStorage.getItem(_FAIL_KEY);
+    if (!raw) return;
+    const log = JSON.parse(raw);
+    const rows = Object.entries(log)
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([k, v]) => ({ llamada: k, fallos: v.count, ultimo: v.last }));
+    if (rows.length) {
+      console.group('[rotacion] FRED fail log (acumulado)');
+      console.table(rows);
+      console.groupEnd();
+    }
+  } catch {}
+}
+
+async function _fetchWithCache(url, cacheKey) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    _writeCache(cacheKey, data);
+    return { data, stale: false, age_h: 0 };
+  } catch {
+    _logFail(cacheKey);
+    const c = _readCache(cacheKey);
+    return c ? { data: c.d, stale: true, age_h: c.age_h }
+             : { data: null, stale: false, age_h: 0 };
+  }
+}
+
+async function fetchMacro() {
+  const out = {};
+
+  // Fetch in parallel with per-call caching
+  const [hy, netliq, t10y3m, cfnai, vix, vix9d, vix3m, t5yie, dfii10, termPremium] = await Promise.all([
+    _fetchWithCache('/api/fred/BAMLH0A0HYM2',               'hy'),
+    _fetchWithCache('/api/fred3?s=WALCL,RRPONTSYD,WTREGEN', 'netliq'),
+    _fetchWithCache('/api/fred/T10Y3M',                      'curve'),
+    _fetchWithCache('/api/fred/CFNAI?monthly=1',             'cfnai'),
+    _fetchWithCache('/api/quote/%5EVIX',                     'vix'),
+    _fetchWithCache('/api/quote/%5EVIX9D',                   'vix9d'),
+    _fetchWithCache('/api/quote/%5EVIX3M',                   'vix3m'),
+    _fetchWithCache('/api/fred/T5YIE',                       't5yie'),
+    _fetchWithCache('/api/fred/DFII10',                      'dfii10'),
+    _fetchWithCache('/api/fred/THREEFYTP10?monthly=1',       'termPremium'),
+  ]);
+
+  // Attaches _stale/_age_h when the value came from localStorage cache
+  const withStale = (entry, wr) =>
+    wr.stale ? { ...entry, _stale: true, _age_h: wr.age_h } : entry;
+
+  // HY Spread
+  const hyD = hy.data;
+  out.hy = withStale(hyD?.current != null ? { value: hyD.current } : { value: null }, hy);
+
+  // NetLiq Δ13w (USD billions = divide by 1000 since FRED is in millions)
+  const nlD = netliq.data;
+  if (nlD?.current != null) {
+    const delta13w = nlD.v13w != null
+      ? (nlD.current - nlD.v13w) / 1000
+      : null;
+    out.netliq = withStale({ value: delta13w, raw: nlD.current }, netliq);
+  } else {
+    out.netliq = withStale({ value: null }, netliq);
+  }
+
+  // VolScore = min(vixScore, termScore)
+  const vixVal  = vix.data?.price  ?? null;
+  const vix9dVal = vix9d.data?.price ?? null;
+  const vix3mVal = vix3m.data?.price ?? null;
+  let volScore = null;
+  if (vixVal != null) {
+    const vixScore = vixVal<14?20:vixVal<18?15:vixVal<23?10:vixVal<30?5:0;
+    if (vix9dVal != null && vix3mVal != null && vix3mVal > 0) {
+      const ratio = vix9dVal / vix3mVal;
+      const termScore = ratio<0.85?20:ratio<0.95?15:ratio<1.05?10:ratio<1.15?5:0;
+      volScore = Math.min(vixScore, termScore);
+    } else {
+      volScore = vixScore;
+    }
+  }
+  const volStale = vix.stale || vix9d.stale || vix3m.stale;
+  const volAge   = Math.max(vix.age_h, vix9d.age_h, vix3m.age_h);
+  out.vol = { value: volScore, vixVal, vix9d: vix9dVal, vix3m: vix3mVal,
+    ...(volStale ? { _stale: true, _age_h: volAge } : {}) };
+
+  // Curva 10Y-3M + Δ13w (steepening penalty)
+  const t10D = t10y3m.data;
+  if (t10D?.current != null) {
+    const delta13w = t10D.v3m != null ? t10D.current - t10D.v3m : null;
+    out.curve = withStale({ value: t10D.current, delta13w }, t10y3m);
+  } else {
+    out.curve = withStale({ value: null }, t10y3m);
+  }
+
+  // CFNAI
+  const cfD = cfnai.data;
+  out.cfnai = withStale(cfD?.current != null ? { value: cfD.current } : { value: null }, cfnai);
+
+  // Flag data
+  const t5D = t5yie.data;
+  const dfD = dfii10.data;
+  const tpD = termPremium.data;
+  out.t5yie       = withStale(t5D?.current != null ? { value: t5D.current       } : { value: null }, t5yie);
+  out.dfii10      = withStale(dfD?.current != null ? { value: dfD.current       } : { value: null }, dfii10);
+  out.termPremium = withStale(tpD?.current != null ? { value: tpD.current       } : { value: null }, termPremium);
+
+  return out;
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────
+const TH_S = {
+  padding:'7px 9px', background:'#f8f9fa', borderBottom:'1px solid #ddd',
+  fontSize:11, color:'#555', whiteSpace:'nowrap', textAlign:'center',
+};
+
+function MacroCard({ item, entry }) {
+  const v       = entry?.value;
+  const pts     = v != null ? (item.needsDelta ? item.score(v, entry.delta13w) : item.score(v)) : null;
+  const bg      = v != null ? item.bg(v) : '#f0f4f8';
+  const fg      = v != null ? item.fg(v) : '#aaa';
+  const isStale = !!entry?._stale;
+  const ageH    = entry?._age_h ?? 0;
+  return (
+    <div style={{ background:bg, border:`1px solid ${isStale?'#e6510060':fg+'30'}`, borderRadius:8, padding:'8px 11px', flex:1, minWidth:120 }}>
+      <div style={{ fontSize:9, color:'#888', marginBottom:2, textTransform:'uppercase', letterSpacing:.5 }}>
+        {item.label} <span style={{ color:'#bbb' }}>/{item.weight}</span>
+      </div>
+      <div style={{ fontSize:18, fontWeight:700, color:fg }}>{v!=null?item.fmt(v):'—'}</div>
+      <div style={{ fontSize:10, color:fg }}>{v!=null?item.status(v):''}</div>
+      <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+        <span style={{ fontSize:10, color: isStale ? '#e65100' : '#aaa' }}>
+          {isStale ? `cache ~${Math.round(ageH)}h` : 'Score'}
+        </span>
+        <span style={{ fontSize:11, fontWeight:700, color:pts==null?'#aaa':pts>=item.weight*.8?'#1b5e20':pts>=item.weight*.4?'#e65100':'#b71c1c' }}>
+          {pts == null ? '—' : (pts % 1 === 0 ? pts : pts.toFixed(1))}/{item.weight}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function FlagBadge({ id, data }) {
+  const configs = {
+    EMERGENCY_MODE:       { label:'🚨 EMERGENCIA',        color:'#b71c1c', bg:'#ffebee' },
+    INFLATION_OVERLAY:    { label:'🔥 INFLACIÓN OVERLAY', color:'#e65100', bg:'#fff3e0' },
+    CREDIT_COMPLACENCY:   { label:'⚠️ COMPLACENCIA HY',   color:'#bf360c', bg:'#fbe9e7' },
+    TERM_PREMIUM_EXTREME: { label:'📉 TERM PREMIUM EXT.', color:'#4a148c', bg:'#f3e5f5' },
+  };
+  const cfg = configs[id];
+  if (!cfg) return null;
+  return (
+    <div style={{ background:cfg.bg, color:cfg.color, border:`1px solid ${cfg.color}40`,
+      borderRadius:20, padding:'3px 12px', fontSize:11, fontWeight:700, whiteSpace:'nowrap' }}>
+      {cfg.label}
+      {data?.streak_weeks > 0 && <span style={{ fontSize:9, marginLeft:4, opacity:.7 }}>{data.streak_weeks}w</span>}
+    </div>
+  );
+}
+
+function Stars({ score }) {
+  const n = toStars(score);
+  return <span>{Array.from({length:5},(_,i)=>(
+    <span key={i} style={{ color:i<n?'#f59e0b':'#ddd', fontSize:12 }}>★</span>
+  ))}</span>;
+}
+
+function BlockBar({ label, score, max, color }) {
+  return (
+    <span title={`${label}: ${score}/${max}`} style={{ display:'inline-flex', alignItems:'center', gap:2, fontSize:10 }}>
+      <span style={{ color:'#aaa' }}>{label}</span>
+      <span style={{ fontWeight:700, color: score===max?color:score>0?'#555':'#ddd' }}>{score}/{max}</span>
+    </span>
+  );
+}
+
+function rc(v) {
+  if (v==null) return '#999';
+  return v>1?'#1b5e20':v>0?'#2e7d32':v>-1?'#e65100':'#b71c1c';
+}
+function relFmt(v) {
+  if (v==null) return '—';
+  return (v>0?'+':'')+v.toFixed(1)+'%';
+}
+
+// ── App ───────────────────────────────────────────────────────────────────
+function App() {
+  const [macro,    setMacro]    = useState({});
+  const [quotes,   setQuotes]   = useState({});
+  const [appState, setAppState] = useState(DEFAULT_STATE);
+  const [loading,  setLoading]  = useState(true);
+  const [done,     setDone]     = useState(0);
+  const [updated,  setUpdated]  = useState(null);
+  const [sortCol,  setSortCol]  = useState('rot');
+  const [sortDir,  setSortDir]  = useState(-1);
+  const [toast,    setToast]    = useState(null);
+
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3000); };
+
+  const load = useCallback(async () => {
+    setLoading(true); setDone(0);
+
+    const [stateData, macroData, spyData, dxyData] = await Promise.all([
+      fetch('/api/state').then(r=>r.json()).catch(()=>DEFAULT_STATE),
+      fetchMacro(),
+      fetchQ('SPY'),
+      fetchQ('DX-Y.NYB'),
+    ]);
+
+    setMacro(macroData);
+    const q = { SPY: spyData, 'DX-Y.NYB': dxyData };
+    setDone(2);
+
+    const rest = UNIVERSE.filter(a => a.ticker !== 'SPY');
+    for (let i = 0; i < rest.length; i += 5) {
+      const batch   = rest.slice(i, i+5);
+      const results = await Promise.all(batch.map(a => fetchQ(a.ticker)));
+      batch.forEach((a,j) => { q[a.ticker] = results[j]; });
+      setDone(prev => prev + batch.length);
+    }
+
+    setQuotes({...q});
+
+    // Compute score + update state
+    const { scaled: rawScore } = calcMacroScore(macroData);
+    const rawRegime = getRegime(rawScore);
+    const vixVal = macroData.vol?.vixVal ?? 0;
+
+    // Calcular RotScores de todos los activos para actualizar streaks de rotación
+    const spyForRot = q['SPY'];
+    const rotScores = {};
+    UNIVERSE.forEach(a => {
+      if (a.ticker !== 'SPY') {
+        rotScores[a.ticker] = q[a.ticker] && spyForRot
+          ? calcRotScore(q[a.ticker], spyForRot).total
+          : 0;
+      }
+    });
+
+    const newState = updateStateFromData(stateData, rawScore, macroData, rawRegime, vixVal, rotScores);
+    setAppState(newState);
+    fetch('/api/state', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newState) }).catch(()=>{});
+
+    setUpdated(new Date());
+    setLoading(false);
+    printFredFailLog();
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const macroScoreResult = useMemo(() => calcMacroScore(macro), [macro]);
+  const { scaled: macroScore, maxPossible: macroMaxPossible } = macroScoreResult;
+  const staleSources = useMemo(
+    () => MACRO_ITEMS.filter(it => macro[it.id]?._stale).map(it => it.label),
+    [macro]
+  );
+  const rawRegime        = useMemo(() => getRegime(macroScore), [macroScore]);
+
+  // Effective regime: histéresis + term premium degradation
+  const effectiveRegime = useMemo(() => {
+    const label = appState.current_regime || rawRegime.label;
+    let r = REGIMES.find(x => x.label === label) || rawRegime;
+    if (appState.flags?.TERM_PREMIUM_EXTREME?.active) {
+      const idx = REGIMES.indexOf(r);
+      r = REGIMES[Math.min(idx+1, REGIMES.length-1)];
+    }
+    return r;
+  }, [appState, rawRegime]);
+
+  const effectiveLeaders = useMemo(() =>
+    getEffectiveLeaders(effectiveRegime, macro, appState.flags, quotes),
+    [effectiveRegime, macro, appState.flags, quotes]);
+
+  const spyAboveSma200 = useMemo(() => quotes['SPY']?.closeAboveSma200 ?? null, [quotes]);
+
+  const rows = useMemo(() => {
+    const spy = quotes['SPY'];
+    const netLiqDeltaB = macro.netliq?.value ?? 0;
+    const candidates   = appState.early_rotation_candidates;
+    return UNIVERSE.map(a => {
+      const d   = quotes[a.ticker];
+      const rot = a.ticker === 'SPY' ? { total:0, blockA:0, blockB:0, blockC:0, w1Rel:null, m1Rel:null, m3Rel:null, bd:{} } : calcRotScore(d, spy);
+      const fit = effectiveLeaders.includes(a.ticker);
+      const earlyRot = a.ticker !== 'SPY' && !fit
+        ? isEarlyRotation(a.ticker, candidates, spyAboveSma200, netLiqDeltaB)
+        : false;
+      const earlyRotMeta = earlyRot
+        ? getEarlyRotMeta(a.ticker, candidates, spyAboveSma200, netLiqDeltaB)
+        : null;
+      const sig = a.ticker === 'SPY' ? { label:'ref', color:'#aaa', bg:'transparent' } : getSignal(rot.total, fit, appState.flags, spyAboveSma200, earlyRot);
+      return { ...a, d, rot, fit, sig, earlyRot, earlyRotMeta };  // sin `extended`: eliminado (pendiente Fase 4)
+    });
+  }, [quotes, effectiveLeaders, appState.flags, appState.early_rotation_candidates, spyAboveSma200, macro]);
+
+  const sorted = useMemo(() => [...rows].sort((a,b) => {
+    let va=0, vb=0;
+    if (sortCol==='rot')  { va=a.rot.total;       vb=b.rot.total; }
+    if (sortCol==='w1')   { va=a.rot.w1Rel??-99;  vb=b.rot.w1Rel??-99; }
+    if (sortCol==='m1')   { va=a.rot.m1Rel??-99;  vb=b.rot.m1Rel??-99; }
+    if (sortCol==='rsi')  { va=a.d?.rsi??-1;      vb=b.d?.rsi??-1; }
+    return sortDir*(vb-va);
+  }), [rows, sortCol, sortDir]);
+
+  const opps = useMemo(() =>
+    rows.filter(r => r.fit && r.rot.total >= 5 && r.ticker !== 'SPY' && !['—'].includes(r.sig.label))
+        .sort((a,b) => b.rot.total - a.rot.total).slice(0,6),
+    [rows]);
+
+  const early = useMemo(() =>
+    rows.filter(r => r.sig.label === 'ROT. TEMPRANA' && r.ticker !== 'SPY')
+        .sort((a,b) => b.rot.total - a.rot.total).slice(0,4),
+    [rows]);
+
+  const activeFlags = useMemo(() =>
+    Object.entries(appState.flags||{}).filter(([,v]) => v.active),
+    [appState.flags]);
+
+  function Th({ col, label, tip }) {
+    return (
+      <th onClick={() => sortCol===col ? setSortDir(d=>-d) : (setSortCol(col),setSortDir(-1))}
+          title={tip}
+          style={{ ...TH_S, cursor:'pointer', background:sortCol===col?'#e8f0fe':'#f8f9fa' }}>
+        {label} {sortCol===col?(sortDir<0?'▼':'▲'):''}
+      </th>
+    );
+  }
+
+  const loadPct = Math.round((done / (UNIVERSE.length+1)) * 100);
+
+  // Checks panel
+  const checks = [
+    { label:'Score ≥ 60',        ok: macroScore >= 60,                                     val:`${macroScore}/100` },
+    { label:'VIX < 23',          ok: (macro.vol?.vixVal??99) < 23,                         val: macro.vol?.vixVal?.toFixed(1)??'—' },
+    { label:'HY < 475 bps',      ok: macro.hy?.value!=null && macro.hy.value*100 < 475,    val: macro.hy?.value ? Math.round(macro.hy.value*100)+' bps' : '—' },
+    { label:'Curva > –25 bps',   ok: macro.curve?.value!=null && macro.curve.value > -0.25,val: macro.curve?.value!=null ? Math.round(macro.curve.value*100)+' bps' : '—' },
+    { label:'CFNAI > –0.35',     ok: (macro.cfnai?.value??-99) > -0.35,                    val: macro.cfnai?.value?.toFixed(2)??'—' },
+    { label:'SPY > SMA200',      ok: spyAboveSma200 === true,                              val: spyAboveSma200===true?'✓':spyAboveSma200===false?'✗':'—' },
+  ];
+
+  // ── Markdown builders ──────────────────────────────────────────────────
+  const buildMD = useCallback(() => {
+    const date = new Date().toLocaleString('es-ES',{dateStyle:'full',timeStyle:'short'});
+    let md = `# Flujos & Rotación v2 — Snapshot\n**Fecha:** ${date}\n\n`;
+
+    md += `## RÉGIMEN\n**MacroScore:** ${macroScore}/100${macroMaxPossible < 100 ? ` ⚠ (reescalado, ${macroMaxPossible}/100 disponible)` : ''} — **${effectiveRegime.label}**\n`;
+    if (appState.pending_regime) md += `_Transición pendiente → ${appState.pending_regime} (${appState.pending_since_count}/2 lecturas)_\n`;
+    md += `_${effectiveRegime.desc}_\n`;
+    md += `Líderes efectivos: ${effectiveLeaders.join(', ')}\n\n`;
+
+    if (activeFlags.length) {
+      md += `## FLAGS ACTIVOS\n`;
+      activeFlags.forEach(([id,v]) => { md += `- **${id}** (${v.streak_weeks||0}w)\n`; });
+      md += '\n';
+    }
+
+    md += `## INDICADORES MACRO\n| Indicador | Valor | Status | Score |\n|-----------|-------|--------|-------|\n`;
+    MACRO_ITEMS.forEach(it => {
+      const v = macro[it.id]?.value;
+      const pts = v!=null?(it.needsDelta?it.score(v,macro[it.id]?.delta13w):it.score(v)):null;
+      md += `| ${it.label} (/${it.weight}) | ${v!=null?it.fmt(v):'—'} | ${v!=null?it.status(v):'—'} | ${pts==null?'—':pts%1===0?pts:pts.toFixed(1)} |\n`;
+    });
+    md += `\n_DFII10: ${macro.dfii10?.value?.toFixed(2)??'—'}% · T5YIE: ${macro.t5yie?.value?.toFixed(2)??'—'}% · Term Premium: ${macro.termPremium?.value?.toFixed(3)??'—'}_\n\n`;
+
+    md += `## CONDICIONES PROTOCOLO\n`;
+    checks.forEach(c => { md += `- ${c.ok?'✅':'❌'} ${c.label}: ${c.val}\n`; });
+    md += '\n';
+
+    if (opps.length) {
+      md += `## OPORTUNIDADES\n| Ticker | Score | A/B/C | 1W vs SPY | RSI | MACD | OBV | Señal |\n|--------|------:|-------|----------:|----:|:----:|:---:|-------|\n`;
+      opps.forEach(r => {
+        const d=r.d, rot=r.rot;
+        md += `| ${r.ticker} | ${rot.total}/10 | ${rot.blockA}/${rot.blockB}/${rot.blockC} | ${relFmt(rot.w1Rel)} | ${d?.rsi??'—'} | ${d?.macdBull!=null?(d.macdBull?'▲':'▼'):'—'} | ${d?.obvAboveSma50!=null?(d.obvAboveSma50?'↑':'↓'):'—'} | ${r.sig.label} |\n`;
+      });
+      md += '\n';
+    }
+
+    md += `## ROTACIÓN COMPLETA\n| Ticker | Cat. | 1W vs SPY | RS13w | Score | A/B/C | Fit | Señal |\n|--------|------|----------:|------:|------:|-------|:---:|-------|\n`;
+    sorted.forEach(r => {
+      if (r.ticker==='SPY') return;
+      md += `| ${r.ticker} | ${r.cat} | ${relFmt(r.rot.w1Rel)} | ${relFmt(r.rot.m3Rel)} | ${r.rot.total}/10 | ${r.rot.blockA}/${r.rot.blockB}/${r.rot.blockC} | ${r.fit?'✓':'○'} | ${r.sig.label} |\n`;
+    });
+    return md;
+  }, [macro, macroScore, macroMaxPossible, effectiveRegime, effectiveLeaders, activeFlags, appState, opps, sorted, checks]);
+
+  useEffect(() => {
+    if (!loading) {
+      try { localStorage.setItem('llm_export_rotacion', buildMD()); } catch {}
+    }
+  }, [loading, buildMD]);
+
+  const copyLLM = useCallback(() => {
+    navigator.clipboard.writeText(buildMD())
+      .then(() => showToast('✅ Snapshot copiado'))
+      .catch(() => showToast('❌ Error'));
+  }, [buildMD]);
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',    label: 'Market Tracker' },
+      { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle',     label: 'Cycle' },
+      { key: 'llm_export_relative',  label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+    ];
+    const found = [], missing = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) { found.push(label); return md; }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    navigator.clipboard.writeText(sections.join('\n\n---\n\n'))
+      .then(() => showToast(missing.length ? `✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}` : `✅ Todas las pestañas copiadas`))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  const copyProtocol = () => {
+    const md = `# Protocolo Flujos & Rotación v2 — Metodología\n\n## 1. MACROSCORE (0–100)\n\nCinco indicadores con pesos no uniformes:\n\n| # | Indicador | Fuente | Peso |\n|---|-----------|--------|------|\n| 1 | HY Credit Spread (BAMLH0A0HYM2) | FRED | 25 |\n| 2 | Net Liquidity Δ13 semanas (WALCL−RRPONTSYD−WTREGEN) | FRED | 25 |\n| 3 | VolScore = min(VIX nivel, VIX term structure ^VIX9D/^VIX3M) | Yahoo | 20 |\n| 4 | Curva 10Y–3M con penalización steepening (T10Y3M) | FRED | 15 |\n| 5 | CFNAI — Chicago Fed National Activity Index | FRED | 15 |\n\n### Umbrales HY Spread (/25)\n<300 bps→25 · 300–374→18.75 · 375–474→12.5 · 475–599→6.25 · ≥600→0\n\n### Umbrales Net Liq Δ13w en USD Billions (/25)\n>+500B→25 · +100–500→18.75 · −100–+100→12.5 · −500–−100→6.25 · <−500→0\n\n### VolScore (/20) — mínimo conservador\nVIX: <14→20 · 14–17.9→15 · 18–22.9→10 · 23–29.9→5 · ≥30→0\nTerm (^VIX9D/^VIX3M): <0.85→20 · 0.85–0.95→15 · 0.95–1.05→10 · 1.05–1.15→5 · >1.15→0\nVolScore = min(VIX_score, Term_score)\n\n### Umbrales Curva 10Y–3M (/15)\nBase: >75bps→20 · 25–75→15 · −25–25→10 · −75–−25→5 · <−75→0\nPenalización: si curva<0 Y Δ13w>+50bps → restar 5 (steepening desde inversión = señal recesión temprana)\nFinal = max(0, base−pen) × 0.75\n\n### Umbrales CFNAI (/15)\n>+0.20→15 · 0–0.20→11.25 · −0.35–0→7.5 · −0.70–−0.35→3.75 · <−0.70→0\n\n---\n\n## 2. REGÍMENES (con histéresis simétrica)\n\n| Score | Régimen |\n|-------|---------|\n| 80–100 | Bull Pleno |\n| 60–79 | Bull Maduro |\n| 40–59 | Transición |\n| 20–39 | Risk-OFF |\n| 0–19 | Capitulación |\n\n**Histéresis (simétrica para subidas y bajadas):** el régimen solo cambia cuando:\n1. El score cruza la frontera en ≥5 puntos (medido contra el borde que se cruza, no el borde inferior siempre)\n2. Ese cruce persiste durante ≥2 lecturas consecutivas\n\nEjemplo ascendente: en Transición (40–59), score sube a 65 → cruce = 65−60 = 5 pts ✓, confirma tras 2 semanas.\nEjemplo descendente: en Bull Maduro (60–79), score baja a 54 → cruce = 60−54 = 6 pts ✓, confirma tras 2 semanas.\n\n**Modificador Term Premium:** si THREEFYTP10 < −0.75 durante ≥13 semanas → degradar régimen 1 nivel.\n\n---\n\n## 3. ROTATION SCORE (0–10)\n\n### Bloque A — Momentum/RS (4 pts)\n- RS 13w vs SPY > +2.0% → 2 pts\n- RS 4w vs SPY > +1.0% → 1 pt\n- Close > SMA200 → 1 pt\n\n### Bloque B — Flujo/Volumen (3 pts)\n- CMF(20) > 0 (Koncorde Azul) → 1 pt\n- OBV > SMA50(OBV) → 1 pt\n- Vol20d / Vol60d > 1.10 → 1 pt\n\n### Bloque C — Momentum técnico (3 pts)\n- MACD histograma > 0 → 1 pt\n- RSI(14) entre 40 y 70 → 1 pt\n- Anti-extensión: Close > SMA20 AND (Close−SMA20)/ATR(14) < 1.5 → 1 pt\n\n---\n\n## 4. SEÑALES\n\n| Señal | Condición |\n|-------|----------|\n| COMPRA | Fit régimen + Score ≥ 7 (≥8 si CREDIT_COMPLACENCY activo) |\n| ACUMULAR | Fit régimen + Score 5–6 |\n| ACUMULAR* | EMERGENCY_MODE activo + Fit Risk-OFF + Score ≥ 6 (acumular defensivos en caída) |\n| ROT. TEMPRANA | Ver §4.1 — tres condiciones obligatorias |\n| VIGILAR | Score 3–4 |\n\n**Master Filter:** si SPY < SMA200 → degradar COMPRA/ACUMULAR/VIGILAR un nivel. ROT. TEMPRANA NO se degrada (tiene su propio filtro de benchmark).\n\n**EMERGENCY_MODE:** si VIX ≥ 35 → todas las señales suprimidas excepto ACUMULAR* para defensivos de Risk-OFF. Duración mínima 14 días.\n\n### §4.1 ROT. TEMPRANA — tres condiciones obligatorias\nSe emite solo si se cumplen las tres a la vez:\n1. **Persistencia individual:** RotScore ≥ 8/10 durante ≥3 lecturas semanales consecutivas\n2. **Clúster categorial:** ≥2 activos del mismo clúster con streak ≥3 simultáneamente\n3. **Filtro benchmark:** SPY > SMA200 OR Δ13w NetLiq > +300B\n\nClústeres definidos:\n| Clúster | Activos |\n|---------|----------|\n| Growth | XLK, XLC, XLY, QQQ, BTC-USD |\n| ValueCyclical | XLF, XLI, XLB, XLE |\n| Defensive | XLP, XLU, XLV, XLRE |\n| Duration | TLT (un solo miembro → nunca dispara, intencional) |\n| Commodities | GC=F, SI=F, BZ=F |\n| SmallEM | IWM, EEM |\n\nNota: si fit con régimen actual, la señal estándar (COMPRA/ACUMULAR) tiene prioridad sobre ROT. TEMPRANA.\n\n---\n\n## 5. LÍDERES CONDICIONALES\n- **IWM** solo si HY Spread < 375 bps AND (Curva > 0 OR Δ13w Curva > 0)\n- **GC=F (Oro)** solo si DFII10 < 1.0% OR DXY en tendencia bajista 3M\n- **INFLATION_OVERLAY** (T5YIE ≥ 2.8% × 4 semanas): TLT/QQQ/XLK pierden fit (salvo Net Liq Δ13w > 300B); XLE/XLB/GC=F/SI=F se promueven como líderes\n\n---\n\n## 6. FLAGS GLOBALES\n| Flag | Activación | Desactivación | Efecto |\n|------|-----------|---------------|--------|\n| CREDIT_COMPLACENCY | HY < 275 bps × 8 semanas | Un periodo HY ≥ 275 → reset streak | Elevar umbral COMPRA a ≥8/10 |\n| INFLATION_OVERLAY | T5YIE ≥ 2.8% × 4 semanas | Un periodo T5YIE < 2.8% → reset streak | Ajustar líderes (ver §5) |\n| TERM_PREMIUM_EXTREME | THREEFYTP10 < −0.75 × 13 semanas | Un periodo ≥ −0.75 → reset streak | Degradar régimen 1 nivel |\n| EMERGENCY_MODE | VIX ≥ 35 (inmediato) | Expiración 14 días desde activación | Suprimir señales; solo ACUMULAR* defensivos |\n`;
+    navigator.clipboard.writeText(md)
+      .then(() => showToast('✅ Protocolo v2 copiado'))
+      .catch(() => showToast('❌ Error'));
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  return (
+    <div className="wrap">
+      {/* Flag strip */}
+      {activeFlags.length > 0 && (
+        <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' }}>
+          {activeFlags.map(([id,v]) => <FlagBadge key={id} id={id} data={v} />)}
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
+        <div>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:4 }}>
+            <div style={{ fontSize:22, fontWeight:'bold', color:'#111' }}>Flujos & Rotación</div>
+            <a href="/index.html" style={{ fontSize:11, color:'#1a6b3c', textDecoration:'none', padding:'2px 10px', border:'1px solid #1a6b3c', borderRadius:12, lineHeight:'20px' }}>Market Tracker</a>
+            <a href="/portfolio.html" style={{ fontSize:11, color:'#3a6ca0', textDecoration:'none', padding:'2px 10px', border:'1px solid #3a6ca0', borderRadius:12, lineHeight:'20px' }}>Portfolio</a>
+            <a href="/relative.html" style={{ fontSize:11, color:'#7b1fa2', textDecoration:'none', padding:'2px 10px', border:'1px solid #7b1fa2', borderRadius:12, lineHeight:'20px' }}>Relative Flow</a>
+            <a href="/cycle.html" style={{ fontSize:11, color:'#7f0000', textDecoration:'none', padding:'2px 10px', border:'1px solid #7f0000', borderRadius:12, lineHeight:'20px' }}>Cycle</a>
+          </div>
+          <div style={{ fontSize:9, color:'#aaa', marginTop:1, fontStyle:'italic' }}>Flujos de Capital — Protocolo de Oportunidades</div>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {updated && !loading && <span style={{ fontSize:11, color:'#999' }}>{updated.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span>}
+          <button onClick={copyProtocol} style={{ background:'#5c35a0', color:'white', border:'none', borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+            📐 Protocolo
+          </button>
+          <button onClick={copyLLM} disabled={loading} style={{ background:loading?'#ccc':'#2d6a4f', color:'white', border:'none', borderRadius:6, padding:'6px 14px', cursor:loading?'not-allowed':'pointer', fontSize:12, fontWeight:600 }}>
+            📋 Copiar LLM
+          </button>
+          <button onClick={copyAllForLLM} style={{ background:'#37474f', color:'white', border:'none', borderRadius:6, padding:'6px 14px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+            🗂️ Exportar TODO a LLM
+          </button>
+          <button onClick={load} disabled={loading} style={{ background:loading?'#ccc':'#1565c0', color:'white', border:'none', borderRadius:6, padding:'6px 14px', cursor:loading?'not-allowed':'pointer', fontSize:12, fontWeight:600 }}>
+            {loading ? `${loadPct}%…` : '↻ Actualizar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Macro Regime Row */}
+      <div style={{ display:'flex', gap:10, marginBottom:14, alignItems:'stretch' }}>
+        {/* Score gauge */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+          background:effectiveRegime.bg, border:`2px solid ${effectiveRegime.border}`,
+          borderRadius:12, padding:'14px 22px', minWidth:145, flexShrink:0 }}>
+          <div style={{ fontSize:9, color:'#888', textTransform:'uppercase', letterSpacing:1, marginBottom:2 }}>Macro Score</div>
+          <div style={{ fontSize:50, fontWeight:900, color:effectiveRegime.color, lineHeight:1 }}>{macroScore}</div>
+          <div style={{ fontSize:9, color:'#aaa', marginBottom:6 }}>/100</div>
+          <div style={{ background:effectiveRegime.color, color:'white', borderRadius:20, padding:'2px 12px', fontSize:11, fontWeight:700 }}>
+            {effectiveRegime.label}
+          </div>
+          {macroMaxPossible < 100 && (
+            <div style={{ fontSize:9, color:'#e65100', marginTop:4, textAlign:'center' }}>
+              ⚠ {macroMaxPossible}/100 disponible
+            </div>
+          )}
+          {appState.pending_regime && (
+            <div style={{ fontSize:9, color:'#888', marginTop:4, textAlign:'center' }}>
+              → {appState.pending_regime} ({appState.pending_since_count}/2)
+            </div>
+          )}
+        </div>
+
+        <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ background:effectiveRegime.bg, border:`1px solid ${effectiveRegime.border}40`, borderRadius:8, padding:'7px 12px' }}>
+            <div style={{ fontSize:12, fontWeight:700, color:effectiveRegime.color }}>{effectiveRegime.desc}</div>
+            <div style={{ fontSize:11, color:'#666', marginTop:2 }}>
+              Líderes activos: <b>{effectiveLeaders.join(' · ')}</b>
+              {macro.t5yie?.value != null && <span style={{ marginLeft:8, fontSize:10, color:'#aaa' }}>T5YIE:{macro.t5yie.value.toFixed(2)}% · DFII10:{macro.dfii10?.value?.toFixed(2)??'—'}%</span>}
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:8, flex:1 }}>
+            {MACRO_ITEMS.map(it => <MacroCard key={it.id} item={it} entry={macro[it.id]} />)}
+          </div>
+          {staleSources.length > 0 && (
+            <div style={{ fontSize:9, color:'#e65100', marginTop:3, textAlign:'right' }}>
+              ⚠ Dato cacheado: {staleSources.join(', ')} — historial de fallos en consola
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Protocol checks */}
+      <div style={{ background:'#f8f9fa', border:'1px solid #e0e0e0', borderRadius:8, padding:'8px 14px', marginBottom:14 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:'#555', textTransform:'uppercase', letterSpacing:1, marginBottom:6 }}>
+          Condiciones Macro para Compra
+        </div>
+        <div style={{ display:'flex', gap:18, flexWrap:'wrap' }}>
+          {checks.map(c => (
+            <div key={c.label} style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <span style={{ width:16, height:16, borderRadius:'50%', flexShrink:0, display:'inline-flex', alignItems:'center',
+                justifyContent:'center', fontSize:9, fontWeight:700, color:'white',
+                background:c.ok?'#4caf50':'#f44336' }}>{c.ok?'✓':'✗'}</span>
+              <span style={{ fontSize:11, color:'#555' }}>{c.label}</span>
+              <span style={{ fontSize:11, fontWeight:700 }}>{c.val}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Opportunities + Early Rotation */}
+      {(opps.length > 0 || early.length > 0) && (
+        <div style={{ display:'grid', gridTemplateColumns:early.length>0?'1fr 1fr':'1fr', gap:14, marginBottom:14 }}>
+          {opps.length > 0 && (
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#1b5e20', marginBottom:6, textTransform:'uppercase', letterSpacing:1 }}>
+                ● Oportunidades ({opps.length})
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                {opps.map(r => (
+                  <div key={r.ticker} style={{ display:'flex', alignItems:'center', gap:8,
+                    background:'#f1f8e9', border:'1px solid #c8e6c9', borderRadius:8, padding:'6px 11px' }}>
+                    <div style={{ minWidth:70 }}>
+                      <div style={{ fontSize:12, fontWeight:700 }}>{r.ticker}</div>
+                      <div style={{ fontSize:9, color:'#888' }}>{r.name}</div>
+                    </div>
+                    <Stars score={r.rot.total} />
+                    <div style={{ display:'flex', gap:6, marginLeft:4 }}>
+                      <BlockBar label="A" score={r.rot.blockA} max={4} color="#1b5e20" />
+                      <BlockBar label="B" score={r.rot.blockB} max={3} color="#1565c0" />
+                      <BlockBar label="C" score={r.rot.blockC} max={3} color="#7b1fa2" />
+                    </div>
+                    <div style={{ marginLeft:'auto', fontSize:11, display:'flex', gap:10 }}>
+                      <span><span style={{ color:'#aaa' }}>RS13w:</span> <b style={{ color:rc(r.rot.m3Rel) }}>{relFmt(r.rot.m3Rel)}</b></span>
+                      <span><span style={{ color:'#aaa' }}>RSI:</span> <b>{r.d?.rsi??'—'}</b></span>
+                    </div>
+                    <div style={{ background:r.sig.bg, color:r.sig.color, borderRadius:4, padding:'2px 7px', fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>
+                      {r.sig.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {early.length > 0 && (
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#e65100', marginBottom:6, textTransform:'uppercase', letterSpacing:1 }}>
+                ◑ Rotación Anticipada ({early.length})
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                {early.map(r => {
+                  const m = r.earlyRotMeta;
+                  return (
+                    <div key={r.ticker} style={{ display:'flex', flexDirection:'column', gap:3,
+                      background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:8, padding:'7px 11px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <div style={{ minWidth:70 }}>
+                          <div style={{ fontSize:12, fontWeight:700 }}>{r.ticker}</div>
+                          <div style={{ fontSize:9, color:'#888' }}>{r.name}</div>
+                        </div>
+                        <Stars score={r.rot.total} />
+                        <span style={{ fontSize:10, fontWeight:700, color:'#e65100', marginLeft:4 }}>{r.rot.total}/10</span>
+                        {m && <span style={{ fontSize:9, background:'#e65100', color:'white', borderRadius:10, padding:'1px 7px', marginLeft:'auto' }}>
+                          {m.streak}w streak
+                        </span>}
+                      </div>
+                      {m && (
+                        <div style={{ fontSize:9, color:'#888', display:'flex', gap:10, flexWrap:'wrap' }}>
+                          <span>Clúster: <b style={{ color:'#555' }}>{m.cluster}</b></span>
+                          {m.clusterPeers.length > 0 && <span>Peers: <b style={{ color:'#555' }}>{m.clusterPeers.join(', ')}</b></span>}
+                          <span style={{ marginLeft:'auto', color: m.benchmarkSPY ? '#1b5e20' : '#e65100' }}>
+                            {m.benchmarkSPY ? '✓ SPY>SMA200' : `✓ NetLiq +${Math.round(m.netLiqDeltaB)}B`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Rotation Heatmap */}
+      <div style={{ fontSize:11, fontWeight:700, color:'#333', marginBottom:6, textTransform:'uppercase', letterSpacing:1 }}>
+        Mapa de Rotación — {UNIVERSE.length} activos
+        {spyAboveSma200===false && <span style={{ marginLeft:10, fontSize:10, color:'#b71c1c', fontWeight:400 }}>⚠ Master Filter activo — SPY bajo SMA200 (señales degradadas)</span>}
+      </div>
+      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+        <thead>
+          <tr>
+            <th style={{ ...TH_S, textAlign:'left', padding:'7px 9px' }}>Activo</th>
+            <th style={{ ...TH_S, textAlign:'left' }}>Cat.</th>
+            <Th col="w1"  label="1W vs SPY" tip="RS semanal vs benchmark" />
+            <Th col="m1"  label="RS 4w"     tip="RS 4 semanas vs SPY" />
+            <Th col="rsi" label="RS 13w"    tip="RS 13 semanas vs SPY (vale 2 pts)" />
+            <th style={TH_S}>RSI</th>
+            <th style={TH_S}>SMA200</th>
+            <th style={TH_S}>OBV</th>
+            <th style={TH_S}>Vol20/60</th>
+            <th style={TH_S} title="Bloque A/B/C">A·B·C</th>
+            <Th col="rot" label="Score /10" tip="Rotation Score v2 (10 pts, 3 bloques)" />
+            <th style={TH_S}>Fit</th>
+            <th style={TH_S}>Señal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r,i) => {
+            const d=r.d, rot=r.rot, isSpy=r.ticker==='SPY';
+            return (
+              <tr key={r.ticker} style={{ background:isSpy?'#f8f9fa':i%2===0?'#fff':'#fafafa' }}>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee' }}>
+                  <span style={{ fontSize:12, fontWeight:700 }}>{r.ticker}</span>
+                  <span style={{ fontSize:9, color:'#bbb', marginLeft:5 }}>{r.name}</span>
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', color:'#999', fontSize:9 }}>{r.cat}</td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontWeight:700, fontSize:11, color:rc(rot.w1Rel) }}>
+                  {relFmt(rot.w1Rel)}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontWeight:700, fontSize:11, color:rc(rot.m1Rel) }}>
+                  {relFmt(rot.m1Rel)}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontWeight:700, fontSize:11, color:rc(rot.m3Rel) }}>
+                  {relFmt(rot.m3Rel)}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center' }}>
+                  {d?.rsi!=null?<span style={{ fontWeight:700, color:d.rsi>70?'#b71c1c':d.rsi<35?'#e65100':'#1b5e20' }}>{d.rsi}</span>:'—'}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontSize:11 }}>
+                  {d?.closeAboveSma200!=null?<span style={{ color:d.closeAboveSma200?'#1b5e20':'#b71c1c' }}>{d.closeAboveSma200?'▲':'▽'}</span>:'—'}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontSize:11 }}>
+                  {d?.obvAboveSma50!=null?<span style={{ color:d.obvAboveSma50?'#1b5e20':'#b71c1c' }}>{d.obvAboveSma50?'↑':'↓'}</span>:'—'}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontSize:10,
+                  color:d?.volRatio!=null?(d.volRatio>1.1?'#1b5e20':d.volRatio>0.9?'#555':'#b71c1c'):'#aaa' }}>
+                  {d?.volRatio!=null?d.volRatio.toFixed(2):'—'}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center' }}>
+                  {!isSpy?<span style={{ fontSize:10, color:'#555' }}>{rot.blockA}·{rot.blockB}·{rot.blockC}</span>:'—'}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center' }}>
+                  {isSpy?<span style={{ fontSize:9, color:'#aaa' }}>ref</span>:
+                    <span style={{ fontWeight:700, fontSize:12 }}>{rot.total}</span>}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center', fontSize:10 }}>
+                  {!isSpy?<span style={{ fontWeight:700, color:r.fit?'#1b5e20':'#ccc' }}>{r.fit?'✓':'○'}</span>:'—'}
+                </td>
+                <td style={{ padding:'5px 9px', borderBottom:'1px solid #eee', textAlign:'center' }}>
+                  {r.sig.label!=='—'&&r.sig.label!=='ref'?
+                    <span style={{ background:r.sig.bg, color:r.sig.color, borderRadius:4, padding:'2px 6px', fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>
+                      {r.sig.label}
+                    </span>:<span style={{ color:'#ddd' }}>—</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* Footer */}
+      <div style={{ marginTop:16, background:'#f8f9fa', border:'1px solid #e0e0e0', borderRadius:8, padding:'10px 14px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, fontSize:11 }}>
+          <div>
+            <b style={{ color:'#333' }}>MacroScore /100</b><br/>
+            <span style={{ color:'#666', lineHeight:1.8 }}>HY/25 · Net Liq Δ13w/25 · VolScore/20 · Curva/15 · CFNAI/15</span>
+          </div>
+          <div>
+            <b style={{ color:'#333' }}>Rotation Score /10</b><br/>
+            <span style={{ color:'#666', lineHeight:1.8 }}>A(4): RS13w+RS4w+SMA200 · B(3): CMF+OBV+Vol · C(3): MACD+RSI+AntiExt</span>
+          </div>
+          <div>
+            <b style={{ color:'#333' }}>Señales</b><br/>
+            <span style={{ color:'#666', lineHeight:1.8 }}>COMPRA: Fit+≥7 · ACUMULAR: Fit+5-6 · ROT.TEMP: streak≥3+clúster+benchmark · Master Filter: SPY{'<'}SMA200→-1 nivel (no degrada ROT.TEMP)</span>
+          </div>
+        </div>
+      </div>
+
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

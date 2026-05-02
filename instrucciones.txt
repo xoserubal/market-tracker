@@ -1,0 +1,146 @@
+====================================================
+  MARKET TRACKER — INSTRUCCIONES DE INSTALACIÓN
+====================================================
+
+REQUISITOS PREVIOS
+------------------
+- Node.js instalado (descargar en https://nodejs.org → versión LTS)
+- Conexión a internet
+
+
+PASO 1 — CREAR LA CARPETA Y LOS ARCHIVOS
+-----------------------------------------
+1. Crea una carpeta llamada "market-tracker" donde quieras (ej: Escritorio)
+2. Dentro crea estos 4 archivos (copia el contenido desde el chat):
+
+   market-tracker/
+   ├── package.json
+   ├── server.js
+   ├── index.html
+   └── .env
+
+
+PASO 2 — CONFIGURAR LA API KEY DE FRED (gratis)
+------------------------------------------------
+FRED es la base de datos económicos de la Reserva Federal.
+Se necesita para los indicadores macro (spreads, curva, M2, etc.)
+
+1. Ve a: https://fredaccount.stlouisfed.org/login/secure/
+2. Crea una cuenta gratuita
+3. Una vez dentro ve a: "My Account" → "API Keys" → "Request API Key"
+4. Copia la clave que te dan (es una cadena de 32 caracteres)
+5. Abre el archivo .env y reemplaza el texto:
+
+   FRED_API_KEY=tu_clave_aqui
+
+   por tu clave real, por ejemplo:
+
+   FRED_API_KEY=abcdef1234567890abcdef1234567890
+
+6. Guarda el archivo
+
+NOTA: Sin la clave FRED la tabla de mercados (equity) funciona igual.
+      Solo la sección "Macro / Cycle Indicators" aparecerá vacía.
+
+
+PASO 3 — INSTALAR DEPENDENCIAS
+--------------------------------
+1. Abre una terminal (símbolo del sistema / PowerShell en Windows,
+   Terminal en Mac/Linux)
+2. Navega hasta la carpeta del proyecto:
+
+   cd ruta/a/market-tracker
+
+   Ejemplo en Windows:   cd C:\Users\TuNombre\Desktop\market-tracker
+   Ejemplo en Mac/Linux: cd ~/Desktop/market-tracker
+
+3. Ejecuta:
+
+   npm install
+
+   (Descarga las librerías necesarias. Solo hace falta hacerlo una vez.)
+
+
+PASO 4 — ARRANCAR EL SERVIDOR
+-------------------------------
+En la misma terminal ejecuta:
+
+   node server.js
+
+Deberías ver este mensaje:
+   ✅ Market Tracker → http://localhost:3000
+
+
+PASO 5 — ABRIR EN EL NAVEGADOR
+--------------------------------
+Abre tu navegador (Chrome, Firefox, Edge...) y ve a:
+
+   http://localhost:3000
+
+La tabla cargará automáticamente todos los datos.
+
+
+USO DIARIO
+----------
+- Cada vez que quieras usar el tracker solo tienes que:
+  1. Abrir terminal en la carpeta
+  2. Ejecutar: node server.js
+  3. Ir a http://localhost:3000
+
+- Botón "↻ Refresh" → actualiza todos los datos
+- Botón "📋 Copiar para LLM" → copia la tabla completa en formato
+  Markdown al portapapeles, lista para pegar en Claude, ChatGPT, etc.
+
+- Para parar el servidor: Ctrl+C en la terminal
+
+
+FUENTES DE DATOS
+----------------
+- Yahoo Finance   → precios de mercado (puede tener 15 min de retraso)
+- FRED (St. Louis Fed) → indicadores macro (actualización diaria/semanal)
+
+
+INDICADORES MACRO INCLUIDOS
+----------------------------
+  VIX                    → estrés / volatilidad implícita        (Yahoo)
+  Dollar Index (DXY)     → liquidez global / risk-off            (Yahoo)
+  10Y Treasury Yield     → tipos largo plazo                     (Yahoo)
+  3M T-Bill Yield        → tipos corto plazo                     (Yahoo)
+  Yield Curve 10Y–3M     → posición del ciclo                    (FRED)
+  Yield Curve 10Y–2Y     → posición del ciclo (clásico)          (FRED)
+  HY Credit Spread       → estrés financiero real                (FRED)
+  IG Credit Spread       → apetito de riesgo institucional       (FRED)
+  5Y Breakeven Inflation → inflación esperada                    (FRED)
+  US Mfg PMI (ISM)       → ciclo económico real                  (FRED)
+  US M2 Money Supply     → masa monetaria / liquidez doméstica   (FRED)
+  Fed Balance Sheet      → QE vs QT                              (FRED)
+  Fed Net Liquidity      → BS - Reverse Repo - TGA (dato real)   (FRED)
+
+
+SOLUCIÓN DE PROBLEMAS
+----------------------
+"npm no se reconoce como comando"
+  → Node.js no está instalado. Descárgalo en https://nodejs.org
+
+"Error: ENOENT .env"
+  → Falta el archivo .env en la carpeta. Créalo con el contenido:
+    FRED_API_KEY=tu_clave_aqui
+
+"La sección macro aparece vacía"
+  → Revisa que la clave FRED en .env sea correcta y guarda el archivo.
+    Luego reinicia el servidor (Ctrl+C y vuelve a ejecutar node server.js)
+
+"Yahoo Finance no devuelve datos para algún ticker"
+  → Yahoo puede bloquear temporalmente peticiones. Espera unos minutos
+    y pulsa Refresh.
+
+"No puedo acceder a http://localhost:3000"
+  → Asegúrate de que el servidor está corriendo (debe mostrar el mensaje
+    ✅ en la terminal). Si cerraste la terminal, vuelve a ejecutar
+    node server.js
+
+
+====================================================
+  No se necesita ninguna suscripción de pago.
+  Todos los datos son gratuitos.
+====================================================

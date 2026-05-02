@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Market Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; }
+    .wrap { background: white; padding: 16px 20px; min-width: 960px; overflow-x: auto; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #27ae60; color: white; padding: 10px 22px; border-radius: 20px;
+      font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 999;
+      animation: fin 0.2s ease; }
+    @keyframes fin { from { opacity:0; transform: translateX(-50%) translateY(8px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+    .eq-thead tr { position: relative; }
+    .eq-thead th[data-tip] { cursor: help; }
+    .eq-thead th[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2933;
+      color: #f0f4f8;
+      font-size: 10px;
+      font-weight: 400;
+      line-height: 1.5;
+      white-space: pre-line;
+      padding: 7px 10px;
+      border-radius: 5px;
+      box-shadow: 0 3px 10px rgba(0,0,0,.35);
+      z-index: 100;
+      min-width: 200px;
+      max-width: 280px;
+      text-align: left;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ── Macro indicators ─────────────────────────────────────────────────────
+const MACRO_ITEMS = [
+  // Yahoo Finance — real-time
+  { id:"vix",  name:"VIX (Fear Index)",       src:"Yahoo", type:"vix",       fetch:"yahoo", ticker:"^VIX",
+    fmt: v=>v.toFixed(1),             dFmt: d=>(d>0?"+":"")+d.toFixed(1),          dSign:-1 },
+  { id:"dxy",  name:"Dollar Index (DXY)",     src:"Yahoo", type:"dxy",       fetch:"yahoo", ticker:"DX-Y.NYB",
+    fmt: v=>v.toFixed(1),             dFmt: d=>(d>0?"+":"")+d.toFixed(2),          dSign:0  },
+  { id:"tnx",  name:"10Y Treasury Yield",     src:"Yahoo", type:"yield",     fetch:"yahoo", ticker:"^TNX",
+    fmt: v=>v.toFixed(2)+"%",         dFmt: d=>(d>0?"+":"")+d.toFixed(2)+"%",      dSign:0  },
+  { id:"irx",  name:"3M T-Bill Yield",        src:"Yahoo", type:"yield",     fetch:"yahoo", ticker:"^IRX",
+    fmt: v=>v.toFixed(2)+"%",         dFmt: d=>(d>0?"+":"")+d.toFixed(2)+"%",      dSign:0  },
+  // FRED — 1-day lag
+  { id:"c3m",  name:"Yield Curve (10Y–3M)",   src:"FRED",  type:"curve_pct", fetch:"fred",  series:"T10Y3M",
+    fmt: v=>(v>0?"+":"")+Math.round(v*100)+" bps", dFmt: d=>(d>0?"+":"")+Math.round(d*100)+" bps", dSign:1 },
+  { id:"c2y",  name:"Yield Curve (10Y–2Y)",   src:"FRED",  type:"curve_pct", fetch:"fred",  series:"T10Y2Y",
+    fmt: v=>(v>0?"+":"")+Math.round(v*100)+" bps", dFmt: d=>(d>0?"+":"")+Math.round(d*100)+" bps", dSign:1 },
+  { id:"hy",   name:"HY Credit Spread",       src:"FRED",  type:"hy_spread", fetch:"fred",  series:"BAMLH0A0HYM2",
+    fmt: v=>Math.round(v*100)+" bps", dFmt: d=>(d>0?"+":"")+Math.round(d*100)+" bps",       dSign:-1 },
+  { id:"ig",   name:"IG Credit Spread",       src:"FRED",  type:"ig_spread", fetch:"fred",  series:"BAMLC0A0CM",
+    fmt: v=>Math.round(v*100)+" bps", dFmt: d=>(d>0?"+":"")+Math.round(d*100)+" bps",       dSign:-1 },
+  { id:"bei",  name:"5Y Breakeven Inflation", src:"FRED",  type:"breakeven", fetch:"fred",  series:"T5YIE",
+    fmt: v=>v.toFixed(2)+"%",         dFmt: d=>(d>0?"+":"")+d.toFixed(2)+"%",      dSign:0  },
+  { id:"pmi",  name:"Prod. Industrial (INDPRO)", src:"FRED",  type:"pmi",       fetch:"fred",  series:"INDPRO", monthly:true,
+    fmt: v=>v.toFixed(1),             dFmt: d=>(d>0?"+":"")+d.toFixed(2),          dSign:1  },
+  // Liquidez global
+  { id:"m2",   name:"US M2 Money Supply",     src:"FRED",  type:"m2",        fetch:"fred",  series:"WM2NS",
+    fmt: v=>`${(v/1000).toFixed(1)}T`,  dFmt: d=>(d>0?"+":"")+`${(d/1000).toFixed(2)}T`,  dSign:1 },
+  { id:"walcl",name:"Fed Balance Sheet",      src:"FRED",  type:"fed_bs",    fetch:"fred",  series:"WALCL",
+    fmt: v=>`${(v/1e6).toFixed(2)}T`,   dFmt: d=>(d>0?"+":"")+`${(d/1e6).toFixed(3)}T`,  dSign:1 },
+  { id:"netliq",name:"Fed Net Liquidity*",    src:"FRED",  type:"net_liq",   fetch:"fred3", series:["WALCL","RRPONTSYD","WTREGEN"],
+    fmt: v=>`${(v/1e6).toFixed(2)}T`,   dFmt: d=>(d>0?"+":"")+`${(d/1e6).toFixed(3)}T`,  dSign:1 },
+];
+
+const STATUS = {
+  vix:       v => v<15?['Complacencia','#c8e6c9','#1b5e20']:v<20?['Calma','#dcedc8','#33691e']:v<25?['Cautela','#fff9c4','#e65100']:v<35?['Estrés','#ffe0b2','#bf360c']:['Pánico','#ffcdd2','#b71c1c'],
+  hy_spread: v => { const b=v*100; return b<300?['Spreads comprimidos','#c8e6c9','#1b5e20']:b<400?['Normal','#f0f0f0','#555']:b<600?['Spreads ampliándose','#ffe0b2','#bf360c']:['Crisis de crédito','#ffcdd2','#b71c1c']; },
+  ig_spread: v => { const b=v*100; return b<80?['Muy comprimido','#c8e6c9','#1b5e20']:b<130?['Normal','#f0f0f0','#555']:b<200?['Stress leve','#ffe0b2','#bf360c']:['Stress elevado','#ffcdd2','#b71c1c']; },
+  curve_pct: v => v>1?['Empinada – expansión','#c8e6c9','#1b5e20']:v>0?['Normal','#f0f0f0','#555']:v>-0.5?['Aplanada','#fff9c4','#e65100']:v>-1?['Invertida – ciclo tardío','#ffe0b2','#bf360c']:['Invertida – riesgo recesión','#ffcdd2','#b71c1c'],
+  pmi:       v => v>103?['Expansión fuerte','#c8e6c9','#1b5e20']:v>100?['Expansión','#dcedc8','#33691e']:v>=98?['Contracción leve','#fff9c4','#e65100']:['Contracción','#ffcdd2','#b71c1c'],
+  breakeven: v => v<2?['Riesgo deflación','#e3f2fd','#1565c0']:v<2.5?['Inflación controlada','#c8e6c9','#1b5e20']:v<3?['Inflación elevada','#ffe0b2','#bf360c']:['Riesgo stagflación','#ffcdd2','#b71c1c'],
+  net_liq:   v => v>7e6?['Liquidez abundante','#c8e6c9','#1b5e20']:v>5.5e6?['Liquidez normal','#f0f0f0','#555']:v>4e6?['Liquidez ajustada','#ffe0b2','#bf360c']:['Liquidez restringida','#ffcdd2','#b71c1c'],
+  m2:        v => null,
+  fed_bs:    v => null,
+  dxy:       () => null,
+};
+
+// ── Equity sections ──────────────────────────────────────────────────────
+const SECTIONS = [
+  { id: "MAJOR INDICES", items: [
+    { name: "S&P 500",               ticker: "^GSPC" },
+    { name: "MSCI World",            ticker: "URTH"  },
+    { name: "NASDAQ Composite",      ticker: "^IXIC" },
+    { name: "Euro STOXX 50",         ticker: "FEZ"   },
+    { name: "MSCI Emerging Markets", ticker: "EEM"   },
+    { name: "Russell 2000",          ticker: "IWM"   },
+    { name: "S&P 500 Equal Weight",  ticker: "RSP"   },
+  ]},
+  { id: "MAG 6", items: [
+    { name: "NVIDIA",         ticker: "NVDA"  },
+    { name: "Apple",          ticker: "AAPL"  },
+    { name: "Alphabet",       ticker: "GOOGL" },
+    { name: "Microsoft",      ticker: "MSFT"  },
+    { name: "Amazon",         ticker: "AMZN"  },
+    { name: "Meta Platforms", ticker: "META"  },
+  ]},
+  { id: "BONDS / COMMODITIES", items: [
+    { name: "Long Duration US Bonds", ticker: "TLT"     },
+    { name: "Oil (Brent)",            ticker: "BZ=F"    },
+    { name: "Gold",                   ticker: "GC=F"    },
+    { name: "Silver",                 ticker: "SI=F"    },
+    { name: "Bitcoin",                ticker: "BTC-USD" },
+  ]},
+  { id: "EUROPE", items: [
+    { name: "United Kingdom (FTSE 100)", ticker: "^FTSE"      },
+    { name: "France (CAC 40)",           ticker: "^FCHI"      },
+    { name: "Germany (DAX)",             ticker: "^GDAXI"     },
+    { name: "Netherlands (AEX)",         ticker: "^AEX"       },
+    { name: "Spain (IBEX 35)",           ticker: "^IBEX"      },
+    { name: "Italy (FTSE MIB)",          ticker: "FTSEMIB.MI" },
+  ]},
+  { id: "ASIA", items: [
+    { name: "Japan",       ticker: "EWJ"  },
+    { name: "South Korea", ticker: "EWY"  },
+    { name: "India",       ticker: "INDA" },
+    { name: "China",       ticker: "MCHI" },
+    { name: "Hong Kong",   ticker: "EWH"  },
+  ]},
+  { id: "LATAM", items: [
+    { name: "Brazil",    ticker: "EWZ" },
+    { name: "Mexico",    ticker: "EWW" },
+    { name: "Argentina", ticker: "ARGT" },
+  ]},
+  { id: "US SECTORS", items: [
+    { name: "Technology",             ticker: "XLK"  },
+    { name: "Healthcare",             ticker: "XLV"  },
+    { name: "Financials",             ticker: "XLF"  },
+    { name: "Consumer Discretionary", ticker: "XLY"  },
+    { name: "Communication Services", ticker: "XLC"  },
+    { name: "Industrials",            ticker: "XLI"  },
+    { name: "Consumer Staples",       ticker: "XLP"  },
+    { name: "Energy",                 ticker: "XLE"  },
+    { name: "Utilities",              ticker: "XLU"  },
+    { name: "Real Estate",            ticker: "XLRE" },
+  ]},
+  { id: "EU SECTORS", items: [
+    { name: "EU Banks",            ticker: "EXV1.DE" },
+    { name: "EU Healthcare",       ticker: "IQQH.DE" },
+    { name: "EU Industrials",      ticker: "EXV6.DE" },
+    { name: "EU Energy",           ticker: "EXH1.DE" },
+    { name: "EU Technology",       ticker: "EXH4.DE" },
+    { name: "EU Consumer Staples", ticker: "EXV5.DE" },
+    { name: "EU Telecoms",         ticker: "EXV2.DE" },
+    { name: "EU Utilities",        ticker: "EXH7.DE" },
+    { name: "EU Materials",        ticker: "EXH8.DE" },
+    { name: "EU Real Estate",      ticker: "IPRP.AS" },
+  ]},
+
+  // ── ENERGY ──────────────────────────────────────────────────────────────
+  { id: "URANIO", energySection: true, scoreKey: 'uranium',
+    items: [
+      { name: "Sprott Uranium Miners ETF (URNM)", ticker: "URNM"   },
+      { name: "Uranium One Group (U-U.TO)",       ticker: "U-U.TO" },
+      { name: "Cameco Corp (CCJ)",                ticker: "CCJ"    },
+      { name: "NexGen Energy (NXE)",              ticker: "NXE"    },
+      { name: "Denison Mines (DNN)",              ticker: "DNN"    },
+      { name: "Centrus Energy (LEU)",             ticker: "LEU"    },
+    ],
+    manualFields: [
+      { key: 'u3o8_spot',  label: 'U3O8 Spot ($/lb)',          unit: '$/lb'  },
+      { key: 'uranium_lt', label: 'Uranium Long-Term ($/lb)',   unit: '$/lb'  },
+    ],
+  },
+  { id: "ENERGÍA FÍSICA / SPREADS", energySection: true,
+    spreadRow: { a: 'BZ=F', b: 'CL=F', label: 'Brent – WTI Spread' },
+    items: [
+      { name: "Brent Crude — BZ=F (front month)", ticker: "BZ=F" },
+      { name: "WTI Crude — CL=F (front month)",   ticker: "CL=F" },
+    ],
+    manualFields: [
+      { key: 'wcs_spot', label: 'WCS Spot ($/b)', unit: '$/b', oilApiCode: 'WCS_USD' },
+    ],
+  },
+  { id: "GAS NATURAL", energySection: true,
+    items: [
+      { name: "Natural Gas Henry Hub — NG=F", ticker: "NG=F"  },
+      { name: "TTF Natural Gas (ICE) — TTF=F", ticker: "TTF=F" },
+    ],
+    manualFields: [
+      { key: 'jkm', label: 'JKM LNG ($/mmbtu)', unit: '$/mmbtu', oilApiCode: 'JKM_LNG_USD' },
+    ],
+  },
+  { id: "CARBÓN MET (PROXIES)", energySection: true,
+    items: [
+      { name: "Warrior Met Coal (HCC)",       ticker: "HCC" },
+      { name: "Alpha Metallurgical (AMR)",    ticker: "AMR" },
+      { name: "Peabody Energy (BTU)",         ticker: "BTU" },
+    ],
+    manualFields: [
+      { key: 'hcc_benchmark', label: 'Hard Coking Coal Benchmark ($/t)', unit: '$/t', oilApiCode: 'COKING_COAL_USD' },
+    ],
+  },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+const toN = v => v != null && !isNaN(v) ? parseFloat(v) : null;
+
+const cellBg = val => {
+  const v = toN(val); if (v===null) return '';
+  if (v>=30) return '#0d4e0d'; if (v>=15) return '#1a7a1a';
+  if (v>=7)  return '#28a228'; if (v>=3)  return '#5ec45e';
+  if (v>0)   return '#a8d8a8'; if (v===0) return '';
+  if (v>-3)  return '#ffc9c9'; if (v>-7)  return '#f48080';
+  if (v>-15) return '#e03030'; return '#b01010';
+};
+const cellFg  = v => { const n=toN(v); return !n?'#555':Math.abs(n)>=8?'white':'#1a1a1a'; };
+const fmtRet  = v => { const n=toN(v); if(n===null) return '—'; return n<0?`(${Math.abs(Math.round(n))}%)`:`${Math.round(n)}%`; };
+const fmtPrc  = v => {
+  const n=toN(v); if(!n) return '—';
+  if(n>=10000) return n.toLocaleString('en-US',{maximumFractionDigits:0});
+  if(n>=1000)  return n.toLocaleString('en-US',{maximumFractionDigits:0});
+  if(n>=100)   return n.toFixed(1);
+  return n.toFixed(2);
+};
+
+const srcBadge = src => {
+  const bg = src==='Yahoo'?'#0078d4':src==='FRED'?'#1a6b3c':'#7b1fa2';
+  return <span style={{fontSize:8,padding:'1px 5px',borderRadius:8,background:bg,color:'white',fontWeight:'bold'}}>{src}</span>;
+};
+
+// Macro delta cell coloring
+const dCellStyle = (d, sign) => {
+  if (d===null || sign===0) return { bg:'transparent', fg:'#666' };
+  const good = (sign===1&&d>0)||(sign===-1&&d<0);
+  return { bg: good?'#e8f5e9':'#ffebee', fg: good?'#2e7d32':'#c62828' };
+};
+
+// Build markdown for LLM export
+const buildMarkdown = (macroData, rows, manualPrices, autoPrices, prevSnapshot={}) => {
+  const date = new Date().toLocaleString('es-ES',{dateStyle:'full',timeStyle:'short'});
+  let md = `# Market Tracker — Snapshot\n**Fecha:** ${date}\n_Fuentes: Yahoo Finance (real-time) · FRED (1-day lag)_\n\n`;
+
+  // Macro section
+  md += `## MACRO / INDICADORES DE CICLO\n`;
+  md += `| Indicador | Fuente | Valor | Δ 1S | Δ 1M | Δ 1A | Estado |\n`;
+  md += `|-----------|--------|------:|-----:|-----:|-----:|--------|\n`;
+  MACRO_ITEMS.forEach(item => {
+    const d  = macroData[item.id];
+    const cur = d ? (item.fetch==='yahoo'?d.price:d.current) : null;
+    const dW  = cur!=null&&d?.v1w!=null ? cur-d.v1w : null;
+    const dM  = cur!=null&&d?.v1m!=null ? cur-d.v1m : null;
+    const dY  = cur!=null&&d?.v1y!=null ? cur-d.v1y : null;
+    const st  = cur!=null&&STATUS[item.type] ? STATUS[item.type](cur) : null;
+    md += `| ${item.name} | ${item.src} | ${cur!=null?item.fmt(cur):'—'} | ${dW!=null?item.dFmt(dW):'—'} | ${dM!=null?item.dFmt(dM):'—'} | ${dY!=null?item.dFmt(dY):'—'} | ${st?st[0]:'—'} |\n`;
+  });
+  md += '\n';
+
+  // Equity sections
+  md += `## MERCADOS\n_Columnas: Precio | 52W Low% | 52W High% | 1D | 1W | 1M | YTD | 1Y | 3Y | RSI | MACD | ATR% | Konc | Flow | Clase | Early | EarlyClase_\n\n`;
+  SECTIONS.forEach(sec => {
+    md += `### ${sec.id}\n`;
+    md += `| Nombre | Ticker | Precio | 52W Low | 52W High | 1D | 1W | 1M | YTD | 1Y | 3Y | RSI | MACD | ATR% | Konc | Flow | Clase | Early | EarlyClase |\n`;
+    md += `|--------|--------|-------:|--------:|---------:|---:|---:|---:|----:|---:|---:|----:|:----:|-----:|:----|-----:|:------|------:|:-----------|\n`;
+    sec.items.forEach(({name,ticker}) => {
+      const d = rows[ticker];
+      if (!d) { md += `| ${name} | ${ticker} | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |\n`; return; }
+      const macdStr = d.macdBull==null ? '—' : d.macdBull ? '▲' : '▼';
+      const fs = computeFlowScore(d);
+      const fc = classifyFlow(fs);
+      const snap = prevSnapshot[ticker] ?? null;
+      const es = computeEarlyFlowScore(d, snap);
+      const ec = classifyEarlyFlow(es);
+      md += `| ${name} | ${ticker} | ${fmtPrc(d.price)} | ${fmtRet(d.fromLow)} | ${fmtRet(d.fromHigh)} | ${fmtRet(d.d1)} | ${fmtRet(d.w1)} | ${fmtRet(d.m1)} | ${fmtRet(d.ytd)} | ${fmtRet(d.y1)} | ${fmtRet(d.y3)} | ${d.rsi??'—'} | ${macdStr} | ${d.atrPct!=null?d.atrPct+'%':'—'} | ${d.konSignal??'—'} | ${fs!=null?fs:'—'} | ${fc??'—'} | ${es!=null?es:'—'} | ${ec??'—'} |\n`;
+    });
+    // Spread row
+    if (sec.spreadRow) {
+      const da = rows[sec.spreadRow.a], db = rows[sec.spreadRow.b];
+      const spread = da?.price != null && db?.price != null ? (da.price - db.price).toFixed(2) : '—';
+      md += `| **${sec.spreadRow.label}** | — | **${spread !== '—' ? spread + ' $/b' : '—'}** | — | — | — | — | — | — | — | — |\n`;
+    }
+    // Uranium score
+    if (sec.scoreKey === 'uranium') {
+      const u = computeUraniumScore(rows);
+      md += `| **uranium_regime_score** | — | **${u.score}/5 — ${u.label}** | — | — | — | — | — | — | — | — |\n`;
+      if (u.pts.length) md += `| _Factores activos_ | — | _${u.pts.join(', ')}_ | — | — | — | — | — | — | — | — |\n`;
+    }
+    // Manual / auto fields
+    if (sec.manualFields?.length) {
+      sec.manualFields.forEach(f => {
+        const manVal  = manualPrices[f.key];
+        const autoVal = autoPrices[f.key]?.price;
+        const val     = (manVal != null && manVal !== '') ? manVal : autoVal;
+        const src     = (manVal != null && manVal !== '') ? 'manual' : f.oilApiCode ? 'OilPriceAPI' : 'manual';
+        md += `| **${f.label}** | ${src} | **${val != null ? parseFloat(val).toLocaleString('en-US',{maximumFractionDigits:2}) + ' ' + f.unit : '(no ingresado)'}** | — | — | — | — | — | — | — | — |\n`;
+      });
+    }
+    md += '\n';
+  });
+  return md;
+};
+
+// ── Uranium regime score ─────────────────────────────────────────────────
+function computeUraniumScore(rows) {
+  const urnm = rows['URNM'], uuto = rows['U-U.TO'], ccj = rows['CCJ'];
+  let score = 0, pts = [];
+  if (urnm?.ytd  > 0)        { score++; pts.push('URNM YTD+'); }
+  if (uuto?.ytd  > 0)        { score++; pts.push('U-U.TO YTD+'); }
+  if (ccj?.ytd   > 0)        { score++; pts.push('CCJ YTD+'); }
+  if (urnm && urnm.fromHigh != null && urnm.fromHigh >= -10) { score++; pts.push('URNM ≤10% de máx'); }
+  if (uuto && uuto.fromHigh != null && uuto.fromHigh >= -10) { score++; pts.push('U-U.TO ≤10% de máx'); }
+  const label = score <= 1 ? 'Débil (0–1)' : score <= 3 ? 'Neutral / Acumulación (2–3)' : 'Bull claro (4–5)';
+  const bg    = score <= 1 ? '#ffcdd2' : score <= 3 ? '#fff9c4' : '#c8e6c9';
+  const fg    = score <= 1 ? '#b71c1c' : score <= 3 ? '#e65100' : '#1b5e20';
+  return { score, label, bg, fg, pts };
+}
+
+// ── Flow Score ───────────────────────────────────────────────────────────
+function computeFlowScore(d) {
+  if (!d) return null;
+  // Momentum: w1 * 0.6 + m1 * 0.4
+  const m = ((d.w1 ?? 0) * 0.6) + ((d.m1 ?? 0) * 0.4);
+  // RSI + MACD
+  let r = 0;
+  if (d.rsi != null) { if (d.rsi > 65) r += 2; else if (d.rsi > 55) r += 1; }
+  if (d.macdBull === true) r += 1; else if (d.macdBull === false) r -= 1;
+  // ATR
+  const atr = d.atrPct ?? 0;
+  const a = (atr >= 1 && atr <= 3) ? 1 : (atr > 3 && atr <= 6) ? 0.5 : atr > 6 ? -0.5 : 0;
+  // Koncorde
+  const kmap = { 'Alza': 2, 'Acumulac.': 1, 'Distribuc.': -1, 'Baja': -2 };
+  const k = kmap[d.konSignal] ?? 0;
+  // Trend (from 52W high)
+  const fh = d.fromHigh ?? 0;
+  const t = (fh >= -10 && fh <= 0) ? 1 : (fh >= -25 && fh < -10) ? 0 : -1;
+  return Math.round(((m * 2) + r + a + k + t) * 100) / 100;
+}
+function classifyFlow(score) {
+  if (score == null) return null;
+  if (score >= 8) return 'Lider';
+  if (score >= 4) return 'Transicion';
+  return 'Debil';
+}
+const FLOW_STYLE = {
+  'Lider':      ['#c8e6c9', '#1b5e20'],
+  'Transicion': ['#fff9c4', '#e65100'],
+  'Debil':      ['#ffcdd2', '#b71c1c'],
+};
+
+// ── Early Flow Detector ───────────────────────────────────────────────────
+function computeEarlyFlowScore(d, prev) {
+  if (!d) return null;
+  let score = 0;
+
+  // A) Giro Koncorde (requiere histórico)
+  if (prev?.konSignal && d.konSignal) {
+    const pk = prev.konSignal, ck = d.konSignal;
+    if      (pk === 'Baja'       && ck === 'Acumulac.') score += 3;
+    else if (pk === 'Distribuc.' && ck === 'Acumulac.') score += 2;
+    else if (pk === 'Acumulac.'  && ck === 'Alza')      score += 1;
+    else if (ck === 'Baja' || ck === 'Distribuc.')      score -= 1;
+  } else if (d.konSignal === 'Baja' || d.konSignal === 'Distribuc.') {
+    score -= 1;
+  }
+
+  // B) Compresión de volatilidad (requiere histórico)
+  if (prev?.atrPct != null && d.atrPct != null && prev.atrPct > 0) {
+    const r = d.atrPct / prev.atrPct;
+    if (r < 0.9) score += 2;
+    else if (r < 1.0) score += 1;
+    else if (r > 1.2) score -= 1;
+  }
+
+  // C) Posición respecto al máximo 52W
+  const fh = d.fromHigh ?? 0;
+  if      (fh >= -15 && fh <= -5)  score += 2;
+  else if (fh >= -25 && fh < -15)  score += 1;
+  else if (fh < -30)               score -= 1;
+
+  // D) RSI en zona de recuperación
+  const rsi = d.rsi;
+  if (rsi != null) {
+    if      (rsi >= 45 && rsi <= 58) score += 2;
+    else if (rsi >= 40 && rsi < 45)  score += 1;
+    else if (rsi < 35)               score -= 1;
+  }
+
+  // E) Momentum todavía modesto
+  const w1 = d.w1 ?? 0, m1 = d.m1 ?? 0;
+  if      (w1 >= 0 && w1 <= 4 && m1 >= -5  && m1 <= 5)  score += 2;
+  else if (w1 >= 0 && w1 <= 6 && m1 >= -8  && m1 <= 8)  score += 1;
+  else if (w1 > 8 || m1 > 10)                            score += 0.5;
+  else if (w1 < -5 && m1 < -8)                           score -= 1;
+
+  return Math.round(score * 100) / 100;
+}
+function classifyEarlyFlow(score) {
+  if (score == null) return null;
+  if (score >= 7) return 'Fuerte';
+  if (score >= 4) return 'Interesante';
+  return 'Sin setup';
+}
+const EARLY_STYLE = {
+  'Fuerte':      ['#d0e8ff', '#0d2e6e'],
+  'Interesante': ['#ede0ff', '#3d1478'],
+  'Sin setup':   [null, null],
+};
+function matrixReading(early, flow) {
+  if (early >= 7 && flow >= 8)  return 'Activación potente — setup + flujo confirmado';
+  if (early >= 7 && flow >= 4)  return 'Setup activo — breakout en marcha';
+  if (early >= 7)               return 'Setup temprano — vigilar / comprar parcial';
+  if (early >= 4 && flow >= 8)  return 'Transición a tendencia madura';
+  if (early < 4  && flow >= 8)  return 'Tendencia madura — llegas tarde';
+  return null;
+}
+
+// ── MacroPulse component ─────────────────────────────────────────────────
+function MacroPulse({ macroData, macroLoading }) {
+  const dot = <span style={{color:'#ccc'}}>···</span>;
+
+  return (
+    <div style={{marginBottom:16}}>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+        <thead>
+          <tr style={{background:'#2c3e50'}}>
+            <th colSpan={7} style={{padding:'5px 10px',color:'white',textAlign:'left',fontSize:11,letterSpacing:'0.5px'}}>
+              MACRO / CYCLE INDICATORS
+              <span style={{marginLeft:10,fontSize:9,color:'#95a5a6',fontWeight:'normal'}}>
+                Yahoo Finance (real-time) · FRED (1-day lag, requiere API key gratuita)
+              </span>
+            </th>
+          </tr>
+          <tr style={{background:'#34495e',borderBottom:'2px solid #2c3e50'}}>
+            {['Indicador','Fuente','Valor actual','Δ 1 semana','Δ 1 mes','Δ 1 año','Estado del ciclo'].map((h,i) => (
+              <th key={h} style={{
+                padding:'3px '+(i===0||i===6?'10px':'5px'),
+                color:'white', fontWeight:400, fontSize:10,
+                textAlign: i===0?'left':i===2||i===6?'center':'center',
+                borderRight: i===2?'1px solid rgba(255,255,255,0.15)':'none',
+                width: i===0?'190px':i===1?'55px':i===2?'95px':i===6?'auto':'75px',
+              }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {MACRO_ITEMS.map((item, i) => {
+            const d      = macroData[item.id] ?? null;
+            const isLoad = macroLoading.has(item.id);
+            const cur    = d ? (item.fetch==='yahoo'?d.price:d.current) : null;
+            const dW     = cur!=null&&d?.v1w!=null ? cur-d.v1w : null;
+            const dM     = cur!=null&&d?.v1m!=null ? cur-d.v1m : null;
+            const dY     = cur!=null&&d?.v1y!=null ? cur-d.v1y : null;
+            const st     = cur!=null&&STATUS[item.type] ? STATUS[item.type](cur) : null;
+            const rowBg  = i%2===0?'white':'#f9f9f9';
+
+            const DC = ({delta, sign, monthly}) => {
+              if (monthly) return <td style={{textAlign:'center',padding:'2px 5px',borderBottom:'1px solid #eee',color:'#bbb',fontSize:10}}>—</td>;
+              const {bg,fg} = dCellStyle(delta,sign);
+              return (
+                <td style={{padding:'2px 5px',textAlign:'center',background:bg,color:fg,borderBottom:'1px solid #eee',fontSize:10,fontFamily:'monospace'}}>
+                  {isLoad ? dot : delta!=null ? item.dFmt(delta) : '—'}
+                </td>
+              );
+            };
+
+            // Add separator line between Yahoo and FRED groups
+            const isFirstFred = item.id === 'c3m';
+
+            return (
+              <tr key={item.id} style={{background:rowBg, borderTop: isFirstFred?'2px solid #bdc3c7':'none'}}>
+                <td style={{padding:'3px 10px',borderBottom:'1px solid #eee',color:'#222'}}>{item.name}</td>
+                <td style={{padding:'3px 5px',textAlign:'center',borderBottom:'1px solid #eee'}}>{srcBadge(item.src)}</td>
+                <td style={{padding:'3px 10px',textAlign:'right',fontWeight:600,color:'#111',borderRight:'1px solid #ddd',borderBottom:'1px solid #eee',fontFamily:'monospace',fontSize:12}}>
+                  {isLoad ? dot : cur!=null ? item.fmt(cur) : <span style={{color:'#e74c3c',fontSize:9}}>sin clave FRED</span>}
+                </td>
+                <DC delta={item.monthly?null:dW} sign={item.dSign} />
+                <DC delta={dM} sign={item.dSign} monthly={false} />
+                <DC delta={dY} sign={item.dSign} monthly={false} />
+                <td style={{
+                  padding:'3px 10px',textAlign:'center',borderBottom:'1px solid #eee',
+                  background:st?st[1]:'transparent', color:st?st[2]:'#aaa',
+                  fontWeight:st?600:400, fontSize:10
+                }}>
+                  {isLoad ? dot : st ? st[0] : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Main MarketTracker component ─────────────────────────────────────────
+function MarketTracker() {
+  const [rows,        setRows]        = React.useState({});
+  const [loading,     setLoading]     = React.useState(new Set());
+  const [macroData,   setMacroData]   = React.useState({});
+  const [macroLoading,setMacroLoading]= React.useState(new Set());
+  const [updated,     setUpdated]     = React.useState(null);
+  const [toast,       setToast]       = React.useState(null);
+  const [manualPrices, setManualPrices] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('energy_manual') || '{}'); } catch { return {}; }
+  });
+  const [autoPrices,   setAutoPrices]   = React.useState({});
+  const [autoLoading,  setAutoLoading]  = React.useState(new Set());
+  const [prevFlowScores] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('flow_scores') || '{}'); } catch { return {}; }
+  });
+  const [prevSnapshot] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('ticker_snapshot') || '{}'); } catch { return {}; }
+  });
+
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); };
+  const setManualPrice = (key, val) => {
+    const next = {...manualPrices, [key]: val};
+    setManualPrices(next);
+    try { localStorage.setItem('energy_manual', JSON.stringify(next)); } catch {}
+  };
+
+  const fetchOilPrices = React.useCallback(async () => {
+    const fields = SECTIONS.flatMap(s => (s.manualFields || []).filter(f => f.oilApiCode));
+    if (!fields.length) return;
+    setAutoLoading(new Set(fields.map(f => f.key)));
+    await Promise.allSettled(fields.map(async f => {
+      try {
+        const r = await fetch(`/api/oilprice/${f.oilApiCode}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        setAutoPrices(prev => ({...prev, [f.key]: { price: d.price, currency: d.currency, date: d.date, v1w: d.v1w, v1m: d.v1m, v1y: d.v1y }}));
+      } catch(e) {
+        setAutoPrices(prev => ({...prev, [f.key]: { error: e.message }}));
+      }
+      setAutoLoading(prev => { const s = new Set(prev); s.delete(f.key); return s; });
+    }));
+  }, []);
+
+  const fetchMacro = React.useCallback(async () => {
+    const all = MACRO_ITEMS.map(i=>i.id);
+    setMacroData({}); setMacroLoading(new Set(all));
+    await Promise.allSettled(MACRO_ITEMS.map(async item => {
+      try {
+        const url = item.fetch==='yahoo'
+          ? `/api/quote/${encodeURIComponent(item.ticker)}`
+          : item.fetch==='fred3'
+          ? `/api/fred3?s=${item.series.join(',')}`
+          : `/api/fred/${item.series}${item.monthly?'?monthly=1':''}`;
+        const r = await fetch(url);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        setMacroData(prev=>({...prev,[item.id]:d}));
+      } catch(e) { /* silencioso, mostramos error en celda */ }
+      setMacroLoading(prev=>{const s=new Set(prev);s.delete(item.id);return s;});
+    }));
+  }, []);
+
+  const fetchEquity = React.useCallback(async () => {
+    const all = SECTIONS.flatMap(s=>s.items.map(i=>i.ticker));
+    setRows({}); setLoading(new Set(all));
+    await Promise.allSettled(all.map(async ticker => {
+      try {
+        const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        setRows(prev=>({...prev,[ticker]:d}));
+      } catch(e) {}
+      setLoading(prev=>{const s=new Set(prev);s.delete(ticker);return s;});
+    }));
+    setUpdated(new Date());
+  }, []);
+
+  const refresh = React.useCallback(() => {
+    fetchMacro();
+    fetchEquity();
+    fetchOilPrices();
+  }, [fetchMacro, fetchEquity, fetchOilPrices]);
+
+  React.useEffect(()=>{ refresh(); },[]);
+
+  // Save flow scores + snapshot to localStorage when equity data finishes loading
+  React.useEffect(() => {
+    if (loading.size === 0 && Object.keys(rows).length > 0) {
+      const scores = {}, snapshot = {};
+      Object.entries(rows).forEach(([ticker, d]) => {
+        const s = computeFlowScore(d);
+        if (s != null) scores[ticker] = s;
+        if (d.konSignal != null || d.atrPct != null)
+          snapshot[ticker] = { konSignal: d.konSignal ?? null, atrPct: d.atrPct ?? null };
+      });
+      try {
+        localStorage.setItem('flow_scores',     JSON.stringify(scores));
+        localStorage.setItem('ticker_snapshot', JSON.stringify(snapshot));
+      } catch {}
+    }
+  }, [rows, loading.size]);
+
+  React.useEffect(() => {
+    if (loading.size === 0 && macroLoading.size === 0 && Object.keys(rows).length > 0) {
+      try { localStorage.setItem('llm_export_market', buildMarkdown(macroData, rows, manualPrices, autoPrices, prevSnapshot)); } catch {}
+    }
+  }, [rows, loading.size, macroData, macroLoading.size]);
+
+  const copyForLLM = () => {
+    if (!Object.keys(rows).length && !Object.keys(macroData).length) { showToast('⚠️ Espera a que carguen los datos'); return; }
+    const md = buildMarkdown(macroData, rows, manualPrices, autoPrices, prevSnapshot);
+    navigator.clipboard.writeText(md)
+      .then(()=>showToast(`✅ Copiado — pégalo en Claude, ChatGPT o cualquier LLM`))
+      .catch(()=>showToast('❌ Error al copiar'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',    label: 'Market Tracker' },
+      { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle',     label: 'Cycle' },
+      { key: 'llm_export_relative',  label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+    ];
+    const found = [], missing = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) { found.push(label); return md; }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    navigator.clipboard.writeText(sections.join('\n\n---\n\n'))
+      .then(() => showToast(missing.length ? `✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}` : `✅ Todas las pestañas copiadas`))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  const dot = <span style={{color:'#ccc'}}>···</span>;
+  const dateStr = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}).replace(/ /g,'-');
+
+  const C = ({v,br,isLoad}) => (
+    <td style={{padding:'2px 5px',textAlign:'center',background:cellBg(v),color:cellFg(v),
+      borderRight:br?'1px solid #ddd':'none',borderBottom:'1px solid #eee'}}>
+      {isLoad?dot:fmtRet(v)}
+    </td>
+  );
+
+  return (
+    <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
+
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12}}>
+        <div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{fontSize:22,fontWeight:'bold',color:'#111'}}>Market Tracker</div>
+            <a href="/portfolio.html" style={{fontSize:11,color:'#3a6ca0',textDecoration:'none',padding:'2px 10px',border:'1px solid #3a6ca0',borderRadius:12,lineHeight:'20px'}}>Portfolio</a>
+            <a href="/relative.html" style={{fontSize:11,color:'#7b1fa2',textDecoration:'none',padding:'2px 10px',border:'1px solid #7b1fa2',borderRadius:12,lineHeight:'20px'}}>Relative Flow</a>
+            <a href="/cycle.html" style={{fontSize:11,color:'#7f0000',textDecoration:'none',padding:'2px 10px',border:'1px solid #7f0000',borderRadius:12,lineHeight:'20px'}}>Cycle</a>
+            <a href="/rotacion.html" style={{fontSize:11,color:'#e65100',textDecoration:'none',padding:'2px 10px',border:'1px solid #e65100',borderRadius:12,lineHeight:'20px'}}>Flujos & Rotación</a>
+          </div>
+          <div style={{fontSize:9,color:'#aaa',marginTop:1,fontStyle:'italic'}}>All returns shown in local currency · Yahoo Finance + FRED</div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          {updated && <span style={{fontSize:10,color:'#888'}}>Updated {updated.toLocaleTimeString()}</span>}
+          <button onClick={copyForLLM}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#6c3483',color:'white'}}>
+            📋 Copiar para LLM
+          </button>
+          <button onClick={copyAllForLLM}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#37474f',color:'white'}}>
+            🗂️ Exportar TODO a LLM
+          </button>
+          <button onClick={refresh} disabled={loading.size>0||macroLoading.size>0}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,
+              cursor:(loading.size>0||macroLoading.size>0)?'default':'pointer',
+              background:(loading.size>0||macroLoading.size>0)?'#aaa':'#3a6ca0',color:'white'}}>
+            {(loading.size>0||macroLoading.size>0)?`⏳ ${loading.size+macroLoading.size} pendientes…`:'↻ Refresh'}
+          </button>
+          <span style={{fontSize:13,fontWeight:'bold',color:'#333'}}>{dateStr}</span>
+        </div>
+      </div>
+
+      {/* Macro section */}
+      <MacroPulse macroData={macroData} macroLoading={macroLoading} />
+
+      {/* Equity table */}
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+        <thead className="eq-thead">
+          <tr style={{background:'#4a6fa5'}}>
+            <th colSpan={3} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Overview</th>
+            <th colSpan={2} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>52W Low / High</th>
+            <th colSpan={6} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Returns</th>
+            <th colSpan={4} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Momentum</th>
+            <th colSpan={2} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,background:'#2e4a30',borderRight:'1px solid rgba(255,255,255,0.15)'}}>Flow Score</th>
+            <th colSpan={1} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,background:'#1a2e6e'}}>Early</th>
+          </tr>
+          <tr style={{background:'#3d5f95',borderBottom:'2px solid #2c4a80'}}>
+            {[
+              { label:'Name',          tip: null },
+              { label:'Ticker',        tip: null },
+              { label:'Current Price', tip: null },
+              { label:'Low',           tip: "% de subida desde el mínimo de 52 semanas." },
+              { label:'High',          tip: "% de caída desde el máximo de 52 semanas." },
+              { label:'1D',            tip: "Retorno del último día de trading." },
+              { label:'1W',            tip: "Retorno de los últimos 5 días de trading." },
+              { label:'1M',            tip: "Retorno de los últimos 21 días de trading." },
+              { label:'YTD',           tip: "Retorno desde el 1 de enero del año en curso." },
+              { label:'1Y',            tip: "Retorno de los últimos 252 días de trading." },
+              { label:'3Y',            tip: "Retorno de los últimos 756 días de trading." },
+              { label:'RSI',           tip: "RSI(14) Wilder.\n>70: sobrecomprado · <30: sobrevendido\nZona neutra: 40–60" },
+              { label:'MACD',          tip: "MACD(12,26,9) — histograma.\n▲ = histograma ≥ 0 (alcista)\n▼ = histograma < 0 (bajista)" },
+              { label:'ATR%',          tip: "ATR(14) Wilder / precio × 100.\nMide la volatilidad normalizada del movimiento diario.\n1–3%: normal · >6%: muy volátil" },
+              { label:'Konc',          tip: "Señal combinada Koncorde (Blai5):\nAlza: institucional + minorista compran\nAcumulac.: institucional compra, minorista vende\nDistribuc.: institucional vende, minorista compra\nBaja: ambos venden" },
+              { label:'Flow',          tip: "Flow Score: momentum compuesto.\n(1W×0.6 + 1M×0.4)×2 + RSI + MACD + ATR% + Koncorde + tendencia 52W.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4" },
+              { label:'Δ',             tip: "Variación del Flow Score vs sesión anterior\n(requiere snapshot guardado)." },
+              { label:'Early',         tip: "Early Flow Detector: detecta setups antes del breakout.\nGiro Koncorde + compresión ATR + posición 52W + RSI en zona + momentum modesto.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4" },
+            ].map(({label, tip}, i) => (
+              <th key={label} data-tip={tip ?? undefined} style={{padding:'3px 5px',color:'white',fontWeight:400,fontSize:10,
+                textAlign:i<2?'left':'center',
+                borderRight:[2,4,10,14].includes(i)?'1px solid rgba(255,255,255,0.2)':'none',
+                background:i>=17?'#1a2e6e':i>=15?'#2e4a30':'inherit'}}>{label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {SECTIONS.map(sec=>(
+            <React.Fragment key={sec.id}>
+              <tr>
+                <td colSpan={18} style={{padding:'3px 8px',fontWeight:'bold',fontSize:'9.5px',
+                  letterSpacing:'0.8px',
+                  color: sec.energySection ? '#1a5276' : '#c0392b',
+                  background: sec.energySection ? '#eaf4fb' : '#f0f0f0',
+                  borderTop:'2px solid #d0d0d0',borderBottom:'1px solid #ddd'}}>
+                  {sec.id}
+                </td>
+              </tr>
+              {sec.items.map((item,i)=>{
+                const d=rows[item.ticker]??null;
+                const isLoad=loading.has(item.ticker);
+                const err=!d&&!isLoad;
+                return (
+                  <tr key={item.ticker} style={{background:i%2===0?'white':'#f7f7f7'}}>
+                    <td style={{padding:'2px 8px',borderBottom:'1px solid #eee',color:'#222'}}>{item.name}</td>
+                    <td style={{padding:'2px 5px',textAlign:'center',color:'#1a6baa',fontWeight:600,borderBottom:'1px solid #eee',fontSize:10}}>{item.ticker}</td>
+                    <td style={{padding:'2px 8px',textAlign:'right',borderRight:'1px solid #ddd',borderBottom:'1px solid #eee',color:'#333',fontWeight:500}}>
+                      {isLoad?dot:err?<span style={{color:'#e74c3c',fontSize:9}}>err</span>:fmtPrc(d?.price)}
+                    </td>
+                    <C v={d?.fromLow}  isLoad={isLoad}/>
+                    <C v={d?.fromHigh} isLoad={isLoad} br/>
+                    <C v={d?.d1}  isLoad={isLoad}/>
+                    <C v={d?.w1}  isLoad={isLoad}/>
+                    <C v={d?.m1}  isLoad={isLoad}/>
+                    <C v={d?.ytd} isLoad={isLoad}/>
+                    <C v={d?.y1}  isLoad={isLoad}/>
+                    <C v={d?.y3}  isLoad={isLoad}/>
+                    {/* RSI */}
+                    {(()=>{ const v=d?.rsi;
+                      const bg=v==null?'transparent':v>=70?'#ffcdd2':v<=30?'#c8e6c9':'transparent';
+                      const fg=v==null?'#ccc':v>=70?'#b71c1c':v<=30?'#1b5e20':'#555';
+                      return <td style={{padding:'2px 5px',textAlign:'center',background:bg,color:fg,
+                        borderLeft:'1px solid #ddd',borderBottom:'1px solid #eee',fontFamily:'monospace',fontSize:10}}>
+                        {isLoad?dot:v!=null?v:'—'}</td>;
+                    })()}
+                    {/* MACD */}
+                    {(()=>{ const bull=d?.macdBull;
+                      return <td style={{padding:'2px 5px',textAlign:'center',
+                        borderBottom:'1px solid #eee',fontSize:12}}>
+                        {isLoad?dot:bull==null?<span style={{color:'#ccc'}}>—</span>
+                          :bull?<span style={{color:'#1b5e20'}}>▲</span>
+                               :<span style={{color:'#b71c1c'}}>▼</span>}</td>;
+                    })()}
+                    {/* ATR% */}
+                    {(()=>{ const v=d?.atrPct;
+                      return <td style={{padding:'2px 5px',textAlign:'center',
+                        borderBottom:'1px solid #eee',color:'#666',fontFamily:'monospace',fontSize:10}}>
+                        {isLoad?dot:v!=null?v+'%':'—'}</td>;
+                    })()}
+                    {/* Konc */}
+                    {(()=>{ const sig=d?.konSignal;
+                      const cm={'Alza':['#c8e6c9','#1b5e20'],'Acumulac.':['#e3f2fd','#0d47a1'],
+                                'Distribuc.':['#fff3e0','#e65100'],'Baja':['#ffcdd2','#b71c1c']};
+                      const [bg,fg]=(sig&&cm[sig])?cm[sig]:['transparent','#ccc'];
+                      return <td style={{padding:'2px 5px',textAlign:'center',background:bg,color:fg,
+                        borderRight:'1px solid #ddd',borderBottom:'1px solid #eee',fontSize:9,fontWeight:600}}>
+                        {isLoad?dot:sig??'—'}</td>;
+                    })()}
+                    {/* Flow Score */}
+                    {(()=>{
+                      const score = d ? computeFlowScore(d) : null;
+                      const cls   = classifyFlow(score);
+                      const [bg,fg] = (cls && FLOW_STYLE[cls]) ? FLOW_STYLE[cls] : ['transparent','#ccc'];
+                      return <td style={{padding:'2px 5px',textAlign:'center',background:isLoad?'transparent':bg,
+                        color:isLoad?'#ccc':fg,borderBottom:'1px solid #eee',fontWeight:700,fontSize:10,fontFamily:'monospace'}}>
+                        {isLoad?dot:score!=null?score.toFixed(1):'—'}</td>;
+                    })()}
+                    {/* Δ Flow */}
+                    {(()=>{
+                      const score = d ? computeFlowScore(d) : null;
+                      const prev  = prevFlowScores[item.ticker];
+                      const change = (score!=null && prev!=null) ? Math.round((score-prev)*100)/100 : null;
+                      const fg = change==null?'#ccc':change>0?'#1b5e20':change<0?'#b71c1c':'#888';
+                      return <td style={{padding:'2px 5px',textAlign:'center',color:isLoad?'#ccc':fg,
+                        borderBottom:'1px solid #eee',fontSize:10,fontFamily:'monospace'}}>
+                        {isLoad?dot:change!=null?(change>0?'+':'')+change.toFixed(1):'—'}</td>;
+                    })()}
+                    {/* Early Flow */}
+                    {(()=>{
+                      const snap  = prevSnapshot[item.ticker];
+                      const early = d ? computeEarlyFlowScore(d, snap) : null;
+                      const flow  = d ? computeFlowScore(d) : null;
+                      const cls   = classifyEarlyFlow(early);
+                      const [bg, fg] = (cls && EARLY_STYLE[cls][0]) ? EARLY_STYLE[cls] : [null, '#ccc'];
+                      const tip   = (early != null && flow != null) ? matrixReading(early, flow) : null;
+                      return <td title={tip ?? undefined}
+                        style={{padding:'2px 5px',textAlign:'center',
+                          background: isLoad||!bg ? 'transparent' : bg,
+                          color: isLoad ? '#ccc' : (fg ?? '#ccc'),
+                          borderBottom:'1px solid #eee',fontWeight:bg?700:400,
+                          fontSize:10,fontFamily:'monospace',cursor:tip?'help':'default'}}>
+                        {isLoad?dot:early!=null?early.toFixed(1):'—'}</td>;
+                    })()}
+                  </tr>
+                );
+              })}
+
+              {/* Uranium regime score */}
+              {sec.scoreKey === 'uranium' && (() => {
+                const allLoaded = ['URNM','U-U.TO','CCJ'].every(t => rows[t]);
+                const u = allLoaded ? computeUraniumScore(rows) : null;
+                return (
+                  <tr style={{background:'#f9f0ff'}}>
+                    <td colSpan={2} style={{padding:'3px 8px',fontWeight:700,fontSize:10,color:'#6c3483',borderBottom:'1px solid #e0d0f0'}}>
+                      uranium_regime_score
+                    </td>
+                    <td colSpan={16} style={{padding:'3px 8px',borderBottom:'1px solid #e0d0f0',background: u?u.bg:'#f5f5f5', color: u?u.fg:'#999', fontWeight:700, fontSize:11}}>
+                      {!allLoaded
+                        ? <span style={{color:'#ccc',fontSize:10}}>···</span>
+                        : `${u.score}/5 — ${u.label}` + (u.pts.length ? `  ·  ${u.pts.join(' · ')}` : '')}
+                    </td>
+                  </tr>
+                );
+              })()}
+
+              {/* Brent-WTI spread */}
+              {sec.spreadRow && (() => {
+                const da = rows[sec.spreadRow.a], db = rows[sec.spreadRow.b];
+                const bothLoad = loading.has(sec.spreadRow.a) || loading.has(sec.spreadRow.b);
+                const spread = da?.price != null && db?.price != null ? da.price - db.price : null;
+                const spreadFmt = spread != null ? (spread >= 0 ? '+' : '') + spread.toFixed(2) + ' $/b' : null;
+                return (
+                  <tr style={{background:'#f0f7ff'}}>
+                    <td colSpan={2} style={{padding:'3px 8px',fontWeight:700,fontSize:10,color:'#1a5276',borderBottom:'1px solid #d0e8f0'}}>
+                      {sec.spreadRow.label}
+                    </td>
+                    <td colSpan={16} style={{padding:'3px 8px',borderBottom:'1px solid #d0e8f0',fontWeight:700,fontSize:11,
+                      color: spread==null ? '#999' : spread > 0 ? '#1a5276' : '#7b241c'}}>
+                      {bothLoad ? <span style={{color:'#ccc',fontSize:10}}>···</span> : spreadFmt ?? '—'}
+                    </td>
+                  </tr>
+                );
+              })()}
+
+              {/* Manual / auto fields */}
+              {sec.manualFields?.map(f => {
+                const auto       = autoPrices[f.key];
+                const isAutoLoad = autoLoading.has(f.key);
+                const hasManual  = manualPrices[f.key] != null && manualPrices[f.key] !== '';
+                const curPrice   = hasManual ? parseFloat(manualPrices[f.key]) : auto?.price ?? null;
+                const pct        = (cur, ref) => (ref && cur) ? Math.round((cur - ref) / Math.abs(ref) * 100) : null;
+                const dW = (!hasManual && auto?.v1w != null) ? pct(curPrice, auto.v1w) : null;
+                const dM = (!hasManual && auto?.v1m != null) ? pct(curPrice, auto.v1m) : null;
+
+                // Mensaje de error legible (solo se muestra si no hay precio disponible)
+                const errMsg = auto?.error === 'sin_clave'            ? 'sin clave API'
+                             : auto?.error === 'clave_invalida'       ? 'clave inválida'
+                             : auto?.error === 'codigo_no_encontrado' ? 'no en free tier'
+                             : auto?.error?.startsWith('api_')        ? 'no en free tier'
+                             : auto?.error ? auto.error : null;
+
+                const badge = f.oilApiCode
+                  ? <span style={{marginLeft:5,fontSize:8,padding:'1px 4px',borderRadius:6,
+                      background: hasManual ? '#fbc02d' : '#43a047', color:'white', fontWeight:'bold'}}>
+                      {hasManual ? 'override' : 'auto'}
+                    </span>
+                  : <span style={{marginLeft:5,fontSize:8,padding:'1px 4px',borderRadius:6,background:'#fbc02d',color:'#333',fontWeight:'bold'}}>manual</span>;
+
+                const blankCell = (br) => (
+                  <td style={{padding:'2px 5px',textAlign:'center',
+                    borderRight:br?'1px solid #ddd':'none',borderBottom:'1px solid #f0e68c',
+                    color:'#ddd',fontSize:10}}>—</td>
+                );
+
+                return (
+                  <tr key={f.key} style={{background:'#fffde7'}}>
+                    {/* Nombre */}
+                    <td style={{padding:'2px 8px',borderBottom:'1px solid #f0e68c',color:'#795548',fontStyle:'italic',fontSize:10}}>
+                      {f.label}{badge}
+                    </td>
+                    {/* Input override (columna Ticker) */}
+                    <td style={{padding:'2px 4px',borderBottom:'1px solid #f0e68c',textAlign:'center'}}>
+                      <input
+                        type="number"
+                        placeholder={f.unit}
+                        value={manualPrices[f.key] ?? ''}
+                        onChange={e => setManualPrice(f.key, e.target.value)}
+                        style={{border:'1px solid #ddd',borderRadius:3,padding:'1px 4px',
+                          fontSize:9,width:65,color:'#555',background:'white',outline:'none',fontFamily:'monospace'}}
+                      />
+                      {hasManual && f.oilApiCode &&
+                        <button onClick={() => setManualPrice(f.key, '')}
+                          style={{marginLeft:2,fontSize:9,padding:'1px 3px',border:'1px solid #ddd',
+                            borderRadius:3,cursor:'pointer',background:'#f5f5f5',color:'#777'}}>✕</button>
+                      }
+                    </td>
+                    {/* Precio actual — el precio (manual o auto) tiene prioridad sobre el error */}
+                    <td style={{padding:'2px 8px',textAlign:'right',borderRight:'1px solid #ddd',
+                      borderBottom:'1px solid #f0e68c',fontWeight:600,fontFamily:'monospace',fontSize:11,color:'#333'}}>
+                      {isAutoLoad ? dot
+                        : curPrice != null ? fmtPrc(curPrice)
+                        : errMsg ? <span style={{color:'#e74c3c',fontSize:9}} title={auto?.error}>{errMsg}</span>
+                        : '—'}
+                    </td>
+                    {blankCell(false)}{/* 52W Low */}
+                    {blankCell(true)} {/* 52W High */}
+                    {blankCell(false)}{/* 1D */}
+                    <C v={dW} isLoad={isAutoLoad && !hasManual} />{/* 1W */}
+                    <C v={dM} isLoad={isAutoLoad && !hasManual} />{/* 1M */}
+                    {blankCell(false)}{/* YTD */}
+                    {blankCell(false)}{/* 1Y */}
+                    {blankCell(false)}{/* 3Y */}
+                    {blankCell(false)}{/* RSI */}
+                    {blankCell(false)}{/* MACD */}
+                    {blankCell(false)}{/* ATR% */}
+                    {blankCell(false)}{/* Konc */}
+                    {blankCell(false)}{/* Flow */}
+                    {blankCell(false)}{/* Δ Flow */}
+                    {blankCell(false)}{/* Early */}
+                  </tr>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+      <div style={{marginTop:8,fontSize:9,color:'#bbb',textAlign:'right'}}>
+        Yahoo Finance (may be delayed 15 min) · FRED (1-day lag) · Not financial advice
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(MarketTracker));
+</script>
+</body>
+</html>

@@ -1,0 +1,433 @@
+ANÁLISIS EXHAUSTIVO: SUGERENCIAS IMPLEMENTADAS VS. PENDIENTES
+==============================================================
+
+
+SECCIÓN 1 — INDICADORES MACRO
+==============================
+
+1.1 VIX
+-------
+Recalibrar umbrales al régimen post-COVID
+  ESTADO: PARCIAL
+  Implementado <15->20, 15-20->15, 20-25->10... La sugerencia era <14, 14-17.9, 18-22.9.
+  Los umbrales se movieron pero no exactamente a los propuestos. El VIX de 15-17 sigue
+  siendo "calma" cuando debería ser el nuevo normal.
+
+VIX Term Structure (VIX9D/VIX3M)
+  ESTADO: SÍ
+  Implementado completamente. Se usa min(vixScore, termScore) — enfoque conservador
+  que penaliza cuando cualquiera de los dos es débil.
+
+Peso 20/100
+  ESTADO: SÍ
+  Implementado exactamente.
+
+
+1.2 HY Credit Spread
+--------------------
+Ajustar umbrales (300/375/475/600)
+  ESTADO: SÍ
+  Implementado con escala 25pts: <300->25, 300-375->18.75, 375-475->12.5, etc.
+  Umbrales prácticamente iguales a los sugeridos.
+
+Subir peso a 25pts
+  ESTADO: SÍ
+  Implementado.
+
+Penalización asimétrica si spread <250 (−5pts al score total)
+  ESTADO: PARCIAL
+  No se resta del score directamente. En su lugar existe el flag CREDIT_COMPLACENCY
+  cuando HY < 275 bps durante 8 semanas, que eleva el umbral de COMPRA a >=8.
+  Captura el espíritu pero no la mecánica exacta propuesta.
+
+
+1.3 Curva de Tipos 10Y–3M
+--------------------------
+Segunda derivada / penalización por desinversión rápida
+  ESTADO: PARCIAL
+  Existe penalización: si curva <0 AND delta13w > +50bps -> -5pts.
+  La sugerencia era +30bps. Implementado más estricto (+50). El concepto está,
+  el umbral difiere.
+
+Reducir peso a 15pts
+  ESTADO: SÍ
+  Implementado exactamente.
+
+Kim-Wright term premium (THREEFYTP10)
+  ESTADO: PARCIAL
+  Existe el flag TERM_PREMIUM_EXTREME si THREEFYTP10 < -0.75% durante 13 semanas
+  -> rebaja régimen 1 nivel. No reemplaza la curva como sugerido, sino que actúa
+  como modificador independiente.
+
+Curva short-term (18m–3m forward, Engstrom & Sharpe)
+  ESTADO: NO
+  No implementado. Se sigue usando T10Y3M como indicador principal.
+
+
+1.4 INDPRO -> CFNAI
+--------------------
+Sustituir INDPRO por CFNAI
+  ESTADO: SÍ
+  Completamente implementado. CFNAI con thresholds exactamente como propuestos
+  (>0.20->15, 0–0.20->11.25, -0.35–0->7.5, -0.70–(-0.35)->3.75, <-0.70->0).
+
+Peso 15pts
+  ESTADO: SÍ
+  Implementado.
+
+ISM PMI como alternativa
+  ESTADO: NO
+  No se implementó ISM. El CFNAI lo cubre conceptualmente mejor de todos modos.
+
+INDPRO solo para visualización
+  ESTADO: SÍ
+  INDPRO sigue disponible solo en index.html como display, no en scoring.
+
+
+1.5 Fed Net Liquidity
+---------------------
+Cambiar a delta13 semanas (momentum) en vez de nivel absoluto
+  ESTADO: SÍ
+  Implementado exactamente.
+
+Umbrales: >+500B->20, +100/500->15, ±100->10, -100/500->5, <-500->0
+  ESTADO: SÍ
+  Implementado con escala 25pts: >+500B->25, +100–500->18.75, etc.
+
+Peso 25pts
+  ESTADO: SÍ
+  Implementado.
+
+Monitorizar facilities no-convencionales (BTFP, SRF)
+  ESTADO: NO
+  Solo se usan WALCL, RRPONTSYD, WTREGEN. El BTFP de 2023 y facilidades de
+  emergencia no están incluidos. Omisión mantenida.
+
+
+1.6 Ponderación uniforme -> no uniforme
+----------------------------------------
+Ponderación diferenciada (HY:25, Net Liq:25, VIX:20, CFNAI:15, Curva:15)
+  ESTADO: SÍ
+  Implementado exactamente con esos pesos.
+
+
+1.7 Indicadores ausentes
+------------------------
+DXY como indicador macro
+  ESTADO: PARCIAL
+  DXY NO está en el MacroScore. Solo se usa como filtro condicional para el oro
+  (goldOk = DFII10 < 1.0 OR dxyM3 < 0) y como variable interna. La sugerencia
+  era incluirlo como 6º indicador o dentro del scoring de liquidez. No está.
+
+Market breadth (NYA200R, new highs/new lows)
+  ESTADO: NO
+  No implementado en ninguna capa del sistema.
+
+
+==============================================================
+SECCIÓN 2 — LÓGICA DE REGÍMENES
+==============================================================
+
+2.1 Regímenes adicionales
+--------------------------
+Régimen Estanflación
+  ESTADO: PARCIAL
+  No existe como régimen propio. Se maneja mediante el flag INFLATION_OVERLAY
+  (T5YIE >= 2.8% durante >=4 semanas) que modifica los líderes: elimina
+  TLT/QQQ/XLK, promueve XLE/XLB/GC=F/SI=F. Es un parche funcional, pero no
+  un régimen con su propia lógica de scoring y transición. El modelo de 2022
+  mejoraría con esto pero no queda completamente resuelto.
+
+Régimen Liquidity Melt-Up
+  ESTADO: NO
+  No existe como régimen ni modificador. El delta13w de Net Liq sube el MacroScore
+  pero el sistema no tiene lógica específica para "macro deteriorando + liquidez
+  disparada".
+
+
+2.2 Líderes: condicionamiento
+------------------------------
+Oro condicionado a tipos reales (DFII10 < 1%) o DXY bajista
+  ESTADO: SÍ
+  Implementado: goldOk = (DFII10 < 1.0 OR dxyM3 < 0). Exactamente como propuesto.
+
+IWM solo líder en Bull Pleno con HY spread < 350 y curva empinando
+  ESTADO: SÍ
+  Implementado: iwmOk = (hyBps < 375 AND (t10y3m > 0 OR curveDelta > 0)).
+  Umbral ligeramente más permisivo (375 vs 350 propuesto).
+
+
+==============================================================
+SECCIÓN 3 — ROTATION SCORE
+==============================================================
+
+3.1 Redundancia de timeframes momentum
+----------------------------------------
+Eliminar 2 de los 3 timeframes (quedarse con 1M o 3M)
+  ESTADO: PARCIAL
+  Se eliminó 1W como criterio puntuable. Se mantienen RS 13w (2pts) y RS 4w (1pt).
+  La sugerencia era reducir a UNO SOLO (momentum 13-26w). Hay dos, no tres,
+  lo cual mejora pero no llega al ideal.
+
+Usar momentum 13-26w como estándar Jegadeesh & Titman
+  ESTADO: NO
+  No se implementó el ratio precio/SMA26w − precio/SMA13w. Se sigue usando
+  retorno relativo vs SPY.
+
+
+3.2 Criterios añadidos
+-----------------------
+OBV > OBV.SMA50
+  ESTADO: SÍ
+  Implementado en Bloque B (1pt).
+
+Precio > SMA200 (tendencia absoluta)
+  ESTADO: SÍ
+  Implementado en Bloque A (1pt). También es el master filter para degradación de señales.
+
+Volumen relativo (Vol20d/Vol60d > 1.10)
+  ESTADO: SÍ
+  Implementado en Bloque B (1pt). Exactamente el umbral propuesto.
+
+Breadth sectorial (% holdings sobre MA50)
+  ESTADO: NO
+  No implementado.
+
+VWAP-based indicator como sustituto CMF
+  ESTADO: NO
+  CMF se mantiene. Se añadió OBV como complemento (lo que se recomendaba como mínimo).
+
+
+3.3 Estructura nueva del Rotation Score
+----------------------------------------
+Escala 0–10 con 3 bloques
+  ESTADO: SÍ
+  Implementado: Bloque A (4pts momentum), Bloque B (3pts flujo/volumen),
+  Bloque C (3pts técnico).
+
+Pesos específicos por criterio
+  ESTADO: PARCIAL
+  La estructura de bloques es similar pero no idéntica a la propuesta. Se añadió
+  criterio de anti-extensión (precio no >1.5xATR sobre SMA20) que no estaba en
+  la sugerencia original — adición no prevista en el informe.
+
+
+3.4 Timeframe 1W
+-----------------
+No usar 1W como criterio puntuable
+  ESTADO: SÍ
+  RS 1W ya no puntúa en el Rotation Score.
+
+Usar 1W solo como filtro de "no entrar en peak" (si delta1W > +5%, esperar)
+  ESTADO: NO
+  Este filtro específico no está implementado.
+
+
+3.5 CMF/Koncorde Azul
+----------------------
+Mantener CMF + añadir OBV como segunda señal independiente
+  ESTADO: SÍ
+  Exactamente implementado así.
+
+Alternativas superiores (A/D normalizado, VWAP-based)
+  ESTADO: NO
+  No se exploraron. CMF sigue siendo la base.
+
+
+==============================================================
+SECCIÓN 4 — SEÑALES Y CONFLUENCIA
+==============================================================
+
+4.1 Umbrales COMPRA/ACUMULAR
+------------------------------
+COMPRA >= 7/10 (70%)
+  ESTADO: SÍ
+  Implementado. (+8 si CREDIT_COMPLACENCY activo.)
+
+ACUMULAR 5–6.5/10
+  ESTADO: SÍ
+  Implementado (5–6).
+
+VIGILAR 3.5–4.5/10
+  ESTADO: SÍ
+  Implementado (3–4).
+
+IGNORAR <3.5
+  ESTADO: SÍ
+  Implementado implícitamente.
+
+
+4.2 Endurecimiento Rotación Temprana (3 condiciones)
+-----------------------------------------------------
+Señal debe persistir >=3 semanas
+  ESTADO: NO
+  No hay persistencia temporal requerida en la lógica de early rotation.
+
+Outperformance 13w > +3% vs SPY Y vs categoría propia
+  ESTADO: NO
+  El score de early rotation usa un sistema diferente (Koncorde flip, ATR
+  compression, posición vs 52W high, RSI recovery, momentum modesto).
+  No usa el criterio de +3% categorial.
+
+Al menos otro activo de la misma categoría futura con Score >=7
+  ESTADO: NO
+  No hay validación cruzada categorial.
+
+
+4.3 Filtro maestro SPY < SMA200
+--------------------------------
+Si SPY < SMA200, degradar todas las señales 1 nivel
+  ESTADO: SÍ
+  Implementado completamente: COMPRA->ACUMULAR, ACUMULAR->VIGILAR,
+  VIGILAR->null, ROT.TEMPRANA->VIGILAR.
+
+
+==============================================================
+SECCIÓN 5 — LIMITACIONES Y SESGOS
+==============================================================
+
+5.1 Crisis geopolítica súbita
+------------------------------
+Override manual VIX > 40 -> modo defensivo
+  ESTADO: SÍ (umbral distinto)
+  EMERGENCY_MODE se activa con VIX >= 35 (no 40 como sugerido). Más conservador.
+  Fuerza Risk-OFF durante mínimo 14 días.
+
+Override si activo cae >8% en 2 días con volumen anómalo
+  ESTADO: NO
+  Solo el VIX desencadena EMERGENCY_MODE. No hay detección de flash crash individual.
+
+
+5.2 Mercados laterales (realized vol < 12% por 60+ días)
+----------------------------------------------------------
+Filtro de régimen de volatilidad realizada para evitar whipsaw
+  ESTADO: NO
+  No implementado. En mercados laterales tipo 2015–2016 el sistema seguiría
+  oscilando entre regímenes. La histéresis (cambio solo si >=5pts y >=2 lecturas
+  consecutivas) mitiga parcialmente, pero no el caso específico de baja
+  volatilidad prolongada.
+
+
+5.3 Facilidades no-convencionales Fed
+---------------------------------------
+Monitorizar series FRED de emergencia (BTFP: H41RESPPALDKXAWNWW, SRF)
+  ESTADO: NO
+  Solo se usan las 3 series estándar. En un evento tipo BTFP-marzo-2023, el
+  indicador de liquidez seguiría sin capturarlo adecuadamente.
+
+
+5.4 Sesgo Pro-US
+-----------------
+Añadir EFA, EWJ, INDA, FXI/MCHI al universo
+  ESTADO: NO
+  El universo de activos sigue siendo prácticamente todo US. EEM es el único
+  no-US. No se añadieron los mercados internacionales sugeridos.
+
+
+5.5 Sesgo long-only
+--------------------
+Señales de SHORT / reducir exposición activa cuando Score 1–2
+  ESTADO: NO
+  El sistema sigue siendo unidireccional. Scores bajos = "no comprar",
+  no "vender/short".
+
+
+5.6 Ausencia de inputs de valoración (ERP)
+-------------------------------------------
+ERP de Damodaran (NYU Stern) como modificador
+  ESTADO: NO
+  No implementado. Si ERP < 2% durante 3 meses -> rebajar señales COMPRA.
+  No existe esta lógica.
+
+
+==============================================================
+SECCIÓN 6 — DATOS ADICIONALES SUGERIDOS
+==============================================================
+
+T5YIE (5Y breakeven inflation) — modificador régimen estanflación
+  ESTADO: SÍ — flag INFLATION_OVERLAY implementado
+
+DFII10 (tipos reales 10Y) — condicionar oro
+  ESTADO: SÍ — goldOk logic implementada
+
+ISM Manufacturing PMI — sustituir INDPRO
+  ESTADO: NO — se usa CFNAI (equivalente o superior)
+
+COT data (CFTC) — posicionamiento managed money
+  ESTADO: NO
+
+AAII Sentiment Survey — sentiment retail contrarian
+  ESTADO: NO
+
+Chicago Fed NFCI — validador cruzado del MacroScore
+  ESTADO: NO (se usa CFNAI, que es diferente al NFCI)
+
+EPU Index (Baker, Bloom & Davis) — incertidumbre política
+  ESTADO: NO
+
+THREEFYTP10 (Kim-Wright term premium) — complementar curva
+  ESTADO: PARCIAL — existe como flag extremo binario, no como indicador continuo
+
+
+==============================================================
+SECCIÓN 7 — BACKTEST
+==============================================================
+
+Backtest en Python (yfinance + pandas) con métricas de retorno forward
+3M/6M por régimen, drawdown máximo siguiendo señales COMPRA
+  ESTADO: NO
+  No existe. El sistema es puramente de señal en tiempo real. Esta es la
+  laguna metodológica más importante que queda sin resolver.
+
+
+==============================================================
+RESUMEN EJECUTIVO
+==============================================================
+
+COMPLETAMENTE IMPLEMENTADAS
+-----------------------------
+- Ponderación no-uniforme (exacta: HY:25, Net Liq:25, VIX:20, CFNAI:15, Curva:15)
+- CFNAI en lugar de INDPRO
+- Fed Net Liquidity en delta13w
+- VIX term structure (VIX9D/VIX3M) con enfoque conservador min()
+- Oro condicionado a DFII10 y DXY bajista
+- IWM condicionado a HY spread y curva
+- OBV + precio vs SMA200 en rotation score
+- Volumen relativo (Vol20d/Vol60d > 1.10)
+- SPY < SMA200 como filtro maestro degradador de señales
+- Umbrales COMPRA (>=7) / ACUMULAR (5-6) / VIGILAR (3-4)
+- EMERGENCY_MODE (VIX >= 35, 14 días mínimo)
+- TERM_PREMIUM_EXTREME flag (THREEFYTP10 < -0.75% x 13 semanas)
+- T5YIE como INFLATION_OVERLAY
+- CREDIT_COMPLACENCY flag (HY < 275 bps x 8 semanas)
+
+
+PARCIALMENTE IMPLEMENTADAS
+----------------------------
+- Recalibración VIX post-COVID: se movió pero no al exacto recomendado
+- Penalización HY <250 bps: implementado como flag, no como resta directa de score
+- Segunda derivada de la curva: +50bps en lugar de +30bps sugerido
+- Kim-Wright term premium: actúa como flag extremo binario, no continuo
+- Reducción redundancia momentum: de 3 a 2 timeframes (la sugerencia era 1)
+- Régimen estanflación: INFLATION_OVERLAY cubre parcialmente pero no es régimen formal
+- DXY en macro: solo como filtro interno, no como indicador puntuable en MacroScore
+
+
+NO IMPLEMENTADAS (PENDIENTES)
+------------------------------
+- Curva short-term 18m–3m forward (Engstrom & Sharpe 2018)
+- Market breadth (NYA200R, new highs/new lows)
+- Régimen Liquidity Melt-Up explícito
+- 3 condiciones de confirmación para Rotación Temprana (persistencia, outperformance categorial, validación cruzada)
+- Filtro de volatilidad realizada <12% por 60+ días (mercados laterales, anti-whipsaw)
+- Override por caída >8% en 2 días con volumen anómalo (flash crash individual)
+- Facilidades no-convencionales Fed (BTFP: H41RESPPALDKXAWNWW, SRF)
+- Expansión universo internacional (EFA, EWJ, INDA, FXI/MCHI)
+- Señales SHORT / reducción activa de exposición
+- ERP (Damodaran/NYU Stern) como modificador de valoración
+- COT data (CFTC) — posicionamiento managed money
+- AAII Sentiment Survey
+- Chicago Fed NFCI como validador cruzado
+- EPU Index (Economic Policy Uncertainty)
+- Filtro "no entrar si delta1W > +5%" (evitar comprar en peak de corto plazo)
+- BACKTEST completo (la más crítica metodológicamente)

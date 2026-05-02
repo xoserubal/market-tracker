@@ -1,0 +1,243 @@
+{
+  "calibration_timestamp": "2026-04-20T12:18:43+00:00",
+  "conclusion": "ABORTED — all three models failed spot-checks. No proxy generated.",
+  "root_cause": "The calibration period (2023-2026) has structurally lower HY spreads than historical periods for the same NFCICREDIT level. NFCICREDIT range in overlap: [-0.085, 0.214]. HY range in overlap: [261, 476] bps. No parametric model calibrated on this narrow benign window can reliably extrapolate to historical stress regimes.",
+  "overlap_period": {
+    "start": "2023-04-21",
+    "end": "2026-04-10",
+    "n_weeks": 156,
+    "nfci_range": [
+      -0.085,
+      0.214
+    ],
+    "hy_range_bps": [
+      261.0,
+      476.2
+    ]
+  },
+  "spot_check_dates_and_ranges": {
+    "2008-10-15": [
+      1400,
+      2100
+    ],
+    "2020-03-20": [
+      850,
+      1250
+    ],
+    "2011-09-30": [
+      600,
+      1000
+    ],
+    "2015-02-13": [
+      350,
+      550
+    ],
+    "2017-05-05": [
+      280,
+      450
+    ]
+  },
+  "models_tested": [
+    {
+      "name": "linear",
+      "formula": "HY_bps = alpha + beta * NFCICREDIT",
+      "alpha": 325.74,
+      "beta": 654.0681,
+      "r_squared": 0.8659,
+      "spot_checks": {
+        "2008-10-15": {
+          "nearest_date": "2008-10-17",
+          "nfci_credit": 2.137,
+          "hy_predicted_bps": 1723.5,
+          "plausible_range": [
+            1400,
+            2100
+          ],
+          "pass": true
+        },
+        "2020-03-20": {
+          "nearest_date": "2020-03-20",
+          "nfci_credit": 0.474,
+          "hy_predicted_bps": 635.8,
+          "plausible_range": [
+            850,
+            1250
+          ],
+          "pass": false
+        },
+        "2011-09-30": {
+          "nearest_date": "2011-09-30",
+          "nfci_credit": 0.13,
+          "hy_predicted_bps": 410.8,
+          "plausible_range": [
+            600,
+            1000
+          ],
+          "pass": false
+        },
+        "2015-02-13": {
+          "nearest_date": "2015-02-13",
+          "nfci_credit": -0.109,
+          "hy_predicted_bps": 254.4,
+          "plausible_range": [
+            350,
+            550
+          ],
+          "pass": false
+        },
+        "2017-05-05": {
+          "nearest_date": "2017-05-05",
+          "nfci_credit": -0.011,
+          "hy_predicted_bps": 318.5,
+          "plausible_range": [
+            280,
+            450
+          ],
+          "pass": true
+        }
+      },
+      "spot_passes": 2,
+      "spot_total": [
+        5
+      ],
+      "verdict": [
+        "FAILED"
+      ]
+    },
+    {
+      "name": "log_linear_3A",
+      "formula": "log(HY_bps) = alpha_log + beta_log * NFCICREDIT",
+      "alpha_log": 5.775213,
+      "beta_log": 1.858668,
+      "exp_alpha": 322.21,
+      "r_squared_log": 0.8565,
+      "spot_checks": {
+        "2008-10-15": {
+          "nearest_date": "2008-10-17",
+          "nfci_credit": 2.137,
+          "hy_predicted_bps": 17106.0,
+          "plausible_range": [
+            1400,
+            2100
+          ],
+          "pass": false
+        },
+        "2020-03-20": {
+          "nearest_date": "2020-03-20",
+          "nfci_credit": 0.474,
+          "hy_predicted_bps": 777.6,
+          "plausible_range": [
+            850,
+            1250
+          ],
+          "pass": false
+        },
+        "2011-09-30": {
+          "nearest_date": "2011-09-30",
+          "nfci_credit": 0.13,
+          "hy_predicted_bps": 410.3,
+          "plausible_range": [
+            600,
+            1000
+          ],
+          "pass": false
+        },
+        "2015-02-13": {
+          "nearest_date": "2015-02-13",
+          "nfci_credit": -0.109,
+          "hy_predicted_bps": 263.1,
+          "plausible_range": [
+            350,
+            550
+          ],
+          "pass": false
+        },
+        "2017-05-05": {
+          "nearest_date": "2017-05-05",
+          "nfci_credit": -0.011,
+          "hy_predicted_bps": 315.7,
+          "plausible_range": [
+            280,
+            450
+          ],
+          "pass": true
+        }
+      },
+      "spot_passes": 1,
+      "spot_total": [
+        5
+      ],
+      "verdict": [
+        "FAILED"
+      ]
+    },
+    {
+      "name": "quadratic_asymmetric_3B",
+      "formula": "HY_bps = alpha + beta*NFCI + gamma*max(NFCI,0)^2",
+      "alpha": 327.19,
+      "beta": 701.5519,
+      "gamma": -409.0825,
+      "r_squared": 0.8669,
+      "spot_checks": {
+        "2008-10-15": {
+          "nearest_date": "2008-10-17",
+          "nfci_credit": 2.137,
+          "hy_predicted_bps": -41.8,
+          "plausible_range": [
+            1400,
+            2100
+          ],
+          "pass": false
+        },
+        "2020-03-20": {
+          "nearest_date": "2020-03-20",
+          "nfci_credit": 0.474,
+          "hy_predicted_bps": 567.8,
+          "plausible_range": [
+            850,
+            1250
+          ],
+          "pass": false
+        },
+        "2011-09-30": {
+          "nearest_date": "2011-09-30",
+          "nfci_credit": 0.13,
+          "hy_predicted_bps": 411.5,
+          "plausible_range": [
+            600,
+            1000
+          ],
+          "pass": false
+        },
+        "2015-02-13": {
+          "nearest_date": "2015-02-13",
+          "nfci_credit": -0.109,
+          "hy_predicted_bps": 250.7,
+          "plausible_range": [
+            350,
+            550
+          ],
+          "pass": false
+        },
+        "2017-05-05": {
+          "nearest_date": "2017-05-05",
+          "nfci_credit": -0.011,
+          "hy_predicted_bps": 319.5,
+          "plausible_range": [
+            280,
+            450
+          ],
+          "pass": true
+        }
+      },
+      "spot_passes": 1,
+      "spot_total": [
+        5
+      ],
+      "verdict": [
+        "FAILED"
+      ]
+    }
+  ],
+  "backtest_implication": "MacroScore credit component (25pts) will be NaN for 2005-2023-04-17. Primary backtest uses Modo B (reduced MacroScore on 75-pt base, see README). Modo A (full MacroScore with real HY data) applies only from 2023-04-18 onwards."
+}

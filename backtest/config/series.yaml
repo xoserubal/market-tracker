@@ -1,0 +1,144 @@
+# ── Configuración de series para el pipeline de datos ────────────────────────
+# Todas las descargas empiezan en START_DATE = 2005-01-01
+# Las series con inicio posterior dejarán NaN para las fechas anteriores.
+
+start_date: "2005-01-01"
+
+# ── Yahoo Finance ─────────────────────────────────────────────────────────────
+yahoo:
+  # Universo del Market Tracker (20 activos)
+  assets:
+    - ticker: "XLK"
+      name: "Technology SPDR"
+      adj_close: true
+    - ticker: "XLC"
+      name: "Comm. Services SPDR"
+      adj_close: true
+    - ticker: "XLY"
+      name: "Consumer Disc. SPDR"
+      adj_close: true
+    - ticker: "XLF"
+      name: "Financials SPDR"
+      adj_close: true
+    - ticker: "XLI"
+      name: "Industrials SPDR"
+      adj_close: true
+    - ticker: "XLB"
+      name: "Materials SPDR"
+      adj_close: true
+    - ticker: "XLE"
+      name: "Energy SPDR"
+      adj_close: true
+    - ticker: "XLV"
+      name: "Healthcare SPDR"
+      adj_close: true
+    - ticker: "XLRE"
+      name: "Real Estate SPDR"
+      adj_close: true
+      note: "Inicia 2015-10-08"
+    - ticker: "XLP"
+      name: "Consumer Staples SPDR"
+      adj_close: true
+    - ticker: "XLU"
+      name: "Utilities SPDR"
+      adj_close: true
+    - ticker: "SPY"
+      name: "S&P 500 ETF"
+      adj_close: true
+    - ticker: "QQQ"
+      name: "NASDAQ 100 ETF"
+      adj_close: true
+    - ticker: "IWM"
+      name: "Russell 2000 ETF"
+      adj_close: true
+    - ticker: "EEM"
+      name: "MSCI EM ETF"
+      adj_close: true
+    - ticker: "TLT"
+      name: "20Y+ Treasury ETF"
+      adj_close: true
+    - ticker: "GC=F"
+      name: "Gold Futures"
+      adj_close: false    # futuros: usar Close
+    - ticker: "SI=F"
+      name: "Silver Futures"
+      adj_close: false
+    - ticker: "BZ=F"
+      name: "Brent Crude Futures"
+      adj_close: false
+    - ticker: "BTC-USD"
+      name: "Bitcoin USD"
+      adj_close: false
+      note: "Inicia ~2014-09-17"
+
+  # Índices de volatilidad y dólar
+  indices:
+    - ticker: "^VIX"
+      name: "CBOE VIX"
+      adj_close: false
+    - ticker: "^VIX9D"
+      name: "CBOE 9-Day VIX"
+      adj_close: false
+      note: "Inicia ~2011-01-03"
+    - ticker: "^VIX3M"
+      name: "CBOE 3-Month VIX"
+      adj_close: false
+      note: "Inicia ~2007-12-04"
+    - ticker: "DX-Y.NYB"
+      name: "US Dollar Index"
+      adj_close: false
+
+# ── FRED ──────────────────────────────────────────────────────────────────────
+fred:
+  # Series diarias
+  daily:
+    - series_id: "BAMLH0A0HYM2"
+      name: "HY Credit Spread (OAS)"
+      units: "percent"
+      note: "ICE Data trunca a 3 años rolling desde abril 2026. ALFRED no conserva vintages anteriores a 2023-04-18. Solo disponible 2023-04-18 en adelante via FRED. Pendiente decision del usuario sobre fuente alternativa para backtest completo."
+    - series_id: "T10Y3M"
+      name: "10Y-3M Yield Curve"
+      units: "percent"
+    - series_id: "T5YIE"
+      name: "5Y Breakeven Inflation"
+      units: "percent"
+    - series_id: "DFII10"
+      name: "10Y TIPS Real Yield"
+      units: "percent"
+    - series_id: "THREEFYTP10"
+      name: "Kim-Wright 10Y Term Premium"
+      units: "percent"
+    - series_id: "RRPONTSYD"
+      name: "Overnight Reverse Repo (ON RRP)"
+      units: "millions_usd"
+      effective_start: "2013-01-01"
+      note: "Facilidad experimental pre-2013: datos esporadicos (uso real desde 2013). Cobertura diaria desde effective_start ~99.6%."
+
+  # Series semanales
+  weekly:
+    - series_id: "WALCL"
+      name: "Fed Balance Sheet (Total Assets)"
+      units: "millions_usd"
+    - series_id: "WTREGEN"
+      name: "Treasury General Account"
+      units: "millions_usd"
+    - series_id: "NFCICREDIT"
+      name: "Chicago Fed NFCI Credit Subindex"
+      units: "index"
+      note: "Proxy para HY spread pre-2023-04-18. Calibrado via regresion lineal contra BAMLH0A0HYM2 en periodo solapante."
+
+  # Series mensuales
+  monthly:
+    - series_id: "CFNAI"
+      name: "Chicago Fed National Activity Index"
+      units: "index"
+      note: "Sujeto a revisiones retroactivas (look-ahead bias menor)"
+
+# ── Net Liquidity (calculada) ─────────────────────────────────────────────────
+# NetLiq = WALCL - RRPONTSYD - WTREGEN  (todo en USD millions)
+# Se añade como columna derivada en macro_weekly.parquet
+derived:
+  net_liquidity:
+    formula: "WALCL - RRPONTSYD - WTREGEN"
+    output_column: "NetLiq"
+    units: "millions_usd"

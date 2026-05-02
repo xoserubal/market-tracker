@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cycle Tracker — Market Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; }
+    .wrap { background: white; padding: 16px 20px; min-width: 960px; overflow-x: auto; }
+    /* Native-tooltip helper — wraps the ℹ icon */
+    .tt { position: relative; display: inline-flex; cursor: help; }
+    .tt:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 5px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2933;
+      color: #f0f4f8;
+      font-size: 10px;
+      font-weight: 400;
+      line-height: 1.5;
+      white-space: pre-line;
+      padding: 6px 9px;
+      border-radius: 5px;
+      box-shadow: 0 3px 10px rgba(0,0,0,.4);
+      z-index: 200;
+      min-width: 180px;
+      max-width: 260px;
+      text-align: left;
+      pointer-events: none;
+    }
+    /* Tooltip anclado a la izquierda del ícono — para cards en borde izquierdo */
+    .tt.tt-right:hover::after {
+      left: 0;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ── Role config — visual badge + label per role type ─────────────────────
+const ROLE_CONFIG = {
+  leader:     { label: 'L',  color: '#0d47a1', bg: '#e3f2fd', title: 'Leader — flujo institucional primario del sector' },
+  high_beta:  { label: 'β',  color: '#7f0000', bg: '#ffebee', title: 'High Beta — detecta fases especulativas / risk-on temprano' },
+  subsegment: { label: '~',  color: '#37474f', bg: '#eceff1', title: 'Subsegmento — señal específica dentro del sector' },
+  proxy:      { label: 'P',  color: '#4a148c', bg: '#f3e5f5', title: 'Proxy / ETF — flujo sectorial agregado' },
+  defensive:  { label: 'D',  color: '#1b5e20', bg: '#e8f5e9', title: 'Defensivo — refugio en fases tardías de ciclo' },
+};
+
+// ── Cycle Map ─────────────────────────────────────────────────────────────
+// Each ticker has: name, ticker, role, desc
+// role → badge color/label   desc → tooltip on ℹ icon
+const CYCLE_MAP = [
+  // ── 1. EARLY BULL ─────────────────────────────────────────────────────
+  {
+    phase: "Early Bull",
+    short: "Early Bull",
+    order: 1,
+    color: "#1b5e20",
+    lightColor: "#e8f5e9",
+    borderColor: "#4caf50",
+    category: "Transportation",
+    sectors: [
+      { name: "Railroads", tickers: [
+        { name: "iShares US Transportation",
+          ticker: "IYT", role: "proxy",
+          desc: "ETF sectorial transporte. Flujo agregado hacia railroads, aéreo y maritimo. Buena señal cuando lidera antes de que el mercado confirme el bull." },
+        { name: "Union Pacific",
+          ticker: "UNP", role: "leader",
+          desc: "Ferrocarril líder en EEUU. Alta correlación con actividad industrial y volúmenes de carga. Flujo institucional de largo plazo." },
+        { name: "CSX Corp",
+          ticker: "CSX", role: "leader",
+          desc: "Ferrocarril este de EEUU. Confirma el flujo hacia railroads cuando sube junto a UNP. Muy sensible a ciclo industrial." },
+        { name: "Norfolk Southern",
+          ticker: "NSC", role: "subsegment",
+          desc: "Tercer ferrocarril grande. Útil para confirmar amplitud del flujo dentro del subsector." },
+      ]},
+      { name: "Shipping", tickers: [
+        { name: "ZIM Integrated Shipping",
+          ticker: "ZIM", role: "high_beta",
+          desc: "Naviera con alta volatilidad. Refleja ciclos de demanda global de contenedores. Señal especulativa temprana cuando lidera." },
+        { name: "Matson Inc",
+          ticker: "MATX", role: "subsegment",
+          desc: "Naviera regional (Pacífico). Menos volátil que ZIM. Confirma flujo hacia shipping sin beta extrema." },
+      ]},
+    ],
+  },
+
+  // ── 2. EARLY → MID BULL ───────────────────────────────────────────────
+  {
+    phase: "Early → Mid Bull",
+    short: "E→M Bull",
+    order: 2,
+    color: "#0d47a1",
+    lightColor: "#e3f2fd",
+    borderColor: "#2196f3",
+    category: "Technology",
+    sectors: [
+      { name: "Semiconductors", tickers: [
+        { name: "NVIDIA",
+          ticker: "NVDA", role: "high_beta",
+          desc: "Líder en AI. Alta beta. Detecta momentum y flujo especulativo en tecnología. Cuando NVDA lidera con volumen, el mercado está en modo risk-on." },
+        { name: "ASML Holding",
+          ticker: "ASML", role: "subsegment",
+          desc: "Equipamiento de semiconductores. Leading indicator adelantado del ciclo de chips. Se mueve antes que los productores (NVDA, TSM)." },
+        { name: "VanEck Semiconductors",
+          ticker: "SMH", role: "proxy",
+          desc: "ETF sectorial semiconductores. Proxy del flujo institucional hacia chips. Confirma que el movimiento de NVDA no es aislado." },
+      ]},
+      { name: "Computers & Electronics", tickers: [
+        { name: "Microsoft",
+          ticker: "MSFT", role: "leader",
+          desc: "Flujo institucional core en tecnología. Representa estabilidad dentro del sector. Buen termómetro de posicionamiento defensivo dentro de tech." },
+        { name: "Apple",
+          ticker: "AAPL", role: "leader",
+          desc: "Mezcla de consumo y tecnología. Buen termómetro del flujo retail + institucional. Suele confirmar el bull una vez que NVDA ya ha liderado." },
+        { name: "Alphabet",
+          ticker: "GOOGL", role: "leader",
+          desc: "Plataforma digital. Representa exposición a publicidad y cloud. Confirma amplitud del flujo institucional en tech." },
+        { name: "Technology Select SPDR",
+          ticker: "XLK", role: "proxy",
+          desc: "ETF sectorial tecnología. Flujo agregado. Confirma que el movimiento es sectorial y no stock-picking puntual." },
+      ]},
+    ],
+  },
+
+  // ── 3. MID → LATE BULL ────────────────────────────────────────────────
+  {
+    phase: "Mid → Late Bull",
+    short: "M→L Bull",
+    order: 3,
+    color: "#4a148c",
+    lightColor: "#f3e5f5",
+    borderColor: "#9c27b0",
+    category: "Capital Goods",
+    sectors: [
+      { name: "Industrials & Electrical", tickers: [
+        { name: "Industrials Select SPDR",
+          ticker: "XLI", role: "proxy",
+          desc: "ETF industriales EEUU. Proxy del flujo institucional hacia capital goods. Buena señal cuando supera a XLK en ratio relativo." },
+        { name: "Caterpillar",
+          ticker: "CAT", role: "leader",
+          desc: "Maquinaria pesada global. Indicador del capex en infraestructura y minería. Flujo institucional clave en fases de expansión industrial." },
+        { name: "Eaton Corp",
+          ticker: "ETN", role: "leader",
+          desc: "Gestión de energía eléctrica. Alta exposición a electrificación industrial y data centers. Combina capital goods con tendencia secular de AI." },
+        { name: "Illinois Tool Works",
+          ticker: "ITW", role: "subsegment",
+          desc: "Manufactura diversificada. Márgenes estables. Señal de flujo institucional hacia industriales de calidad." },
+      ]},
+      { name: "Machinery, Trucks & Pollution Ctrl", tickers: [
+        { name: "PACCAR Inc",
+          ticker: "PCAR", role: "subsegment",
+          desc: "Camiones pesados (Kenworth, DAF). Sensible al ciclo del transporte de mercancías. Confirma expansión de capex en logística." },
+        { name: "Parker Hannifin",
+          ticker: "PH", role: "subsegment",
+          desc: "Sistemas de movimiento y control. Exposición amplia a manufactura industrial. Confirma flujo hacia capital goods con carácter más defensivo." },
+        { name: "Xylem",
+          ticker: "XYL", role: "subsegment",
+          desc: "Tecnología de agua y control de polución. Exposición a infraestructura pública. Señal de flujo hacia pollution control." },
+      ]},
+    ],
+  },
+
+  // ── 4. LATE BULL ──────────────────────────────────────────────────────
+  {
+    phase: "Late Bull",
+    short: "Late Bull",
+    order: 4,
+    color: "#bf360c",
+    lightColor: "#fbe9e7",
+    borderColor: "#ff5722",
+    category: "Basic Industries & Materials",
+    sectors: [
+      { name: "Metals & Mining", tickers: [
+        { name: "Freeport-McMoRan",
+          ticker: "FCX", role: "proxy",
+          desc: "Exposición al cobre. Proxy directo del ciclo económico global ('Dr. Copper'). Si FCX lidera, el mercado está anticipando aceleración industrial." },
+        { name: "BHP Group",
+          ticker: "BHP", role: "leader",
+          desc: "Minera diversificada global. Refleja flujo institucional global hacia commodities. Confirma el bull en materiales cuando acompaña a FCX." },
+        { name: "Rio Tinto",
+          ticker: "RIO", role: "leader",
+          desc: "Similar a BHP. Confirmación adicional de flujos globales hacia recursos básicos. Ambas subiendo = señal robusta de fase Late Bull." },
+        { name: "Nucor Corp",
+          ticker: "NUE", role: "subsegment",
+          desc: "Acero. Muy sensible al ciclo industrial estadounidense. Confirma demanda doméstica de materiales de construcción e infraestructura." },
+        { name: "Linde",
+          ticker: "LIN", role: "subsegment",
+          desc: "Gases industriales. Refleja demanda industrial real más estable. Menos volátil que NUE. Indicador de actividad manufacturera sostenida." },
+      ]},
+      { name: "Chemicals, Containers & Paper", tickers: [
+        { name: "Materials Select SPDR",
+          ticker: "XLB", role: "proxy",
+          desc: "ETF materiales EEUU. Flujo agregado hacia el sector. Confirma rotación desde tecnología hacia hard assets." },
+        { name: "LyondellBasell",
+          ticker: "LYB", role: "subsegment",
+          desc: "Petroquímica y plásticos. Muy cíclica. Señal de expansión industrial y demanda de materiales de embalaje." },
+        { name: "International Paper",
+          ticker: "IP", role: "subsegment",
+          desc: "Papel y forest products. Proxy del ciclo de packaging y consumo. Confirma rotación hacia materias primas industriales tardías." },
+      ]},
+    ],
+  },
+
+  // ── 5. LATE BULL → TOP ────────────────────────────────────────────────
+  {
+    phase: "Late Bull → Top",
+    short: "L.Bull→Top",
+    order: 5,
+    color: "#7f0000",
+    lightColor: "#ffebee",
+    borderColor: "#f44336",
+    category: "Energy (Oil · Uranium · Coal)",
+    sectors: [
+      { name: "🛢 Oil & Gas", tickers: [
+        { name: "Exxon Mobil",
+          ticker: "XOM", role: "leader",
+          desc: "Major integrada. Representa flujo institucional defensivo dentro del sector energético. Si solo sube XOM, indica posicionamiento conservador en energía." },
+        { name: "Chevron",
+          ticker: "CVX", role: "leader",
+          desc: "Otra major global. Confirma entrada institucional en energía cuando acompaña a XOM. Las dos subiendo = señal robusta de fase energética." },
+        { name: "Schlumberger (SLB)",
+          ticker: "SLB", role: "subsegment",
+          desc: "Servicios petroleros. Leading indicator del ciclo de capex energético. Suele moverse antes que el resto del sector. SLB lidera → XOM confirma." },
+        { name: "Pioneer Natural Resources",
+          ticker: "PXD", role: "high_beta",
+          desc: "Productor shale. Alta sensibilidad al precio del crudo. Detecta fases tempranas de risk-on en energía. Alta beta respecto a XOM/CVX." },
+        { name: "Devon Energy",
+          ticker: "DVN", role: "high_beta",
+          desc: "Mid-cap energética shale. Refuerza señales de flujo agresivo cuando sube junto a PXD. Si DVN lidera sin XOM, señal especulativa." },
+        { name: "Energy Select SPDR",
+          ticker: "XLE", role: "proxy",
+          desc: "ETF energía EEUU. Flujo agregado hacia el sector. Confirma que el movimiento no es solo un stock aislado." },
+      ]},
+      { name: "☢ Uranium", tickers: [
+        { name: "Sprott Uranium Miners (URNM)",
+          ticker: "URNM", role: "proxy",
+          desc: "ETF sectorial. Representa flujo global agregado hacia uranio. Punto de entrada para detectar el inicio de rotación hacia el sector." },
+        { name: "Cameco",
+          ticker: "CCJ", role: "leader",
+          desc: "Líder del sector. Indicador de entrada institucional en uranio. CCJ subiendo con volumen = señal robusta de ciclo alcista." },
+        { name: "NexGen Energy",
+          ticker: "NXE", role: "high_beta",
+          desc: "Developer avanzado. Alta beta. Detecta fases especulativas tempranas en uranio. Si NXE lidera, el flujo está en modo risk-on." },
+        { name: "Denison Mines",
+          ticker: "DNN", role: "high_beta",
+          desc: "Junior miner. Refuerza señales de flujo agresivo cuando sube junto a NXE. Alta especulatividad." },
+        { name: "Centrus Energy",
+          ticker: "LEU", role: "subsegment",
+          desc: "Fuel cycle (enriquecimiento). Exposición downstream distinta al mining. Señal de demanda real de combustible nuclear, no solo especulación minera." },
+      ]},
+      { name: "🪨 Coal", tickers: [
+        { name: "Warrior Met Coal",
+          ticker: "HCC", role: "leader",
+          desc: "Carbón metalúrgico. Ligado al ciclo del acero y la industria pesada. Indicador de demanda industrial global." },
+        { name: "Alpha Metallurgical Resources",
+          ticker: "AMR", role: "leader",
+          desc: "Similar a HCC. Confirmación de flujo hacia carbón metalúrgico. Las dos subiendo = señal robusta del ciclo acero/industria." },
+        { name: "Peabody Energy",
+          ticker: "BTU", role: "subsegment",
+          desc: "Carbón térmico. Exposición a generación eléctrica. Permite distinguir entre demanda eléctrica (BTU) e industrial (HCC/AMR)." },
+        { name: "Arch Resources",
+          ticker: "ARCH", role: "subsegment",
+          desc: "Mix térmico/metalúrgico. Permite detectar rotación interna entre carbón térmico y met. Si ARCH supera a HCC, señal de mayor demanda eléctrica." },
+        { name: "Teck Resources",
+          ticker: "TECK", role: "proxy",
+          desc: "Diversificada (carbón met + cobre + zinc). Indicador híbrido del ciclo commodities. Útil como termómetro general de hard assets." },
+      ]},
+    ],
+  },
+
+  // ── 6. EARLY BEAR ─────────────────────────────────────────────────────
+  {
+    phase: "Early Bear",
+    short: "Early Bear",
+    order: 6,
+    color: "#004d40",
+    lightColor: "#e0f2f1",
+    borderColor: "#00897b",
+    category: "Staples & Healthcare",
+    sectors: [
+      { name: "Consumer Staples & Defensive", tickers: [
+        { name: "Consumer Staples SPDR",
+          ticker: "XLP", role: "proxy",
+          desc: "ETF staples EEUU. Flujo agregado hacia defensivos. XLP outperformando a XLK = señal clara de rotación defensiva." },
+        { name: "Walmart",
+          ticker: "WMT", role: "defensive",
+          desc: "Retail defensivo. Indica migración hacia consumo básico de bajo coste. Sube cuando el consumidor recorta gasto discrecional." },
+        { name: "Procter & Gamble",
+          ticker: "PG", role: "defensive",
+          desc: "Bienes básicos del hogar. Flujo hacia estabilidad en fases tardías de ciclo. Combinado con KO confirma rotación defensiva." },
+        { name: "Coca-Cola",
+          ticker: "KO", role: "defensive",
+          desc: "Consumo defensivo de alta visibilidad. Indica fases de aversión al riesgo. Si KO supera a AMZN en relativo, el ciclo gira hacia bear." },
+        { name: "Altria",
+          ticker: "MO", role: "defensive",
+          desc: "Tabaco. Dividendo alto, demanda inelástica. Sube por flujo hacia yield defense. Confirma el giro hacia activos defensivos de renta." },
+      ]},
+      { name: "Healthcare & Pharma", tickers: [
+        { name: "Healthcare Select SPDR",
+          ticker: "XLV", role: "proxy",
+          desc: "ETF healthcare EEUU. Flujo agregado. XLV outperformando = señal de aversión al riesgo con sesgo defensivo-growth." },
+        { name: "Johnson & Johnson",
+          ticker: "JNJ", role: "leader",
+          desc: "Farmacéutica/medtech diversificada. Flujo institucional defensivo en healthcare. Preferida en fases de incertidumbre macro." },
+        { name: "Eli Lilly",
+          ticker: "LLY", role: "high_beta",
+          desc: "Biofarma de alta beta (GLP-1/Alzheimer). Puede subir en cualquier fase por catalizadores propios. Más indicador de momentum que de ciclo puro." },
+      ]},
+    ],
+  },
+
+  // ── 7. LATE BEAR (APPROACHING) ────────────────────────────────────────
+  {
+    phase: "Late Bear (Approx.)",
+    short: "L.Bear Appr.",
+    order: 7,
+    color: "#37474f",
+    lightColor: "#eceff1",
+    borderColor: "#78909c",
+    category: "Utilities",
+    sectors: [
+      { name: "Electric, Gas & Telecom Infra", tickers: [
+        { name: "Utilities Select SPDR",
+          ticker: "XLU", role: "proxy",
+          desc: "ETF utilities EEUU. Flujo agregado hacia servicios regulados. XLU liderando = mercado busca yield y estabilidad extrema." },
+        { name: "NextEra Energy",
+          ticker: "NEE", role: "leader",
+          desc: "Renovables + utility eléctrica. Mayor utility del mundo por capitalización. Combina exposición defensiva con tendencia secular de energía limpia." },
+        { name: "Duke Energy",
+          ticker: "DUK", role: "leader",
+          desc: "Utility eléctrica regulada tradicional. Representa el flujo puramente defensivo/yield dentro del sector. Confirma posicionamiento late-bear." },
+        { name: "American Tower",
+          ticker: "AMT", role: "subsegment",
+          desc: "Infraestructura telecom (torres). REIT con carácter defensivo. Sube cuando hay búsqueda de yield y flujo hacia infraestructura crítica." },
+      ]},
+    ],
+  },
+
+  // ── 8. LATE BEAR ──────────────────────────────────────────────────────
+  {
+    phase: "Late Bear",
+    short: "Late Bear",
+    order: 8,
+    color: "#1a237e",
+    lightColor: "#e8eaf6",
+    borderColor: "#5c6bc0",
+    category: "Financials & Cyclicals",
+    sectors: [
+      { name: "Banking & Finance", tickers: [
+        { name: "JPMorgan Chase",
+          ticker: "JPM", role: "leader",
+          desc: "Banco líder. Refleja salud del crédito y flujo institucional. JPM liderando en relativo señala anticipación de recuperación económica." },
+        { name: "Bank of America",
+          ticker: "BAC", role: "leader",
+          desc: "Alta sensibilidad a tipos de interés y ciclo económico. Confirma flujo bancario cuando acompaña a JPM. Útil para detectar el giro de ciclo." },
+        { name: "Goldman Sachs",
+          ticker: "GS", role: "subsegment",
+          desc: "Banca de inversión. Proxy de actividad de mercado y risk appetite institucional. GS liderando = mercado anticipa recuperación de deal flow." },
+        { name: "Charles Schwab",
+          ticker: "SCHW", role: "subsegment",
+          desc: "Broker/custodio minorista. Refleja participación del inversor retail y nivel de actividad en mercados. Confirma recuperación del apetito por riesgo." },
+        { name: "KKR & Co",
+          ticker: "KKR", role: "high_beta",
+          desc: "Private equity. Indicador de liquidez y apetito por activos alternativos. KKR subiendo con fuerza = mercado anticipa recuperación de valoraciones." },
+        { name: "Financials Select SPDR",
+          ticker: "XLF", role: "proxy",
+          desc: "ETF financials EEUU. Flujo agregado. Confirma que la recuperación es sectorial y no solo nombre aislado." },
+      ]},
+      { name: "Consumer Cyclical (Recovery)", tickers: [
+        { name: "Amazon",
+          ticker: "AMZN", role: "leader",
+          desc: "Consumo + tecnología + cloud. Refleja demanda agregada y crecimiento. Cuando AMZN recupera posiciones, el mercado anticipa expansión de consumo." },
+        { name: "Tesla",
+          ticker: "TSLA", role: "high_beta",
+          desc: "Consumo cíclico extremo. Proxy de apetito por riesgo. TSLA liderando = señal fuerte de risk-on y anticipación de ciclo bull." },
+        { name: "Homebuilders ETF",
+          ticker: "XHB", role: "proxy",
+          desc: "ETF homebuilders. Muy sensible a tipos hipotecarios. XHB recuperando = mercado anticipa bajada de tipos y reactivación inmobiliaria." },
+        { name: "DR Horton",
+          ticker: "DHI", role: "subsegment",
+          desc: "Constructor de viviendas. Liderazgo en XHB. Señal temprana de recuperación del sector inmobiliario residencial." },
+      ]},
+    ],
+  },
+];
+
+// ── LLM Markdown export ───────────────────────────────────────────────────
+const buildCycleMarkdown = (rows, phases) => {
+  const date = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+  const spy = rows['SPY'];
+  let md = `# Cycle Tracker — Snapshot\n**Fecha:** ${date}\n_Sector rotation · Dow Theory cycle framework · α = relative outperformance vs SPY_\n\n`;
+
+  // SPY context
+  if (spy) {
+    md += `## REFERENCIA SPY\n`;
+    md += `| 1M | 3M | YTD | 1Y |\n|---:|---:|----:|---:|\n`;
+    const f = v => v == null || isNaN(v) ? '—' : v < 0 ? `(${Math.abs(Math.round(v))}%)` : `+${Math.round(v)}%`;
+    md += `| ${f(spy.m1)} | ${f(spy.m3)} | ${f(spy.ytd)} | ${f(spy.y1)} |\n\n`;
+  }
+
+  // Phase ranking
+  md += `## PHASE RANKING (score = avg relativo vs SPY · 70%×3M + 30%×1M)\n`;
+  md += `| # | Fase | Score | Aceleración | Cargados |\n`;
+  md += `|--:|------|------:|:-----------:|---------:|\n`;
+  const sorted = [...phases].filter(p => p.score != null).sort((a, b) => b.score - a.score);
+  sorted.forEach((ph, i) => {
+    const acc = ph.accelerating == null ? '—' : ph.accelerating ? '▲ accel.' : '▽ decel.';
+    md += `| ${i + 1} | **${ph.phase}** | ${ph.score > 0 ? '+' : ''}${ph.score.toFixed(1)} | ${acc} | ${ph.loaded}/${ph.total} |\n`;
+  });
+  md += '\n';
+
+  // Detail by phase
+  md += `## DETALLE POR FASE\n`;
+  const fmtR = v => v == null || isNaN(v) ? '—' : v < 0 ? `(${Math.abs(Math.round(v))}%)` : `+${Math.round(v)}%`;
+  phases.forEach(ph => {
+    md += `### ${ph.phase} — ${ph.category} (score: ${ph.score != null ? (ph.score > 0 ? '+' : '') + ph.score.toFixed(1) : '—'})\n`;
+    md += `| Rol | Ticker | Nombre | 1M | 3M | α vs SPY |\n`;
+    md += `|:---:|:------:|--------|---:|---:|---------:|\n`;
+    ph.sectors.forEach(sec => {
+      md += `| — | — | **${sec.name.toUpperCase()}** | — | — | — |\n`;
+      sec.tickers.forEach(t => {
+        const d = rows[t.ticker];
+        const spyM3 = spy?.m3 ?? null;
+        const relM3 = d?.m3 != null && spyM3 != null ? d.m3 - spyM3 : null;
+        md += `| ${t.role} | ${t.ticker} | ${t.name} | ${fmtR(d?.m1)} | ${fmtR(d?.m3)} | ${relM3 != null ? (relM3 > 0 ? '+' : '') + relM3.toFixed(0) + 'pp' : '—'} |\n`;
+      });
+    });
+    md += '\n';
+  });
+
+  md += `_Yahoo Finance (delayed ~15 min) · Not financial advice_\n`;
+  return md;
+};
+
+// ── All tickers (deduplicated) ────────────────────────────────────────────
+const ALL_TICKERS = (() => {
+  const set = new Set(['SPY']);
+  CYCLE_MAP.forEach(p => p.sectors.forEach(s => s.tickers.forEach(t => set.add(t.ticker))));
+  return [...set];
+})();
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+const fmtRet = v => {
+  if (v == null || isNaN(v)) return '—';
+  return v < 0 ? `(${Math.abs(Math.round(v))}%)` : `+${Math.round(v)}%`;
+};
+
+const retColor = v => {
+  if (v == null) return '#aaa';
+  if (v >= 15) return '#1b5e20'; if (v >= 7) return '#2e7d32';
+  if (v >= 3)  return '#388e3c'; if (v > 0)  return '#43a047';
+  if (v === 0) return '#666';
+  if (v > -3)  return '#c62828'; if (v > -7) return '#c62828';
+  return '#b71c1c';
+};
+
+// ── Role Badge ────────────────────────────────────────────────────────────
+function RoleBadge({ role, tipCls = 'tt' }) {
+  const cfg = ROLE_CONFIG[role];
+  if (!cfg) return null;
+  return (
+    <span className={tipCls} data-tip={cfg.title} style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: 14, height: 14, borderRadius: 3,
+      background: cfg.bg, color: cfg.color,
+      fontSize: 7, fontWeight: 800, fontFamily: 'monospace',
+      flexShrink: 0,
+    }}>
+      {cfg.label}
+    </span>
+  );
+}
+
+// ── Sparkline — 5 anchor points from return data ──────────────────────────
+// Time-accurate x-positioning: 1Y(0%) → 3M(75%) → 1M(91.7%) → 1W(98.1%) → now(100%)
+// Line color reflects 3M absolute return.
+function Sparkline({ d, width = 62, height = 20 }) {
+  if (!d || d.price == null) return <span style={{ color: '#ddd', fontSize: 8 }}>—</span>;
+  const p = d.price;
+  const pts = [
+    { t: 0.000, v: d.y1 != null ? p / (1 + d.y1 / 100) : null },
+    { t: 0.750, v: d.m3 != null ? p / (1 + d.m3 / 100) : null },
+    { t: 0.917, v: d.m1 != null ? p / (1 + d.m1 / 100) : null },
+    { t: 0.981, v: d.w1 != null ? p / (1 + d.w1 / 100) : null },
+    { t: 1.000, v: p },
+  ];
+  const vals = pts.map(pt => pt.v).filter(v => v != null);
+  if (vals.length < 2) return <span style={{ color: '#ddd', fontSize: 8 }}>—</span>;
+
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const pad = 2, iw = width - 2 * pad, ih = height - 2 * pad;
+
+  const pathParts = [];
+  let started = false;
+  pts.forEach(pt => {
+    if (pt.v == null) { started = false; return; }
+    const x = (pad + pt.t * iw).toFixed(1);
+    const y = (pad + ih - ((pt.v - min) / range) * ih).toFixed(1);
+    pathParts.push(started ? `L${x} ${y}` : `M${x} ${y}`);
+    started = true;
+  });
+
+  const lastPt = [...pts].reverse().find(pt => pt.v != null);
+  const dotX = lastPt ? pad + lastPt.t * iw : null;
+  const dotY = lastPt ? pad + ih - ((lastPt.v - min) / range) * ih : null;
+
+  const m3 = d.m3;
+  const lineColor = m3 == null ? '#bbb'
+    : m3 > 10 ? '#1b5e20' : m3 > 3 ? '#43a047'
+    : m3 > -3 ? '#f9a825' : m3 > -10 ? '#e53935' : '#b71c1c';
+
+  return (
+    <svg width={width} height={height} style={{ display: 'block', verticalAlign: 'middle' }}>
+      <path d={pathParts.join(' ')} fill="none" stroke={lineColor} strokeWidth="1.5"
+        strokeLinejoin="round" strokeLinecap="round" />
+      {dotX != null && <circle cx={dotX.toFixed(1)} cy={dotY.toFixed(1)} r="2" fill={lineColor} />}
+    </svg>
+  );
+}
+
+// ── Phase score calculation ───────────────────────────────────────────────
+// Score = 0.7 × avg(relM3) + 0.3 × avg(relM1) — relative to SPY.
+// Falls back to absolute returns when SPY not yet loaded.
+function calcPhaseScores(rows) {
+  const spy = rows['SPY'];
+  return CYCLE_MAP.map(phase => {
+    const allT = phase.sectors.flatMap(s => s.tickers);
+    const data = allT.map(t => rows[t.ticker]).filter(Boolean);
+    if (!data.length) return { ...phase, score: null, relM3: null, relM1: null, loaded: 0, total: allT.length };
+
+    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    const spyM3 = spy?.m3 ?? null, spyM1 = spy?.m1 ?? null;
+
+    const relM3v = data.map(d => d.m3 != null && spyM3 != null ? d.m3 - spyM3 : null).filter(v => v != null);
+    const relM1v = data.map(d => d.m1 != null && spyM1 != null ? d.m1 - spyM1 : null).filter(v => v != null);
+    const absM3v = data.map(d => d.m3).filter(v => v != null);
+    const absM1v = data.map(d => d.m1).filter(v => v != null);
+
+    const relM3 = avg(relM3v) ?? avg(absM3v);
+    const relM1 = avg(relM1v) ?? avg(absM1v);
+    const score = relM3 != null ? relM3 * 0.7 + (relM1 ?? relM3) * 0.3 : null;
+    const accelerating = relM1 != null && relM3 != null ? relM1 > relM3 : null;
+
+    return { ...phase, score, relM3, relM1, accelerating, loaded: data.length, total: allT.length };
+  });
+}
+
+// ── PhaseTimeline ─────────────────────────────────────────────────────────
+function PhaseTimeline({ phases }) {
+  const scored = phases.filter(p => p.score != null);
+  const topPhase = scored.length ? [...scored].sort((a, b) => b.score - a.score)[0] : null;
+  const maxAbs = scored.length ? Math.max(...scored.map(p => Math.abs(p.score)), 0.1) : 1;
+
+  return (
+    <div style={{ marginBottom: 12, background: '#1a2535', borderRadius: 6, padding: '12px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <span style={{ color: 'white', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px' }}>
+          MARKET CYCLE PHASE ESTIMATOR
+        </span>
+        {topPhase && (
+          <span style={{ background: topPhase.color, color: 'white', padding: '2px 12px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+            Estimated: {topPhase.phase}
+            {topPhase.accelerating != null && (
+              <span style={{ marginLeft: 6, opacity: 0.8, fontSize: 10 }}>
+                {topPhase.accelerating ? '▲ accel.' : '▽ decel.'}
+              </span>
+            )}
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: '#6b7a8d', fontStyle: 'italic' }}>
+          Score = avg. relative return vs SPY · 70% × 3M + 30% × 1M · lagging indicator
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 56 }}>
+        {phases.map(ph => {
+          const isTop = topPhase?.phase === ph.phase;
+          const hasScore = ph.score != null;
+          const barH = hasScore ? Math.max(4, Math.abs(ph.score) / maxAbs * 40) : 4;
+          const barColor = !hasScore ? '#334' : ph.score >= 0 ? ph.borderColor : '#4a3040';
+          return (
+            <div key={ph.phase} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div style={{ fontSize: 8, fontFamily: 'monospace', height: 11, lineHeight: '11px', color: !hasScore ? '#444' : ph.score >= 0 ? '#7ecf7e' : '#ff7070' }}>
+                {hasScore ? (ph.score > 0 ? '+' : '') + ph.score.toFixed(1) : '—'}
+              </div>
+              <div style={{ width: '100%', height: barH, minHeight: 4, background: barColor, borderRadius: 2, border: isTop ? '2px solid white' : '1px solid transparent', opacity: hasScore ? 1 : 0.25 }} />
+              <div style={{ fontSize: 8, color: isTop ? 'white' : '#7a8a9a', textAlign: 'center', lineHeight: 1.2, fontWeight: isTop ? 700 : 400 }}>
+                {ph.short}
+              </div>
+              {isTop && <div style={{ fontSize: 8, color: '#ffd700', fontWeight: 700 }}>▲</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── PhaseRankings ─────────────────────────────────────────────────────────
+function PhaseRankings({ phases }) {
+  const sorted = [...phases].filter(p => p.score != null).sort((a, b) => b.score - a.score);
+  if (!sorted.length) return null;
+  const medals = ['🥇', '🥈', '🥉'];
+  return (
+    <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f8f9fa', borderRadius: 6, border: '1px solid #e0e0e0' }}>
+      <div style={{ fontSize: 9, fontWeight: 600, color: '#666', marginBottom: 7, letterSpacing: '0.5px' }}>
+        PHASE RANKING — relative momentum vs SPY (highest score = most likely current phase)
+      </div>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {sorted.map((ph, i) => (
+          <div key={ph.phase} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px 3px 5px', borderRadius: 14, border: `1.5px solid ${ph.borderColor}`, background: i === 0 ? ph.lightColor : 'white', fontSize: 9 }}>
+            <span style={{ width: 15, height: 15, borderRadius: 8, background: ph.color, color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
+            {i < 3 && <span style={{ fontSize: 10 }}>{medals[i]}</span>}
+            <span style={{ fontWeight: i === 0 ? 700 : 400, color: '#222' }}>{ph.phase}</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 9, color: ph.score >= 0 ? '#2e7d32' : '#c62828' }}>
+              {ph.score > 0 ? '+' : ''}{ph.score.toFixed(1)}
+            </span>
+            {ph.accelerating != null && (
+              <span style={{ fontSize: 9, color: ph.accelerating ? '#2e7d32' : '#c62828' }}>
+                {ph.accelerating ? '↑' : '↓'}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── PhaseCard ─────────────────────────────────────────────────────────────
+function PhaseCard({ phase, rows, spy, colIndex = 0 }) {
+  const tipCls = colIndex === 0 ? 'tt tt-right' : 'tt';
+  const { score } = phase;
+  const scoreColor = score == null ? '#999' : score >= 5 ? '#1b5e20' : score >= 2 ? '#388e3c' : score > 0 ? '#66bb6a' : score > -2 ? '#e53935' : '#b71c1c';
+  const scoreBg    = score == null ? '#f5f5f5' : score >= 2 ? '#e8f5e9' : score > 0 ? '#f4fbf4' : score > -2 ? '#fff5f5' : '#ffebee';
+
+  return (
+    <div style={{ border: `2px solid ${phase.borderColor}`, borderRadius: 6, fontSize: 11 }}>
+      {/* Header */}
+      <div style={{ background: phase.color, padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '4px 4px 0 0' }}>
+        <div>
+          <div style={{ color: 'white', fontWeight: 700, fontSize: 11 }}>{phase.phase}</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9 }}>{phase.category}</div>
+        </div>
+        <div style={{ background: scoreBg, color: scoreColor, padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, fontFamily: 'monospace', minWidth: 44, textAlign: 'center' }}>
+          {score != null ? (score > 0 ? '+' : '') + score.toFixed(1) : '—'}
+        </div>
+      </div>
+
+      {/* Column headers */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 10px 1px', background: '#fafafa', borderBottom: '1px solid #e8e8e8' }}>
+        <div style={{ width: 14, flexShrink: 0 }} />
+        <div style={{ flex: 1 }} />
+        <div style={{ width: 14, flexShrink: 0 }} />
+        <div style={{ width: 26, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>1M</div>
+        <div style={{ width: 26, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>3M</div>
+        <div style={{ width: 28, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>α</div>
+        <div style={{ width: 64, textAlign: 'center', fontSize: 8, color: '#aaa' }}>1Y~now</div>
+      </div>
+
+      {/* Sectors */}
+      {phase.sectors.map(sector => (
+        <React.Fragment key={sector.name}>
+          <div style={{ background: phase.lightColor, padding: '2px 10px', fontSize: 8, color: phase.color, fontWeight: 700, letterSpacing: '0.2px', borderTop: `1px solid ${phase.borderColor}22` }}>
+            {sector.name.toUpperCase()}
+          </div>
+          {sector.tickers.map(t => {
+            const d = rows[t.ticker];
+            const spyM3 = spy?.m3 ?? null;
+            const relM3 = d?.m3 != null && spyM3 != null ? d.m3 - spyM3 : null;
+            const isLoading = d == null;
+            const dot = <span style={{ color: '#ccc' }}>···</span>;
+
+            return (
+              <div key={t.ticker} style={{ display: 'flex', alignItems: 'center', padding: '3px 10px', borderBottom: '1px solid #f2f2f2', gap: 3, background: t.role === 'proxy' ? '#fafbff' : 'white' }}>
+                {/* Role badge */}
+                <RoleBadge role={t.role} tipCls={tipCls} />
+
+                {/* Name + ticker */}
+                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', marginLeft: 3 }}>
+                  <div style={{ fontSize: 9, color: '#1a1a1a', fontWeight: t.role === 'proxy' || t.role === 'leader' ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.name}
+                  </div>
+                  <div style={{ fontSize: 7.5, color: '#888', fontFamily: 'monospace' }}>{t.ticker}</div>
+                </div>
+
+                {/* Description tooltip icon */}
+                {t.desc && (
+                  <span className={tipCls} data-tip={t.desc} style={{ fontSize: 9, color: '#bbb', flexShrink: 0, lineHeight: 1 }}>ℹ</span>
+                )}
+
+                {/* 1M */}
+                <div style={{ width: 26, textAlign: 'center', fontSize: 9, fontFamily: 'monospace', fontWeight: 600, color: isLoading ? '#ccc' : retColor(d?.m1) }}>
+                  {isLoading ? dot : fmtRet(d?.m1)}
+                </div>
+
+                {/* 3M */}
+                <div style={{ width: 26, textAlign: 'center', fontSize: 9, fontFamily: 'monospace', fontWeight: 600, color: isLoading ? '#ccc' : retColor(d?.m3) }}>
+                  {isLoading ? dot : fmtRet(d?.m3)}
+                </div>
+
+                {/* α = vs SPY 3M */}
+                <div style={{ width: 28, textAlign: 'center', fontSize: 9, fontFamily: 'monospace', fontWeight: 600, color: isLoading ? '#ccc' : relM3 == null ? '#bbb' : relM3 >= 0 ? '#2e7d32' : '#c62828' }}>
+                  {isLoading ? dot : relM3 != null ? (relM3 > 0 ? '+' : '') + relM3.toFixed(0) : '—'}
+                </div>
+
+                {/* Sparkline */}
+                <div style={{ width: 64, flexShrink: 0 }}>
+                  {isLoading
+                    ? <div style={{ width: 62, height: 20, background: '#f0f0f0', borderRadius: 2 }} />
+                    : <Sparkline d={d} width={62} height={20} />
+                  }
+                </div>
+              </div>
+            );
+          })}
+        </React.Fragment>
+      ))}
+
+      {/* Loading progress */}
+      {phase.loaded < phase.total && (
+        <div style={{ padding: '2px 10px', fontSize: 8, color: '#bbb', background: '#fafafa', textAlign: 'right' }}>
+          {phase.loaded}/{phase.total} loaded
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Role Legend ───────────────────────────────────────────────────────────
+function RoleLegend() {
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 9, color: '#888', fontWeight: 600 }}>ROLES:</span>
+      {Object.entries(ROLE_CONFIG).map(([key, cfg]) => (
+        <span key={key} className="tt" data-tip={cfg.title} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555', cursor: 'help' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, borderRadius: 3, background: cfg.bg, color: cfg.color, fontSize: 7, fontWeight: 800, fontFamily: 'monospace' }}>
+            {cfg.label}
+          </span>
+          {key}
+        </span>
+      ))}
+      <span style={{ marginLeft: 'auto', fontSize: 8, color: '#bbb', fontFamily: 'monospace' }}>
+        1M · 3M · α = vs SPY (3M pp) · 1Y~now = sparkline
+      </span>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────
+function CycleTracker() {
+  const [rows,    setRows]    = React.useState({});
+  const [loading, setLoading] = React.useState(new Set(ALL_TICKERS));
+  const [updated, setUpdated] = React.useState(null);
+  const [toast,   setToast]   = React.useState(null);
+
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  React.useEffect(() => {
+    if (loading.size === 0 && Object.keys(rows).length > 0) {
+      try { localStorage.setItem('llm_export_cycle', buildCycleMarkdown(rows, phases)); } catch {}
+    }
+  }, [rows, loading.size, phases]);
+
+  const copyForLLM = () => {
+    if (!Object.keys(rows).length) { showToast('⚠️ Espera a que carguen los datos'); return; }
+    const md = buildCycleMarkdown(rows, phases);
+    navigator.clipboard.writeText(md)
+      .then(() => showToast('✅ Copiado — pégalo en Claude, ChatGPT o cualquier LLM'))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',    label: 'Market Tracker' },
+      { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle',     label: 'Cycle' },
+      { key: 'llm_export_relative',  label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+    ];
+    const found = [], missing = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) { found.push(label); return md; }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    navigator.clipboard.writeText(sections.join('\n\n---\n\n'))
+      .then(() => showToast(missing.length ? `✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}` : `✅ Todas las pestañas copiadas`))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  const fetchAll = React.useCallback(async () => {
+    setRows({});
+    setLoading(new Set(ALL_TICKERS));
+    await Promise.allSettled(ALL_TICKERS.map(async ticker => {
+      try {
+        const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`);
+        const d = await r.json();
+        if (!d.error) setRows(prev => ({ ...prev, [ticker]: d }));
+      } catch {}
+      setLoading(prev => { const s = new Set(prev); s.delete(ticker); return s; });
+    }));
+    setUpdated(new Date());
+  }, []);
+
+  React.useEffect(() => { fetchAll(); }, []);
+
+  const spy    = rows['SPY'];
+  const phases = React.useMemo(() => calcPhaseScores(rows), [rows]);
+  const isLoading = loading.size > 0;
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '-');
+
+  return (
+    <div className="wrap">
+      {toast && <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#27ae60', color: 'white', padding: '10px 22px', borderRadius: 20, fontSize: 13, boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 999 }}>{toast}</div>}
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 22, fontWeight: 'bold', color: '#111' }}>Cycle Tracker</div>
+            <a href="/index.html" style={{ fontSize: 11, color: '#1a6b3c', textDecoration: 'none', padding: '2px 10px', border: '1px solid #1a6b3c', borderRadius: 12, lineHeight: '20px' }}>Market Tracker</a>
+            <a href="/portfolio.html" style={{ fontSize: 11, color: '#3a6ca0', textDecoration: 'none', padding: '2px 10px', border: '1px solid #3a6ca0', borderRadius: 12, lineHeight: '20px' }}>Portfolio</a>
+            <a href="/relative.html" style={{ fontSize: 11, color: '#7b1fa2', textDecoration: 'none', padding: '2px 10px', border: '1px solid #7b1fa2', borderRadius: 12, lineHeight: '20px' }}>Relative Flow</a>
+            <a href="/rotacion.html" style={{ fontSize: 11, color: '#e65100', textDecoration: 'none', padding: '2px 10px', border: '1px solid #e65100', borderRadius: 12, lineHeight: '20px' }}>Flujos & Rotación</a>
+          </div>
+          <div style={{ fontSize: 9, color: '#aaa', marginTop: 2, fontStyle: 'italic' }}>
+            Sector rotation · Dow Theory cycle framework · α = relative outperformance vs SPY · hover ℹ for stock description
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {spy && (
+            <span style={{ fontSize: 9, color: '#666', padding: '3px 10px', background: '#f8f9fa', borderRadius: 4, border: '1px solid #e0e0e0' }}>
+              SPY — 1M: <strong style={{ color: retColor(spy.m1) }}>{fmtRet(spy.m1)}</strong>
+              &nbsp;· 3M: <strong style={{ color: retColor(spy.m3) }}>{fmtRet(spy.m3)}</strong>
+              &nbsp;· YTD: <strong style={{ color: retColor(spy.ytd) }}>{fmtRet(spy.ytd)}</strong>
+              &nbsp;· 1Y: <strong style={{ color: retColor(spy.y1) }}>{fmtRet(spy.y1)}</strong>
+            </span>
+          )}
+          {updated && <span style={{ fontSize: 10, color: '#888' }}>{updated.toLocaleTimeString()}</span>}
+          <button onClick={copyForLLM}
+            style={{ padding: '4px 12px', fontSize: 11, border: 'none', borderRadius: 3, cursor: 'pointer', background: '#6c3483', color: 'white' }}>
+            📋 Copiar para LLM
+          </button>
+          <button onClick={copyAllForLLM}
+            style={{ padding: '4px 12px', fontSize: 11, border: 'none', borderRadius: 3, cursor: 'pointer', background: '#37474f', color: 'white' }}>
+            🗂️ Exportar TODO a LLM
+          </button>
+          <button onClick={fetchAll} disabled={isLoading} style={{ padding: '4px 12px', fontSize: 11, border: 'none', borderRadius: 3, cursor: isLoading ? 'default' : 'pointer', background: isLoading ? '#aaa' : '#3a6ca0', color: 'white' }}>
+            {isLoading ? `⏳ ${loading.size} pending…` : '↻ Refresh'}
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 'bold', color: '#333' }}>{dateStr}</span>
+        </div>
+      </div>
+
+      <PhaseTimeline phases={phases} />
+      <PhaseRankings phases={phases} />
+      <RoleLegend />
+
+      {/* Phase Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {phases.map((ph, i) => (
+          <PhaseCard key={ph.phase} phase={ph} rows={rows} spy={spy} colIndex={i % 4} />
+        ))}
+      </div>
+
+      <div style={{ marginTop: 10, fontSize: 9, color: '#bbb', textAlign: 'right' }}>
+        Yahoo Finance (delayed ~15 min) · Score = avg. relative return vs SPY across all phase instruments · Not financial advice
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(CycleTracker));
+</script>
+</body>
+</html>

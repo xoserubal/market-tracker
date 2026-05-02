@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Portfolio Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; }
+    .wrap { background: white; padding: 16px 20px; min-width: 980px; overflow-x: auto; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #27ae60; color: white; padding: 10px 22px; border-radius: 20px;
+      font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 999; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100;
+      display: flex; align-items: center; justify-content: center; }
+    .modal { background: white; border-radius: 8px; padding: 24px; width: 440px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25); }
+    .modal h3 { margin-bottom: 16px; color: #1a3a2a; font-size: 14px; font-weight: 700; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 10px; color: #666; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .field input, .field select, .field textarea {
+      width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px 8px;
+      font-size: 12px; color: #333; outline: none; font-family: inherit; }
+    .field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #1a6b3c; box-shadow: 0 0 0 2px rgba(26,107,60,0.1); }
+    .row2 { display: flex; gap: 10px; }
+    .row2 .field { flex: 1; }
+    .btn { padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: opacity .15s; }
+    .btn:hover { opacity: 0.82; }
+    .btn-primary   { background: #1a6b3c; color: white; }
+    .btn-secondary { background: #f0f0f0; color: #555; }
+    .btn-danger    { background: #e74c3c; color: white; }
+    .sec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .sec-table th { padding: 3px 6px; font-size: 9px; font-weight: 600; color: #888;
+      text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+      background: #f8f8f8; border-bottom: 1px solid #eee; }
+    .sec-table td { padding: 3px 6px; border-bottom: 1px solid #f0f0f0; }
+    .rank-thead tr { position: relative; }
+    .rank-thead th[data-tip] { cursor: help; }
+    .rank-thead th[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2933;
+      color: #f0f4f8;
+      font-size: 10px;
+      font-weight: 400;
+      line-height: 1.5;
+      white-space: pre-line;
+      padding: 7px 10px;
+      border-radius: 5px;
+      box-shadow: 0 3px 10px rgba(0,0,0,.35);
+      z-index: 100;
+      min-width: 200px;
+      max-width: 280px;
+      text-align: left;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+// ── Formatters ────────────────────────────────────────────────────────────
+const toN = v => (v != null && !isNaN(v)) ? +v : null;
+const fmtPrc = v => { const n=toN(v); if(!n) return '—'; if(n>=1000) return n.toLocaleString('en-US',{maximumFractionDigits:0}); if(n>=100) return n.toFixed(1); return n.toFixed(2); };
+const fmtVal = v => { const n=toN(v); if(n==null) return '—'; return n.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}); };
+const fmtPL  = v => { const n=toN(v); if(n==null) return '—'; const a=Math.abs(n).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}); return n>=0?'+'+a:'-'+a; };
+const fmtPct = v => { const n=toN(v); if(n==null) return '—'; return (n>=0?'+':'')+n.toFixed(1)+'%'; };
+const fmtRet = v => { const n=toN(v); if(n==null) return '—'; return n<0?`(${Math.abs(Math.round(n))}%)`:`${Math.round(n)}%`; };
+const plColor = v => { const n=toN(v); return n==null?'#999':n>=0?'#1a7a1a':'#c0392b'; };
+const retBg   = v => { const n=toN(v); if(n==null) return ''; if(n>=20) return '#0d4e0d'; if(n>=10) return '#1a7a1a'; if(n>=3) return '#5ec45e'; if(n>0) return '#a8d8a8'; if(n===0) return ''; if(n>-3) return '#ffc9c9'; if(n>-10) return '#f48080'; return '#e03030'; };
+const retFg   = v => { const n=toN(v); return n==null?'#555':Math.abs(n)>=10?'white':'#1a1a1a'; };
+const volBg   = v => { const n=toN(v); if(n==null) return ''; if(n>=200) return '#0d2e6e'; if(n>=150) return '#1a5ca0'; if(n>=120) return '#6ab0e0'; if(n<=50) return '#a0a0a0'; if(n<=80) return '#d0d0d0'; return ''; };
+const volFg   = v => { const n=toN(v); if(n==null) return '#aaa'; if(n>=150) return 'white'; if(n<=80) return '#555'; return '#333'; };
+const fmtVol  = v => { const n=toN(v); if(n==null) return '—'; return n+'%'; };
+const rsiBg = v => { const n=toN(v); if(n==null) return ''; if(n>=80) return '#6b0000'; if(n>=70) return '#c0392b'; if(n>=60) return '#e8a87c'; if(n<=20) return '#0d4e0d'; if(n<=30) return '#1a7a1a'; if(n<=40) return '#a8d8a8'; return ''; };
+const rsiFg = v => { const n=toN(v); if(n==null) return '#aaa'; if(n>=70||n<=30) return 'white'; if(n>=60||n<=40) return '#222'; return '#444'; };
+const konSignalStyle = s => {
+  const map = {
+    'Acumulac.':  { bg:'#1a5ca0', fg:'white' },
+    'Alza':       { bg:'#1a7a1a', fg:'white' },
+    'Distribuc.': { bg:'#b86a00', fg:'white' },
+    'Baja':       { bg:'#c0392b', fg:'white' },
+  };
+  return map[s] ?? { bg:'', fg:'#aaa' };
+};
+const konValFg = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?'#c0392b':'#888'; };
+
+// ── Flow Score ────────────────────────────────────────────────────────────
+function computeFlowScore(d) {
+  if (!d) return null;
+  const m = ((d.w1 ?? 0) * 0.6) + ((d.m1 ?? 0) * 0.4);
+  let r = 0;
+  if (d.rsi != null) { if (d.rsi > 65) r += 2; else if (d.rsi > 55) r += 1; }
+  if (d.macdBull === true) r += 1; else if (d.macdBull === false) r -= 1;
+  const atr = d.atrPct ?? 0;
+  const a = (atr >= 1 && atr <= 3) ? 1 : (atr > 3 && atr <= 6) ? 0.5 : atr > 6 ? -0.5 : 0;
+  const kmap = { 'Alza': 2, 'Acumulac.': 1, 'Distribuc.': -1, 'Baja': -2 };
+  const k = kmap[d.konSignal] ?? 0;
+  const fh = d.fromHigh ?? 0;
+  const t = (fh >= -10 && fh <= 0) ? 1 : (fh >= -25 && fh < -10) ? 0 : -1;
+  return Math.round(((m * 2) + r + a + k + t) * 100) / 100;
+}
+function classifyFlow(score) {
+  if (score == null) return null;
+  if (score >= 8) return 'Lider';
+  if (score >= 4) return 'Transicion';
+  return 'Debil';
+}
+const FLOW_STYLE = {
+  'Lider':      { bg:'#1a7a1a', fg:'white' },
+  'Transicion': { bg:'#b8860b', fg:'white' },
+  'Debil':      { bg:'#c0392b', fg:'white' },
+};
+
+// ── Early Flow Detector ────────────────────────────────────────────────────
+function computeEarlyFlowScore(d, prev) {
+  if (!d) return null;
+  let score = 0;
+  if (prev?.konSignal && d.konSignal) {
+    const pk = prev.konSignal, ck = d.konSignal;
+    if      (pk === 'Baja'       && ck === 'Acumulac.') score += 3;
+    else if (pk === 'Distribuc.' && ck === 'Acumulac.') score += 2;
+    else if (pk === 'Acumulac.'  && ck === 'Alza')      score += 1;
+    else if (ck === 'Baja' || ck === 'Distribuc.')      score -= 1;
+  } else if (d.konSignal === 'Baja' || d.konSignal === 'Distribuc.') {
+    score -= 1;
+  }
+  if (prev?.atrPct != null && d.atrPct != null && prev.atrPct > 0) {
+    const r = d.atrPct / prev.atrPct;
+    if (r < 0.9) score += 2;
+    else if (r < 1.0) score += 1;
+    else if (r > 1.2) score -= 1;
+  }
+  const fh = d.fromHigh ?? 0;
+  if      (fh >= -15 && fh <= -5)  score += 2;
+  else if (fh >= -25 && fh < -15)  score += 1;
+  else if (fh < -30)               score -= 1;
+  const rsi = d.rsi;
+  if (rsi != null) {
+    if      (rsi >= 45 && rsi <= 58) score += 2;
+    else if (rsi >= 40 && rsi < 45)  score += 1;
+    else if (rsi < 35)               score -= 1;
+  }
+  const w1 = d.w1 ?? 0, m1 = d.m1 ?? 0;
+  if      (w1 >= 0 && w1 <= 4 && m1 >= -5 && m1 <= 5)  score += 2;
+  else if (w1 >= 0 && w1 <= 6 && m1 >= -8 && m1 <= 8)  score += 1;
+  else if (w1 > 8 || m1 > 10)                           score += 0.5;
+  else if (w1 < -5 && m1 < -8)                          score -= 1;
+  return Math.round(score * 100) / 100;
+}
+function classifyEarlyFlow(score) {
+  if (score == null) return null;
+  if (score >= 7) return 'Fuerte';
+  if (score >= 4) return 'Interesante';
+  return 'Sin setup';
+}
+const EARLY_STYLE = {
+  'Fuerte':      { bg:'#1a5ca0', fg:'white' },
+  'Interesante': { bg:'#5b3fa0', fg:'white' },
+  'Sin setup':   { bg:'',       fg:'#aaa'   },
+};
+function matrixReading(early, flow) {
+  if (early >= 7 && flow >= 8)  return 'Activación potente — setup + flujo confirmado';
+  if (early >= 7 && flow >= 4)  return 'Setup activo — breakout en marcha';
+  if (early >= 7)               return 'Setup temprano — vigilar / comprar parcial';
+  if (early >= 4 && flow >= 8)  return 'Transición a tendencia madura';
+  if (early < 4  && flow >= 8)  return 'Tendencia madura — llegas tarde';
+  return null;
+}
+
+// ── PositionModal ─────────────────────────────────────────────────────────
+function PositionModal({ mode, sectionId, item, sections, onSave, onClose }) {
+  const [ticker,  setTicker]  = React.useState(item?.ticker  ?? '');
+  const [shares,  setShares]  = React.useState(item?.shares  ?? '');
+  const [avgCost, setAvgCost] = React.useState(item?.avgCost ?? '');
+  const [notes,   setNotes]   = React.useState(item?.notes   ?? '');
+  const [secId,   setSecId]   = React.useState(sectionId);
+  const [err,     setErr]     = React.useState('');
+
+  const handleSave = () => {
+    if (!ticker.trim()) return setErr('Ticker obligatorio');
+    onSave({ sectionId: secId, item: {
+      id: item?.id ?? genId(),
+      ticker:  ticker.trim().toUpperCase(),
+      shares:  +shares,
+      avgCost: +avgCost,
+      notes:   notes.trim(),
+      addedAt: item?.addedAt ?? new Date().toISOString().slice(0,10),
+    }});
+  };
+
+  return (
+    <div className="overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>{mode==='add' ? '+ Nueva posición' : `Editar — ${item?.ticker}`}</h3>
+        <div className="field">
+          <label>Ticker</label>
+          <input value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase())}
+            placeholder="AAPL, NVDA, CCJ…" autoFocus disabled={mode==='edit'} />
+        </div>
+        <div className="row2">
+          <div className="field">
+            <label>Acciones / contratos</label>
+            <input type="number" value={shares} onChange={e=>setShares(e.target.value)} placeholder="10" min="0" step="any"/>
+          </div>
+          <div className="field">
+            <label>Coste medio (€ o $)</label>
+            <input type="number" value={avgCost} onChange={e=>setAvgCost(e.target.value)} placeholder="150.00" min="0" step="any"/>
+          </div>
+        </div>
+        <div className="field">
+          <label>Sección</label>
+          <select value={secId} onChange={e=>setSecId(e.target.value)}>
+            {sections.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>Notas (tesis, stop-loss, alertas pendientes…)</label>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={4}
+            placeholder="ej. Stop en 42. Catalizador: aprobación Q3. Alerta si cae <10% 52W high."/>
+        </div>
+        {err && <div style={{color:'#e74c3c',fontSize:11,marginBottom:10}}>⚠ {err}</div>}
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:4}}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary"   onClick={handleSave}>{mode==='add'?'Añadir':'Guardar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── NotesModal ────────────────────────────────────────────────────────────
+function NotesModal({ ticker, notes, onSave, onClose }) {
+  const [val, setVal] = React.useState(notes);
+  return (
+    <div className="overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>Notas — {ticker}</h3>
+        <div className="field">
+          <textarea value={val} onChange={e=>setVal(e.target.value)} rows={9} autoFocus
+            style={{fontSize:12,lineHeight:1.6}}
+            placeholder="Tesis de inversión, niveles clave, stops, alertas pendientes, fechas de resultados…"/>
+        </div>
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary"   onClick={()=>onSave(val)}>Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Portfolio markdown export ─────────────────────────────────────────────
+function buildPortfolioMarkdown(portfolio, prices, summary) {
+  const date = new Date().toLocaleDateString('es-ES');
+  const f  = v => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fp = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  let md = `# Portfolio Tracker — Snapshot\n**Fecha:** ${date}\n\n`;
+  md += `## RESUMEN GLOBAL\n| Coste | Valor | P&L | P&L% | Daily P&L |\n|------:|------:|----:|-----:|----------:|\n`;
+  md += `| ${f(summary.cost)} | ${f(summary.value)} | ${f(summary.pl)} | ${fp(summary.plPct)} | ${f(summary.dailyPL)} |\n\n`;
+  portfolio.sections.forEach(sec => {
+    md += `## ${sec.name}\n| Ticker | Acciones | Coste Avg | Precio | Valor | P&L | P&L% | 1D | RSI |\n`;
+    md += `|--------|--------:|----------:|-------:|------:|----:|-----:|---:|----:|\n`;
+    sec.items.forEach(item => {
+      const p     = prices[item.ticker];
+      const value = p?.price != null ? item.shares * p.price : null;
+      const pl    = value != null ? value - item.shares * item.avgCost : null;
+      const plPct = pl != null && item.avgCost ? pl / (item.shares * item.avgCost) * 100 : null;
+      md += `| ${item.ticker} | ${item.shares} | ${f(item.avgCost)} | ${p?.price != null ? f(p.price) : '—'} | ${value != null ? f(value) : '—'} | ${pl != null ? f(pl) : '—'} | ${plPct != null ? fp(plPct) : '—'} | ${p?.d1 != null ? fp(p.d1) : '—'} | ${p?.rsi != null ? p.rsi.toFixed(0) : '—'} |\n`;
+    });
+    md += '\n';
+  });
+  return md;
+}
+
+// ── Portfolio ─────────────────────────────────────────────────────────────
+function Portfolio() {
+  const [portfolio,   setPortfolio]   = React.useState({ sections: [] });
+  const [prices,      setPrices]      = React.useState({});
+  const [loading,     setLoading]     = React.useState(new Set());
+  const [saving,      setSaving]      = React.useState(false);
+  const [lastSaved,   setLastSaved]   = React.useState(null);
+  const [modal,       setModal]       = React.useState(null);
+  const [toast,       setToast]       = React.useState(null);
+  const [prevSnapshot, setPrevSnapshot] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('ticker_snapshot') || '{}'); } catch { return {}; }
+  });
+  const saveTimer = React.useRef(null);
+
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3200); };
+
+  // ── Carga inicial ──────────────────────────────────────────────────────
+  React.useEffect(() => {
+    fetch('/api/portfolio')
+      .then(r => r.json())
+      .then(d => {
+        if (d.sections) {
+          setPortfolio(d);
+          fetchPrices(d.sections);
+          if (d.lastSessionSnapshot) setPrevSnapshot(d.lastSessionSnapshot);
+        }
+      })
+      .catch(() => showToast('❌ No se pudo cargar la cartera'));
+  }, []);
+
+  // ── Guardado automático (debounce 800 ms) ─────────────────────────────
+  const persistPortfolio = React.useCallback(async data => {
+    setSaving(true);
+    try {
+      const r = await fetch('/api/portfolio', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      setLastSaved(new Date());
+    } catch(e) { showToast('❌ Error al guardar: '+e.message); }
+    setSaving(false);
+  }, []);
+
+  const updatePortfolio = React.useCallback(updater => {
+    setPortfolio(prev => {
+      const next = updater(prev);
+      clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => persistPortfolio(next), 800);
+      return next;
+    });
+  }, [persistPortfolio]);
+
+  // ── Precios Yahoo ──────────────────────────────────────────────────────
+  const fetchPrices = React.useCallback(async (sections, extraTickers=[]) => {
+    const tickers = [...new Set([
+      ...(sections ?? []).flatMap(s => s.items.map(i => i.ticker)),
+      ...extraTickers,
+    ])];
+    if (!tickers.length) return;
+    setLoading(prev => new Set([...prev, ...tickers]));
+    await Promise.allSettled(tickers.map(async ticker => {
+      try {
+        const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        setPrices(prev => ({...prev, [ticker]: d}));
+      } catch(e) {}
+      setLoading(prev => { const s=new Set(prev); s.delete(ticker); return s; });
+    }));
+  }, []);
+
+  const refresh = () => fetchPrices(portfolio.sections);
+
+  // ── Guardar snapshot + historial de señales ───────────────────────────
+  React.useEffect(() => {
+    if (loading.size === 0 && Object.keys(prices).length > 0) {
+      const snapshot = {};
+      Object.entries(prices).forEach(([ticker, d]) => {
+        if (d.konSignal != null || d.atrPct != null)
+          snapshot[ticker] = { konSignal: d.konSignal ?? null, atrPct: d.atrPct ?? null };
+      });
+
+      // Persistir snapshot en portfolio.json (funciona entre máquinas)
+      setPortfolio(prev => {
+        const next = { ...prev, lastSessionSnapshot: snapshot };
+        persistPortfolio(next);
+        return next;
+      });
+
+      // Mantener localStorage como fallback
+      try { localStorage.setItem('ticker_snapshot', JSON.stringify(snapshot)); } catch {}
+
+      // Auto-save markdown for combined LLM export
+      try { localStorage.setItem('llm_export_portfolio', buildPortfolioMarkdown(portfolio, prices, summary)); } catch {}
+
+      // Guardar historial de señales
+      const today = new Date().toISOString().slice(0, 10);
+      const entries = [];
+      Object.entries(prices).forEach(([ticker, d]) => {
+        const flowScore = computeFlowScore(d);
+        const earlyFlow = computeEarlyFlowScore(d, prevSnapshot[ticker] ?? null);
+        if (flowScore != null || earlyFlow != null) {
+          entries.push({
+            date:      today,
+            ticker,
+            price:     d.price     ?? null,
+            flowScore,
+            earlyFlow,
+            konSignal: d.konSignal ?? null,
+            konAzul:   d.konAzul   ?? null,
+            konVerde:  d.konVerde  ?? null,
+            rsi:       d.rsi       ?? null,
+            w1:        d.w1        ?? null,
+            m1:        d.m1        ?? null,
+            fromHigh:  d.fromHigh  ?? null,
+          });
+        }
+      });
+      if (entries.length) {
+        fetch('/api/signals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entries),
+        }).catch(() => {});
+      }
+    }
+  }, [prices, loading.size]);
+
+  // ── Resumen global ─────────────────────────────────────────────────────
+  const summary = React.useMemo(() => {
+    let cost=0, value=0, dailyPL=0, loaded=0, total=0;
+    portfolio.sections.forEach(sec => sec.items.forEach(item => {
+      const p = prices[item.ticker];
+      cost += item.shares * item.avgCost;
+      total++;
+      if (p?.price != null) {
+        const v = item.shares * p.price;
+        value   += v;
+        dailyPL += p.d1 != null ? v * p.d1 / 100 : 0;
+        loaded++;
+      }
+    }));
+    const pl    = value - cost;
+    const plPct = cost ? pl / cost * 100 : 0;
+    return { cost, value, pl, plPct, dailyPL, loaded, total };
+  }, [portfolio, prices]);
+
+  // ── Ranking de setups ─────────────────────────────────────────────────
+  const setupRanking = React.useMemo(() => {
+    const seen = new Map();
+    portfolio.sections.forEach(sec => sec.items.forEach(item => {
+      const p = prices[item.ticker];
+      if (!p || p.price == null) return;
+      if (seen.has(item.ticker)) return;
+      const flowScore = computeFlowScore(p);
+      const earlyFlow = computeEarlyFlowScore(p, prevSnapshot[item.ticker] ?? null);
+      if (earlyFlow == null && flowScore == null) return;
+      seen.set(item.ticker, { ticker: item.ticker, flowScore, earlyFlow,
+        konSignal: p.konSignal ?? null, rsi: p.rsi ?? null,
+        w1: p.w1 ?? null, m1: p.m1 ?? null });
+    }));
+    return [...seen.values()].sort((a, b) => (b.earlyFlow ?? -99) - (a.earlyFlow ?? -99));
+  }, [portfolio, prices, prevSnapshot]);
+
+  // ── LLM export ─────────────────────────────────────────────────────────
+  const copyForLLM = () => {
+    if (!Object.keys(prices).length) { showToast('⚠️ Espera a que carguen los datos'); return; }
+    const md = buildPortfolioMarkdown(portfolio, prices, summary);
+    navigator.clipboard.writeText(md)
+      .then(() => showToast('✅ Copiado — pégalo en Claude, ChatGPT o cualquier LLM'))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',    label: 'Market Tracker' },
+      { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle',     label: 'Cycle' },
+      { key: 'llm_export_relative',  label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+    ];
+    const found = [], missing = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) { found.push(label); return md; }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    navigator.clipboard.writeText(sections.join('\n\n---\n\n'))
+      .then(() => showToast(missing.length ? `✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}` : `✅ Todas las pestañas copiadas`))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  // ── CRUD ───────────────────────────────────────────────────────────────
+  const addSection = () => {
+    const name = prompt('Nombre de la sección (ej. Core, Especulativo, Energía):');
+    if (!name?.trim()) return;
+    updatePortfolio(p => ({...p, sections: [...p.sections, {id:genId(), name:name.trim(), items:[]}]}));
+  };
+
+  const renameSection = secId => {
+    const sec = portfolio.sections.find(s=>s.id===secId);
+    const name = prompt('Nuevo nombre:', sec?.name);
+    if (!name?.trim() || name===sec?.name) return;
+    updatePortfolio(p => ({...p, sections: p.sections.map(s => s.id===secId ? {...s, name:name.trim()} : s)}));
+  };
+
+  const deleteSection = secId => {
+    const sec = portfolio.sections.find(s=>s.id===secId);
+    if (!confirm(`¿Eliminar la sección "${sec?.name}" y todas sus posiciones?`)) return;
+    updatePortfolio(p => ({...p, sections: p.sections.filter(s=>s.id!==secId)}));
+  };
+
+  const savePosition = ({sectionId, item, originalSectionId}) => {
+    updatePortfolio(p => {
+      let secs = p.sections.map(s => ({...s, items:[...s.items]}));
+      // Mover de sección si cambió
+      if (originalSectionId && originalSectionId !== sectionId)
+        secs = secs.map(s => s.id===originalSectionId ? {...s, items:s.items.filter(i=>i.id!==item.id)} : s);
+      // Añadir o actualizar en la sección destino
+      secs = secs.map(s => {
+        if (s.id !== sectionId) return s;
+        const idx = s.items.findIndex(i=>i.id===item.id);
+        return {...s, items: idx>=0 ? s.items.map(i=>i.id===item.id?item:i) : [...s.items, item]};
+      });
+      return {...p, sections: secs};
+    });
+    if (!prices[item.ticker]) fetchPrices([], [item.ticker]);
+    setModal(null);
+  };
+
+  const deletePosition = (secId, itemId) => {
+    if (!confirm('¿Eliminar esta posición?')) return;
+    updatePortfolio(p => ({...p, sections:
+      p.sections.map(s => s.id===secId ? {...s, items:s.items.filter(i=>i.id!==itemId)} : s)
+    }));
+  };
+
+  const saveNotes = (secId, itemId, notes) => {
+    updatePortfolio(p => ({...p, sections:
+      p.sections.map(s => s.id===secId ? {...s, items:
+        s.items.map(i => i.id===itemId ? {...i, notes} : i)
+      } : s)
+    }));
+    setModal(null);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  const dot        = <span style={{color:'#ccc'}}>···</span>;
+  const totalValue = summary.value || 1;
+
+  return (
+    <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
+
+      {modal?.type==='position' && (
+        <PositionModal mode={modal.mode} sectionId={modal.sectionId} item={modal.item}
+          sections={portfolio.sections}
+          onSave={p => savePosition({...p, originalSectionId: modal.sectionId})}
+          onClose={()=>setModal(null)} />
+      )}
+      {modal?.type==='notes' && (
+        <NotesModal ticker={modal.ticker} notes={modal.notes}
+          onSave={v=>saveNotes(modal.secId, modal.itemId, v)}
+          onClose={()=>setModal(null)} />
+      )}
+
+      {/* ── Header ────────────────────────────────────────────────────── */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12}}>
+        <div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{fontSize:22,fontWeight:'bold',color:'#111'}}>Portfolio Tracker</div>
+            <a href="/index.html" style={{fontSize:11,color:'#1a6b3c',textDecoration:'none',padding:'2px 10px',border:'1px solid #1a6b3c',borderRadius:12,lineHeight:'20px'}}>Market Tracker</a>
+            <a href="/relative.html" style={{fontSize:11,color:'#7b1fa2',textDecoration:'none',padding:'2px 10px',border:'1px solid #7b1fa2',borderRadius:12,lineHeight:'20px'}}>Relative Flow</a>
+            <a href="/cycle.html" style={{fontSize:11,color:'#7f0000',textDecoration:'none',padding:'2px 10px',border:'1px solid #7f0000',borderRadius:12,lineHeight:'20px'}}>Cycle</a>
+            <a href="/rotacion.html" style={{fontSize:11,color:'#e65100',textDecoration:'none',padding:'2px 10px',border:'1px solid #e65100',borderRadius:12,lineHeight:'20px'}}>Flujos & Rotación</a>
+          </div>
+          <div style={{fontSize:9,color:'#aaa',marginTop:2,fontStyle:'italic'}}>
+            Precios: Yahoo Finance (delayed 15 min) · Guardado automático en portfolio.json
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          {saving && <span style={{fontSize:10,color:'#aaa'}}>Guardando…</span>}
+          {!saving && lastSaved && <span style={{fontSize:10,color:'#bbb'}}>Guardado {lastSaved.toLocaleTimeString()}</span>}
+          <button onClick={copyForLLM} disabled={loading.size>0}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:loading.size>0?'default':'pointer',background:loading.size>0?'#aaa':'#6c3483',color:'white'}}>
+            📋 Copiar para LLM
+          </button>
+          <button onClick={copyAllForLLM}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#37474f',color:'white'}}>
+            🗂️ Exportar TODO a LLM
+          </button>
+          <a href="/api/signals" target="_blank"
+            style={{padding:'4px 12px',fontSize:11,border:'1px solid #888',borderRadius:3,
+              cursor:'pointer',background:'#f5f5f5',color:'#555',fontWeight:600,textDecoration:'none'}}>
+            📋 Historial
+          </a>
+          <button onClick={addSection}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#1a6b3c',color:'white',fontWeight:600}}>
+            + Sección
+          </button>
+          <button onClick={refresh} disabled={loading.size>0}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,
+              cursor:loading.size>0?'default':'pointer',
+              background:loading.size>0?'#aaa':'#3a6ca0',color:'white'}}>
+            {loading.size>0 ? `⏳ ${loading.size}…` : '↻ Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Summary bar ───────────────────────────────────────────────── */}
+      {summary.total > 0 && (
+        <div style={{display:'flex',alignItems:'center',gap:0,marginBottom:16,
+          background:'#f8f9fa',border:'1px solid #e0e0e0',borderRadius:6,padding:'10px 20px'}}>
+          {[
+            { label:'Coste total',     val: fmtVal(summary.cost),    color:'#555',    bold:false },
+            { label:'Valor actual',    val: fmtVal(summary.value),   color:'#1a3a5c', bold:true  },
+            { label:'P&L total',       val: fmtPL(summary.pl),       color: plColor(summary.pl),    bold:true },
+            { label:'P&L %',           val: fmtPct(summary.plPct),   color: plColor(summary.plPct), bold:false },
+            { label:'P&L día (est.)',  val: fmtPL(summary.dailyPL),  color: plColor(summary.dailyPL), bold:false },
+          ].map(({label,val,color,bold},i) => (
+            <React.Fragment key={label}>
+              {i>0 && <div style={{width:1,background:'#ddd',margin:'0 18px',alignSelf:'stretch'}}/>}
+              <div>
+                <div style={{fontSize:9,color:'#999',letterSpacing:'0.3px',marginBottom:2}}>{label}</div>
+                <div style={{fontSize:17,fontWeight:bold?700:400,color,fontFamily:'monospace',lineHeight:1}}>{val}</div>
+              </div>
+            </React.Fragment>
+          ))}
+          <div style={{marginLeft:'auto',fontSize:10,color:'#ccc'}}>
+            {summary.loaded}/{summary.total} precios
+          </div>
+        </div>
+      )}
+
+      {/* ── Setup Ranking ─────────────────────────────────────────────── */}
+      {setupRanking.length > 0 && (
+        <div style={{marginBottom:16,border:'1px solid #e0e0e0',borderRadius:6,overflow:'hidden'}}>
+          <div style={{padding:'5px 12px',background:'#354f73',color:'white',
+            fontSize:10,fontWeight:700,letterSpacing:'.5px',textTransform:'uppercase'}}>
+            Ranking de Setups — ordenado por Early Flow
+          </div>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+              <thead className="rank-thead">
+                <tr style={{background:'#f0f4f8'}}>
+                  <th style={{padding:'4px 10px',textAlign:'left',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Ticker</th>
+                  <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde + compresión ATR\n+ posición 52W + RSI en zona + momentum modesto.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
+                  <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ ajuste Koncorde + ajuste tendencia 52W.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
+                  <th data-tip={"Interpretación combinada Early Flow × Flow Score.\nEjemplos:\nEarly≥7 + Flow≥8 → Activación potente\nEarly≥7 + Flow<4 → Setup temprano\nEarly<4 + Flow≥8 → Tendencia madura (tarde)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Lectura</th>
+                  <th data-tip={"Señal combinada Koncorde (Blai5):\nAlza: institucional y minorista compran\nAcumulac.: institucional compra, minorista vende\nDistribuc.: institucional vende, minorista compra\nBaja: ambos venden"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Koncorde</th>
+                  <th data-tip={"RSI(14) Wilder.\n>65: sobrecomprado · <35: sobrevendido\nZona ideal de entrada: 45–58\n(RSI en zona = +2 en Early Flow)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>RSI</th>
+                  <th data-tip={"Retorno de los últimos 5 días de trading.\nEn Early Flow se valora positivo pero modesto\n(0–4%) como señal de acumulación sin sobreextensión."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1W</th>
+                  <th data-tip={"Retorno de los últimos 21 días de trading.\nEn Early Flow se valora neutro a ligeramente positivo\n(−5% a +5%) — confirma consolidación."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1M</th>
+                </tr>
+              </thead>
+              <tbody>
+                {setupRanking.map((r, i) => {
+                  const earlyCls  = classifyEarlyFlow(r.earlyFlow);
+                  const flowCls   = classifyFlow(r.flowScore);
+                  const earlySt   = earlyCls ? EARLY_STYLE[earlyCls] : null;
+                  const flowSt    = flowCls  ? FLOW_STYLE[flowCls]   : null;
+                  const konSt     = konSignalStyle(r.konSignal);
+                  const reading   = (r.earlyFlow != null && r.flowScore != null)
+                    ? matrixReading(r.earlyFlow, r.flowScore) : null;
+                  return (
+                    <tr key={r.ticker} style={{background: i%2===0 ? 'white' : '#fafafa',
+                      borderBottom:'1px solid #f0f0f0'}}>
+                      <td style={{padding:'4px 10px',fontWeight:700,color:'#1a6baa',fontFamily:'monospace'}}>{r.ticker}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontWeight:700,fontFamily:'monospace',
+                        background: earlySt?.bg || '', color: earlySt?.fg || '#aaa'}}>
+                        {r.earlyFlow != null ? r.earlyFlow.toFixed(1) : '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontWeight:700,fontFamily:'monospace',
+                        background: flowSt?.bg || '', color: flowSt?.fg || '#aaa'}}>
+                        {r.flowScore != null ? r.flowScore.toFixed(1) : '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',fontSize:10,color:'#555',fontStyle: reading ? 'normal' : 'italic'}}>
+                        {reading ?? '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontWeight:600,fontSize:10,
+                        background: r.konSignal ? konSt.bg : '', color: r.konSignal ? konSt.fg : '#aaa',
+                        whiteSpace:'nowrap'}}>
+                        {r.konSignal ?? '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',
+                        background:rsiBg(r.rsi),color:rsiFg(r.rsi)}}>
+                        {r.rsi ?? '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',
+                        background:r.w1!=null?retBg(r.w1):'',color:r.w1!=null?retFg(r.w1):'#aaa'}}>
+                        {r.w1 != null ? fmtRet(r.w1) : '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',
+                        background:r.m1!=null?retBg(r.m1):'',color:r.m1!=null?retFg(r.m1):'#aaa'}}>
+                        {r.m1 != null ? fmtRet(r.m1) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ───────────────────────────────────────────────── */}
+      {portfolio.sections.length===0 && (
+        <div style={{textAlign:'center',padding:'64px 0',color:'#ccc'}}>
+          <div style={{fontSize:44,marginBottom:12}}>📊</div>
+          <div style={{fontSize:14,color:'#aaa',marginBottom:6}}>Cartera vacía</div>
+          <div style={{fontSize:11}}>Pulsa "+ Sección" para empezar</div>
+        </div>
+      )}
+
+      {/* ── Sections ──────────────────────────────────────────────────── */}
+      {portfolio.sections.map(sec => {
+        const secCost  = sec.items.reduce((s,i) => s + i.shares*i.avgCost, 0);
+        const secValue = sec.items.reduce((s,i) => { const p=prices[i.ticker]; return s+(p?.price!=null?i.shares*p.price:0); }, 0);
+        const secPL    = secValue - secCost;
+
+        return (
+          <div key={sec.id} style={{marginBottom:24}}>
+            {/* Section header */}
+            <div style={{display:'flex',alignItems:'center',gap:8,
+              borderBottom:'2px solid #1a6b3c',paddingBottom:5,marginBottom:0}}>
+              <span style={{fontWeight:'bold',fontSize:11,letterSpacing:'0.8px',
+                color:'#1a6b3c',textTransform:'uppercase'}}>{sec.name}</span>
+              <span style={{fontSize:10,color:'#aaa'}}>
+                {secValue>0 && fmtVal(secValue)}
+                {secPL!==0 && secValue>0 && (
+                  <span style={{marginLeft:6,color:plColor(secPL),fontWeight:600}}>
+                    {fmtPL(secPL)}
+                  </span>
+                )}
+              </span>
+              <div style={{marginLeft:'auto',display:'flex',gap:4}}>
+                <button onClick={()=>setModal({type:'position',mode:'add',sectionId:sec.id})}
+                  style={{fontSize:10,padding:'2px 9px',border:'1px solid #1a6b3c',borderRadius:3,
+                    cursor:'pointer',background:'#e8f5e9',color:'#1a6b3c',fontWeight:600}}>+ posición</button>
+                <button onClick={()=>renameSection(sec.id)}
+                  style={{fontSize:10,padding:'2px 8px',border:'1px solid #ddd',borderRadius:3,cursor:'pointer',background:'#f5f5f5',color:'#555'}}>✎</button>
+                <button onClick={()=>deleteSection(sec.id)}
+                  style={{fontSize:10,padding:'2px 8px',border:'1px solid #fcc',borderRadius:3,cursor:'pointer',background:'#fff5f5',color:'#e74c3c'}}>✕</button>
+              </div>
+            </div>
+
+            {sec.items.length===0 && (
+              <div style={{padding:'10px 8px',fontSize:11,color:'#ccc',fontStyle:'italic'}}>
+                Sin posiciones — pulsa "+ posición" para añadir
+              </div>
+            )}
+
+            {sec.items.length>0 && (
+              <table className="sec-table">
+                <thead>
+                  <tr>
+                    <th style={{textAlign:'left',width:90}}>Ticker</th>
+                    <th>Precio</th>
+                    <th>1D</th>
+                    <th>2D</th>
+                    <th>3D</th>
+                    <th>1W</th>
+                    <th>1M</th>
+                    <th>3M</th>
+                    <th>YTD</th>
+                    <th>1Y</th>
+                    <th title="Volumen vs media 3M">Vol 1D</th>
+                    <th title="Volumen vs media 3M">Vol 2D</th>
+                    <th title="Volumen vs media 3M">Vol 3D</th>
+                    <th title="RSI 14 periodos">RSI</th>
+                    <th title="Koncorde Verde — dinero minorista (Estocástico −50)">K.V</th>
+                    <th title="Koncorde Azul — dinero institucional (ΔOBV normalizado)">K.A</th>
+                    <th title="Señal combinada Koncorde">Konc</th>
+                    <th title="MACD histograma (12,26,9) — ▲ alcista / ▼ bajista">MACD</th>
+                    <th title="ATR(14) normalizado por precio — volatilidad/fuerza del movimiento">ATR%</th>
+                    <th title="Flow Score: momentum + RSI/MACD + ATR + Koncorde + tendencia">Flow</th>
+                    <th title="Early Flow Detector: giro Koncorde + compresión ATR + posición 52W + RSI zona + momentum modesto">Early</th>
+                    <th style={{textAlign:'left'}}>Notas</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sec.items.map((item,i) => {
+                    const p      = prices[item.ticker];
+                    const isLoad = loading.has(item.ticker);
+                    const price  = p?.price ?? null;
+
+                    return (
+                      <tr key={item.id} style={{background:i%2===0?'white':'#fafafa'}}>
+                        {/* Ticker */}
+                        <td>
+                          <span style={{fontWeight:700,color:'#1a6baa',fontSize:12}}>{item.ticker}</span>
+                          <div style={{fontSize:8,color:'#bbb'}}>{item.addedAt}</div>
+                        </td>
+                        {/* Precio actual */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600}}>
+                          {isLoad ? dot : price!=null ? fmtPrc(price) : <span style={{color:'#e74c3c',fontSize:9}}>err</span>}
+                        </td>
+                        {/* 1D */}
+                        <td style={{textAlign:'center',background:p?.d1!=null?retBg(p.d1):'',color:p?.d1!=null?retFg(p.d1):'#aaa'}}>
+                          {isLoad ? dot : p?.d1!=null ? fmtRet(p.d1) : '—'}
+                        </td>
+                        {/* 2D */}
+                        <td style={{textAlign:'center',background:p?.d2!=null?retBg(p.d2):'',color:p?.d2!=null?retFg(p.d2):'#aaa'}}>
+                          {isLoad ? dot : p?.d2!=null ? fmtRet(p.d2) : '—'}
+                        </td>
+                        {/* 3D */}
+                        <td style={{textAlign:'center',background:p?.d3!=null?retBg(p.d3):'',color:p?.d3!=null?retFg(p.d3):'#aaa'}}>
+                          {isLoad ? dot : p?.d3!=null ? fmtRet(p.d3) : '—'}
+                        </td>
+                        {/* 1W */}
+                        <td style={{textAlign:'center',background:p?.w1!=null?retBg(p.w1):'',color:p?.w1!=null?retFg(p.w1):'#aaa'}}>
+                          {isLoad ? dot : p?.w1!=null ? fmtRet(p.w1) : '—'}
+                        </td>
+                        {/* 1M */}
+                        <td style={{textAlign:'center',background:p?.m1!=null?retBg(p.m1):'',color:p?.m1!=null?retFg(p.m1):'#aaa'}}>
+                          {isLoad ? dot : p?.m1!=null ? fmtRet(p.m1) : '—'}
+                        </td>
+                        {/* 3M */}
+                        <td style={{textAlign:'center',background:p?.m3!=null?retBg(p.m3):'',color:p?.m3!=null?retFg(p.m3):'#aaa'}}>
+                          {isLoad ? dot : p?.m3!=null ? fmtRet(p.m3) : '—'}
+                        </td>
+                        {/* YTD */}
+                        <td style={{textAlign:'center',background:p?.ytd!=null?retBg(p.ytd):'',color:p?.ytd!=null?retFg(p.ytd):'#aaa'}}>
+                          {isLoad ? dot : p?.ytd!=null ? fmtRet(p.ytd) : '—'}
+                        </td>
+                        {/* 1Y */}
+                        <td style={{textAlign:'center',background:p?.y1!=null?retBg(p.y1):'',color:p?.y1!=null?retFg(p.y1):'#aaa'}}>
+                          {isLoad ? dot : p?.y1!=null ? fmtRet(p.y1) : '—'}
+                        </td>
+                        {/* Vol 1D */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',background:volBg(p?.vol1d),color:volFg(p?.vol1d)}}>
+                          {isLoad ? dot : fmtVol(p?.vol1d)}
+                        </td>
+                        {/* Vol 2D */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',background:volBg(p?.vol2d),color:volFg(p?.vol2d)}}>
+                          {isLoad ? dot : fmtVol(p?.vol2d)}
+                        </td>
+                        {/* Vol 3D */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',background:volBg(p?.vol3d),color:volFg(p?.vol3d)}}>
+                          {isLoad ? dot : fmtVol(p?.vol3d)}
+                        </td>
+                        {/* RSI */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,
+                          background:rsiBg(p?.rsi),color:rsiFg(p?.rsi)}}>
+                          {isLoad ? dot : p?.rsi != null ? p.rsi : '—'}
+                        </td>
+                        {/* Koncorde Verde */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,
+                          color:konValFg(p?.konVerde)}}>
+                          {isLoad ? dot : p?.konVerde != null ? (p.konVerde>0?'+':'')+p.konVerde : '—'}
+                        </td>
+                        {/* Koncorde Azul */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,
+                          color:konValFg(p?.konAzul)}}>
+                          {isLoad ? dot : p?.konAzul != null ? (p.konAzul>0?'+':'')+p.konAzul : '—'}
+                        </td>
+                        {/* Koncorde señal */}
+                        {(() => { const s = konSignalStyle(p?.konSignal); return (
+                          <td style={{textAlign:'center',fontWeight:600,fontSize:9,
+                            background:p?.konSignal?s.bg:'',color:p?.konSignal?s.fg:'#aaa',whiteSpace:'nowrap'}}>
+                            {isLoad ? dot : p?.konSignal ?? '—'}
+                          </td>
+                        ); })()}
+                        {/* MACD */}
+                        <td style={{textAlign:'center',fontSize:12}}>
+                          {isLoad ? dot : p?.macdBull==null ? <span style={{color:'#aaa'}}>—</span>
+                            : p.macdBull ? <span style={{color:'#1a7a1a'}}>▲</span>
+                                         : <span style={{color:'#c0392b'}}>▼</span>}
+                        </td>
+                        {/* ATR% */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,color:'#666'}}>
+                          {isLoad ? dot : p?.atrPct != null ? p.atrPct+'%' : '—'}
+                        </td>
+                        {/* Flow Score */}
+                        {(() => {
+                          const score = computeFlowScore(p);
+                          const cls   = classifyFlow(score);
+                          const st    = cls ? FLOW_STYLE[cls] : null;
+                          return (
+                            <td style={{textAlign:'center',fontWeight:700,fontSize:10,fontFamily:'monospace',
+                              background: isLoad||!st ? '' : st.bg,
+                              color:      isLoad||!st ? '#aaa' : st.fg,
+                              whiteSpace:'nowrap'}}>
+                              {isLoad ? dot : score!=null ? score.toFixed(1) : '—'}
+                            </td>
+                          );
+                        })()}
+                        {/* Early Flow */}
+                        {(() => {
+                          const snap  = prevSnapshot[item.ticker];
+                          const early = computeEarlyFlowScore(p, snap);
+                          const flow  = computeFlowScore(p);
+                          const cls   = classifyEarlyFlow(early);
+                          const st    = cls ? EARLY_STYLE[cls] : null;
+                          const tip   = (early != null && flow != null) ? matrixReading(early, flow) : null;
+                          return (
+                            <td title={tip ?? undefined}
+                              style={{textAlign:'center',fontWeight:700,fontSize:10,fontFamily:'monospace',
+                                background: isLoad||!st?.bg ? '' : st.bg,
+                                color:      isLoad||!st    ? '#aaa' : st.fg,
+                                whiteSpace:'nowrap', cursor: tip ? 'help' : 'default'}}>
+                              {isLoad ? dot : early!=null ? early.toFixed(1) : '—'}
+                            </td>
+                          );
+                        })()}
+                        {/* Notas preview */}
+                        <td style={{maxWidth:180}}>
+                          <button onClick={()=>setModal({type:'notes',secId:sec.id,itemId:item.id,ticker:item.ticker,notes:item.notes??''})}
+                            style={{border:'none',background:'none',cursor:'pointer',textAlign:'left',
+                              width:'100%',padding:0,fontSize:10,color:item.notes?'#555':'#ccc',
+                              overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:175,display:'block'}}>
+                            {item.notes ? '📝 '+item.notes.slice(0,45)+(item.notes.length>45?'…':'') : '+ notas'}
+                          </button>
+                        </td>
+                        {/* Acciones */}
+                        <td style={{textAlign:'center',whiteSpace:'nowrap'}}>
+                          <button onClick={()=>setModal({type:'position',mode:'edit',sectionId:sec.id,item})}
+                            style={{fontSize:9,padding:'1px 5px',border:'1px solid #ddd',borderRadius:3,
+                              cursor:'pointer',background:'#f5f5f5',color:'#555',marginRight:2}}>✎</button>
+                          <button onClick={()=>deletePosition(sec.id,item.id)}
+                            style={{fontSize:9,padding:'1px 5px',border:'1px solid #fcc',borderRadius:3,
+                              cursor:'pointer',background:'#fff5f5',color:'#e74c3c'}}>✕</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })}
+
+      <div style={{marginTop:10,fontSize:9,color:'#ccc',textAlign:'right'}}>
+        Yahoo Finance (delayed 15 min) · portfolio.json · Not financial advice
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Portfolio));
+</script>
+</body>
+</html>
