@@ -20,14 +20,14 @@ import pandas as pd
 import yfinance as yf
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
 
-from rotation.indicators import (
+from src.rotation.indicators import (
     compute_daily_indicators,
     load_daily_ohlcv,
     sample_to_friday,
 )
-from rotation.stock_scanner import load_stock_config, scan_stocks
+from src.rotation.stock_scanner import load_stock_config, scan_stocks
 
 RAW_DIR       = ROOT / "data" / "raw"
 PROCESSED_DIR = ROOT / "data" / "processed"
