@@ -570,11 +570,32 @@ app.post("/api/state", express.json(), (req, res) => {
 // ── Sync GitHub ──────────────────────────────────────────────────────────
 let lastPull = null;
 
+function fixGitObjectPerms(done) {
+  const fs = require("fs");
+  const objDir = path.join(__dirname, ".git", "objects");
+  function walk(dir) {
+    try {
+      for (const entry of fs.readdirSync(dir)) {
+        const full = path.join(dir, entry);
+        try {
+          const stat = fs.statSync(full);
+          if (stat.isDirectory()) walk(full);
+          else fs.chmodSync(full, 0o644);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+  walk(objDir);
+  done();
+}
+
 function gitPull(cb) {
-  exec("git pull --ff-only origin master", { cwd: __dirname, timeout: 60000 }, (err, stdout, stderr) => {
-    const msg = err ? (stderr || err.message).trim() : (stdout || "Ya actualizado").trim();
-    if (!err) lastPull = new Date().toISOString();
-    cb(err, msg);
+  fixGitObjectPerms(() => {
+    exec("git pull --ff-only origin master", { cwd: __dirname, timeout: 60000 }, (err, stdout, stderr) => {
+      const msg = err ? (stderr || err.message).trim() : (stdout || "Ya actualizado").trim();
+      if (!err) lastPull = new Date().toISOString();
+      cb(err, msg);
+    });
   });
 }
 
