@@ -482,6 +482,14 @@ const DEFAULT_STATE = {
   early_rotation_candidates: {},
 };
 
+app.get("/api/stock-candidates", (_req, res) => {
+  const p = path.join(__dirname, "backtest/data/processed/stock_candidates.json");
+  try {
+    if (!fs.existsSync(p)) return res.json({ candidates: [], active_rot_temprana_clusters: [], updated: null });
+    res.json(JSON.parse(fs.readFileSync(p, "utf8")));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/api/state", (_req, res) => {
   try { res.json(JSON.parse(fs.readFileSync(STATE_FILE, "utf8"))); }
   catch { res.json(DEFAULT_STATE); }
