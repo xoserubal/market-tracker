@@ -51,6 +51,10 @@
   .flag { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: .4px; }
   .flag.on  { background: rgba(248,81,73,.18); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
   .flag.off { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .flag.toggle { cursor: pointer; user-select: none; transition: box-shadow .15s, opacity .15s; }
+  .flag.toggle:hover { opacity: .8; }
+  .flag.toggle.overlay-active.on  { box-shadow: 0 0 0 2px var(--red); }
+  .flag.toggle.overlay-active.off { box-shadow: 0 0 0 2px var(--text2); }
 
   /* Charts */
   .chart-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
@@ -232,6 +236,60 @@ function signalClass(sig) {
   return sig;
 }
 
+// ── Flag overlay state ────────────────────────────────────────────────────────
+let _macroBaseShapes = [];
+const _flagOverlayState = {};
+
+const FLAG_DEFS = [
+  { key:'flag_credit_complacency',  label:'Credit Complacency',   fillcolor:'rgba(255,165,0,.22)'   },
+  { key:'flag_inflation_overlay',   label:'Inflation Overlay',    fillcolor:'rgba(255,80,160,.2)'   },
+  { key:'flag_term_premium_extreme',label:'Term Premium Extreme', fillcolor:'rgba(150,80,220,.2)'   },
+  { key:'flag_emergency_mode',      label:'Emergency Mode',       fillcolor:'rgba(248,81,73,.28)'   },
+];
+
+function computeFlagShapes(history, flagKey, fillcolor) {
+  const shapes = []; let inPeriod = false; let start = null;
+  for (let i = 0; i < history.length; i++) {
+    if (history[i][flagKey] && !inPeriod) { start = history[i].date; inPeriod = true; }
+    else if (!history[i][flagKey] && inPeriod) {
+      shapes.push({ type:'rect', xref:'x', yref:'paper', x0:start, x1:history[i-1].date,
+        y0:0, y1:1, fillcolor, opacity:1, line:{width:0}, layer:'below' });
+      inPeriod = false;
+    }
+  }
+  if (inPeriod) shapes.push({ type:'rect', xref:'x', yref:'paper', x0:start,
+    x1:history[history.length-1].date, y0:0, y1:1, fillcolor, opacity:1, line:{width:0}, layer:'below' });
+  return shapes;
+}
+
+function updateMacroChart() {
+  const allShapes = [..._macroBaseShapes];
+  Object.values(_flagOverlayState).forEach(s => { if (s.active) allShapes.push(...s.shapes); });
+  Plotly.relayout('chart-macro-full', { shapes: allShapes });
+}
+
+function toggleFlagOverlay(flagKey) {
+  if (!_flagOverlayState[flagKey]) return;
+  _flagOverlayState[flagKey].active = !_flagOverlayState[flagKey].active;
+  const btn = document.querySelector(`[data-flag-key="${flagKey}"]`);
+  if (btn) btn.classList.toggle('overlay-active', _flagOverlayState[flagKey].active);
+  updateMacroChart();
+}
+
+function renderFlagToggles(containerId, flags, history) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  FLAG_DEFS.forEach((fd, i) => {
+    _flagOverlayState[fd.key] = { active: false, shapes: computeFlagShapes(history, fd.key, fd.fillcolor) };
+  });
+  el.innerHTML = FLAG_DEFS.map((fd, i) => {
+    const isOn = flags[i]?.on;
+    return `<span class="flag toggle ${isOn ? 'on' : 'off'}" data-flag-key="${fd.key}"
+      onclick="toggleFlagOverlay('${fd.key}')" title="Mostrar periodos históricos en el gráfico">
+      ${isOn ? '⚠ ' : ''}${fd.label}</span>`;
+  }).join('');
+}
+
 // ── Navigation ───────────────────────────────────────────────────────────────
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -345,6 +403,8 @@ function chartMacroFull(history) {
     type:'line', xref:'paper', yref:'y', x0:0, x1:1, y0:t.y, y1:t.y,
     line:{ color:t.color, width:1, dash:'dot' }
   }));
+
+  _macroBaseShapes = [...shapes];
 
   Plotly.newPlot('chart-macro-full', [{
     x: dates, y: scores, type: 'scatter', mode: 'lines', name: 'MacroScore',
@@ -571,8 +631,8 @@ async function init() {
       { label:'CFNAI pts', value: latest?.cfnai_pts?.toFixed(2) ?? '—', cls: 'info' },
       { label:'Curva Tipos pts', value: latest?.curva_pts?.toFixed(2) ?? '—', cls: 'info' },
     ]);
-    renderFlags('macro-flags', flags);
     chartMacroFull(macro.history);
+    renderFlagToggles('macro-flags', flags, macro.history);
     chartMacroComponents(macro.history);
 
     // Rotation page
