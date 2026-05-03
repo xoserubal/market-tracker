@@ -72,6 +72,12 @@ def export_macro():
     else:
         df_a = df[cols_macro].copy()
 
+    # Descartar filas del final donde macro_score es null (semana en curso sin datos completos)
+    if "macro_score" in df_a.columns:
+        last_valid = df_a["macro_score"].last_valid_index()
+        if last_valid is not None:
+            df_a = df_a.loc[:last_valid]
+
     out = {
         "updated": str(df_a.index[-1].date()),
         "latest": {
