@@ -4,6 +4,7 @@ const fetch   = require("node-fetch");
 const cors    = require("cors");
 const path    = require("path");
 const fs      = require("fs");
+const { exec } = require("child_process");
 
 const app = express();
 app.use(cors());
@@ -539,6 +540,13 @@ app.post("/api/stock-config", express.json(), (req, res) => {
   try {
     fs.writeFileSync(STOCK_CFG, generateStockYaml(req.body), 'utf8');
     res.json({ ok: true });
+    // Push al config a GitHub en background para que Actions lo recoja
+    const rel = path.relative(__dirname, STOCK_CFG).replace(/\\/g, '/');
+    const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "chore: update individual_stocks.yaml from dashboard" && git push origin master`;
+    exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
+      if (err) console.log("⚠ git push config:", (stderr || err.message).trim());
+      else     console.log("✓ git push config:", stdout.trim() || "ok");
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -559,5 +567,34 @@ app.post("/api/state", express.json(), (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Sync GitHub ──────────────────────────────────────────────────────────
+let lastPull = null;
+
+function gitPull(cb) {
+  exec("git pull --ff-only origin master", { cwd: __dirname, timeout: 60000 }, (err, stdout, stderr) => {
+    const msg = err ? (stderr || err.message).trim() : (stdout || "Ya actualizado").trim();
+    if (!err) lastPull = new Date().toISOString();
+    cb(err, msg);
+  });
+}
+
+app.get("/api/sync/status", (_req, res) => {
+  exec("git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M'", { cwd: __dirname }, (err, stdout) => {
+    res.json({ lastPull, lastCommit: stdout.trim().replace(/'/g, '') });
+  });
+});
+
+app.post("/api/sync/pull", (_req, res) => {
+  gitPull((err, msg) => res.json({ ok: !err, message: msg }));
+});
+
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.listen(3000, () => console.log("✅ Market Tracker → http://localhost:3000"));
+
+app.listen(3000, () => {
+  console.log("✅ Market Tracker → http://localhost:3000");
+  // Pull automático al arrancar para tener los datos más recientes de GitHub
+  gitPull((err, msg) => {
+    if (err) console.log("⚠ git pull al iniciar:", msg);
+    else     console.log("✓ git pull al iniciar:", msg);
+  });
+});

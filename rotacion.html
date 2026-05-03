@@ -619,6 +619,24 @@ function StockCandidates({ data }) {
   const [newTicker,     setNewTicker]     = useState('');
   const [newCluster,    setNewCluster]    = useState('Growth');
   const [newNote,       setNewNote]       = useState('');
+  const [syncing,       setSyncing]       = useState(false);
+  const [syncMsg,       setSyncMsg]       = useState(null);
+  const [syncStatus,    setSyncStatus]    = useState(null);
+
+  useEffect(() => {
+    fetch('/api/sync/status').then(r=>r.json()).then(setSyncStatus).catch(()=>{});
+  }, []);
+
+  const doSync = async () => {
+    setSyncing(true); setSyncMsg(null);
+    try {
+      const r = await fetch('/api/sync/pull', { method:'POST' });
+      const d = await r.json();
+      setSyncMsg(d);
+      if (d.ok) { setSyncStatus(s => ({ ...s, lastPull: new Date().toISOString() })); }
+    } catch(e) { setSyncMsg({ ok:false, message: e.message }); }
+    setSyncing(false);
+  };
 
   const openModal = async () => {
     setShowModal(true); setLoadingCfg(true); setSaveMsg(null);
@@ -702,19 +720,34 @@ function StockCandidates({ data }) {
     <div style={{ marginTop:24, background:'#fff', border:'1px solid #e0e0e0', borderRadius:10, padding:'16px 20px' }}>
 
       {/* ── Header ── */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, flexWrap:'wrap' }}>
         <span style={{ fontSize:14, fontWeight:700, color:'#333' }}>⚡ Acciones individuales — candidatos por cluster</span>
         {activeCluster.length > 0 &&
           <span style={{ fontSize:11, background:'#fff3e0', color:'#e65100', borderRadius:4, padding:'2px 8px', fontWeight:700 }}>
             ROT.TEMP activa en: {activeCluster.join(', ')}
           </span>}
-        <button onClick={openModal}
-          style={{ marginLeft:'auto', fontSize:11, background:'#f0f4ff', color:'#3949ab', border:'1px solid #c5cae9', borderRadius:5, padding:'4px 12px', cursor:'pointer', fontWeight:600 }}>
-          ⚙ Editar lista
-        </button>
-        <span style={{ fontSize:10, color:'#bbb' }}>
-          {data.updated ? `Actualizado: ${data.updated}` : 'sin datos — ejecuta main_stocks.py'}
-        </span>
+        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+          {/* Sync status */}
+          {syncStatus?.lastCommit &&
+            <span style={{ fontSize:10, color:'#bbb' }}>GitHub: {syncStatus.lastCommit}</span>}
+          <button onClick={doSync} disabled={syncing}
+            style={{ fontSize:11, background: syncing?'#f5f5f5':'#e8f5e9', color: syncing?'#aaa':'#2e7d32', border:'1px solid #c8e6c9', borderRadius:5, padding:'4px 10px', cursor:syncing?'default':'pointer', fontWeight:600 }}>
+            {syncing ? '⟳ Sincronizando...' : '⟳ Sync GitHub'}
+          </button>
+          {syncMsg &&
+            <span style={{ fontSize:11, color: syncMsg.ok?'#2e7d32':'#c62828', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}
+              title={syncMsg.message}>
+              {syncMsg.ok ? '✓' : '✗'} {syncMsg.message}
+            </span>}
+          <button onClick={openModal}
+            style={{ fontSize:11, background:'#f0f4ff', color:'#3949ab', border:'1px solid #c5cae9', borderRadius:5, padding:'4px 12px', cursor:'pointer', fontWeight:600 }}>
+            ⚙ Editar lista
+          </button>
+        </div>
+      </div>
+      <div style={{ fontSize:10, color:'#bbb', marginBottom:8 }}>
+        {data.updated ? `Datos procesados: ${data.updated}` : 'Sin datos — ejecuta main_stocks.py o haz Sync GitHub'}
+        {syncStatus?.lastPull && <span style={{ marginLeft:12 }}>Último pull: {new Date(syncStatus.lastPull).toLocaleTimeString()}</span>}
       </div>
 
       {/* ── Tabla principal (no IGNORAR) ── */}
@@ -829,8 +862,10 @@ function StockCandidates({ data }) {
                     {saveMsg && <span style={{ fontSize:12, color:saveMsg.startsWith('✓')?'#1b5e20':'#c62828' }}>{saveMsg}</span>}
                   </div>
                   {saveMsg && saveMsg.startsWith('✓') && (
-                    <div style={{ marginTop:8, fontSize:11, color:'#aaa' }}>
-                      Ejecuta <code style={{ background:'#f5f5f5', padding:'1px 6px', borderRadius:3, fontFamily:'monospace' }}>py backtest/src/main_stocks.py</code> para actualizar los datos.
+                    <div style={{ marginTop:8, fontSize:11, color:'#aaa', lineHeight:1.6 }}>
+                      El YAML se ha subido a GitHub automáticamente.<br/>
+                      La próxima ejecución de Actions (08:00 / 20:00 UTC) procesará los nuevos tickers.<br/>
+                      Para actualizar ahora: <code style={{ background:'#f5f5f5', padding:'1px 6px', borderRadius:3, fontFamily:'monospace' }}>py backtest/src/main_stocks.py</code> + botón <b>⟳ Sync GitHub</b>.
                     </div>
                   )}
                 </>
