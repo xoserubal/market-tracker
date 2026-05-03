@@ -57,6 +57,10 @@ jobs:
         run: python backtest/src/main_portfolio.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 7 stock scanner
+        run: python backtest/src/main_stocks.py
+        working-directory: ${{ github.workspace }}
+
       - name: Export data to JSON for dashboard
         run: python scripts/export_to_json.py
         working-directory: ${{ github.workspace }}

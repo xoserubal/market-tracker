@@ -289,6 +289,40 @@ def write_json(data: dict, filename: str):
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
 
+# ── 6. Stock candidates ──────────────────────────────────────────────────────
+def export_stock_candidates():
+    path = DATA_DIR / "stock_candidates.json"
+    if not path.exists():
+        print("  ⚠ stock_candidates.json no encontrado, saltando")
+        return
+
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Re-serializar con el mismo clean() para consistencia de tipos
+    candidates = data.get("candidates", [])
+    cleaned = []
+    for c in candidates:
+        rec = {}
+        for k, v in c.items():
+            if k == "components" and isinstance(v, dict):
+                rec[k] = {ck: clean(cv) for ck, cv in v.items()}
+            elif isinstance(v, (int, float, np.floating, np.integer)):
+                rec[k] = clean(v)
+            else:
+                rec[k] = v
+        cleaned.append(rec)
+
+    out = {
+        "updated":                      data.get("updated", ""),
+        "active_rot_temprana_clusters": data.get("active_rot_temprana_clusters", []),
+        "candidates":                   cleaned,
+    }
+    write_json(out, "stock_candidates.json")
+    n_cand = sum(1 for c in cleaned if c.get("signal") in ("CANDIDATO", "EN_RADAR"))
+    print(f"  ✓ stock_candidates.json  ({len(cleaned)} stocks, {n_cand} activos)")
+
+
 if __name__ == "__main__":
     print("Exportando datos para dashboard...")
     export_macro()
@@ -296,4 +330,5 @@ if __name__ == "__main__":
     export_portfolio()
     export_confluence()
     export_prices()
+    export_stock_candidates()
     print(f"\nDatos exportados en: {OUT_DIR}")

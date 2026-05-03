@@ -1,0 +1,73 @@
+# Acciones individuales por cluster para el stock scanner.
+# Añade o quita tickers libremente — el pipeline los descarga automáticamente.
+#
+# Campos por ticker:
+#   ticker : símbolo Yahoo Finance (obligatorio)
+#   note   : motivo de inclusión — alta beta, small cap, apalancado, etc. (opcional)
+#
+# Criterios de señal (más relajados que rot_temprana_pure):
+#   - Score >= 6/10 durante >= 2 semanas consecutivas
+#   - Sin confirmación de cluster
+#   - La señal "CANDIDATO" aparece cuando el cluster ETF tiene ROT.TEMPRANA activa
+#     y el stock cumple los criterios → entrada con mayor convicción
+#   - Stop sugerido: -10% | Horizonte: 8-13 semanas
+
+clusters:
+
+  Growth:
+    - ticker: NVDA
+      note: "alta beta, líder semiconductores IA"
+    - ticker: AMD
+      note: "beta alta, alternativa a NVDA en IA/datacenter"
+    - ticker: SMCI
+      note: "small/mid cap, alta beta, infraestructura IA"
+    - ticker: PLTR
+      note: "software IA/defensa, beta alta, momentum"
+    - ticker: TSLA
+      note: "alta beta, macro-sensible, momentum extremo"
+    - ticker: META
+      note: "mega-cap growth, beta moderada-alta"
+
+  Value/Cyclical:
+    - ticker: CAT
+      note: "industrial puro, cíclico de referencia"
+    - ticker: FCX
+      note: "minería cobre, alta beta, proxy ciclo global"
+    - ticker: NUE
+      note: "acero USA, cíclico, leverage al ciclo"
+    - ticker: URI
+      note: "alquiler maquinaria, alto apalancamiento financiero"
+    - ticker: GS
+      note: "financiero, alta beta vs XLF, beneficia de ciclo crédito"
+    - ticker: OXY
+      note: "petróleo, alta beta vs XLE, apalancado"
+
+  Defensive:
+    - ticker: COST
+      note: "defensivo de calidad, crecimiento secular"
+    - ticker: LLY
+      note: "farma, growth defensivo, momentum fuerte"
+    - ticker: VRTX
+      note: "biotech defensivo, menor correlación mercado"
+
+  Commodities:
+    - ticker: GOLD
+      note: "miner oro (Barrick), leverage 2-3x al precio del oro"
+    - ticker: NEM
+      note: "miner oro (Newmont), mayor tamaño, más estable"
+    - ticker: SLB
+      note: "servicios petróleo, beta alta vs BZ=F"
+    - ticker: MOS
+      note: "fertilizantes/potasa, proxy commodities agrícolas"
+    - ticker: TECK
+      note: "minería diversificada, cobre + carbón, alta beta"
+
+  Small/EM:
+    - ticker: EWZ
+      note: "Brasil ETF, beta alta en EM, proxy commodities LatAm"
+    - ticker: INDA
+      note: "India ETF, growth EM, menor correlación China"
+    - ticker: SAIA
+      note: "small cap transporte USA, beta alta, cíclico"
+    - ticker: KTOS
+      note: "small cap defensa, alta beta, momentum"
