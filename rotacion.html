@@ -606,6 +606,36 @@ function relFmt(v) {
   return (v>0?'+':'')+v.toFixed(1)+'%';
 }
 
+// ── ThTip — th con tooltip flotante ──────────────────────────────────────
+function ThTip({ children, tip, style, onClick }) {
+  const [pos, setPos] = useState(null);
+  if (!tip) return <th style={style} onClick={onClick}>{children}</th>;
+  return (
+    <th style={{ ...style, cursor: onClick ? 'pointer' : 'default' }}
+      onClick={onClick}
+      onMouseEnter={e => setPos({ x: e.clientX, y: e.clientY })}
+      onMouseMove={e  => setPos({ x: e.clientX, y: e.clientY })}
+      onMouseLeave={()  => setPos(null)}>
+      <span style={{ borderBottom:'1px dashed #ccc' }}>{children}</span>
+      {pos && ReactDOM.createPortal(
+        <div style={{
+          position:'fixed',
+          left: Math.min(pos.x + 14, window.innerWidth - 350),
+          top:  pos.y + 18,
+          zIndex: 9999, pointerEvents:'none',
+          background:'#1e1e2e', color:'#dde', border:'1px solid #444',
+          borderRadius:8, padding:'10px 14px',
+          fontSize:11, lineHeight:1.7, width:330,
+          boxShadow:'0 6px 28px rgba(0,0,0,.35)', whiteSpace:'pre-wrap',
+        }}>
+          {tip}
+        </div>,
+        document.body
+      )}
+    </th>
+  );
+}
+
 // ── StockCandidates ───────────────────────────────────────────────────────
 const CLUSTER_OPTIONS = ['Growth','Value/Cyclical','Defensive','Commodities','Small/EM'];
 
@@ -680,11 +710,24 @@ function StockCandidates({ data }) {
   const fmtRel  = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
   const relColor = v => v == null ? '#aaa' : v > 0 ? '#1b5e20' : '#c62828';
 
+  const SC_TH = { padding:'6px 10px', textAlign:'left', fontWeight:600, color:'#555', borderBottom:'2px solid #e0e0e0', whiteSpace:'nowrap' };
+  const SC_COLS = [
+    { h:'Ticker',     tip: null },
+    { h:'Cluster',    tip: "Sector/cluster al que pertenece la acción.\nDetermina si hay ROT.TEMPRANA activa en el ETF del cluster (marca ⚡)." },
+    { h:'Señal',      tip: "⚡ CANDIDATO: cluster ETF con ROT.TEMP activa + streak ≥ 2w\nEN_RADAR: streak ≥ 2w, cluster sin señal ETF todavía\nVIGILAR: score ≥ 6 pero streak < 2w\nIGNORAR: score < 6\n\nCriterios relajados vs sistema ETF (threshold 6 vs 8, streak 2 vs 3)." },
+    { h:'Score',      tip: "RotationScore 0–10 — mismo cálculo que la tabla ETF principal.\n\nUmbral relajado: ≥ 6 (vs ≥ 8 en el sistema ETF).\n\nScore ≥ 8 → zona óptima\nScore 6–7 → elegible para señal" },
+    { h:'Streak',     tip: "Semanas consecutivas con Score ≥ 6.\n\nSe necesitan ≥ 2 semanas consecutivas para generar señal activa (EN_RADAR o CANDIDATO)." },
+    { h:'Beta 52w',   tip: "Beta calculada sobre retornos semanales — últimas 52 semanas vs SPY.\n\nBeta = Cov(ticker, SPY) / Var(SPY)\n\n> 1.8 = muy alta (rojo)\n> 1.3 = alta (naranja)\n\nActúa como multiplicador del movimiento del sector ETF." },
+    { h:'Amplifier',  tip: "Amplifier = Beta 52w × RotationScore\n\nEstima el potencial de amplificación relativo al cluster ETF. Una acción con Beta 2.0 y Score 8 tiene Amplifier 16.\n\n> 12 = muy alto (rojo)\n8–12 = alto (naranja)\n\nMayor Amplifier → mayor potencial de retorno y mayor riesgo." },
+    { h:'4w vs SPY',  tip: "Retorno 4 semanas de la acción menos retorno 4w de SPY.\n\nPositivo = outperformance reciente." },
+    { h:'13w vs SPY', tip: "Retorno 13 semanas de la acción menos retorno 13w de SPY.\n\nHorizonte trimestral: evalúa si la tendencia relativa es sostenida." },
+    { h:'Nota',       tip: "Comentario libre del YAML (motivo de inclusión del ticker en la lista)." },
+  ];
   const THead = () => (
     <thead>
       <tr style={{ background:'#f8f9fa' }}>
-        {['Ticker','Cluster','Señal','Score','Streak','Beta 52w','Amplifier','4w vs SPY','13w vs SPY','Nota'].map(h =>
-          <th key={h} style={{ padding:'6px 10px', textAlign:'left', fontWeight:600, color:'#555', borderBottom:'2px solid #e0e0e0', whiteSpace:'nowrap' }}>{h}</th>
+        {SC_COLS.map(({ h, tip }) =>
+          <ThTip key={h} tip={tip} style={SC_TH}>{h}</ThTip>
         )}
       </tr>
     </thead>
@@ -1013,12 +1056,11 @@ function App() {
     [appState.flags]);
 
   function Th({ col, label, tip }) {
+    const handleClick = () => sortCol===col ? setSortDir(d=>-d) : (setSortCol(col), setSortDir(-1));
     return (
-      <th onClick={() => sortCol===col ? setSortDir(d=>-d) : (setSortCol(col),setSortDir(-1))}
-          title={tip}
-          style={{ ...TH_S, cursor:'pointer', background:sortCol===col?'#e8f0fe':'#f8f9fa' }}>
+      <ThTip tip={tip} style={{ ...TH_S, cursor:'pointer', background:sortCol===col?'#e8f0fe':'#f8f9fa' }} onClick={handleClick}>
         {label} {sortCol===col?(sortDir<0?'▼':'▲'):''}
-      </th>
+      </ThTip>
     );
   }
 
@@ -1303,17 +1345,17 @@ function App() {
           <tr>
             <th style={{ ...TH_S, textAlign:'left', padding:'7px 9px' }}>Activo</th>
             <th style={{ ...TH_S, textAlign:'left' }}>Cat.</th>
-            <Th col="w1"  label="1W vs SPY" tip="RS semanal vs benchmark" />
-            <Th col="m1"  label="RS 4w"     tip="RS 4 semanas vs SPY" />
-            <Th col="rsi" label="RS 13w"    tip="RS 13 semanas vs SPY (vale 2 pts)" />
-            <th style={TH_S}>RSI</th>
-            <th style={TH_S}>SMA200</th>
-            <th style={TH_S}>OBV</th>
-            <th style={TH_S}>Vol20/60</th>
-            <th style={TH_S} title="Bloque A/B/C">A·B·C</th>
-            <Th col="rot" label="Score /10" tip="Rotation Score v2 (10 pts, 3 bloques)" />
-            <th style={TH_S}>Fit</th>
-            <th style={TH_S}>Señal</th>
+            <Th col="w1"  label="1W vs SPY" tip={"Retorno semanal relativo a SPY\n\n(Precio_hoy / Precio_5d) − (SPY_hoy / SPY_5d)\n\nPositivo = outperformance esta semana.\nNo puntúa directamente en el Score."} />
+            <Th col="m1"  label="RS 4w"     tip={"Relative Strength 4 semanas vs SPY\n\n(Retorno 4w del activo) − (Retorno 4w SPY)\n\nPositivo → outperformance último mes.\nContribuye 1 pt al Bloque A."} />
+            <Th col="rsi" label="RS 13w"    tip={"Relative Strength 13 semanas vs SPY\n\n(Retorno 13w del activo) − (Retorno 13w SPY)\n\nPositivo → outperformance trimestral.\nContribuye 2 pts al Bloque A (peso doble)."} />
+            <ThTip style={TH_S} tip={"RSI 14 períodos\n\nMide fuerza del momentum en escala 0–100.\n• >70 = sobrecompra → −1 pt (Bloque C)\n• <30 = sobreventa → +1 pt (Bloque C)\n• 30–70 = neutro\n\nActúa como filtro anti-extremal para evitar entrar en picos de euforia."}>RSI</ThTip>
+            <ThTip style={TH_S} tip={"SMA 200 días\n\nPrecio vs media móvil de 200 días.\n• Precio > SMA200 → +1 pt (Bloque A)\n• Precio < SMA200 → 0 pt\n\nFiltro de tendencia primaria. También condiciona el Master Filter global: si SPY < SMA200, todas las señales se degradan 1 nivel."}>SMA200</ThTip>
+            <ThTip style={TH_S} tip={"OBV — On-Balance Volume\n\nAcumula el volumen del día según dirección del precio (suma si sube, resta si baja). Confirma si el dinero acompaña al precio.\n\nCriterio: OBV > SMA(OBV, 10) → +1 pt\nDivergencia OBV/precio = señal de debilidad.\n\nBloque B · Componente 'Flujo'"}>OBV</ThTip>
+            <ThTip style={TH_S} tip={"Ratio Volumen 20d / 60d\n\nCompara el volumen reciente con su media trimestral.\n• >1.1 = volumen acelerado → +1 pt\n• <1.0 = volumen desacelerado → 0 pt\n\nDetecta acumulación institucional temprana antes de que el precio arranque.\n\nBloque B · Componente 'Volumen'"}>Vol20/60</ThTip>
+            <ThTip style={TH_S} tip={"Puntuación por bloque del RotationScore\n\nA (4 pts) — Momentum relativo:\n  RS4w (1pt) + RS13w (2pt) + SMA200 (1pt)\n\nB (3 pts) — Flujo / Volumen:\n  CMF (1pt) + OBV (1pt) + Vol20/60 (1pt)\n\nC (3 pts) — Técnico:\n  MACD (1pt) + RSI anti-ext (1pt) + anti-extremal (1pt)\n\nTotal = A + B + C = Score /10"}>A·B·C</ThTip>
+            <Th col="rot" label="Score /10" tip={"RotationScore v2 — 10 puntos, 3 bloques\n\nA (4 pts): RS4w + RS13w(×2) + SMA200\nB (3 pts): CMF + OBV + Vol20/60\nC (3 pts): MACD + RSI + AntiExtremal\n\n≥8 → zona ROT.TEMPRANA\n≥7 → COMPRA (con Fit)\n5–6 → ACUMULAR (con Fit)\n<5 → sin señal"} />
+            <ThTip style={TH_S} tip={"Fit — Aptitud del activo\n\n✓ El activo tiene suficiente historial y liquidez para que el score sea fiable.\n✗ Señal descartada por datos insuficientes, correlación baja o activo sin historial.\n\nFiltra falsos positivos. Sin Fit, el score se ignora para señales de entrada."}>Fit</ThTip>
+            <ThTip style={TH_S} tip={"Señal de entrada\n\n▲ COMPRA: Fit ✓ + Score ≥ 7\n◉ ACUMULAR: Fit ✓ + Score 5–6\n⚡ ROT.TEMPRANA: score≥8 durante 3w + ≥2 ETFs en cluster + SPY>SMA200 o NetLiq>300B\n\n⚠ Master Filter: SPY < SMA200 degrada 1 nivel (salvo ROT.TEMP, que lleva su propio filtro de benchmark)."}>Señal</ThTip>
           </tr>
         </thead>
         <tbody>
