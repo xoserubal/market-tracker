@@ -21,12 +21,12 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from src.rotation.indicators import (
+from .indicators import (
     compute_daily_indicators,
     load_daily_ohlcv,
     sample_to_friday,
 )
-from src.rotation.score import rotation_score
+from .score import rotation_score
 
 SCORE_THRESHOLD = 6.0
 STREAK_MIN      = 2
