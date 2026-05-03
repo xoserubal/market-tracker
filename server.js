@@ -482,6 +482,66 @@ const DEFAULT_STATE = {
   early_rotation_candidates: {},
 };
 
+// ── Stock config YAML (leer / escribir) ──────────────────────────────────
+const STOCK_CFG = path.join(__dirname, "backtest/config/individual_stocks.yaml");
+
+function parseStockYaml(text) {
+  const clusters = {};
+  let currentCluster = null, currentStock = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.replace(/\r/, '');
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+    // cluster: "  Name/With-Slash:"
+    const clM = line.match(/^  ([\w\/\-]+):\s*$/);
+    if (clM) { currentCluster = clM[1]; clusters[currentCluster] = []; currentStock = null; continue; }
+    // ticker: "    - ticker: XYZ"
+    const tkM = line.match(/^\s+- ticker:\s+(\S+)/);
+    if (tkM && currentCluster) { currentStock = { ticker: tkM[1], note: '' }; clusters[currentCluster].push(currentStock); continue; }
+    // note: '      note: "..."'  or  '      note: text'
+    const ntM = line.match(/^\s+note:\s+"(.*)"\s*$/) || line.match(/^\s+note:\s+(.*)\s*$/);
+    if (ntM && currentStock) { currentStock.note = ntM[1]; }
+  }
+  return clusters;
+}
+
+function generateStockYaml(clusters) {
+  const lines = [
+    '# Acciones individuales por cluster para el stock scanner.',
+    '# Añade o quita tickers libremente — el pipeline los descarga automáticamente.',
+    '#',
+    '# Campos por ticker:',
+    '#   ticker : símbolo Yahoo Finance (obligatorio)',
+    '#   note   : motivo de inclusión — alta beta, small cap, apalancado, etc. (opcional)',
+    '',
+    'clusters:',
+    '',
+  ];
+  for (const [cluster, stocks] of Object.entries(clusters)) {
+    lines.push(`  ${cluster}:`);
+    for (const s of (stocks || [])) {
+      const note = (s.note || '').replace(/"/g, '\\"');
+      lines.push(`    - ticker: ${s.ticker}`);
+      lines.push(`      note: "${note}"`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+app.get("/api/stock-config", (_req, res) => {
+  try {
+    if (!fs.existsSync(STOCK_CFG)) return res.json({});
+    res.json(parseStockYaml(fs.readFileSync(STOCK_CFG, 'utf8')));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/stock-config", express.json(), (req, res) => {
+  try {
+    fs.writeFileSync(STOCK_CFG, generateStockYaml(req.body), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/api/stock-candidates", (_req, res) => {
   const p = path.join(__dirname, "backtest/data/processed/stock_candidates.json");
   try {

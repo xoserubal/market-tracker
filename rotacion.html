@@ -607,90 +607,237 @@ function relFmt(v) {
 }
 
 // ── StockCandidates ───────────────────────────────────────────────────────
-function StockCandidates({ data }) {
-  if (!data) return null;
-  const candidates = (data.candidates || []).filter(c => c.signal !== 'IGNORAR');
-  if (!candidates.length) return (
-    <div style={{ marginTop:20, padding:'10px 16px', background:'#fafafa', border:'1px solid #eee', borderRadius:8, fontSize:12, color:'#aaa' }}>
-      ⚡ Acciones individuales: sin señales activas (score {'<'} 6 en todos los candidatos del config).
-    </div>
-  );
+const CLUSTER_OPTIONS = ['Growth','Value/Cyclical','Defensive','Commodities','Small/EM'];
 
+function StockCandidates({ data }) {
+  const [showIgnorados, setShowIgnorados] = useState(false);
+  const [showModal,     setShowModal]     = useState(false);
+  const [config,        setConfig]        = useState(null);
+  const [loadingCfg,    setLoadingCfg]    = useState(false);
+  const [savingCfg,     setSavingCfg]     = useState(false);
+  const [saveMsg,       setSaveMsg]       = useState(null);
+  const [newTicker,     setNewTicker]     = useState('');
+  const [newCluster,    setNewCluster]    = useState('Growth');
+  const [newNote,       setNewNote]       = useState('');
+
+  const openModal = async () => {
+    setShowModal(true); setLoadingCfg(true); setSaveMsg(null);
+    try { const r = await fetch('/api/stock-config'); setConfig(await r.json()); }
+    catch { setConfig({}); }
+    setLoadingCfg(false);
+  };
+
+  const deleteStock = (cluster, ticker) =>
+    setConfig(prev => ({ ...prev, [cluster]: (prev[cluster]||[]).filter(s => s.ticker !== ticker) }));
+
+  const addStock = () => {
+    const t = newTicker.trim().toUpperCase();
+    if (!t) return;
+    setConfig(prev => ({ ...prev, [newCluster]: [...(prev[newCluster]||[]), { ticker:t, note:newNote.trim() }] }));
+    setNewTicker(''); setNewNote('');
+  };
+
+  const saveConfig = async () => {
+    setSavingCfg(true); setSaveMsg(null);
+    try {
+      const r = await fetch('/api/stock-config', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(config) });
+      const d = await r.json();
+      setSaveMsg(d.ok ? '✓ Guardado correctamente.' : '✗ Error: ' + (d.error||'desconocido'));
+    } catch(e) { setSaveMsg('✗ ' + e.message); }
+    setSavingCfg(false);
+  };
+
+  if (!data) return null;
+  const all       = data.candidates || [];
+  const active    = all.filter(c => c.signal !== 'IGNORAR');
+  const ignorados = all.filter(c => c.signal === 'IGNORAR');
   const activeCluster = data.active_rot_temprana_clusters || [];
+
   const sigStyle = {
     CANDIDATO:{ color:'#e65100', bg:'#fff3e0' },
     EN_RADAR: { color:'#1565c0', bg:'#e3f2fd' },
     VIGILAR:  { color:'#888',    bg:'#f5f5f5' },
+    IGNORAR:  { color:'#ccc',    bg:'#fafafa' },
   };
-
-  const fmtRel = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+  const fmtRel  = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
   const relColor = v => v == null ? '#aaa' : v > 0 ? '#1b5e20' : '#c62828';
+
+  const THead = () => (
+    <thead>
+      <tr style={{ background:'#f8f9fa' }}>
+        {['Ticker','Cluster','Señal','Score','Streak','Beta 52w','Amplifier','4w vs SPY','13w vs SPY','Nota'].map(h =>
+          <th key={h} style={{ padding:'6px 10px', textAlign:'left', fontWeight:600, color:'#555', borderBottom:'2px solid #e0e0e0', whiteSpace:'nowrap' }}>{h}</th>
+        )}
+      </tr>
+    </thead>
+  );
+
+  const TRow = ({ c }) => {
+    const st  = sigStyle[c.signal] || sigStyle.VIGILAR;
+    const amp = c.amplifier_score;
+    return (
+      <tr style={{ borderBottom:'1px solid #f0f0f0' }}>
+        <td style={{ padding:'5px 10px', fontWeight:700, color:'#222' }}>{c.ticker}</td>
+        <td style={{ padding:'5px 10px', color:'#666', fontSize:11 }}>{c.cluster}</td>
+        <td style={{ padding:'5px 10px' }}>
+          <span style={{ background:st.bg, color:st.color, borderRadius:4, padding:'2px 7px', fontWeight:700, fontSize:11, whiteSpace:'nowrap' }}>
+            {c.cluster_has_rot_temprana ? '⚡ ' : ''}{c.signal}
+          </span>
+        </td>
+        <td style={{ padding:'5px 10px', textAlign:'center', fontWeight:700,
+          color: c.rot_score >= 8 ? '#1b5e20' : c.rot_score >= 6 ? '#e65100' : '#aaa' }}>{c.rot_score}</td>
+        <td style={{ padding:'5px 10px', textAlign:'center', color:'#555' }}>{c.streak_weeks}w</td>
+        <td style={{ padding:'5px 10px', textAlign:'center', fontWeight:(c.beta_52w??0)>=1.5?700:400,
+          color:(c.beta_52w??0)>=1.8?'#c62828':(c.beta_52w??0)>=1.3?'#e65100':'#333' }}>{c.beta_52w??'—'}</td>
+        <td style={{ padding:'5px 10px', textAlign:'center', fontWeight:600,
+          color:(amp??0)>=12?'#c62828':(amp??0)>=8?'#e65100':'#555' }}>{amp!=null?amp.toFixed(1):'—'}</td>
+        <td style={{ padding:'5px 10px', textAlign:'center', color:relColor(c.ret_4w_vs_spy)  }}>{fmtRel(c.ret_4w_vs_spy)}</td>
+        <td style={{ padding:'5px 10px', textAlign:'center', color:relColor(c.ret_13w_vs_spy) }}>{fmtRel(c.ret_13w_vs_spy)}</td>
+        <td style={{ padding:'5px 10px', color:'#999', fontSize:11, maxWidth:200 }}>{c.note||'—'}</td>
+      </tr>
+    );
+  };
 
   return (
     <div style={{ marginTop:24, background:'#fff', border:'1px solid #e0e0e0', borderRadius:10, padding:'16px 20px' }}>
+
+      {/* ── Header ── */}
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, flexWrap:'wrap' }}>
         <span style={{ fontSize:14, fontWeight:700, color:'#333' }}>⚡ Acciones individuales — candidatos por cluster</span>
         {activeCluster.length > 0 &&
           <span style={{ fontSize:11, background:'#fff3e0', color:'#e65100', borderRadius:4, padding:'2px 8px', fontWeight:700 }}>
             ROT.TEMP activa en: {activeCluster.join(', ')}
-          </span>
-        }
-        <span style={{ marginLeft:'auto', fontSize:10, color:'#bbb' }}>
+          </span>}
+        <button onClick={openModal}
+          style={{ marginLeft:'auto', fontSize:11, background:'#f0f4ff', color:'#3949ab', border:'1px solid #c5cae9', borderRadius:5, padding:'4px 12px', cursor:'pointer', fontWeight:600 }}>
+          ⚙ Editar lista
+        </button>
+        <span style={{ fontSize:10, color:'#bbb' }}>
           {data.updated ? `Actualizado: ${data.updated}` : 'sin datos — ejecuta main_stocks.py'}
         </span>
       </div>
 
-      <div style={{ overflowX:'auto' }}>
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-          <thead>
-            <tr style={{ background:'#f8f9fa' }}>
-              {['Ticker','Cluster','Señal','Score','Streak','Beta 52w','Amplifier','4w vs SPY','13w vs SPY','Nota'].map(h =>
-                <th key={h} style={{ padding:'6px 10px', textAlign:'left', fontWeight:600, color:'#555', borderBottom:'2px solid #e0e0e0', whiteSpace:'nowrap' }}>{h}</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {candidates.map(c => {
-              const st = sigStyle[c.signal] || sigStyle.VIGILAR;
-              const amp = c.amplifier_score;
-              return (
-                <tr key={c.ticker} style={{ borderBottom:'1px solid #f0f0f0' }}>
-                  <td style={{ padding:'5px 10px', fontWeight:700, color:'#222' }}>{c.ticker}</td>
-                  <td style={{ padding:'5px 10px', color:'#666', fontSize:11 }}>{c.cluster}</td>
-                  <td style={{ padding:'5px 10px' }}>
-                    <span style={{ background:st.bg, color:st.color, borderRadius:4, padding:'2px 7px', fontWeight:700, fontSize:11, whiteSpace:'nowrap' }}>
-                      {c.cluster_has_rot_temprana ? '⚡ ' : ''}{c.signal}
-                    </span>
-                  </td>
-                  <td style={{ padding:'5px 10px', textAlign:'center', fontWeight:700,
-                    color: c.rot_score >= 8 ? '#1b5e20' : c.rot_score >= 6 ? '#e65100' : '#888' }}>
-                    {c.rot_score}
-                  </td>
-                  <td style={{ padding:'5px 10px', textAlign:'center', color:'#555' }}>{c.streak_weeks}w</td>
-                  <td style={{ padding:'5px 10px', textAlign:'center',
-                    color: (c.beta_52w ?? 0) >= 1.8 ? '#c62828' : (c.beta_52w ?? 0) >= 1.3 ? '#e65100' : '#333',
-                    fontWeight: (c.beta_52w ?? 0) >= 1.5 ? 700 : 400 }}>
-                    {c.beta_52w ?? '—'}
-                  </td>
-                  <td style={{ padding:'5px 10px', textAlign:'center', fontWeight:600,
-                    color: (amp ?? 0) >= 12 ? '#c62828' : (amp ?? 0) >= 8 ? '#e65100' : '#555' }}>
-                    {amp != null ? amp.toFixed(1) : '—'}
-                  </td>
-                  <td style={{ padding:'5px 10px', textAlign:'center', color:relColor(c.ret_4w_vs_spy) }}>{fmtRel(c.ret_4w_vs_spy)}</td>
-                  <td style={{ padding:'5px 10px', textAlign:'center', color:relColor(c.ret_13w_vs_spy) }}>{fmtRel(c.ret_13w_vs_spy)}</td>
-                  <td style={{ padding:'5px 10px', color:'#999', fontSize:11, maxWidth:200 }}>{c.note || '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* ── Tabla principal (no IGNORAR) ── */}
+      {active.length === 0
+        ? <div style={{ fontSize:12, color:'#aaa', padding:'6px 0' }}>Sin señales activas — todos los candidatos con score {'<'} 6.</div>
+        : <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+              <THead /><tbody>{active.map(c => <TRow key={c.ticker} c={c} />)}</tbody>
+            </table>
+          </div>
+      }
+
+      {/* ── Toggle IGNORAR ── */}
+      {ignorados.length > 0 && (
+        <div style={{ marginTop:10 }}>
+          <button onClick={() => setShowIgnorados(s => !s)}
+            style={{ fontSize:11, background:'none', border:'none', color:'#aaa', cursor:'pointer', padding:'3px 0', display:'flex', alignItems:'center', gap:4 }}>
+            {showIgnorados ? '▾ Ocultar' : '▸ Ver'} ignorados ({ignorados.length} con score {'<'} 6)
+          </button>
+          {showIgnorados &&
+            <div style={{ overflowX:'auto', marginTop:6, opacity:0.5 }}>
+              <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                <THead /><tbody>{ignorados.map(c => <TRow key={c.ticker} c={c} />)}</tbody>
+              </table>
+            </div>}
+        </div>
+      )}
+
+      {/* ── Leyenda ── */}
+      <div style={{ marginTop:12, fontSize:10, color:'#bbb', display:'flex', gap:20, flexWrap:'wrap' }}>
+        <span><b style={{ color:'#e65100' }}>⚡ CANDIDATO</b>: cluster ETF con ROT.TEMP + score≥6 durante 2w</span>
+        <span><b style={{ color:'#1565c0' }}>EN_RADAR</b>: score≥6 durante 2w, cluster ETF sin señal todavía</span>
+        <span>Stop: −10% · Horizonte: 8–13 sem · Amplifier = beta × score</span>
       </div>
 
-      <div style={{ marginTop:10, fontSize:10, color:'#bbb', display:'flex', gap:20, flexWrap:'wrap' }}>
-        <span><b style={{ color:'#e65100' }}>⚡ CANDIDATO</b>: cluster ETF con ROT.TEMP + score≥6 durante 2w → entrada con convicción</span>
-        <span><b style={{ color:'#1565c0' }}>EN_RADAR</b>: score≥6 durante 2w, cluster ETF sin señal todavía → prepararse</span>
-        <span>Stop sugerido: −10% · Horizonte: 8–13 semanas · Amplifier = beta × score</span>
-      </div>
+      {/* ── Modal edición config ── */}
+      {showModal && (
+        <div onClick={e => e.target===e.currentTarget && setShowModal(false)}
+          style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'#fff', borderRadius:12, padding:24, width:660, maxWidth:'95vw', maxHeight:'88vh', overflow:'auto', boxShadow:'0 8px 40px rgba(0,0,0,0.2)' }}>
+
+            <div style={{ display:'flex', alignItems:'center', marginBottom:16 }}>
+              <span style={{ fontSize:15, fontWeight:700, color:'#333' }}>⚙ Editar lista de acciones</span>
+              <button onClick={() => setShowModal(false)}
+                style={{ marginLeft:'auto', fontSize:20, background:'none', border:'none', cursor:'pointer', color:'#aaa', lineHeight:1 }}>✕</button>
+            </div>
+
+            {loadingCfg ? <div style={{ color:'#aaa', fontSize:13 }}>Cargando...</div> : !config
+              ? <div style={{ color:'#c62828', fontSize:13 }}>Error al cargar el config.</div>
+              : <>
+                  {/* Stocks por cluster */}
+                  {CLUSTER_OPTIONS.map(cluster => {
+                    const stocks = config[cluster] || [];
+                    return (
+                      <div key={cluster} style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:'#555', borderBottom:'1px solid #eee', paddingBottom:4, marginBottom:6 }}>
+                          {cluster} <span style={{ fontWeight:400, color:'#aaa' }}>({stocks.length})</span>
+                        </div>
+                        {stocks.length === 0
+                          ? <div style={{ fontSize:11, color:'#ddd' }}>— vacío</div>
+                          : stocks.map(s => (
+                            <div key={s.ticker} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 0', fontSize:12 }}>
+                              <span style={{ fontWeight:700, minWidth:65, color:'#222' }}>{s.ticker}</span>
+                              <span style={{ color:'#aaa', flex:1, fontSize:11 }}>{s.note || '—'}</span>
+                              <button onClick={() => deleteStock(cluster, s.ticker)}
+                                style={{ fontSize:12, color:'#e53935', background:'none', border:'none', cursor:'pointer', padding:'0 4px', lineHeight:1 }}>✕</button>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    );
+                  })}
+
+                  {/* Form añadir */}
+                  <div style={{ borderTop:'2px solid #eee', paddingTop:14, marginTop:6 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#555', marginBottom:8 }}>Añadir acción</div>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'flex-end' }}>
+                      <div>
+                        <div style={{ fontSize:10, color:'#888', marginBottom:3 }}>Ticker *</div>
+                        <input value={newTicker} onChange={e => setNewTicker(e.target.value.toUpperCase())}
+                          onKeyDown={e => e.key==='Enter' && addStock()}
+                          placeholder="NVDA"
+                          style={{ width:85, padding:'5px 8px', border:'1px solid #ddd', borderRadius:5, fontSize:12 }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, color:'#888', marginBottom:3 }}>Cluster</div>
+                        <select value={newCluster} onChange={e => setNewCluster(e.target.value)}
+                          style={{ padding:'5px 8px', border:'1px solid #ddd', borderRadius:5, fontSize:12 }}>
+                          {CLUSTER_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex:1, minWidth:150 }}>
+                        <div style={{ fontSize:10, color:'#888', marginBottom:3 }}>Nota (opcional)</div>
+                        <input value={newNote} onChange={e => setNewNote(e.target.value)}
+                          onKeyDown={e => e.key==='Enter' && addStock()}
+                          placeholder="alta beta, cíclico..."
+                          style={{ width:'100%', padding:'5px 8px', border:'1px solid #ddd', borderRadius:5, fontSize:12 }} />
+                      </div>
+                      <button onClick={addStock}
+                        style={{ padding:'5px 16px', background:'#3949ab', color:'#fff', border:'none', borderRadius:5, fontSize:12, cursor:'pointer', fontWeight:700 }}>
+                        + Añadir
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Guardar */}
+                  <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:18 }}>
+                    <button onClick={saveConfig} disabled={savingCfg}
+                      style={{ padding:'7px 22px', background:savingCfg?'#ccc':'#1b5e20', color:'#fff', border:'none', borderRadius:6, fontSize:13, cursor:savingCfg?'default':'pointer', fontWeight:700 }}>
+                      {savingCfg ? 'Guardando...' : '💾 Guardar'}
+                    </button>
+                    {saveMsg && <span style={{ fontSize:12, color:saveMsg.startsWith('✓')?'#1b5e20':'#c62828' }}>{saveMsg}</span>}
+                  </div>
+                  {saveMsg && saveMsg.startsWith('✓') && (
+                    <div style={{ marginTop:8, fontSize:11, color:'#aaa' }}>
+                      Ejecuta <code style={{ background:'#f5f5f5', padding:'1px 6px', borderRadius:3, fontFamily:'monospace' }}>py backtest/src/main_stocks.py</code> para actualizar los datos.
+                    </div>
+                  )}
+                </>
+            }
+          </div>
+        </div>
+      )}
     </div>
   );
 }
