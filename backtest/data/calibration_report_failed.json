@@ -1,18 +1,18 @@
 {
-  "calibration_timestamp": "2026-04-20T12:18:43+00:00",
+  "calibration_timestamp": "2026-05-04T17:26:13+00:00",
   "conclusion": "ABORTED — all three models failed spot-checks. No proxy generated.",
-  "root_cause": "The calibration period (2023-2026) has structurally lower HY spreads than historical periods for the same NFCICREDIT level. NFCICREDIT range in overlap: [-0.085, 0.214]. HY range in overlap: [261, 476] bps. No parametric model calibrated on this narrow benign window can reliably extrapolate to historical stress regimes.",
+  "root_cause": "The calibration period (2023-2026) has structurally lower HY spreads than historical periods for the same NFCICREDIT level. NFCICREDIT range in overlap: [-0.085, 0.202]. HY range in overlap: [261, 477] bps. No parametric model calibrated on this narrow benign window can reliably extrapolate to historical stress regimes.",
   "overlap_period": {
-    "start": "2023-04-21",
-    "end": "2026-04-10",
+    "start": "2023-05-05",
+    "end": "2026-04-24",
     "n_weeks": 156,
     "nfci_range": [
       -0.085,
-      0.214
+      0.202
     ],
     "hy_range_bps": [
       261.0,
-      476.2
+      477.0
     ]
   },
   "spot_check_dates_and_ranges": {
@@ -41,14 +41,14 @@
     {
       "name": "linear",
       "formula": "HY_bps = alpha + beta * NFCICREDIT",
-      "alpha": 325.74,
-      "beta": 654.0681,
-      "r_squared": 0.8659,
+      "alpha": 325.89,
+      "beta": 664.1325,
+      "r_squared": 0.8591,
       "spot_checks": {
         "2008-10-15": {
           "nearest_date": "2008-10-17",
-          "nfci_credit": 2.137,
-          "hy_predicted_bps": 1723.5,
+          "nfci_credit": 2.138,
+          "hy_predicted_bps": 1745.8,
           "plausible_range": [
             1400,
             2100
@@ -58,7 +58,7 @@
         "2020-03-20": {
           "nearest_date": "2020-03-20",
           "nfci_credit": 0.474,
-          "hy_predicted_bps": 635.8,
+          "hy_predicted_bps": 640.7,
           "plausible_range": [
             850,
             1250
@@ -68,7 +68,7 @@
         "2011-09-30": {
           "nearest_date": "2011-09-30",
           "nfci_credit": 0.13,
-          "hy_predicted_bps": 410.8,
+          "hy_predicted_bps": 412.2,
           "plausible_range": [
             600,
             1000
@@ -78,7 +78,7 @@
         "2015-02-13": {
           "nearest_date": "2015-02-13",
           "nfci_credit": -0.109,
-          "hy_predicted_bps": 254.4,
+          "hy_predicted_bps": 253.5,
           "plausible_range": [
             350,
             550
@@ -88,7 +88,7 @@
         "2017-05-05": {
           "nearest_date": "2017-05-05",
           "nfci_credit": -0.011,
-          "hy_predicted_bps": 318.5,
+          "hy_predicted_bps": 318.6,
           "plausible_range": [
             280,
             450
@@ -107,15 +107,15 @@
     {
       "name": "log_linear_3A",
       "formula": "log(HY_bps) = alpha_log + beta_log * NFCICREDIT",
-      "alpha_log": 5.775213,
-      "beta_log": 1.858668,
-      "exp_alpha": 322.21,
-      "r_squared_log": 0.8565,
+      "alpha_log": 5.775705,
+      "beta_log": 1.895725,
+      "exp_alpha": 322.37,
+      "r_squared_log": 0.8514,
       "spot_checks": {
         "2008-10-15": {
           "nearest_date": "2008-10-17",
-          "nfci_credit": 2.137,
-          "hy_predicted_bps": 17106.0,
+          "nfci_credit": 2.138,
+          "hy_predicted_bps": 18560.0,
           "plausible_range": [
             1400,
             2100
@@ -125,7 +125,7 @@
         "2020-03-20": {
           "nearest_date": "2020-03-20",
           "nfci_credit": 0.474,
-          "hy_predicted_bps": 777.6,
+          "hy_predicted_bps": 791.8,
           "plausible_range": [
             850,
             1250
@@ -135,7 +135,7 @@
         "2011-09-30": {
           "nearest_date": "2011-09-30",
           "nfci_credit": 0.13,
-          "hy_predicted_bps": 410.3,
+          "hy_predicted_bps": 412.5,
           "plausible_range": [
             600,
             1000
@@ -145,7 +145,7 @@
         "2015-02-13": {
           "nearest_date": "2015-02-13",
           "nfci_credit": -0.109,
-          "hy_predicted_bps": 263.1,
+          "hy_predicted_bps": 262.2,
           "plausible_range": [
             350,
             550
@@ -174,15 +174,15 @@
     {
       "name": "quadratic_asymmetric_3B",
       "formula": "HY_bps = alpha + beta*NFCI + gamma*max(NFCI,0)^2",
-      "alpha": 327.19,
-      "beta": 701.5519,
-      "gamma": -409.0825,
-      "r_squared": 0.8669,
+      "alpha": 326.77,
+      "beta": 691.8241,
+      "gamma": -257.1173,
+      "r_squared": 0.8594,
       "spot_checks": {
         "2008-10-15": {
           "nearest_date": "2008-10-17",
-          "nfci_credit": 2.137,
-          "hy_predicted_bps": -41.8,
+          "nfci_credit": 2.138,
+          "hy_predicted_bps": 630.6,
           "plausible_range": [
             1400,
             2100
@@ -192,7 +192,7 @@
         "2020-03-20": {
           "nearest_date": "2020-03-20",
           "nfci_credit": 0.474,
-          "hy_predicted_bps": 567.8,
+          "hy_predicted_bps": 596.9,
           "plausible_range": [
             850,
             1250
@@ -202,7 +202,7 @@
         "2011-09-30": {
           "nearest_date": "2011-09-30",
           "nfci_credit": 0.13,
-          "hy_predicted_bps": 411.5,
+          "hy_predicted_bps": 412.4,
           "plausible_range": [
             600,
             1000
@@ -212,7 +212,7 @@
         "2015-02-13": {
           "nearest_date": "2015-02-13",
           "nfci_credit": -0.109,
-          "hy_predicted_bps": 250.7,
+          "hy_predicted_bps": 251.4,
           "plausible_range": [
             350,
             550
@@ -222,7 +222,7 @@
         "2017-05-05": {
           "nearest_date": "2017-05-05",
           "nfci_credit": -0.011,
-          "hy_predicted_bps": 319.5,
+          "hy_predicted_bps": 319.2,
           "plausible_range": [
             280,
             450
