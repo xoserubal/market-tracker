@@ -166,6 +166,37 @@ def scan_stocks(
             ret_4w_vs_spy  = _vs_spy("ret_4w")
             ret_13w_vs_spy = _vs_spy("ret_13w")
 
+            # RS Momentum: mejora del diferencial RS en las últimas 4 semanas
+            # Positivo = RS mejorando aunque el precio esté lateral → acumulación en relativo
+            rs_momentum = None
+            if len(weekly_ind) >= 5 and "ret_4w" in weekly_ind.columns and "ret_4w" in spy_aligned.columns:
+                curr_rs = weekly_ind["ret_4w"].iloc[-1] - spy_aligned["ret_4w"].iloc[-1]
+                prev_rs = weekly_ind["ret_4w"].iloc[-5] - spy_aligned["ret_4w"].iloc[-5]
+                if not pd.isna(curr_rs) and not pd.isna(prev_rs):
+                    rs_momentum = round(float(curr_rs - prev_rs), 4)
+
+            # ATR contraction rank: percentil del ATR% actual vs últimos 252 días
+            # Valor bajo (< 25) = volatilidad contraída = posible pre-breakout
+            atr_pct_rank = None
+            if "atr14" in daily_ind.columns:
+                atr_pct_series = (daily_ind["atr14"] / daily_ind["close"] * 100).dropna()
+                if len(atr_pct_series) >= 20:
+                    tail_atr = atr_pct_series.tail(252)
+                    current_atr = float(atr_pct_series.iloc[-1])
+                    atr_pct_rank = round(float((tail_atr < current_atr).sum() / len(tail_atr) * 100), 1)
+
+            # Distancia al máximo de 52 semanas (%) — negativo = por debajo del high
+            # Cerca de 0 = precio rozando resistencia → setup pre-breakout
+            # Usa precios sin ajustar (high y close_raw) para coincidir con charts.
+            dist_52w_high = None
+            high_252 = daily["high"].tail(252) if "high" in daily.columns else pd.Series(dtype=float)
+            if len(high_252) > 0:
+                high_52w = float(high_252.max())
+                close_col = "close_raw" if "close_raw" in daily.columns else "close"
+                current_close = float(daily[close_col].iloc[-1])
+                if high_52w > 0:
+                    dist_52w_high = round((current_close / high_52w - 1) * 100, 2)
+
             # Señal
             if streak >= STREAK_MIN and cluster_active:
                 signal = "CANDIDATO"
@@ -189,6 +220,9 @@ def scan_stocks(
                 "amplifier_score":           amplifier,
                 "ret_4w_vs_spy":             ret_4w_vs_spy,
                 "ret_13w_vs_spy":            ret_13w_vs_spy,
+                "rs_momentum":               rs_momentum,
+                "atr_pct_rank":              atr_pct_rank,
+                "dist_52w_high":             dist_52w_high,
                 "components": {
                     k: (round(float(v), 1) if v is not None else None)
                     for k, v in latest_components.items()

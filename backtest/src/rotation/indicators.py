@@ -58,11 +58,17 @@ def load_daily_ohlcv(ticker: str, raw_dir: Path) -> pd.DataFrame | None:
     low_col    = df['Low']    if 'Low'    in df.columns else df[close_col]
     volume_col = df['Volume'].fillna(0.0) if 'Volume' in df.columns else pd.Series(0.0, index=df.index)
 
+    # close_raw = Close sin ajustar por dividendos (solo splits).
+    # Usado para indicadores de precio (RSI, MACD, SMA, ATR) para que coincidan
+    # con lo que muestran las plataformas de charting (ProRealtime, TradingView).
+    raw_col = df['Close'] if 'Close' in df.columns else df[close_col]
+
     daily = pd.DataFrame({
-        'high':   high_col,
-        'low':    low_col,
-        'close':  df[close_col],
-        'volume': volume_col,
+        'high':      high_col,
+        'low':       low_col,
+        'close':     df[close_col],  # Adj Close → para retornos
+        'close_raw': raw_col,        # Close sin div → para indicadores de precio
+        'volume':    volume_col,
     })
     daily.index.name = 'date'
     return daily.dropna(subset=['close'])
@@ -258,49 +264,53 @@ def compute_daily_indicators(daily_df: pd.DataFrame) -> pd.DataFrame:
       vol4w (= vol20d), vol12w (= vol60d),
       ret_1w (5d), ret_2w (10d), ret_4w (21d), ret_13w (63d)
     """
-    c  = daily_df['close']
+    # c     = Adj Close → retornos totales (dividendos incluidos)
+    # c_raw = Close sin ajustar por dividendos → indicadores de precio
+    #         (RSI, MACD, SMA, ATR) coinciden así con plataformas de charting.
+    c     = daily_df['close']
+    c_raw = daily_df['close_raw'] if 'close_raw' in daily_df.columns else c
     h  = daily_df['high']
     lo = daily_df['low']
     v  = daily_df['volume']
 
     ind = pd.DataFrame(index=daily_df.index)
-    ind['close']  = c
+    ind['close']  = c_raw  # precio de referencia para comparaciones en score.py
     ind['high']   = h
     ind['low']    = lo
     ind['volume'] = v
 
-    # SMAs sobre diarios (coincide con server.js calcSMA)
-    ind['sma20']  = sma(c, 20)    # 20 días hábiles ≈ 1 mes
-    ind['sma50']  = sma(c, 50)
-    ind['sma200'] = sma(c, 200)   # 200 días hábiles ≈ 10 meses
+    # SMAs sobre precio sin ajustar — niveles de soporte/resistencia reales
+    ind['sma20']  = sma(c_raw, 20)
+    ind['sma50']  = sma(c_raw, 50)
+    ind['sma200'] = sma(c_raw, 200)
 
-    # ATR14 diario
-    ind['atr14'] = atr(h, lo, c, 14)
+    # ATR14 diario — sobre precio sin ajustar (h, lo ya son sin ajustar en Yahoo)
+    ind['atr14'] = atr(h, lo, c_raw, 14)
 
-    # OBV diario + SMA50(OBV) diaria
-    obv_s         = obv(c, v)
+    # OBV diario + SMA50(OBV) — sobre precio sin ajustar
+    obv_s         = obv(c_raw, v)
     ind['obv']       = obv_s
     ind['obv_sma50'] = sma(obv_s, 50)
 
-    # CMF(20) diario — 20 velas diarias ≈ 4 semanas
-    ind['cmf20'] = cmf(h, lo, c, v, 20)
+    # CMF(20) diario — h, lo, c sin ajustar
+    ind['cmf20'] = cmf(h, lo, c_raw, v, 20)
 
-    # MACD(12,26,9) con SMA-seed (replica server.js)
-    m = macd_sma_seeded(c, 12, 26, 9)
+    # MACD(12,26,9) — sobre precio sin ajustar
+    m = macd_sma_seeded(c_raw, 12, 26, 9)
     ind['macd_hist'] = m['histogram']
 
-    # RSI(14) Wilder con SMA-seed explícito (replica server.js)
-    ind['rsi14'] = rsi_wilder_explicit(c, 14)
+    # RSI(14) Wilder — sobre precio sin ajustar
+    ind['rsi14'] = rsi_wilder_explicit(c_raw, 14)
 
     # Vol ratio: vol20d / vol60d (alias vol4w / vol12w para compatibilidad)
-    ind['vol4w']  = v.rolling(20,  min_periods=20).mean()   # vol20d
-    ind['vol12w'] = v.rolling(60,  min_periods=60).mean()   # vol60d
+    ind['vol4w']  = v.rolling(20,  min_periods=20).mean()
+    ind['vol12w'] = v.rolling(60,  min_periods=60).mean()
 
-    # Retornos en % sobre diarios (alineados con server.js ret(5)/ret(10)/ret(21)/ret(63))
-    ind['ret_1w']  = c.pct_change(5)  * 100.0   # 5 días ≈ 1 semana
-    ind['ret_2w']  = c.pct_change(10) * 100.0   # 10 días ≈ 2 semanas
-    ind['ret_4w']  = c.pct_change(21) * 100.0   # 21 días ≈ 1 mes (app m1)
-    ind['ret_13w'] = c.pct_change(63) * 100.0   # 63 días ≈ 13 semanas (app m3)
+    # Retornos en % sobre Adj Close (incluye dividendos → retorno total correcto)
+    ind['ret_1w']  = c.pct_change(5)  * 100.0
+    ind['ret_2w']  = c.pct_change(10) * 100.0
+    ind['ret_4w']  = c.pct_change(21) * 100.0
+    ind['ret_13w'] = c.pct_change(63) * 100.0
 
     return ind
 

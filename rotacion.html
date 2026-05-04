@@ -721,6 +721,9 @@ function StockCandidates({ data }) {
     { h:'Amplifier',  tip: "Amplifier = Beta 52w × RotationScore\n\nEstima el potencial de amplificación relativo al cluster ETF. Una acción con Beta 2.0 y Score 8 tiene Amplifier 16.\n\n> 12 = muy alto (rojo)\n8–12 = alto (naranja)\n\nMayor Amplifier → mayor potencial de retorno y mayor riesgo." },
     { h:'4w vs SPY',  tip: "Retorno 4 semanas de la acción menos retorno 4w de SPY.\n\nPositivo = outperformance reciente." },
     { h:'13w vs SPY', tip: "Retorno 13 semanas de la acción menos retorno 13w de SPY.\n\nHorizonte trimestral: evalúa si la tendencia relativa es sostenida." },
+    { h:'RS Mom',    tip: "Mejora del diferencial RS vs SPY en las últimas 4 semanas.\n\nRS Mom = (ret_4w_vs_spy hoy) − (ret_4w_vs_spy hace 4w)\n\nPositivo → RS construyendo aunque el precio esté lateral = acumulación en relativo.\nNegativo → RS deteriorándose." },
+    { h:'ATR%',      tip: "Percentil del ATR% (ATR14/precio×100) actual respecto a los últimos 252 días.\n\n< 25 = volatilidad muy contraída (squeeze) → posible pre-breakout\n25–50 = rango normal-bajo\n> 50 = volatilidad expansiva\n\nBuscar valor bajo combinado con precio cerca del máximo 52w." },
+    { h:'Dist 52h',  tip: "Distancia del precio actual al máximo de las últimas 52 semanas (%).\n\nCerca de 0% = precio rozando máximos anuales → zona de breakout potencial\n< −5% = bastante cerca\n< −15% = aún lejos" },
     { h:'Nota',       tip: "Comentario libre del YAML (motivo de inclusión del ticker en la lista)." },
   ];
   const THead = () => (
@@ -754,6 +757,18 @@ function StockCandidates({ data }) {
           color:(amp??0)>=12?'#c62828':(amp??0)>=8?'#e65100':'#555' }}>{amp!=null?amp.toFixed(1):'—'}</td>
         <td style={{ padding:'5px 10px', textAlign:'center', color:relColor(c.ret_4w_vs_spy)  }}>{fmtRel(c.ret_4w_vs_spy)}</td>
         <td style={{ padding:'5px 10px', textAlign:'center', color:relColor(c.ret_13w_vs_spy) }}>{fmtRel(c.ret_13w_vs_spy)}</td>
+        <td style={{ padding:'5px 10px', textAlign:'center',
+          color: c.rs_momentum == null ? '#aaa' : c.rs_momentum > 0 ? '#1b5e20' : '#c62828' }}>
+          {c.rs_momentum == null ? '—' : (c.rs_momentum > 0 ? '+' : '') + c.rs_momentum.toFixed(1)}
+        </td>
+        <td style={{ padding:'5px 10px', textAlign:'center',
+          color: c.atr_pct_rank == null ? '#aaa' : c.atr_pct_rank < 25 ? '#1b5e20' : c.atr_pct_rank < 50 ? '#e65100' : '#888' }}>
+          {c.atr_pct_rank == null ? '—' : c.atr_pct_rank.toFixed(0) + '%'}
+        </td>
+        <td style={{ padding:'5px 10px', textAlign:'center',
+          color: c.dist_52w_high == null ? '#aaa' : c.dist_52w_high > -5 ? '#1b5e20' : c.dist_52w_high > -15 ? '#e65100' : '#888' }}>
+          {c.dist_52w_high == null ? '—' : c.dist_52w_high.toFixed(1) + '%'}
+        </td>
         <td style={{ padding:'5px 10px', color:'#999', fontSize:11, maxWidth:200 }}>{c.note||'—'}</td>
       </tr>
     );
