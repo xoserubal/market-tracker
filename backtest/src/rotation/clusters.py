@@ -7,8 +7,8 @@ UNIVERSE = [
     'XLK', 'XLC', 'XLY', 'XLF', 'XLI', 'XLB', 'XLE',
     'XLV', 'XLRE', 'XLP', 'XLU',
     'SPY',
-    'QQQ', 'IWM', 'EEM', 'TLT',
-    'GC=F', 'SI=F', 'BZ=F', 'BTC-USD',
+    'QQQ', 'IWM', 'EEM', 'EFA', 'FEZ', 'TLT',
+    'GC=F', 'SI=F', 'BZ=F', 'HG=F', 'BTC-USD',
 ]
 
 TICKERS_NO_SPY = [t for t in UNIVERSE if t != 'SPY']
@@ -18,14 +18,14 @@ CLUSTERS = {
     'Value/Cyclical': ['XLF', 'XLI', 'XLB', 'XLE'],
     'Defensive':      ['XLP', 'XLU', 'XLV', 'XLRE'],
     'Duration':       ['TLT'],          # un solo miembro → nunca dispara (intencional)
-    'Commodities':    ['GC=F', 'SI=F', 'BZ=F'],
-    'Small/EM':       ['IWM', 'EEM'],
+    'Commodities':    ['GC=F', 'SI=F', 'BZ=F', 'HG=F'],
+    'Small/EM':       ['IWM', 'EEM', 'EFA', 'FEZ'],
 }
 
 # Líderes por defecto de cada régimen (sin conditionals aplicados)
 REGIME_DEFAULT_LEADERS = {
-    'Bull Pleno':   ['XLK', 'XLC', 'XLY', 'QQQ', 'BTC-USD', 'IWM', 'EEM'],
-    'Bull Maduro':  ['XLF', 'XLI', 'XLB', 'XLE', 'GC=F', 'SI=F', 'BZ=F'],
+    'Bull Pleno':   ['XLK', 'XLC', 'XLY', 'QQQ', 'BTC-USD', 'IWM', 'EEM', 'EFA', 'FEZ'],
+    'Bull Maduro':  ['XLF', 'XLI', 'XLB', 'XLE', 'GC=F', 'SI=F', 'BZ=F', 'HG=F'],
     'Transición':   ['XLP', 'XLU', 'XLV', 'XLRE', 'GC=F', 'TLT'],
     'Risk-OFF':     ['TLT', 'GC=F', 'XLP', 'XLU'],
     'Capitulación': ['TLT', 'GC=F'],

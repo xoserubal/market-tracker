@@ -71,10 +71,10 @@ const MACRO_ITEMS = [
 const REGIMES = [
   { min:80, label:'Bull Pleno',   color:'#1b5e20', bg:'#e8f5e9', border:'#4caf50',
     desc:'Expansión con apetito de riesgo alto. Growth y cíclicos lideran.',
-    defaultLeaders:['XLK','XLC','XLY','QQQ','BTC-USD','IWM','EEM'] },
+    defaultLeaders:['XLK','XLC','XLY','QQQ','BTC-USD','IWM','EEM','EFA','FEZ'] },
   { min:60, label:'Bull Maduro',  color:'#33691e', bg:'#f1f8e9', border:'#8bc34a',
     desc:'Crecimiento decelerando. Rota hacia value, financials, energía.',
-    defaultLeaders:['XLF','XLI','XLB','XLE','GC=F','SI=F','BZ=F'] },
+    defaultLeaders:['XLF','XLI','XLB','XLE','GC=F','SI=F','BZ=F','HG=F'] },
   { min:40, label:'Transición',   color:'#e65100', bg:'#fff3e0', border:'#ff9800',
     desc:'Ciclo tardío. Defensivos y oro acumulan. Reducir growth.',
     defaultLeaders:['XLP','XLU','XLV','XLRE','GC=F','TLT'] },
@@ -103,10 +103,13 @@ const UNIVERSE = [
   { name:'NASDAQ 100',       ticker:'QQQ',     cat:'Índice',     goodIn:[80] },
   { name:'Russell 2000',     ticker:'IWM',     cat:'Índice',     goodIn:[80,60] },
   { name:'MSCI EM',          ticker:'EEM',     cat:'Índice',     goodIn:[60,40] },
+  { name:'MSCI EAFE',        ticker:'EFA',     cat:'Índice',     goodIn:[80,60] },
+  { name:'Euro Stoxx 50',    ticker:'FEZ',     cat:'Índice',     goodIn:[80,60] },
   { name:'Long Bonds',       ticker:'TLT',     cat:'Renta Fija', goodIn:[0,20] },
   { name:'Gold',             ticker:'GC=F',    cat:'Commodity',  goodIn:[60,40,20,0] },
   { name:'Silver',           ticker:'SI=F',    cat:'Commodity',  goodIn:[60,40] },
   { name:'Oil (Brent)',      ticker:'BZ=F',    cat:'Commodity',  goodIn:[60,40] },
+  { name:'Copper',           ticker:'HG=F',    cat:'Commodity',  goodIn:[80,60] },
   { name:'Bitcoin',          ticker:'BTC-USD', cat:'Crypto',     goodIn:[80] },
 ];
 
@@ -116,8 +119,8 @@ const CLUSTERS = {
   ValueCyclical: ['XLF','XLI','XLB','XLE'],
   Defensive:     ['XLP','XLU','XLV','XLRE'],
   Duration:      ['TLT'],          // un solo miembro → nunca dispara (intencional)
-  Commodities:   ['GC=F','SI=F','BZ=F'],
-  SmallEM:       ['IWM','EEM'],
+  Commodities:   ['GC=F','SI=F','BZ=F','HG=F'],
+  SmallEM:       ['IWM','EEM','EFA','FEZ'],
 };
 
 function getTickerCluster(ticker) {
