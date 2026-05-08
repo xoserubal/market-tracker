@@ -78,11 +78,32 @@ def export_macro():
         if last_valid is not None:
             df_a = df_a.loc[:last_valid]
 
+    # ── Trend fields (delta 1W / 1M, macro_trend, macro_phase_quality) ───────
+    if "macro_score" in df_a.columns:
+        df_a["macro_delta_1w"] = df_a["macro_score"].diff(1).round(2)
+        df_a["macro_delta_1m"] = df_a["macro_score"].diff(4).round(2)
+        improving    = (df_a["macro_delta_1w"] > 2)  | (df_a["macro_delta_1m"] > 5)
+        deteriorating = (df_a["macro_delta_1w"] < -2) | (df_a["macro_delta_1m"] < -5)
+        df_a["macro_trend"] = np.select(
+            [improving, deteriorating],
+            ["Improving", "Deteriorating"],
+            default="Stable",
+        )
+        if "regime" in df_a.columns:
+            df_a["macro_phase_quality"] = (
+                df_a["regime"].astype(str) + " " + df_a["macro_trend"]
+            )
+
+    latest_row = df_a.iloc[-1]
     out = {
         "updated": str(df_a.index[-1].date()),
         "latest": {
-            "score": clean(df_a["macro_score"].iloc[-1]) if "macro_score" in df_a.columns else None,
-            "regime": str(df_a["regime"].iloc[-1]) if "regime" in df_a.columns else None,
+            "score":         clean(latest_row.get("macro_score")),
+            "regime":        str(latest_row["regime"]) if "regime" in df_a.columns and pd.notna(latest_row.get("regime")) else None,
+            "delta_1w":      clean(latest_row.get("macro_delta_1w")),
+            "delta_1m":      clean(latest_row.get("macro_delta_1m")),
+            "trend":         str(latest_row.get("macro_trend", "Stable")),
+            "phase_quality": str(latest_row.get("macro_phase_quality", "")) if "macro_phase_quality" in df_a.columns else None,
         },
         "history": df_to_records(df_a),
     }
@@ -332,3 +353,16 @@ if __name__ == "__main__":
     export_prices()
     export_stock_candidates()
     print(f"\nDatos exportados en: {OUT_DIR}")
+
+    # Run PCS calculator after all source JSONs are fresh
+    try:
+        import importlib.util, pathlib
+        spec = importlib.util.spec_from_file_location(
+            "pcs_calculator",
+            pathlib.Path(__file__).parent / "pcs_calculator.py",
+        )
+        pcs = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pcs)
+        pcs.run()
+    except Exception as e:
+        print(f"  ⚠ pcs_calculator skipped: {e}")

@@ -92,6 +92,28 @@
   #loader { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 12px; }
   .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* AI Picks Lab */
+  .ptf-tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .ptf-tab  { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); cursor: pointer; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; transition: all .15s; }
+  .ptf-tab:hover  { color: var(--text); border-color: var(--blue); }
+  .ptf-tab.active { background: rgba(88,166,255,.15); color: var(--blue); border-color: var(--blue); }
+  .picks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .picks-table th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text2); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  .picks-table td { padding: 8px 10px; border-bottom: 1px solid rgba(48,54,61,.5); vertical-align: top; }
+  .picks-table tr:last-child td { border-bottom: none; }
+  .pcs-bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--blue); vertical-align: middle; margin-right: 6px; }
+  .conv-HIGH   { color: var(--green); font-weight: 700; }
+  .conv-MEDIUM { color: var(--yellow); font-weight: 700; }
+  .conv-LOW    { color: var(--text2); }
+  .no-positions { color: var(--text2); font-size: 13px; padding: 20px; text-align: center; }
+  .review-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+  .review-box .lbl { color: var(--text2); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .history-item { padding: 8px 0; border-bottom: 1px solid rgba(48,54,61,.5); display: flex; gap: 12px; align-items: baseline; font-size: 12px; }
+  .history-item:last-child { border-bottom: none; }
+  .history-open  { color: var(--green); font-weight: 700; font-size: 11px; }
+  .history-close { color: var(--red);   font-weight: 700; font-size: 11px; }
+  .pcs-pill { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; background: rgba(88,166,255,.15); color: var(--blue); }
 </style>
 </head>
 <body>
@@ -112,6 +134,7 @@
   <button onclick="showPage('rotation')">Rotación</button>
   <button onclick="showPage('portfolio')">Portfolio</button>
   <button onclick="showPage('confluence')">Confluencia</button>
+  <button onclick="showPage('aipicks')">AI Picks Lab</button>
 </nav>
 
 <!-- ── OVERVIEW ─────────────────────────────────────────── -->
@@ -197,6 +220,17 @@
       <div class="chart-title">Macro vs Sector tension</div>
       <div id="chart-tensions" class="plotly-chart"></div>
     </div>
+  </div>
+</div>
+
+<!-- ── AI PICKS LAB ────────────────────────────────────────── -->
+<div id="page-aipicks" class="page">
+  <div class="cards" id="aipicks-cards"></div>
+
+  <div class="ptf-tabs" id="aipicks-ptf-tabs"></div>
+
+  <div id="aipicks-content">
+    <!-- filled by renderAIPicks() -->
   </div>
 </div>
 
@@ -573,6 +607,166 @@ function renderPortfolioCards(metrics) {
   ]);
 }
 
+// ── AI Picks Lab ──────────────────────────────────────────────────────────────
+const PTF_LABELS = {
+  HIGH_CONVICTION:              'Alta Convicción',
+  CONFIRMED_FLOW_LEADERS:       'Flujo Confirmado',
+  EARLY_ROTATION:               'Rot. Temprana',
+  MACRO_THEMATIC_BENEFICIARIES: 'Macro Temático',
+  REJECTED_HIGH_SCORE:          'Rechazados (control)',
+};
+const PTF_THRESHOLDS = {
+  HIGH_CONVICTION: 85, CONFIRMED_FLOW_LEADERS: 78,
+  EARLY_ROTATION: 70, MACRO_THEMATIC_BENEFICIARIES: 65, REJECTED_HIGH_SCORE: 75,
+};
+let _activePtfTab = 'HIGH_CONVICTION';
+let _aipicksData = null;
+let _aicandidatesData = null;
+
+function renderAIPicks(picks, candidates) {
+  _aipicksData = picks;
+  _aicandidatesData = candidates;
+  const portfolios = picks.portfolios || {};
+  const ptfIds = Object.keys(PTF_LABELS);
+
+  // Summary cards
+  let totalOpen = 0, totalOps = 0;
+  ptfIds.forEach(id => {
+    const p = portfolios[id] || {};
+    totalOpen += (p.positions || []).length;
+    totalOps  += (p.history  || []).length;
+  });
+  const cands = candidates.candidates || [];
+  const eligible = cands.filter(c => c.eligible).length;
+  const pcs78 = cands.filter(c => c.eligible && c.pcs >= 78).length;
+  renderCards('aipicks-cards', [
+    { label: 'Posiciones abiertas', value: totalOpen, cls: totalOpen > 0 ? 'bull' : '' },
+    { label: 'Operaciones totales', value: totalOps, cls: 'info' },
+    { label: 'Candidatos elegibles', value: eligible, cls: 'info' },
+    { label: 'PCS ≥ 78', value: pcs78, cls: pcs78 > 0 ? 'bull' : '' },
+    { label: 'Actualizado', value: picks.last_updated || '—', cls: 'info' },
+  ]);
+
+  // Portfolio tabs
+  const tabsEl = document.getElementById('aipicks-ptf-tabs');
+  tabsEl.innerHTML = ptfIds.map(id =>
+    `<button class="ptf-tab${id===_activePtfTab?' active':''}" onclick="switchPtfTab('${id}')">${PTF_LABELS[id]}</button>`
+  ).join('');
+
+  renderPtfContent(_activePtfTab);
+}
+
+function switchPtfTab(id) {
+  _activePtfTab = id;
+  document.querySelectorAll('.ptf-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ptf-tab').forEach(b => {
+    if (b.textContent === PTF_LABELS[id]) b.classList.add('active');
+  });
+  renderPtfContent(id);
+}
+
+function renderPtfContent(ptfId) {
+  const el = document.getElementById('aipicks-content');
+  const picks = _aipicksData || {};
+  const ptf = (picks.portfolios || {})[ptfId] || {};
+  const positions = ptf.positions || [];
+  const history   = ptf.history   || [];
+  const review    = ptf.last_review;
+  const threshold = PTF_THRESHOLDS[ptfId] || 70;
+  const cands     = (_aicandidatesData?.candidates || [])
+    .filter(c => c.eligible && c.pcs >= threshold - 12)
+    .sort((a,b) => b.pcs - a.pcs)
+    .slice(0, 25);
+
+  let html = '';
+
+  // Last review summary
+  if (review) {
+    html += `<div class="review-box">
+      <div class="lbl">Último análisis AI — ${review.date}</div>
+      <div style="margin-top:4px">${review.macro_summary || ''}</div>
+      ${review.no_action_reason ? `<div style="color:var(--text2);margin-top:4px;font-size:12px">Sin acción: ${review.no_action_reason}</div>` : ''}
+    </div>`;
+  }
+
+  // Open positions
+  html += `<div class="chart-box">
+    <div class="chart-title">Posiciones abiertas (${positions.length})</div>`;
+  if (positions.length === 0) {
+    html += `<div class="no-positions">No hay posiciones abiertas en este portfolio</div>`;
+  } else {
+    html += `<table class="picks-table">
+      <thead><tr>
+        <th>Ticker</th><th>PCS entrada</th><th>Tamaño</th><th>Convicción</th><th>Fecha entrada</th><th>Señal entrada</th><th>Rationale</th>
+      </tr></thead><tbody>`;
+    positions.forEach(p => {
+      const convCls = `conv-${p.conviction || 'LOW'}`;
+      const barW = Math.round(((p.entry_pcs || 0) / 100) * 80);
+      html += `<tr>
+        <td style="font-weight:700">${p.ticker}</td>
+        <td><span class="pcs-bar" style="width:${barW}px"></span>${p.entry_pcs ?? '—'}</td>
+        <td>${p.size_pct != null ? p.size_pct + '%' : '—'}</td>
+        <td class="${convCls}">${p.conviction || '—'}</td>
+        <td>${p.entry_date || '—'}</td>
+        <td>${p.entry_signal || '—'}</td>
+        <td style="color:var(--text2);font-size:12px">${p.rationale || '—'}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+
+  // Top candidates
+  html += `<div class="chart-box">
+    <div class="chart-title">Top candidatos actuales (PCS ≥ ${threshold - 12})</div>
+    <table class="picks-table">
+      <thead><tr>
+        <th>Ticker</th><th>PCS</th><th>Tema</th><th>Rot score</th><th>Señal</th><th>r4w vs SPY</th><th>r13w vs SPY</th><th>Early</th><th>Flags</th>
+      </tr></thead><tbody>`;
+  cands.forEach(c => {
+    const barW = Math.round((c.pcs / 100) * 80);
+    const r4  = c.ret_4w_vs_spy  != null ? (c.ret_4w_vs_spy  > 0 ? '+' : '') + c.ret_4w_vs_spy.toFixed(1)  + '%' : '—';
+    const r13 = c.ret_13w_vs_spy != null ? (c.ret_13w_vs_spy > 0 ? '+' : '') + c.ret_13w_vs_spy.toFixed(1) + '%' : '—';
+    const r4Cls  = c.ret_4w_vs_spy  > 0  ? 'color:var(--green)' : c.ret_4w_vs_spy  < 0 ? 'color:var(--red)' : '';
+    const r13Cls = c.ret_13w_vs_spy > 0  ? 'color:var(--green)' : c.ret_13w_vs_spy < 0 ? 'color:var(--red)' : '';
+    const flagsShort = (c.flags || []).filter(f => !f.startsWith('macro_')).slice(0, 3).join(', ');
+    html += `<tr>
+      <td style="font-weight:700">${c.ticker}</td>
+      <td><span class="pcs-bar" style="width:${barW}px"></span><span class="pcs-pill">${c.pcs}</span></td>
+      <td style="color:var(--text2);font-size:12px">${c.theme || '—'}</td>
+      <td>${c.rot_score ?? '—'}</td>
+      <td><span class="signal-badge ${signalClass(c.signal)}">${c.signal || '—'}</span></td>
+      <td style="${r4Cls}">${r4}</td>
+      <td style="${r13Cls}">${r13}</td>
+      <td>${c.is_early ? '<span style="color:var(--purple)">SI</span>' : '<span style="color:var(--text2)">—</span>'}</td>
+      <td style="color:var(--text2);font-size:11px">${flagsShort}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Trade history (last 20)
+  if (history.length > 0) {
+    const recent = [...history].reverse().slice(0, 20);
+    html += `<div class="chart-box">
+      <div class="chart-title">Historial de operaciones (${history.length} total)</div>`;
+    recent.forEach(h => {
+      const cls = h.event === 'open' ? 'history-open' : 'history-close';
+      const label = h.event === 'open' ? 'COMPRA' : 'VENTA';
+      const date  = h.event === 'open' ? h.entry_date : h.exit_date;
+      html += `<div class="history-item">
+        <span class="${cls}">${label}</span>
+        <span style="font-weight:700;min-width:80px">${h.ticker}</span>
+        <span style="color:var(--text2)">${date || '—'}</span>
+        <span class="pcs-pill">${(h.entry_pcs ?? h.exit_pcs) ?? '—'}</span>
+        <span style="color:var(--text2);font-size:11px;flex:1">${h.rationale || h.exit_reason || '—'}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
 // ── Main init ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -647,6 +841,14 @@ async function init() {
     // Confluence page
     chartConfluence(confluence.history);
     renderAlerts(confluence.alerts);
+
+    // AI Picks Lab (non-blocking: files may not exist yet)
+    Promise.all([
+      loadJSON('ai_picks.json').catch(() => ({ portfolios: {}, last_updated: '—' })),
+      loadJSON('ai_candidates.json').catch(() => ({ candidates: [], macro_context: {} })),
+    ]).then(([picks, candidates]) => {
+      renderAIPicks(picks, candidates);
+    }).catch(() => {});
 
   } catch (e) {
     console.error('Dashboard error:', e);

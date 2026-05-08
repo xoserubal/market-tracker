@@ -67,6 +67,20 @@ jobs:
         run: python scripts/export_to_json.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 8 PCS calculator
+        run: python scripts/pcs_calculator.py
+        working-directory: ${{ github.workspace }}
+
+      - name: Run pipeline - Step 9 event detection
+        run: python scripts/event_detector.py
+        working-directory: ${{ github.workspace }}
+
+      - name: Run pipeline - Step 10 paper trading (AI picks)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/paper_trading.py
+        working-directory: ${{ github.workspace }}
+
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"

@@ -1141,7 +1141,7 @@ function App() {
 
   useEffect(() => {
     if (!loading) {
-      try { localStorage.setItem('llm_export_rotacion', buildMD()); } catch {}
+      try { localStorage.setItem('llm_export_rotacion', buildMD()); localStorage.setItem('llm_export_rotacion_ts', Date.now().toString()); } catch {}
     }
   }, [loading, buildMD]);
 
@@ -1159,15 +1159,30 @@ function App() {
       { key: 'llm_export_relative',  label: 'Relative Flow' },
       { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
     ];
-    const found = [], missing = [];
+    const now = Date.now();
+    const found = [], missing = [], stale = [];
     const sections = parts.map(({ key, label }) => {
       const md = localStorage.getItem(key);
-      if (md) { found.push(label); return md; }
+      if (md) {
+        found.push(label);
+        const ts = parseInt(localStorage.getItem(key + '_ts') || '0');
+        const hours = ts ? Math.round((now - ts) / 3600000) : null;
+        if (!ts || hours > 23) stale.push(hours != null ? `${label} (${hours}h)` : label);
+        return md;
+      }
       missing.push(label); return null;
     }).filter(Boolean);
     if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
-    navigator.clipboard.writeText(sections.join('\n\n---\n\n'))
-      .then(() => showToast(missing.length ? `✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}` : `✅ Todas las pestañas copiadas`))
+    const exportDate = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+    const header = `**Exportado:** ${exportDate}` +
+      (stale.length ? `\n⚠️ **Secciones desactualizadas (>24h):** ${stale.join(', ')} — Abre esas pestañas para refrescar\n` : '\n');
+    const combined = header + '\n---\n\n' + sections.join('\n\n---\n\n');
+    navigator.clipboard.writeText(combined)
+      .then(() => {
+        if (stale.length) showToast(`⚠️ ${stale.length} secc. desactualizadas: ${stale.join(', ')}`);
+        else if (missing.length) showToast(`✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}`);
+        else showToast('✅ Todas las pestañas copiadas (datos frescos)');
+      })
       .catch(() => showToast('❌ Error al copiar'));
   };
 
