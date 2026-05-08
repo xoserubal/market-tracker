@@ -414,6 +414,7 @@ def validate_model_response(
         c["ticker"] for c in payload.get("candidates", [])
         if c.get("subtheme", "") in NON_TRADABLE_SUBTHEMES
     }
+    cand_pcs_map = {c["ticker"]: c.get("pcs", 0.0) for c in payload.get("candidates", [])}
 
     seen: set[str]           = set()
     ptf_counts: dict[str, int] = {}
@@ -436,6 +437,11 @@ def validate_model_response(
         max_p = PORTFOLIOS.get(ptf, {}).get("max_positions", 999)
         if ptf_counts[ptf] > max_p:
             r.add(f"Portfolio {ptf}: exceeds max_positions ({max_p})")
+        pcs_min = PORTFOLIOS.get(ptf, {}).get("pcs_min_entry", 0)
+        if ptf in VALID_PORTFOLIOS and pcs_min > 0:
+            ticker_pcs = cand_pcs_map.get(t, 0.0)
+            if ticker_pcs < pcs_min:
+                r.add(f"SELECT {t}: PCS {ticker_pcs} below {ptf} minimum ({pcs_min})")
 
     for w in data.get("watch", []):
         t = w.get("ticker", "")
@@ -529,6 +535,7 @@ def _build_summary_record(
     fallback_used: bool,
     error:         str | None,
     should_call:   bool,
+    forced_run:    bool = False,
 ) -> dict:
     return {
         "date":                 str(date.today()),
@@ -536,6 +543,7 @@ def _build_summary_record(
         "model":                model,
         "provider":             "openrouter",
         "should_call_ai":       should_call,
+        "forced_run":           forced_run,
         "event_count":          len(payload.get("events", [])),
         "candidate_count":      len(payload.get("candidates", [])),
         "input_tokens":         in_tok,
@@ -586,20 +594,34 @@ def _save_test_result(
     })
 
 
-def _log_shadow_picks(model: str, data: dict, is_active: bool) -> None:
+def _log_shadow_picks(
+    model: str,
+    data: dict,
+    is_active: bool,
+    run_id: str,
+    is_valid_run: bool,
+    forced_run: bool,
+    cand_pcs: dict | None = None,
+) -> None:
     today = str(date.today())
+    valid_for_tracking = is_valid_run and not forced_run
     for s in data.get("selected", []):
+        t = s.get("ticker", "")
+        pcs_val = (cand_pcs.get(t) if cand_pcs else None) or s.get("pcs")
         _append_jsonl(SHADOW_LOG, {
             "date":         today,
+            "run_id":       run_id,
             "model":        model,
-            "ticker":       s.get("ticker"),
+            "ticker":       t,
             "portfolio":    s.get("portfolio"),
-            "pcs":          s.get("pcs"),
+            "pcs":          pcs_val,
             "signal_type":  s.get("signal_type"),
             "confidence":   s.get("confidence"),
             "reason_short": s.get("reason_short"),
             "shadow":       not is_active,
             "active_model": is_active,
+            "forced_run":   forced_run,
+            "valid_for_performance_tracking": valid_for_tracking,
             "entry_price":  None,   # filled by a separate price-fetch step
             "ret_1d":  None, "ret_3d":  None, "ret_1w":  None,
             "ret_2w":  None, "ret_1m":  None, "ret_3m":  None,
@@ -616,7 +638,7 @@ def _size_from_conviction(conviction: str, size_range: tuple) -> float:
     return round((lo + hi) / 2.0, 1)
 
 
-def update_portfolio(picks: dict, data: dict) -> dict:
+def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> dict:
     today      = str(date.today())
     portfolios = picks.setdefault("portfolios", {})
 
@@ -626,13 +648,15 @@ def update_portfolio(picks: dict, data: dict) -> dict:
             continue
         ptf       = portfolios.setdefault(ptf_id, {"positions": [], "history": [], "last_review": None})
         positions = ptf.setdefault("positions", [])
-        if any(p["ticker"] == s["ticker"] for p in positions):
+        t = s["ticker"]
+        if any(p["ticker"] == t for p in positions):
             continue
 
+        pcs_val = (cand_pcs.get(t) if cand_pcs else None) or s.get("pcs")
         new_pos = {
-            "ticker":       s["ticker"],
+            "ticker":       t,
             "entry_date":   today,
-            "entry_pcs":    s.get("pcs"),
+            "entry_pcs":    pcs_val,
             "entry_signal": s.get("signal_type"),
             "size_pct":     _size_from_conviction(
                                 s.get("confidence", "medium"),
@@ -657,7 +681,7 @@ def update_portfolio(picks: dict, data: dict) -> dict:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
-def run(force: bool = False) -> None:
+def run(force: bool = False, apply: bool = False) -> None:
     config = Config.from_env()
     today  = str(date.today())
     run_id = f"{today}_{datetime.now().strftime('%H%M')}"
@@ -667,6 +691,7 @@ def run(force: bool = False) -> None:
         events_raw = []
 
     cands_data = _load("ai_candidates.json")
+    cand_pcs   = {c["ticker"]: c.get("pcs") for c in cands_data.get("candidates", [])}
     picks      = _load("ai_picks.json")
     if not isinstance(picks, dict):
         picks = {}
@@ -745,22 +770,28 @@ def run(force: bool = False) -> None:
         quality = compute_quality_score(data, v, payload)
         print(f"q={quality}/100  viol={v.hard_rule_violations}")
 
+        is_valid_run = v.schema_valid and v.hard_rule_violations == 0
         summary_rec = _build_summary_record(
             run_id, model_used, payload, data, v,
             quality, in_tok, out_tok, cost, latency,
-            fallback_used, error, True,
+            fallback_used, error, True, forced_run=force,
         )
         _append_jsonl(SUMMARY_LOG, summary_rec)
         _save_test_result(run_id, model_used, data, v, quality, raw, summary_rec)
 
         if data and json_valid:
-            _log_shadow_picks(model_used, data, is_active)
+            _log_shadow_picks(model_used, data, is_active,
+                              run_id=run_id, is_valid_run=is_valid_run,
+                              forced_run=force, cand_pcs=cand_pcs)
 
-        if is_active and data and v.schema_valid and v.hard_rule_violations == 0:
-            picks          = update_portfolio(picks, data)
-            active_updated = True
-            n_sel = len(data.get("selected", []))
-            print(f"  [{model_used}] ACTIVE -> {n_sel} picks applied to portfolio")
+        if is_active and data and is_valid_run:
+            if force and not apply:
+                print(f"  [{model_used}] ACTIVE -> picks NOT applied (forced run without --apply)")
+            else:
+                picks          = update_portfolio(picks, data, cand_pcs)
+                active_updated = True
+                n_sel = len(data.get("selected", []))
+                print(f"  [{model_used}] ACTIVE -> {n_sel} picks applied to portfolio")
         elif is_active:
             reasons = []
             if not json_valid:        reasons.append("json_invalid")
@@ -774,4 +805,4 @@ def run(force: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    run(force="--force" in sys.argv)
+    run(force="--force" in sys.argv, apply="--apply" in sys.argv)
