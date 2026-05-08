@@ -724,28 +724,73 @@ function renderPtfContent(ptfId) {
   html += `</div>`;
 
   // Top candidates
+  const isEarly = ptfId === 'EARLY_ROTATION';
   html += `<div class="chart-box">
     <div class="chart-title">Top candidatos actuales (PCS ≥ ${threshold - 12})</div>
     <table class="picks-table">
       <thead><tr>
-        <th>Ticker</th><th>PCS</th><th>Tema</th><th>Rot score</th><th>Señal</th><th>r4w vs SPY</th><th>r13w vs SPY</th><th>Early</th><th>Flags</th>
+        <th>Ticker</th><th>PCS</th><th>Tema</th><th>Rot</th><th>Señal</th>
+        ${isEarly
+          ? '<th title="Daily Early Momentum Score 0-20">DEMS</th><th>r5d SPY</th><th>d10</th><th>Accel</th><th>Spike</th>'
+          : '<th>r4w SPY</th><th>r13w SPY</th><th>Early</th>'
+        }
+        <th>Flags</th>
       </tr></thead><tbody>`;
   cands.forEach(c => {
     const barW = Math.round((c.pcs / 100) * 80);
-    const r4  = c.ret_4w_vs_spy  != null ? (c.ret_4w_vs_spy  > 0 ? '+' : '') + c.ret_4w_vs_spy.toFixed(1)  + '%' : '—';
-    const r13 = c.ret_13w_vs_spy != null ? (c.ret_13w_vs_spy > 0 ? '+' : '') + c.ret_13w_vs_spy.toFixed(1) + '%' : '—';
-    const r4Cls  = c.ret_4w_vs_spy  > 0  ? 'color:var(--green)' : c.ret_4w_vs_spy  < 0 ? 'color:var(--red)' : '';
-    const r13Cls = c.ret_13w_vs_spy > 0  ? 'color:var(--green)' : c.ret_13w_vs_spy < 0 ? 'color:var(--red)' : '';
-    const flagsShort = (c.flags || []).filter(f => !f.startsWith('macro_')).slice(0, 3).join(', ');
+    const r4   = c.ret_4w_vs_spy  != null ? (c.ret_4w_vs_spy  > 0 ? '+' : '') + c.ret_4w_vs_spy.toFixed(1)  + '%' : '—';
+    const r13  = c.ret_13w_vs_spy != null ? (c.ret_13w_vs_spy > 0 ? '+' : '') + c.ret_13w_vs_spy.toFixed(1) + '%' : '—';
+    const r4Cls  = (c.ret_4w_vs_spy  || 0) > 0 ? 'color:var(--green)' : (c.ret_4w_vs_spy  || 0) < 0 ? 'color:var(--red)' : '';
+    const r13Cls = (c.ret_13w_vs_spy || 0) > 0 ? 'color:var(--green)' : (c.ret_13w_vs_spy || 0) < 0 ? 'color:var(--red)' : '';
+    const flagsShort = (c.flags || []).filter(f => !f.startsWith('macro_') && !f.startsWith('dems_')).slice(0, 3).join(', ');
+
+    let earlyExtra = '';
+    if (isEarly) {
+      const ds   = c.daily_signals || {};
+      const dems = ds.daily_early_momentum_score;
+      const r5   = ds.ret_5d_vs_spy;
+      const d10  = ds.outperform_days_10d;
+      const accel = ds.momentum_accel;
+      const spike = ds.spike_flag;
+
+      const demsColor = dems == null ? 'var(--text2)'
+                      : dems >= 14  ? 'var(--green)'
+                      : dems >= 10  ? 'var(--yellow)'
+                      : 'var(--text2)';
+      const demsBar = dems != null
+        ? `<div style="height:3px;border-radius:2px;background:var(--border);margin-top:3px"><div style="height:100%;border-radius:2px;width:${dems*5}%;background:${demsColor}"></div></div>`
+        : '';
+      const r5Str  = r5   != null ? (r5  > 0 ? '+' : '') + r5.toFixed(1)  + '%' : '—';
+      const r5Cls  = (r5  || 0) > 0 ? 'color:var(--green)' : (r5 || 0) < 0 ? 'color:var(--red)' : '';
+      const d10Str = d10  != null ? `${d10}/10` : '—';
+      const d10Cls = (d10 || 0) >= 6 ? 'color:var(--green)' : (d10 || 0) >= 4 ? 'color:var(--yellow)' : 'color:var(--text2)';
+      const accelBadge = accel === true  ? '<span style="color:var(--green);font-size:10px;font-weight:700">SI</span>'
+                       : accel === false ? '<span style="color:var(--text2);font-size:10px">—</span>'
+                       : '<span style="color:var(--text2);font-size:10px">—</span>';
+      const spikeBadge = spike === true  ? '<span style="color:var(--red);font-size:10px;font-weight:700">SI</span>'
+                       : spike === false ? '<span style="color:var(--green);font-size:10px">NO</span>'
+                       : '<span style="color:var(--text2);font-size:10px">—</span>';
+
+      earlyExtra = `
+        <td><span style="font-weight:700;color:${demsColor}">${dems ?? '—'}</span>${demsBar}</td>
+        <td style="${r5Cls};font-size:12px">${r5Str}</td>
+        <td style="${d10Cls};font-size:12px">${d10Str}</td>
+        <td>${accelBadge}</td>
+        <td>${spikeBadge}</td>`;
+    } else {
+      earlyExtra = `
+        <td style="${r4Cls}">${r4}</td>
+        <td style="${r13Cls}">${r13}</td>
+        <td>${c.is_early ? '<span style="color:var(--purple)">SI</span>' : '<span style="color:var(--text2)">—</span>'}</td>`;
+    }
+
     html += `<tr>
       <td style="font-weight:700">${c.ticker}</td>
       <td><span class="pcs-bar" style="width:${barW}px"></span><span class="pcs-pill">${c.pcs}</span></td>
       <td style="color:var(--text2);font-size:12px">${c.theme || '—'}</td>
       <td>${c.rot_score ?? '—'}</td>
       <td><span class="signal-badge ${signalClass(c.signal)}">${c.signal || '—'}</span></td>
-      <td style="${r4Cls}">${r4}</td>
-      <td style="${r13Cls}">${r13}</td>
-      <td>${c.is_early ? '<span style="color:var(--purple)">SI</span>' : '<span style="color:var(--text2)">—</span>'}</td>
+      ${earlyExtra}
       <td style="color:var(--text2);font-size:11px">${flagsShort}</td>
     </tr>`;
   });
