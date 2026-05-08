@@ -179,6 +179,7 @@ def _append_jsonl(path: Path, record: dict) -> None:
 # ── Payload builder ────────────────────────────────────────────────────────────
 
 def _compact_candidate(c: dict) -> dict:
+    ds = c.get("daily_signals") or {}
     return {
         "ticker":         c["ticker"],
         "name":           c.get("name", ""),
@@ -194,6 +195,15 @@ def _compact_candidate(c: dict) -> dict:
         "dist_52w_high":  c.get("dist_52w_high"),
         "is_early":       c.get("is_early", False),
         "flags":          (c.get("flags") or [])[:5],
+        # Daily signals — populated only when pcs_calculator fetched prices
+        "dems":           ds.get("daily_early_momentum_score"),
+        "ret_5d_vs_spy":  ds.get("ret_5d_vs_spy"),
+        "ret_10d_vs_spy": ds.get("ret_10d_vs_spy"),
+        "outperform_d10": ds.get("outperform_days_10d"),
+        "streak_days":    ds.get("streak_days"),
+        "momentum_accel": ds.get("momentum_accel"),
+        "vol_5d_20d":     ds.get("vol_5d_vs_20d"),
+        "spike_flag":     ds.get("spike_flag"),
     }
 
 
@@ -268,6 +278,18 @@ HARD RULES (violations are flagged automatically):
 6. Every selected item needs: portfolio, signal_type, confidence, \
 reason_short (≥20 chars), reason_full (≥50 chars).
 7. Every rejected item needs: reason and a valid rejection_category.
+
+EARLY_ROTATION — daily signals guidance (dems, ret_5d_vs_spy, etc.):
+- dems (Daily Early Momentum Score 0-20): PRIMARY signal for EARLY_ROTATION.
+  dems >= 14 + spike_flag=false → can SELECT if PCS >= 68.
+  dems 10-13 → prefer WATCH over SELECT.
+  dems < 10 → do not use daily momentum as the primary reason to SELECT.
+- spike_flag=true means most of the 5d move came from one day. Prefer WATCH, \
+not SELECT, unless there is clear multi-day continuation (outperform_d10 >= 6).
+- outperform_d10 >= 6 is more robust than streak_days alone: it allows small \
+pauses without invalidating the setup.
+- For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS, weekly metrics (ret_4w, \
+ret_13w, streak_weeks) are the primary signal. Ignore dems for these portfolios.
 
 REQUIRED OUTPUT SCHEMA (fill in all fields):
 {

@@ -26,6 +26,185 @@ def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
 
+# ── Daily Early Momentum fetch ────────────────────────────────────────────────
+
+def fetch_daily_metrics(tickers: list[str]) -> dict[str, dict]:
+    """
+    Fetch ~2 months of daily OHLCV and compute early-rotation signals per ticker.
+    All computations are relative to SPY.  Returns {} per ticker on any failure.
+    Does NOT affect PCS — results go into daily_signals only.
+    """
+    try:
+        import yfinance as yf
+        import pandas as pd
+    except ImportError:
+        return {}
+
+    all_syms = sorted(set(tickers) | {"SPY"})
+    try:
+        raw = yf.download(all_syms, period="2mo", auto_adjust=True,
+                          progress=False, threads=True)
+    except Exception:
+        return {}
+
+    if raw is None or raw.empty:
+        return {}
+
+    try:
+        import pandas as pd
+        if isinstance(raw.columns, pd.MultiIndex):
+            close_df  = raw["Close"].dropna(how="all")
+            vol_df    = raw["Volume"].dropna(how="all") if "Volume" in raw else pd.DataFrame()
+        else:
+            t0 = tickers[0] if tickers else "UNK"
+            close_df = raw[["Close"]].rename(columns={"Close": t0})
+            vol_df   = raw[["Volume"]].rename(columns={"Volume": t0}) if "Volume" in raw else pd.DataFrame()
+    except Exception:
+        return {}
+
+    if "SPY" not in close_df.columns or len(close_df) < 6:
+        return {}
+
+    results: dict[str, dict] = {}
+
+    for t in tickers:
+        if t not in close_df.columns:
+            results[t] = {}
+            continue
+        try:
+            import pandas as pd
+            aligned = pd.concat(
+                [close_df[t], close_df["SPY"]], axis=1, join="inner"
+            ).dropna()
+            aligned.columns = ["tk", "spy"]
+            if len(aligned) < 6:
+                results[t] = {}
+                continue
+
+            tc = aligned["tk"].values
+            sc = aligned["spy"].values
+
+            # Percentage returns per day
+            tk_ret  = pd.Series(tc).pct_change().values[1:]
+            spy_ret = pd.Series(sc).pct_change().values[1:]
+            alpha   = tk_ret - spy_ret
+
+            def _ret_nd(n: int) -> float | None:
+                if len(tc) < n + 1:
+                    return None
+                return round((tc[-1] / tc[-(n+1)] - sc[-1] / sc[-(n+1)]) * 100, 2)
+
+            r5  = _ret_nd(5)
+            r10 = _ret_nd(10)
+            r20 = _ret_nd(20)
+
+            # outperform_days_10d: days in last 10 where ticker beat SPY
+            window = alpha[-10:] if len(alpha) >= 10 else alpha
+            opd10 = int((window > 0).sum())
+
+            # streak_days: consecutive outperform days from today backwards
+            streak = 0
+            for a in reversed(alpha[-15:] if len(alpha) >= 15 else alpha):
+                if a > 0:
+                    streak += 1
+                else:
+                    break
+
+            # spike_flag: one day accounts for > 70 % of the 5-day ticker move
+            spike_flag = False
+            if r5 is not None and r5 > 0 and len(tk_ret) >= 5:
+                raw_5d = tc[-1] / tc[-6] - 1 if len(tc) >= 6 else 0
+                if raw_5d > 0:
+                    spike_flag = bool(max(tk_ret[-5:]) / raw_5d > 0.70)
+
+            # momentum_accel (auditor formula)
+            if r5 is not None and r10 is not None and r20 is not None:
+                if r20 > 0:
+                    momentum_accel = bool(r5 > 0 and r10 > 0 and r5 > 0.5 * r20)
+                else:
+                    momentum_accel = bool(r5 > 3.0)
+            else:
+                momentum_accel = bool((r5 or 0) > 3.0)
+
+            # vol_5d_vs_20d
+            vol_ratio: float | None = None
+            if t in vol_df.columns:
+                v = vol_df[t].dropna()
+                if len(v) >= 20:
+                    v5  = float(v.iloc[-5:].mean())
+                    v20 = float(v.iloc[-20:].mean())
+                    vol_ratio = round(v5 / v20, 2) if v20 > 0 else None
+
+            results[t] = {
+                "ret_5d_vs_spy":       r5,
+                "ret_10d_vs_spy":      r10,
+                "ret_20d_vs_spy":      r20,
+                "outperform_days_10d": opd10,
+                "streak_days":         streak,
+                "momentum_accel":      momentum_accel,
+                "vol_5d_vs_20d":       vol_ratio,
+                "spike_flag":          spike_flag,
+            }
+        except Exception:
+            results[t] = {}
+
+    return results
+
+
+# ── Daily Early Momentum Score (DEMS 0–20) ────────────────────────────────────
+# Independent of PCS.  Used only for EARLY_ROTATION candidates.
+
+def compute_dems(d: dict) -> tuple[int, list[str]]:
+    if not d:
+        return 0, []
+
+    score = 0
+    flags: list[str] = []
+
+    r5  = d.get("ret_5d_vs_spy")  or 0.0
+    r10 = d.get("ret_10d_vs_spy") or 0.0
+    opd = d.get("outperform_days_10d") or 0
+    mo  = bool(d.get("momentum_accel"))
+    vol = d.get("vol_5d_vs_20d")
+    spk = bool(d.get("spike_flag"))
+
+    # 0–5 pts: 5-day alpha vs SPY
+    if   r5 >= 12: score += 5; flags.append("dems_5d_very_strong")
+    elif r5 >=  8: score += 4; flags.append("dems_5d_strong")
+    elif r5 >=  5: score += 3; flags.append("dems_5d_good")
+    elif r5 >=  2: score += 2
+    elif r5 >=  0: score += 1
+
+    # 0–4 pts: 10-day alpha vs SPY
+    if   r10 >= 10: score += 4
+    elif r10 >=  6: score += 3
+    elif r10 >=  3: score += 2
+    elif r10 >=  0: score += 1
+
+    # 0–4 pts: consistency (how many of last 10 days beat SPY)
+    if   opd >= 8: score += 4; flags.append("dems_consistent")
+    elif opd >= 6: score += 3
+    elif opd >= 4: score += 2
+    elif opd >= 2: score += 1
+
+    # 0–3 pts: acceleration (recent 5d > half of 20d alpha)
+    if mo:
+        score += 3; flags.append("dems_accel")
+
+    # 0–2 pts: volume confirmation
+    if vol is not None:
+        if   vol >= 1.5: score += 2; flags.append("dems_vol_surge")
+        elif vol >= 1.2: score += 1; flags.append("dems_vol_up")
+
+    # 0–2 pts: anti-spike quality (distributed move = better)
+    if not spk:
+        score += 2
+    else:
+        flags.append("dems_spike")
+
+    return min(score, 20), flags
+
+
 # ── A. Macro Permission (0–15) ────────────────────────────────────────────────
 # What: Does the macro regime allow taking risk? Is it improving or deteriorating?
 # Sources: macro_history.json → latest + last history row (for emergency flag)
@@ -216,6 +395,7 @@ def compute_pcs(
     rot_idx: dict,
     cand_idx: dict,
     cand_by_theme: dict,
+    daily: dict | None = None,
 ) -> dict:
     a, fa = score_a(macro_latest, last_hist)
     b, fb = score_b(meta, rot_idx, cand_by_theme)
@@ -229,6 +409,8 @@ def compute_pcs(
 
     raw  = cand_idx.get(ticker) or rot_idx.get(ticker) or {}
     comp = raw.get("components") or {}
+
+    dems, dems_flags = compute_dems(daily or {})
 
     return {
         "ticker":    ticker,
@@ -258,6 +440,19 @@ def compute_pcs(
         "dist_52w_high": raw.get("dist_52w_high"),
         "macd_pts":      comp.get("macd_pts", raw.get("macd_pts")),
         "rsi_pts":       comp.get("rsi_pts",  raw.get("rsi_pts")),
+        # Daily early-rotation signals — independent of PCS, only for EARLY_ROTATION
+        "daily_signals": {
+            "ret_5d_vs_spy":              (daily or {}).get("ret_5d_vs_spy"),
+            "ret_10d_vs_spy":             (daily or {}).get("ret_10d_vs_spy"),
+            "ret_20d_vs_spy":             (daily or {}).get("ret_20d_vs_spy"),
+            "outperform_days_10d":        (daily or {}).get("outperform_days_10d"),
+            "streak_days":                (daily or {}).get("streak_days"),
+            "momentum_accel":             (daily or {}).get("momentum_accel"),
+            "vol_5d_vs_20d":              (daily or {}).get("vol_5d_vs_20d"),
+            "spike_flag":                 (daily or {}).get("spike_flag"),
+            "daily_early_momentum_score": dems,
+            "dems_flags":                 dems_flags,
+        } if daily else None,
     }
 
 
@@ -293,11 +488,17 @@ def run():
         if th and r is not None:
             cand_by_theme.setdefault(th, []).append(r)
 
+    print("Fetching daily price data for DEMS...")
+    daily_idx = fetch_daily_metrics(list(u_meta.keys()))
+    dems_ok = sum(1 for d in daily_idx.values() if d)
+    print(f"  Daily data: {dems_ok}/{len(u_meta)} tickers")
+
     candidates = []
     for ticker, meta in u_meta.items():
         result = compute_pcs(
             ticker, meta, macro_latest, last_hist,
             rot_idx, cand_idx, cand_by_theme,
+            daily=daily_idx.get(ticker),
         )
         candidates.append(result)
 
