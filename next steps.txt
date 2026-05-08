@@ -1,0 +1,19 @@
+Steps completed:
+
+Step 3 — PCS Calculator (scripts/pcs_calculator.py) — running, producing 91 tickers with sensible scores. Top picks: CORZ (81.8), NVDA (81.5), NBIS (81.0).
+
+Step 4 — Event Detector (scripts/event_detector.py) — detects macro regime/trend changes, PCS threshold crossings, signal upgrades/downgrades, new early rotations, rot_score jumps. Saves to ai_events.json, rotates prev snapshot.
+
+Step 5 — Paper Trading (scripts/paper_trading.py) — calls Claude API (claude-opus-4-7) for each portfolio mandate when events are detected. Applies BUY/SELL decisions to ai_picks.json.
+
+Step 6 — ai_picks.json — bootstrapped with empty structure for all 5 portfolios.
+
+Step 7 — UI Tab — "AI Picks Lab" tab added to docs/index.html with: summary cards, portfolio tabs, open positions table, top candidates with PCS bars, trade history.
+
+Pipeline — steps 8-10 added to GitHub Actions workflow. anthropic>=0.95.0 added to requirements.
+
+What you need to do:
+
+Add ANTHROPIC_API_KEY to GitHub repo secrets
+Add your key to .env locally for manual runs
+The first real AI picks will appear after the next scheduled GitHub Actions run that detects signal events

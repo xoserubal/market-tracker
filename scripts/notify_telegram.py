@@ -168,4 +168,20 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    run()
+    if "--test" in sys.argv:
+        token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+        if not token or not chat_id:
+            print("Pon TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en .env")
+            sys.exit(1)
+        msg = (
+            "<b>AI Picks Lab — TEST</b>\n\n"
+            "Bot configurado correctamente.\n"
+            "Recibiras avisos automaticos cuando haya picks nuevos.\n\n"
+            "🟢 <b>NVDA</b>  PCS 81.5 | 10%\n"
+            "  <i>Ejemplo de notificacion real</i>"
+        )
+        ok = send_telegram(token, chat_id, msg)
+        print("Mensaje de test enviado OK" if ok else "Error al enviar")
+    else:
+        run()
