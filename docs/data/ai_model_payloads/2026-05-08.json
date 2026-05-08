@@ -1,0 +1,408 @@
+{
+  "date": "2026-05-08",
+  "system_context": {
+    "project": "AI Picks Lab",
+    "objective": "select high-conviction paper-trading picks from prefiltered quantitative events",
+    "hard_rules": [
+      "Only SELECT tickers present in the candidates list.",
+      "Only SELECT tickers with eligible=true.",
+      "Do not SELECT futures, commodities, or macro indices directly.",
+      "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
+      "Do not fill portfolios with mediocre picks — empty selected list is valid.",
+      "Return valid JSON only. No markdown, no explanation, no extra text.",
+      "Do not invent data not present in the payload.",
+      "With strong contradictions, use WATCH or REJECT, not SELECT.",
+      "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥50 chars).",
+      "Every rejected item must have: reason and a valid rejection_category."
+    ]
+  },
+  "macro_context": {
+    "macro_score": 77.5,
+    "macro_regime": "Bull Maduro",
+    "macro_trend": "Improving",
+    "macro_delta_1w": 6.25,
+    "macro_delta_1m": 5.0,
+    "phase_quality": "Bull Maduro Improving"
+  },
+  "portfolio_mandates": {
+    "HIGH_CONVICTION": {
+      "description": "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
+      "pcs_threshold": 85.0,
+      "pcs_min_entry": 82.0,
+      "max_positions": 8,
+      "size_range": [
+        8,
+        15
+      ],
+      "target_ops_month": 1
+    },
+    "CONFIRMED_FLOW_LEADERS": {
+      "description": "Líderes con flujo confirmado en múltiples timeframes.",
+      "pcs_threshold": 78.0,
+      "pcs_min_entry": 75.0,
+      "max_positions": 12,
+      "size_range": [
+        5,
+        10
+      ],
+      "target_ops_month": 4
+    },
+    "EARLY_ROTATION": {
+      "description": "Captura rotaciones tempranas antes de que sean obvias.",
+      "pcs_threshold": 70.0,
+      "pcs_min_entry": 68.0,
+      "max_positions": 15,
+      "size_range": [
+        4,
+        8
+      ],
+      "target_ops_month": 8
+    },
+    "MACRO_THEMATIC_BENEFICIARIES": {
+      "description": "Beneficiarios del régimen macro actual.",
+      "pcs_threshold": 65.0,
+      "pcs_min_entry": 62.0,
+      "max_positions": 20,
+      "size_range": [
+        3,
+        6
+      ],
+      "target_ops_month": 10
+    }
+  },
+  "events": [],
+  "candidates": [
+    {
+      "ticker": "CORZ",
+      "name": "Core Scientific",
+      "theme": "crypto",
+      "subtheme": "bitcoin_mining",
+      "pcs": 81.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 35.0279,
+      "ret_13w_vs_spy": 45.273,
+      "streak_weeks": 6,
+      "dist_52w_high": -1.52,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "theme": "us_tech_ai",
+      "subtheme": "ai_chips",
+      "pcs": 81.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 5.3749,
+      "ret_13w_vs_spy": 12.084,
+      "streak_weeks": 5,
+      "dist_52w_high": -4.15,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_strong",
+        "rs_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "NBIS",
+      "name": "Nebius Group (AI cloud)",
+      "theme": "us_tech_ai",
+      "subtheme": "ai_cloud",
+      "pcs": 81.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 54.8575,
+      "ret_13w_vs_spy": 129.5537,
+      "streak_weeks": 8,
+      "dist_52w_high": -0.46,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_strong",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "MSTR",
+      "name": "MicroStrategy",
+      "theme": "crypto",
+      "subtheme": "bitcoin_treasury",
+      "pcs": 79.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 39.6843,
+      "ret_13w_vs_spy": 37.486,
+      "streak_weeks": 2,
+      "dist_52w_high": -59.14,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "theme": "global_etf",
+      "subtheme": "nasdaq100",
+      "pcs": 78.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 6.8917,
+      "ret_13w_vs_spy": 7.771,
+      "streak_weeks": 3,
+      "dist_52w_high": -0.02,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_strong",
+        "rs_leader",
+        "rot_good",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "SASK.V",
+      "name": "Atha Energy",
+      "theme": "uranium_nuclear",
+      "subtheme": "uranium_exploration",
+      "pcs": 76.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 37.3663,
+      "ret_13w_vs_spy": 15.5913,
+      "streak_weeks": 5,
+      "dist_52w_high": -8.87,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_neutral",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "KOS",
+      "name": "Kosmos Energy",
+      "theme": "oil_gas",
+      "subtheme": "africa_oil",
+      "pcs": 76.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": -15.9384,
+      "ret_13w_vs_spy": 81.6542,
+      "streak_weeks": 8,
+      "dist_52w_high": -12.95,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_weak",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "COIN",
+      "name": "Coinbase",
+      "theme": "crypto",
+      "subtheme": "crypto_infrastructure",
+      "pcs": 75.5,
+      "eligible": true,
+      "signal": "VIGILAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 1.6858,
+      "ret_13w_vs_spy": 10.1653,
+      "streak_weeks": 1,
+      "dist_52w_high": -55.48,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_outperform",
+        "rot_high",
+        "macd_rsi_positive"
+      ]
+    },
+    {
+      "ticker": "KIST.L",
+      "name": "Kistos Holdings",
+      "theme": "oil_gas",
+      "subtheme": "north_sea",
+      "pcs": 75.2,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 10.7229,
+      "ret_13w_vs_spy": 19.9993,
+      "streak_weeks": 3,
+      "dist_52w_high": -10.75,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_weak",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "CVE",
+      "name": "Cenovus Energy",
+      "theme": "oil_gas",
+      "subtheme": "canadian_oil",
+      "pcs": 72.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": -4.5875,
+      "ret_13w_vs_spy": 36.7588,
+      "streak_weeks": 8,
+      "dist_52w_high": -5.93,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_weak",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "WCP.TO",
+      "name": "Whitecap Resources",
+      "theme": "oil_gas",
+      "subtheme": "canadian_oil",
+      "pcs": 72.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": -8.2475,
+      "ret_13w_vs_spy": 19.6682,
+      "streak_weeks": 8,
+      "dist_52w_high": -4.32,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_weak",
+        "rs_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "GLNG",
+      "name": "Golar LNG",
+      "theme": "oil_gas",
+      "subtheme": "lng",
+      "pcs": 72.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": -10.9138,
+      "ret_13w_vs_spy": 28.1812,
+      "streak_weeks": 8,
+      "dist_52w_high": -4.59,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_weak",
+        "rs_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "UCO",
+      "name": "ProShares Ultra Bloomberg Crude Oil",
+      "theme": "oil_gas",
+      "subtheme": "crude_oil_leveraged",
+      "pcs": 71.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": -5.6783,
+      "ret_13w_vs_spy": 78.3937,
+      "streak_weeks": 8,
+      "dist_52w_high": -15.26,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_weak",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "BTCC-B.TO",
+      "name": "Purpose Bitcoin ETF",
+      "theme": "crypto",
+      "subtheme": "bitcoin_etf",
+      "pcs": 71.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 4.4006,
+      "ret_13w_vs_spy": 3.1938,
+      "streak_weeks": 2,
+      "dist_52w_high": -37.41,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_outperform",
+        "rot_good",
+        "signal_en_radar"
+      ]
+    },
+    {
+      "ticker": "MSOS",
+      "name": "AdvisorShares Pure US Cannabis ETF",
+      "theme": "cannabis",
+      "subtheme": "cannabis_us_mso",
+      "pcs": 70.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 29.5912,
+      "ret_13w_vs_spy": 15.039,
+      "streak_weeks": 3,
+      "dist_52w_high": -27.31,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_poor",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ]
+    }
+  ],
+  "active_picks_relevant": [],
+  "recent_rejected_relevant": []
+}

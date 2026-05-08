@@ -77,7 +77,13 @@ jobs:
 
       - name: Run pipeline - Step 10 paper trading (AI picks)
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL_TEST_MODE: ${{ vars.AI_MODEL_TEST_MODE || 'true' }}
+          AI_MODELS_TO_TEST: ${{ vars.AI_MODELS_TO_TEST || '["anthropic/claude-haiku-4-5-20251001"]' }}
+          ACTIVE_MODEL: ${{ vars.ACTIVE_MODEL || 'anthropic/claude-haiku-4-5-20251001' }}
+          FALLBACK_MODEL: ${{ vars.FALLBACK_MODEL || 'anthropic/claude-haiku-4-5-20251001' }}
+          ENABLE_SHADOW_MODELS: ${{ vars.ENABLE_SHADOW_MODELS || 'true' }}
+          MAX_CANDIDATES_PER_CALL: ${{ vars.MAX_CANDIDATES_PER_CALL || '15' }}
         run: python scripts/paper_trading.py
         working-directory: ${{ github.workspace }}
 

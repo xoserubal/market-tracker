@@ -225,12 +225,19 @@
 
 <!-- ── AI PICKS LAB ────────────────────────────────────────── -->
 <div id="page-aipicks" class="page">
-  <div class="cards" id="aipicks-cards"></div>
+  <div class="ptf-tabs" id="aipicks-section-tabs" style="margin-bottom:12px">
+    <button class="ptf-tab active" onclick="switchAISection('portfolio')">Portfolio</button>
+    <button class="ptf-tab" onclick="switchAISection('abtest')">AB Test — Modelos</button>
+  </div>
 
-  <div class="ptf-tabs" id="aipicks-ptf-tabs"></div>
+  <div id="aipicks-portfolio-view">
+    <div class="cards" id="aipicks-cards"></div>
+    <div class="ptf-tabs" id="aipicks-ptf-tabs"></div>
+    <div id="aipicks-content"><!-- filled by renderAIPicks() --></div>
+  </div>
 
-  <div id="aipicks-content">
-    <!-- filled by renderAIPicks() -->
+  <div id="aipicks-abtest-view" style="display:none">
+    <div id="aipicks-abtest-content"><!-- filled by renderABTest() --></div>
   </div>
 </div>
 
@@ -767,6 +774,162 @@ function renderPtfContent(ptfId) {
   el.innerHTML = html;
 }
 
+// ── AB Test Lab ───────────────────────────────────────────────────────────────
+let _abTestRows = null;
+let _aiSection  = 'portfolio';
+
+async function loadText(file) {
+  const r = await fetch(DATA_BASE + file + '?t=' + Date.now());
+  return r.text();
+}
+
+function parseJSONL(text) {
+  return text.split('\n').filter(l => l.trim()).map(l => {
+    try { return JSON.parse(l); } catch { return null; }
+  }).filter(Boolean);
+}
+
+function modelShort(slug) {
+  if (!slug) return '—';
+  return slug.replace('anthropic/', '').replace('x-ai/', '').replace('openai/', '');
+}
+
+function switchAISection(id) {
+  _aiSection = id;
+  document.getElementById('aipicks-portfolio-view').style.display = id === 'portfolio' ? '' : 'none';
+  document.getElementById('aipicks-abtest-view').style.display    = id === 'abtest'    ? '' : 'none';
+  document.querySelectorAll('#aipicks-section-tabs .ptf-tab').forEach(b => {
+    const isPortfolio = b.textContent.trim() === 'Portfolio';
+    b.classList.toggle('active', id === 'portfolio' ? isPortfolio : !isPortfolio);
+  });
+  if (id === 'abtest' && _abTestRows) renderABTest(_abTestRows);
+}
+
+function renderABTest(rows) {
+  _abTestRows = rows;
+  const el = document.getElementById('aipicks-abtest-content');
+  if (!rows || rows.length === 0) {
+    el.innerHTML = '<div class="no-positions">No hay datos de AB test todavia.</div>';
+    return;
+  }
+
+  // Aggregate per model
+  const modelMap = {};
+  rows.forEach(r => {
+    if (!modelMap[r.model]) modelMap[r.model] = {
+      model: r.model, runs: 0, success: 0,
+      q_sum: 0, cost_sum: 0, lat_sum: 0, lat_n: 0,
+      sel_sum: 0, watch_sum: 0, rej_sum: 0,
+    };
+    const m = modelMap[r.model];
+    m.runs++;
+    const ok = r.json_valid && r.schema_valid;
+    if (ok) { m.success++; m.q_sum += r.quality_score; }
+    m.cost_sum += r.cost_usd || 0;
+    if (r.latency_ms > 0) { m.lat_sum += r.latency_ms; m.lat_n++; }
+    m.sel_sum   += r.selected_count  || 0;
+    m.watch_sum += r.watch_count     || 0;
+    m.rej_sum   += r.rejected_count  || 0;
+  });
+
+  const modelList = Object.values(modelMap).sort((a, b) => {
+    const qa = a.success > 0 ? a.q_sum / a.success : 0;
+    const qb = b.success > 0 ? b.q_sum / b.success : 0;
+    return qb - qa;
+  });
+
+  const totalRuns = new Set(rows.map(r => r.run_id)).size;
+  const lastDate  = rows[rows.length - 1]?.date || '—';
+  const bestQModel = modelList[0];
+  const cheapest  = [...modelList].sort((a, b) => (a.cost_sum / a.runs) - (b.cost_sum / b.runs))[0];
+  const totalCost  = rows.reduce((s, r) => s + (r.cost_usd || 0), 0);
+
+  // Summary cards
+  const summaryCards = [
+    { label: 'Ejecuciones', value: totalRuns, cls: 'info' },
+    { label: 'Modelos', value: modelList.length, cls: 'info' },
+    { label: 'Mejor calidad', value: modelShort(bestQModel?.model), cls: 'bull' },
+    { label: 'Mas economico', value: modelShort(cheapest?.model), cls: 'bull' },
+    { label: 'Coste total', value: '$' + totalCost.toFixed(4), cls: 'neutral' },
+    { label: 'Ultima ejecucion', value: lastDate, cls: 'info' },
+  ];
+  let html = '<div class="cards">' + summaryCards.map(c =>
+    `<div class="card ${c.cls||''}"><div class="card-label">${c.label}</div><div class="card-value">${c.value}</div></div>`
+  ).join('') + '</div>';
+
+  // Model comparison table
+  html += `<div class="chart-box" style="margin-top:16px">
+    <div class="chart-title">Comparativa de modelos</div>
+    <table class="picks-table">
+      <thead><tr>
+        <th>Modelo</th><th>Runs</th><th>Exito</th>
+        <th>Q Score avg</th><th>Coste avg</th><th>Latencia avg</th>
+        <th>Sel / Watch / Rej avg</th>
+      </tr></thead><tbody>`;
+
+  modelList.forEach(m => {
+    const sr   = m.runs > 0 ? Math.round(m.success / m.runs * 100) : 0;
+    const qAvg = m.success > 0 ? (m.q_sum / m.success).toFixed(0) : '—';
+    const qN   = typeof qAvg === 'string' && qAvg !== '—' ? Number(qAvg) : null;
+    const costAvg = m.runs > 0 ? '$' + (m.cost_sum / m.runs).toFixed(4) : '—';
+    const latAvg  = m.lat_n > 0 ? (m.lat_sum / m.lat_n / 1000).toFixed(1) + 's' : '—';
+    const selAvg  = m.runs > 0 ? (m.sel_sum   / m.runs).toFixed(1) : '—';
+    const wAvg    = m.runs > 0 ? (m.watch_sum  / m.runs).toFixed(1) : '—';
+    const rAvg    = m.runs > 0 ? (m.rej_sum    / m.runs).toFixed(1) : '—';
+    const srCls   = sr === 100 ? 'color:var(--green)' : sr >= 50 ? 'color:var(--yellow)' : 'color:var(--red)';
+    const qCls    = qN == null ? '' : qN >= 90 ? 'color:var(--green)' : qN >= 70 ? 'color:var(--yellow)' : 'color:var(--red)';
+    const qBar    = qN != null ? `<div style="height:4px;border-radius:2px;background:var(--border);margin-top:4px"><div style="height:100%;border-radius:2px;width:${qN}%;background:${qN>=90?'var(--green)':qN>=70?'var(--yellow)':'var(--red)'}"></div></div>` : '';
+    html += `<tr>
+      <td><span style="font-weight:700">${modelShort(m.model)}</span><br><span style="color:var(--text2);font-size:10px">${m.model}</span></td>
+      <td>${m.runs}</td>
+      <td><span style="${srCls}">${m.success}/${m.runs} (${sr}%)</span></td>
+      <td><span style="${qCls};font-weight:700">${qAvg}</span>${qBar}</td>
+      <td>${costAvg}</td>
+      <td>${latAvg}</td>
+      <td style="font-size:12px">${selAvg} / ${wAvg} / ${rAvg}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // Run history (newest first)
+  const sorted = [...rows].reverse();
+  html += `<div class="chart-box">
+    <div class="chart-title">Historial de ejecuciones (${rows.length} entradas)</div>
+    <table class="picks-table">
+      <thead><tr>
+        <th>Fecha / Run ID</th><th>Modelo</th><th>Q</th>
+        <th>Coste</th><th>Latencia</th><th>JSON+Schema</th>
+        <th>S/W/R</th><th>Tokens I/O</th><th>Error</th>
+      </tr></thead><tbody>`;
+
+  sorted.forEach(r => {
+    const ok  = r.json_valid && r.schema_valid;
+    const qCls = r.quality_score >= 90 ? 'color:var(--green);font-weight:700'
+               : r.quality_score >= 70 ? 'color:var(--yellow);font-weight:700'
+               : 'color:var(--red);font-weight:700';
+    const jsonBadge = ok
+      ? '<span style="color:var(--green)">OK</span>'
+      : '<span style="color:var(--red)">FAIL</span>';
+    const lat = r.latency_ms > 0 ? (r.latency_ms / 1000).toFixed(1) + 's' : '—';
+    const err = r.error ? r.error.slice(0, 55) + (r.error.length > 55 ? '...' : '') : '—';
+    const errStyle = r.error ? 'color:var(--red)' : 'color:var(--text2)';
+    html += `<tr>
+      <td style="font-size:11px;color:var(--text2)">${r.date}<br>${r.run_id}</td>
+      <td style="font-size:12px">${modelShort(r.model)}</td>
+      <td><span style="${qCls}">${r.quality_score ?? '—'}</span></td>
+      <td style="font-size:12px">$${(r.cost_usd || 0).toFixed(4)}</td>
+      <td style="font-size:12px">${lat}</td>
+      <td>${jsonBadge}</td>
+      <td style="font-size:12px">${r.selected_count || 0}/${r.watch_count || 0}/${r.rejected_count || 0}</td>
+      <td style="font-size:11px;color:var(--text2)">${r.input_tokens || 0}/${r.output_tokens || 0}</td>
+      <td style="font-size:11px;${errStyle}">${err}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  el.innerHTML = html;
+}
+
 // ── Main init ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -848,6 +1011,12 @@ async function init() {
       loadJSON('ai_candidates.json').catch(() => ({ candidates: [], macro_context: {} })),
     ]).then(([picks, candidates]) => {
       renderAIPicks(picks, candidates);
+    }).catch(() => {});
+
+    // AB Test data (JSONL, non-blocking)
+    loadText('ai_model_test_summary.jsonl').then(text => {
+      const rows = parseJSONL(text);
+      renderABTest(rows);
     }).catch(() => {});
 
   } catch (e) {

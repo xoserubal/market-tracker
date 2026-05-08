@@ -1,351 +1,777 @@
 """
-Paper Trading — AI Picks Lab
-Calls Claude API with current market signals and portfolio state.
-Produces structured buy/sell/size decisions for each portfolio mandate.
+Paper Trading + Model A/B Test Framework — AI Picks Lab
 
-Inputs:
-  docs/data/ai_candidates.json   (PCS scores)
-  docs/data/ai_events.json       (signal events from event_detector.py)
-  docs/data/ai_picks.json        (current open positions per portfolio)
+Reads:
+  docs/data/ai_events.json        (signal events)
+  docs/data/ai_candidates.json    (PCS scores + macro context)
+  docs/data/ai_picks.json         (current open positions)
 
-Output:
-  docs/data/ai_picks.json        (updated with new decisions)
-  docs/data/ai_rejected.json     (high-score rejected picks for calibration)
+Writes:
+  docs/data/ai_model_payloads/YYYY-MM-DD.json     common payload (one per day)
+  docs/data/model_tests/YYYY-MM-DD_{model}.json   full result per model
+  docs/data/ai_model_test_summary.jsonl            one line per call (append)
+  docs/data/shadow_picks.jsonl                     all picks for perf tracking
+  docs/data/ai_picks.json                          updated by active_model only
+
+Env vars (add to .env or GitHub Secrets):
+  ANTHROPIC_API_KEY
+  XAI_API_KEY
+  AI_MODEL_TEST_MODE        true|false        (default: true)
+  AI_MODELS_TO_TEST         JSON list         (default: ["claude-haiku-4-5-20251001"])
+  ACTIVE_MODEL              model id          (default: claude-haiku-4-5-20251001)
+  FALLBACK_MODEL            model id          (default: claude-haiku-4-5-20251001)
+  ENABLE_SHADOW_MODELS      true|false        (default: true)
+  MAX_CANDIDATES_PER_CALL   int               (default: 15)
 """
 from __future__ import annotations
+
 import json
 import os
 import re
 import sys
-from datetime import date
+import time
+from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
-import anthropic
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
-DATA = ROOT / "docs" / "data"
 
-MODEL = "claude-opus-4-7"  # Use most capable model for trading decisions
+DATA        = ROOT / "docs" / "data"
+PAYLOAD_DIR = DATA / "ai_model_payloads"
+TESTS_DIR   = DATA / "model_tests"
+SUMMARY_LOG = DATA / "ai_model_test_summary.jsonl"
+SHADOW_LOG  = DATA / "shadow_picks.jsonl"
 
-# Portfolio mandates
-PORTFOLIOS = {
+# ── Pricing  (USD / 1M tokens) — OpenRouter prices: openrouter.ai/models ──────
+# Use OpenRouter model slugs as keys (e.g. "anthropic/claude-haiku-4-5-20251001")
+# Defaults to (0.0, 0.0) for unknown models — cost shows as $0 until filled in.
+MODEL_PRICING: dict[str, tuple[float, float]] = {
+    "anthropic/claude-haiku-4.5":  (1.00,  5.00),
+    "anthropic/claude-sonnet-4.6": (3.00, 15.00),
+    "anthropic/claude-opus-4.7":   (15.00, 75.00),
+    "x-ai/grok-4.3":                       (1.25,  2.50),
+    "x-ai/grok-4.2":                       (0.0,   0.0),  # TODO: fill from openrouter.ai/models
+}
+
+PORTFOLIOS: dict[str, dict] = {
     "HIGH_CONVICTION": {
-        "description": "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
-        "pcs_threshold":     85.0,
-        "pcs_min_entry":     82.0,
-        "max_positions":     8,
-        "size_range":        (8, 15),   # % portfolio per position
-        "target_ops_month":  1,
+        "description":      "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
+        "pcs_threshold":    85.0,
+        "pcs_min_entry":    82.0,
+        "max_positions":    8,
+        "size_range":       (8, 15),
+        "target_ops_month": 1,
     },
     "CONFIRMED_FLOW_LEADERS": {
-        "description": "Líderes con flujo confirmado en múltiples timeframes. Balance entre convicción y diversificación.",
-        "pcs_threshold":     78.0,
-        "pcs_min_entry":     75.0,
-        "max_positions":     12,
-        "size_range":        (5, 10),
-        "target_ops_month":  4,
+        "description":      "Líderes con flujo confirmado en múltiples timeframes.",
+        "pcs_threshold":    78.0,
+        "pcs_min_entry":    75.0,
+        "max_positions":    12,
+        "size_range":       (5, 10),
+        "target_ops_month": 4,
     },
     "EARLY_ROTATION": {
-        "description": "Captura rotaciones tempranas antes de que sean obvias. Mayor riesgo, mayor upside.",
-        "pcs_threshold":     70.0,
-        "pcs_min_entry":     68.0,
-        "max_positions":     15,
-        "size_range":        (4, 8),
-        "target_ops_month":  8,
+        "description":      "Captura rotaciones tempranas antes de que sean obvias.",
+        "pcs_threshold":    70.0,
+        "pcs_min_entry":    68.0,
+        "max_positions":    15,
+        "size_range":       (4, 8),
+        "target_ops_month": 8,
     },
     "MACRO_THEMATIC_BENEFICIARIES": {
-        "description": "Beneficiarios del régimen macro actual. Posiciones temáticas diversificadas.",
-        "pcs_threshold":     65.0,
-        "pcs_min_entry":     62.0,
-        "max_positions":     20,
-        "size_range":        (3, 6),
-        "target_ops_month":  10,
+        "description":      "Beneficiarios del régimen macro actual.",
+        "pcs_threshold":    65.0,
+        "pcs_min_entry":    62.0,
+        "max_positions":    20,
+        "size_range":       (3, 6),
+        "target_ops_month": 10,
     },
     "REJECTED_HIGH_SCORE": {
-        "description": "Control: picks rechazados con PCS alto. Para medir el coste del filtro AI.",
-        "pcs_threshold":     75.0,
-        "pcs_min_entry":     75.0,
-        "max_positions":     20,
-        "size_range":        (5, 5),
-        "target_ops_month":  5,
-        "is_control": True,
+        "description":      "Control: picks rechazados con PCS alto.",
+        "pcs_threshold":    75.0,
+        "pcs_min_entry":    75.0,
+        "max_positions":    20,
+        "size_range":       (5, 5),
+        "target_ops_month": 5,
+        "is_control":       True,
     },
 }
 
-MAX_CANDIDATES_IN_PROMPT = 30  # Keep prompt focused
+HARD_RULES = [
+    "Only SELECT tickers present in the candidates list.",
+    "Only SELECT tickers with eligible=true.",
+    "Do not SELECT futures, commodities, or macro indices directly.",
+    "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
+    "Do not fill portfolios with mediocre picks — empty selected list is valid.",
+    "Return valid JSON only. No markdown, no explanation, no extra text.",
+    "Do not invent data not present in the payload.",
+    "With strong contradictions, use WATCH or REJECT, not SELECT.",
+    "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥50 chars).",
+    "Every rejected item must have: reason and a valid rejection_category.",
+]
+
+NON_TRADABLE_SUBTHEMES = frozenset({
+    "futures", "commodity", "macro_index", "crude_oil_leveraged",
+})
+
+VALID_PORTFOLIOS = frozenset(PORTFOLIOS) - {"REJECTED_HIGH_SCORE"}
+
+VALID_REJECT_CATS = frozenset({
+    "insufficient_conviction", "macro_conflict", "weak_flow",
+    "weak_relative_strength", "technical_overextension", "data_quality",
+    "not_tradable", "better_alternative_available",
+})
+
+REQUIRED_RESPONSE_KEYS = {"date", "decision_summary", "selected", "watch", "rejected"}
 
 
-def _load(name: str) -> dict | list:
+# ── Config ─────────────────────────────────────────────────────────────────────
+
+@dataclass
+class Config:
+    test_mode:            bool      = True
+    models_to_test:       list[str] = field(default_factory=lambda: ["claude-haiku-4-5-20251001"])
+    active_model:         str       = "claude-haiku-4-5-20251001"
+    fallback_model:       str       = "claude-haiku-4-5-20251001"
+    enable_shadow_models: bool      = True
+    max_candidates:       int       = 15
+
+    @classmethod
+    def from_env(cls) -> Config:
+        test_mode = os.getenv("AI_MODEL_TEST_MODE", "true").lower() == "true"
+        default_model = "anthropic/claude-haiku-4.5"
+        try:
+            models = json.loads(os.getenv("AI_MODELS_TO_TEST", f'["{default_model}"]'))
+        except json.JSONDecodeError:
+            models = [default_model]
+        return cls(
+            test_mode=test_mode,
+            models_to_test=models,
+            active_model=os.getenv("ACTIVE_MODEL",   default_model),
+            fallback_model=os.getenv("FALLBACK_MODEL", default_model),
+            enable_shadow_models=os.getenv("ENABLE_SHADOW_MODELS", "true").lower() == "true",
+            max_candidates=int(os.getenv("MAX_CANDIDATES_PER_CALL", "15")),
+        )
+
+
+# ── I/O helpers ────────────────────────────────────────────────────────────────
+
+def _load(name: str) -> Any:
     p = DATA / name
-    if not p.exists():
-        return {} if name.endswith(".json") else []
-    return json.loads(p.read_text(encoding="utf-8"))
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
-def _write(name: str, data):
-    (DATA / name).write_text(
-        json.dumps(data, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
-    )
+def _write_json(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _build_candidates_text(candidates: list[dict], threshold: float) -> str:
-    """Format top candidates for the prompt."""
-    eligible = [c for c in candidates if c.get("eligible") and c.get("pcs", 0) >= threshold - 15]
-    eligible.sort(key=lambda x: x["pcs"], reverse=True)
-    top = eligible[:MAX_CANDIDATES_IN_PROMPT]
-
-    lines = []
-    for c in top:
-        comp = c.get("pcs_components", {})
-        lines.append(
-            f"  {c['ticker']:12} PCS={c['pcs']:5.1f}  "
-            f"theme={c.get('theme',''):20}  rot={c.get('rot_score','?')}  "
-            f"sig={c.get('signal','?'):12}  "
-            f"r4w={c.get('ret_4w_vs_spy','?'):6}  r13w={c.get('ret_13w_vs_spy','?'):6}  "
-            f"early={c.get('is_early',False)}  "
-            f"flags=[{','.join((c.get('flags') or [])[:4])}]"
-        )
-    return "\n".join(lines)
+def _append_jsonl(path: Path, record: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def _build_open_positions_text(picks: dict, portfolio_id: str) -> str:
-    positions = picks.get("portfolios", {}).get(portfolio_id, {}).get("positions", [])
-    if not positions:
-        return "  (ninguna — cartera vacía)"
-    lines = []
-    for p in positions:
-        lines.append(
-            f"  {p['ticker']:12} entry_pcs={p.get('entry_pcs','?')}  "
-            f"entry_date={p.get('entry_date','?')}  size={p.get('size_pct','?')}%  "
-            f"entry_signal={p.get('entry_signal','?')}"
-        )
-    return "\n".join(lines)
+# ── Payload builder ────────────────────────────────────────────────────────────
+
+def _compact_candidate(c: dict) -> dict:
+    return {
+        "ticker":         c["ticker"],
+        "name":           c.get("name", ""),
+        "theme":          c.get("theme", ""),
+        "subtheme":       c.get("subtheme", ""),
+        "pcs":            c.get("pcs"),
+        "eligible":       c.get("eligible"),
+        "signal":         c.get("signal"),
+        "rot_score":      c.get("rot_score"),
+        "ret_4w_vs_spy":  c.get("ret_4w_vs_spy"),
+        "ret_13w_vs_spy": c.get("ret_13w_vs_spy"),
+        "streak_weeks":   c.get("streak_weeks"),
+        "dist_52w_high":  c.get("dist_52w_high"),
+        "is_early":       c.get("is_early", False),
+        "flags":          (c.get("flags") or [])[:5],
+    }
 
 
-def _build_events_text(events: list[dict]) -> str:
-    if not events:
-        return "  (ningún evento nuevo)"
-    recent = [e for e in events if e.get("type") != "first_snapshot"][-20:]
-    lines = []
-    for e in recent:
-        ticker = e.get("ticker", "—")
-        lines.append(f"  [{e.get('type','?'):28}] {ticker:12} {e.get('detail', e.get('pcs',''))}")
-    return "\n".join(lines) if lines else "  (sin eventos relevantes)"
-
-
-def call_claude_for_portfolio(
-    portfolio_id: str,
-    mandate: dict,
-    macro_context: dict,
-    candidates: list[dict],
-    picks: dict,
+def build_payload(
+    cands_data: dict,
     events: list[dict],
-    client: anthropic.Anthropic,
+    picks: dict,
+    config: Config,
 ) -> dict:
-    """Call Claude API and return structured decisions for one portfolio."""
-    today = str(date.today())
-    cands_text = _build_candidates_text(candidates, mandate["pcs_threshold"])
-    open_pos_text = _build_open_positions_text(picks, portfolio_id)
-    events_text = _build_events_text(events)
-    open_positions = picks.get("portfolios", {}).get(portfolio_id, {}).get("positions", [])
-    n_open = len(open_positions)
-    max_pos = mandate["max_positions"]
-    size_lo, size_hi = mandate["size_range"]
+    macro    = cands_data.get("macro_context", {})
+    eligible = sorted(
+        [c for c in cands_data.get("candidates", []) if c.get("eligible")],
+        key=lambda x: x.get("pcs", 0),
+        reverse=True,
+    )[:config.max_candidates]
 
-    system = """Eres un gestor de cartera cuantitativo disciplinado. Tu trabajo es revisar señales de mercado y tomar decisiones de compra/venta/tamaño para carteras de paper trading.
+    active_positions = [
+        {**pos, "portfolio": pid}
+        for pid, ptf in picks.get("portfolios", {}).items()
+        for pos in ptf.get("positions", [])
+    ]
 
-Siempre responde en JSON puro (sin markdown, sin texto extra). El JSON debe seguir exactamente el esquema indicado.
+    mandates = {
+        pid: {k: v for k, v in m.items() if k != "is_control"}
+        for pid, m in PORTFOLIOS.items()
+        if not m.get("is_control")
+    }
 
-Principios:
-- Solo actúas cuando hay convicción real. No operas por operar.
-- El PCS (Pick Conviction Score) es la señal principal, pero debes interpretarla en contexto macro y de momentum.
-- Las salidas las decides solo tú: no hay stop-loss automático. Si una posición ya no merece estar, la cierras.
-- El tamaño refleja la convicción: mayor PCS → mayor tamaño dentro del rango del mandato."""
+    meaningful_events = [
+        e for e in events if e.get("type") != "first_snapshot"
+    ][-30:]
 
-    user = f"""Fecha: {today}
-Portfolio: {portfolio_id}
-Mandato: {mandate['description']}
-PCS mínimo entrada: {mandate['pcs_min_entry']}
-Máximo posiciones: {max_pos} (actualmente {n_open} abiertas)
-Tamaño por posición: {size_lo}–{size_hi}% del portfolio
-Operaciones objetivo/mes: {mandate.get('target_ops_month', '?')}
+    return {
+        "date": str(date.today()),
+        "system_context": {
+            "project":   "AI Picks Lab",
+            "objective": "select high-conviction paper-trading picks from prefiltered quantitative events",
+            "hard_rules": HARD_RULES,
+        },
+        "macro_context": {
+            "macro_score":    macro.get("score"),
+            "macro_regime":   macro.get("regime"),
+            "macro_trend":    macro.get("trend"),
+            "macro_delta_1w": macro.get("delta_1w"),
+            "macro_delta_1m": macro.get("delta_1m"),
+            "phase_quality":  macro.get("phase_quality"),
+        },
+        "portfolio_mandates":       mandates,
+        "events":                   meaningful_events,
+        "candidates":               [_compact_candidate(c) for c in eligible],
+        "active_picks_relevant":    active_positions,
+        "recent_rejected_relevant": [],
+    }
 
-CONTEXTO MACRO:
-  Score={macro_context.get('score')}  Régimen={macro_context.get('regime')}
-  Tendencia={macro_context.get('trend')}  Fase={macro_context.get('phase_quality')}
-  Delta1W={macro_context.get('delta_1w')}  Delta1M={macro_context.get('delta_1m')}
 
-EVENTOS DE SEÑAL (últimas 24h):
-{events_text}
+# ── Prompt ─────────────────────────────────────────────────────────────────────
 
-POSICIONES ABIERTAS:
-{open_pos_text}
+SYSTEM_PROMPT = """\
+You are a disciplined quantitative portfolio manager for a paper trading system.
 
-CANDIDATOS (PCS >= {mandate['pcs_threshold'] - 15:.0f}, ordenados por PCS):
-{cands_text}
+TASK: Review the market signals in the payload and return a structured JSON decision.
 
-TAREA:
-Revisa las posiciones abiertas: ¿alguna debe cerrarse? ¿ha perdido convicción, ha invertido señal, o hay una oportunidad mejor?
-Luego decide si abrir nuevas posiciones. Solo abre si el PCS supera {mandate['pcs_min_entry']} y los eventos/momentum lo justifican.
+CRITICAL: Respond ONLY with valid JSON — no markdown fences, no explanation, \
+no text before or after the JSON object.
 
-Responde con este JSON exacto:
-{{
-  "portfolio": "{portfolio_id}",
-  "date": "{today}",
-  "macro_summary": "<1 frase sobre el régimen macro actual>",
-  "decisions": [
-    {{
-      "action": "BUY" | "SELL" | "HOLD",
+HARD RULES (violations are flagged automatically):
+1. Only SELECT tickers present in candidates with eligible=true.
+2. Do not SELECT futures, commodities, or macro indices.
+3. Empty selected list is valid — do not fill portfolios with mediocre picks.
+4. Use WATCH for uncertain/incomplete signals; REJECT for clearly insufficient ones.
+5. Do not invent data. Use only information from the payload.
+6. Every selected item needs: portfolio, signal_type, confidence, \
+reason_short (≥20 chars), reason_full (≥50 chars).
+7. Every rejected item needs: reason and a valid rejection_category.
+
+REQUIRED OUTPUT SCHEMA (fill in all fields):
+{
+  "date": "YYYY-MM-DD",
+  "model": "<model_name>",
+  "run_id": "<run_id>",
+  "decision_summary": {
+    "market_read": "<1 sentence on current regime>",
+    "risk_posture": "aggressive|normal|cautious|defensive",
+    "should_select_picks": true|false
+  },
+  "selected": [
+    {
       "ticker": "<ticker>",
-      "size_pct": <número entre {size_lo} y {size_hi}, solo para BUY>,
-      "pcs": <número>,
-      "conviction": "HIGH" | "MEDIUM" | "LOW",
-      "rationale": "<1-2 frases concretas>"
-    }}
+      "portfolio": "HIGH_CONVICTION|CONFIRMED_FLOW_LEADERS|EARLY_ROTATION|MACRO_THEMATIC_BENEFICIARIES",
+      "signal_type": "confirmed_leader|early_rotation|macro_thematic|high_conviction",
+      "confidence": "low|medium|high",
+      "reason_short": "<specific, ≥20 chars>",
+      "reason_full": "<specific factors, ≥50 chars>",
+      "key_supporting_factors": ["<string>"],
+      "key_risks_or_contradictions": ["<string>"]
+    }
   ],
-  "no_action_reason": "<si decisions está vacío, explica por qué no actúas>"
-}}
+  "watch": [
+    {
+      "ticker": "<ticker>",
+      "reason": "<why watching, not selecting>",
+      "watch_trigger": "<what would make this a SELECT>"
+    }
+  ],
+  "rejected": [
+    {
+      "ticker": "<ticker>",
+      "reason": "<why rejected>",
+      "rejection_category": \
+"insufficient_conviction|macro_conflict|weak_flow|weak_relative_strength|\
+technical_overextension|data_quality|not_tradable|better_alternative_available"
+    }
+  ]
+}"""
 
-Solo incluye tickers con acción real (BUY o SELL). No incluyas HOLD en la lista.
-Para BUYs: solo tickers con PCS >= {mandate['pcs_min_entry']}.
-Para SELLs: solo posiciones actualmente abiertas que deben cerrarse."""
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
-        system=system,
-        messages=[{"role": "user", "content": user}],
+def build_user_message(payload: dict, model: str, run_id: str) -> str:
+    annotated = dict(payload)
+    annotated["_meta"] = {
+        "model":       model,
+        "run_id":      run_id,
+        "instruction": "Set model and run_id fields in your JSON response to these values.",
+    }
+    return json.dumps(annotated, ensure_ascii=False, indent=2)
+
+
+# ── Model caller ───────────────────────────────────────────────────────────────
+
+def call_model(
+    model: str,
+    system: str,
+    user_message: str,
+    max_tokens: int = 2048,
+) -> tuple[str, int, int, float]:
+    """Returns (raw_text, input_tokens, output_tokens, latency_ms).
+
+    All models are routed through OpenRouter (openrouter.ai).
+    Use OpenRouter model slugs, e.g. "anthropic/claude-haiku-4-5-20251001".
+    """
+    from openai import OpenAI
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY not set")
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "https://github.com/market-tracker",
+            "X-Title":      "AI Picks Lab",
+        },
     )
+    t0   = time.monotonic()
+    resp = client.chat.completions.create(
+        model=model,
+        max_tokens=max_tokens,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user",   "content": user_message},
+        ],
+    )
+    text    = resp.choices[0].message.content
+    in_tok  = resp.usage.prompt_tokens
+    out_tok = resp.usage.completion_tokens
+    return text, in_tok, out_tok, (time.monotonic() - t0) * 1000
 
-    raw = response.content[0].text.strip()
-    # Strip markdown code fences if present
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
 
+def compute_cost(model: str, in_tok: int, out_tok: int) -> float:
+    in_p, out_p = MODEL_PRICING.get(model, (0.0, 0.0))
+    return (in_tok * in_p + out_tok * out_p) / 1_000_000
+
+
+def parse_response(raw: str) -> tuple[dict | None, bool]:
+    """Strip markdown fences and parse JSON. Returns (data, json_valid)."""
+    text = raw.strip()
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```\s*$", "", text)
+    if not text.startswith("{"):
+        m = re.search(r"\{[\s\S]*\}", text)
+        text = m.group(0) if m else text
     try:
-        return json.loads(raw)
+        return json.loads(text), True
     except json.JSONDecodeError:
-        return {
-            "portfolio": portfolio_id,
-            "date": today,
-            "error": "JSON parse failed",
-            "raw": raw[:500],
-            "decisions": [],
-        }
+        return None, False
 
 
-def apply_decisions(picks: dict, result: dict) -> dict:
-    """Apply Claude's decisions to the picks state."""
-    portfolio_id = result["portfolio"]
-    today = result["date"]
-    decisions = result.get("decisions", [])
+# ── Validator ──────────────────────────────────────────────────────────────────
 
-    if "portfolios" not in picks:
-        picks["portfolios"] = {}
-    if portfolio_id not in picks["portfolios"]:
-        picks["portfolios"][portfolio_id] = {"positions": [], "history": []}
+@dataclass
+class ValidationResult:
+    json_valid:             bool       = False
+    schema_valid:           bool       = False
+    hard_rule_violations:   int        = 0
+    violations_detail:      list[str]  = field(default_factory=list)
 
-    positions = picks["portfolios"][portfolio_id]["positions"]
-    history   = picks["portfolios"][portfolio_id].setdefault("history", [])
+    def add(self, msg: str) -> None:
+        self.hard_rule_violations += 1
+        self.violations_detail.append(msg)
 
-    pos_by_ticker = {p["ticker"]: p for p in positions}
 
-    for d in decisions:
-        action = d.get("action", "").upper()
-        ticker = d.get("ticker", "")
-        if not ticker:
+def validate_model_response(
+    data: dict | None,
+    payload: dict,
+    json_valid: bool,
+) -> ValidationResult:
+    r = ValidationResult(json_valid=json_valid)
+    if not json_valid or data is None:
+        return r
+
+    if REQUIRED_RESPONSE_KEYS - set(data.keys()):
+        r.add(f"Missing top-level keys: {REQUIRED_RESPONSE_KEYS - set(data.keys())}")
+        return r
+    r.schema_valid = True
+
+    cand_tickers = {c["ticker"] for c in payload.get("candidates", [])}
+    eligible     = {c["ticker"] for c in payload.get("candidates", []) if c.get("eligible")}
+    non_tradable = {
+        c["ticker"] for c in payload.get("candidates", [])
+        if c.get("subtheme", "") in NON_TRADABLE_SUBTHEMES
+    }
+
+    seen: set[str]           = set()
+    ptf_counts: dict[str, int] = {}
+
+    for s in data.get("selected", []):
+        t = s.get("ticker", "")
+        if t in seen:              r.add(f"Duplicate ticker: {t}")
+        seen.add(t)
+        if t not in cand_tickers:  r.add(f"SELECT {t}: not in candidates")
+        if t not in eligible:      r.add(f"SELECT {t}: not eligible")
+        if t in non_tradable:      r.add(f"SELECT {t}: non-tradable subtheme")
+        ptf = s.get("portfolio", "")
+        if ptf not in VALID_PORTFOLIOS:
+            r.add(f"SELECT {t}: invalid portfolio '{ptf}'")
+        if len(str(s.get("reason_short", ""))) < 10:
+            r.add(f"SELECT {t}: reason_short too short")
+        if len(str(s.get("reason_full",  ""))) < 30:
+            r.add(f"SELECT {t}: reason_full too short")
+        ptf_counts[ptf] = ptf_counts.get(ptf, 0) + 1
+        max_p = PORTFOLIOS.get(ptf, {}).get("max_positions", 999)
+        if ptf_counts[ptf] > max_p:
+            r.add(f"Portfolio {ptf}: exceeds max_positions ({max_p})")
+
+    for w in data.get("watch", []):
+        t = w.get("ticker", "")
+        if t in seen: r.add(f"Duplicate ticker: {t}")
+        seen.add(t)
+
+    for rj in data.get("rejected", []):
+        t = rj.get("ticker", "")
+        if t in seen: r.add(f"Duplicate ticker: {t}")
+        seen.add(t)
+        cat = rj.get("rejection_category", "")
+        if cat not in VALID_REJECT_CATS:
+            r.add(f"REJECT {t}: invalid rejection_category '{cat}'")
+
+    return r
+
+
+# ── Quality scorer ─────────────────────────────────────────────────────────────
+
+def compute_quality_score(
+    data: dict | None,
+    v: ValidationResult,
+    payload: dict,
+) -> int:
+    if not v.json_valid or data is None:
+        return 0
+
+    score = 0
+
+    # 30 pts: JSON + schema valid
+    if v.json_valid:    score += 15
+    if v.schema_valid:  score += 15
+
+    # 20 pts: no hard rule violations
+    if v.hard_rule_violations == 0:    score += 20
+    elif v.hard_rule_violations <= 2:  score += 10
+
+    selected  = data.get("selected", [])
+    watch     = data.get("watch",    [])
+    rejected  = data.get("rejected", [])
+    n_cands   = max(len(payload.get("candidates", [])), 1)
+
+    # 15 pts: parsimony (≤30% selected is ideal)
+    ratio = len(selected) / n_cands
+    if ratio <= 0.30:    score += 15
+    elif ratio <= 0.50:  score += 8
+
+    # 15 pts: reason quality (length proxy for specificity)
+    if selected:
+        reason_q = [
+            min(1.0, len(str(s.get("reason_short", ""))) / 40) * 0.4
+            + min(1.0, len(str(s.get("reason_full",  ""))) / 100) * 0.6
+            for s in selected
+        ]
+        score += int(15 * (sum(reason_q) / len(reason_q)))
+    else:
+        score += 10  # empty selected with explanation is acceptable
+
+    # 10 pts: discriminates (uses WATCH or REJECT, not just SELECT)
+    if watch or rejected:
+        score += 10
+
+    # 10 pts: coherence — PCS ≥ portfolio pcs_min_entry for each selected
+    cand_pcs = {c["ticker"]: c.get("pcs", 0) for c in payload.get("candidates", [])}
+    if selected:
+        coherent = sum(
+            1 for s in selected
+            if cand_pcs.get(s.get("ticker", ""), 0)
+            >= PORTFOLIOS.get(s.get("portfolio", ""), {}).get("pcs_min_entry", 999)
+        )
+        score += int(10 * coherent / len(selected))
+    else:
+        score += 5
+
+    return min(score, 100)
+
+
+# ── Logger ─────────────────────────────────────────────────────────────────────
+
+def _build_summary_record(
+    run_id:        str,
+    model:         str | None,
+    payload:       dict,
+    data:          dict | None,
+    v:             ValidationResult,
+    quality:       int,
+    in_tok:        int,
+    out_tok:       int,
+    cost:          float,
+    latency:       float,
+    fallback_used: bool,
+    error:         str | None,
+    should_call:   bool,
+) -> dict:
+    return {
+        "date":                 str(date.today()),
+        "run_id":               run_id,
+        "model":                model,
+        "provider":             "openrouter",
+        "should_call_ai":       should_call,
+        "event_count":          len(payload.get("events", [])),
+        "candidate_count":      len(payload.get("candidates", [])),
+        "input_tokens":         in_tok,
+        "output_tokens":        out_tok,
+        "cost_usd":             round(cost, 6),
+        "latency_ms":           round(latency, 0),
+        "json_valid":           v.json_valid,
+        "schema_valid":         v.schema_valid,
+        "hard_rule_violations": v.hard_rule_violations,
+        "quality_score":        quality,
+        "selected_count":       len(data.get("selected", [])) if data else 0,
+        "watch_count":          len(data.get("watch",    [])) if data else 0,
+        "rejected_count":       len(data.get("rejected", [])) if data else 0,
+        "fallback_used":        fallback_used,
+        "error":                error,
+    }
+
+
+def _log_no_call(run_id: str) -> None:
+    _append_jsonl(SUMMARY_LOG, {
+        "date": str(date.today()), "run_id": run_id, "model": None,
+        "provider": None, "should_call_ai": False,
+        "event_count": 0, "candidate_count": 0,
+        "input_tokens": 0, "output_tokens": 0,
+        "cost_usd": 0.0, "latency_ms": 0.0,
+        "json_valid": None, "schema_valid": None,
+        "hard_rule_violations": 0, "quality_score": None,
+        "selected_count": 0, "watch_count": 0, "rejected_count": 0,
+        "fallback_used": False, "error": None,
+    })
+
+
+def _save_test_result(
+    run_id: str, model: str,
+    data: dict | None, v: ValidationResult, quality: int,
+    raw: str, summary: dict,
+) -> None:
+    slug = re.sub(r"[^\w.-]", "-", model)
+    _write_json(TESTS_DIR / f"{date.today()}_{slug}.json", {
+        "run_id":           run_id,
+        "model":            model,
+        "date":             str(date.today()),
+        "summary":          summary,
+        "validation":       {"violations": v.violations_detail},
+        "quality_score":    quality,
+        "response":         data,
+        "raw_response_head": raw[:2000],
+    })
+
+
+def _log_shadow_picks(model: str, data: dict, is_active: bool) -> None:
+    today = str(date.today())
+    for s in data.get("selected", []):
+        _append_jsonl(SHADOW_LOG, {
+            "date":         today,
+            "model":        model,
+            "ticker":       s.get("ticker"),
+            "portfolio":    s.get("portfolio"),
+            "pcs":          s.get("pcs"),
+            "signal_type":  s.get("signal_type"),
+            "confidence":   s.get("confidence"),
+            "reason_short": s.get("reason_short"),
+            "shadow":       not is_active,
+            "active_model": is_active,
+            "entry_price":  None,   # filled by a separate price-fetch step
+            "ret_1d":  None, "ret_3d":  None, "ret_1w":  None,
+            "ret_2w":  None, "ret_1m":  None, "ret_3m":  None,
+            "max_gain_1m": None, "max_drawdown_1m": None, "vs_spy_1m": None,
+        })
+
+
+# ── Portfolio updater (active model only) ──────────────────────────────────────
+
+def _size_from_conviction(conviction: str, size_range: tuple) -> float:
+    lo, hi = size_range
+    if conviction == "high": return float(hi)
+    if conviction == "low":  return float(lo)
+    return round((lo + hi) / 2.0, 1)
+
+
+def update_portfolio(picks: dict, data: dict) -> dict:
+    today      = str(date.today())
+    portfolios = picks.setdefault("portfolios", {})
+
+    for s in data.get("selected", []):
+        ptf_id = s.get("portfolio", "")
+        if ptf_id not in VALID_PORTFOLIOS:
+            continue
+        ptf       = portfolios.setdefault(ptf_id, {"positions": [], "history": [], "last_review": None})
+        positions = ptf.setdefault("positions", [])
+        if any(p["ticker"] == s["ticker"] for p in positions):
             continue
 
-        if action == "BUY" and ticker not in pos_by_ticker:
-            new_pos = {
-                "ticker":        ticker,
-                "entry_date":    today,
-                "entry_pcs":     d.get("pcs"),
-                "entry_signal":  None,
-                "size_pct":      d.get("size_pct"),
-                "conviction":    d.get("conviction"),
-                "rationale":     d.get("rationale"),
-            }
-            positions.append(new_pos)
-            history.append({**new_pos, "event": "open"})
+        new_pos = {
+            "ticker":       s["ticker"],
+            "entry_date":   today,
+            "entry_pcs":    s.get("pcs"),
+            "entry_signal": s.get("signal_type"),
+            "size_pct":     _size_from_conviction(
+                                s.get("confidence", "medium"),
+                                PORTFOLIOS[ptf_id]["size_range"],
+                            ),
+            "conviction":   s.get("confidence"),
+            "rationale":    s.get("reason_short"),
+        }
+        positions.append(new_pos)
+        ptf.setdefault("history", []).append({**new_pos, "event": "open"})
 
-        elif action == "SELL" and ticker in pos_by_ticker:
-            closed = pos_by_ticker.pop(ticker)
-            history.append({
-                **closed,
-                "event":       "close",
-                "exit_date":   today,
-                "exit_pcs":    d.get("pcs"),
-                "exit_reason": d.get("rationale"),
-            })
-            positions[:] = [p for p in positions if p["ticker"] != ticker]
-
-    # Save latest Claude output
-    picks["portfolios"][portfolio_id]["last_review"] = {
+    ds = data.get("decision_summary", {})
+    picks["last_ai_review"] = {
         "date":          today,
-        "macro_summary": result.get("macro_summary"),
-        "no_action_reason": result.get("no_action_reason"),
-        "raw_decisions": decisions,
+        "market_read":   ds.get("market_read"),
+        "risk_posture":  ds.get("risk_posture"),
+        "should_select": ds.get("should_select_picks"),
     }
+    picks["last_updated"] = today
     return picks
 
 
-def run(force: bool = False):
-    """
-    force=True: run even if no events (useful for initial population or manual trigger).
-    """
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("ANTHROPIC_API_KEY not set — skipping paper trading")
-        return
+# ── Main ───────────────────────────────────────────────────────────────────────
 
-    events_data = _load("ai_events.json")
-    if isinstance(events_data, dict):
-        events_data = []
+def run(force: bool = False) -> None:
+    config = Config.from_env()
+    today  = str(date.today())
+    run_id = f"{today}_{datetime.now().strftime('%H%M')}"
 
-    # Only run if there are new events (or forced)
-    today = str(date.today())
-    todays_events = [e for e in events_data if e.get("date") == today]
-
-    if not todays_events and not force:
-        print("No new events today — skipping Claude API call")
-        return
+    events_raw = _load("ai_events.json")
+    if isinstance(events_raw, dict):
+        events_raw = []
 
     cands_data = _load("ai_candidates.json")
-    candidates = cands_data.get("candidates", [])
-    macro_context = cands_data.get("macro_context", {})
-
-    picks = _load("ai_picks.json")
+    picks      = _load("ai_picks.json")
     if not isinstance(picks, dict):
         picks = {}
 
-    client = anthropic.Anthropic(api_key=api_key)
+    meaningful_today = [
+        e for e in events_raw
+        if e.get("date") == today and e.get("type") != "first_snapshot"
+    ]
+    should_call_ai = bool(meaningful_today) or force
 
-    print(f"Running paper trading ({len(todays_events)} events, {len(candidates)} candidates)...")
+    if not should_call_ai:
+        print(f"[{run_id}] No meaningful events today — skipping AI calls")
+        _log_no_call(run_id)
+        return
 
-    for portfolio_id, mandate in PORTFOLIOS.items():
-        if mandate.get("is_control"):
-            continue  # Control portfolio handled separately
-        print(f"  {portfolio_id}...", end=" ", flush=True)
+    events_for_payload = meaningful_today or [
+        e for e in events_raw if e.get("type") != "first_snapshot"
+    ][-20:]
+
+    payload = build_payload(cands_data, events_for_payload, picks, config)
+    _write_json(PAYLOAD_DIR / f"{today}.json", payload)
+    print(
+        f"[{run_id}] Payload ready - "
+        f"{len(payload['candidates'])} candidates, {len(payload['events'])} events"
+    )
+
+    models = list(config.models_to_test) if config.test_mode else [config.active_model]
+    if config.active_model not in models:
+        models.insert(0, config.active_model)
+
+    active_updated = False
+
+    for model in models:
+        is_active = (model == config.active_model)
+        if not is_active and not config.enable_shadow_models:
+            continue
+
+        print(f"  [{model}]", end=" ", flush=True)
+
+        raw, data             = "", None
+        in_tok, out_tok       = 0, 0
+        latency, cost         = 0.0, 0.0
+        json_valid            = False
+        fallback_used, error  = False, None
+        model_used            = model
+
         try:
-            result = call_claude_for_portfolio(
-                portfolio_id, mandate, macro_context,
-                candidates, picks, todays_events, client,
-            )
-            picks = apply_decisions(picks, result)
-            n_dec = len(result.get("decisions", []))
-            print(f"{n_dec} decisions")
-        except Exception as e:
-            print(f"ERROR: {e}")
+            user_msg = build_user_message(payload, model, run_id)
+            raw, in_tok, out_tok, latency = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=4096)
+            data, json_valid = parse_response(raw)
+            cost = compute_cost(model, in_tok, out_tok)
+            print(f"{latency:.0f}ms  ${cost:.5f}  {in_tok}+{out_tok}tok", end="  ")
 
-    picks["last_updated"] = today
-    _write("ai_picks.json", picks)
-    print(f"ai_picks.json updated")
+        except Exception as exc:
+            error      = str(exc)
+            json_valid = False
+            print(f"ERROR({exc})", end="  ")
+
+            if is_active and config.fallback_model and config.fallback_model != model:
+                print(f"-> fallback={config.fallback_model}", end="  ")
+                try:
+                    user_msg = build_user_message(payload, config.fallback_model, run_id)
+                    raw, in_tok, out_tok, latency = call_model(
+                        config.fallback_model, SYSTEM_PROMPT, user_msg
+                    )
+                    data, json_valid = parse_response(raw)
+                    cost          = compute_cost(config.fallback_model, in_tok, out_tok)
+                    fallback_used = True
+                    model_used    = config.fallback_model
+                    error         = None
+                    print(f"ok {latency:.0f}ms", end="  ")
+                except Exception as exc2:
+                    error = f"primary={exc}; fallback={exc2}"
+
+        v       = validate_model_response(data, payload, json_valid)
+        quality = compute_quality_score(data, v, payload)
+        print(f"q={quality}/100  viol={v.hard_rule_violations}")
+
+        summary_rec = _build_summary_record(
+            run_id, model_used, payload, data, v,
+            quality, in_tok, out_tok, cost, latency,
+            fallback_used, error, True,
+        )
+        _append_jsonl(SUMMARY_LOG, summary_rec)
+        _save_test_result(run_id, model_used, data, v, quality, raw, summary_rec)
+
+        if data and json_valid:
+            _log_shadow_picks(model_used, data, is_active)
+
+        if is_active and data and v.schema_valid and v.hard_rule_violations == 0:
+            picks          = update_portfolio(picks, data)
+            active_updated = True
+            n_sel = len(data.get("selected", []))
+            print(f"  [{model_used}] ACTIVE -> {n_sel} picks applied to portfolio")
+        elif is_active:
+            reasons = []
+            if not json_valid:        reasons.append("json_invalid")
+            elif not v.schema_valid:  reasons.append("schema_invalid")
+            else:                     reasons.append(f"{v.hard_rule_violations} violations")
+            print(f"  [{model_used}] ACTIVE -> portfolio NOT updated ({', '.join(reasons)})")
+
+    if active_updated:
+        _write_json(DATA / "ai_picks.json", picks)
+        print("  ai_picks.json saved")
 
 
 if __name__ == "__main__":
-    force = "--force" in sys.argv
-    run(force=force)
+    run(force="--force" in sys.argv)
