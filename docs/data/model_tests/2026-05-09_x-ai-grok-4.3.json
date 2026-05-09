@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-05-09_0915",
+  "run_id": "2026-05-09_2042",
   "model": "x-ai/grok-4.3",
   "date": "2026-05-09",
   "summary": {
     "date": "2026-05-09",
-    "run_id": "2026-05-09_0915",
+    "run_id": "2026-05-09_2042",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 8,
     "candidate_count": 15,
-    "input_tokens": 7161,
-    "output_tokens": 1293,
-    "cost_usd": 0.012184,
-    "latency_ms": 29638.0,
+    "input_tokens": 7257,
+    "output_tokens": 1772,
+    "cost_usd": 0.013501,
+    "latency_ms": 22808.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
     "quality_score": 100,
     "selected_count": 1,
-    "watch_count": 0,
-    "rejected_count": 5,
+    "watch_count": 1,
+    "rejected_count": 13,
     "fallback_used": false,
     "error": null
   },
@@ -32,59 +32,105 @@
   "response": {
     "date": "2026-05-09",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-05-09_0915",
+    "run_id": "2026-05-09_2042",
     "decision_summary": {
-      "market_read": "Bull Maduro Improving regime with macro_score 77.5 supports selective additions in high-conviction themes.",
-      "risk_posture": "normal",
+      "market_read": "Bull Maduro Improving regime with macro score 77.5 supporting thematic rotation.",
+      "risk_posture": "aggressive",
       "should_select_picks": true
     },
     "selected": [
       {
-        "ticker": "COIN",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "signal_type": "confirmed_leader",
-        "confidence": "medium",
-        "reason_short": "PCS 83.5 crossed above 78 threshold with improving macro.",
-        "reason_full": "CONFIRMED_FLOW_LEADERS eligible with pcs 83.5 (prev 77.0), macro regime Bull Maduro Improving and rot 8, weekly relative strength positive despite low dems.",
+        "ticker": "TSLA",
+        "portfolio": "EARLY_ROTATION",
+        "signal_type": "early_rotation",
+        "confidence": "high",
+        "reason_short": "DEMS 15 with spike_flag=false and strong multi-day RS",
+        "reason_full": "DEMS score 15, PCS 75.0 exceeds EARLY_ROTATION threshold, spike_flag false, outperform_d10=7, ret_5d_vs_spy=7.25, momentum_accel true in Bull Maduro regime.",
         "key_supporting_factors": [
-          "pcs_crossed_up",
-          "macro_improving",
-          "theme_strong_crypto"
+          "dems >=14 with no spike",
+          "PCS above mandate threshold",
+          "outperform_d10 >=6"
         ],
         "key_risks_or_contradictions": [
-          "spike_flag true",
-          "low streak_weeks=1"
+          "ret_13w_vs_spy negative",
+          "elevated volatility in EV theme"
         ]
       }
     ],
-    "watch": [],
+    "watch": [
+      {
+        "ticker": "NVDA",
+        "reason": "DEMS only 11 places it in 10-13 band; prefer watch over select per EARLY_ROTATION guidance",
+        "watch_trigger": "DEMS sustained above 14 or weekly streak extension with PCS hold"
+      }
+    ],
     "rejected": [
       {
+        "ticker": "CORZ",
+        "reason": "Already held in active HIGH_CONVICTION portfolio; no new allocation needed",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "Already held in active HIGH_CONVICTION portfolio; dems criteria borderline for rotation",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "COIN",
+        "reason": "Already entered today into CONFIRMED_FLOW_LEADERS; dems too low for additional rotation",
+        "rejection_category": "better_alternative_available"
+      },
+      {
         "ticker": "SASK.V",
-        "reason": "Insufficient weekly streak and dems below robust thresholds for selection.",
+        "reason": "DEMS only 8 fails early rotation threshold and spike_flag true",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "MSTR",
-        "reason": "Already in active picks; no new signal upgrade justifying addition.",
+        "reason": "Already active in CONFIRMED_FLOW_LEADERS; dems 7 too weak for new entry",
         "rejection_category": "better_alternative_available"
       },
       {
+        "ticker": "QQQ",
+        "reason": "Macro index proxy excluded per hard rules; not a single equity name",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "Low DEMS 3 and spike_flag true invalidate early rotation",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS 72.5 below CONFIRMED threshold; macro_thematic but weak dems and ret_5d_vs_spy negative",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "MSOS",
+        "reason": "DEMS 6 too low and theme cannabis not aligned with primary macro regime",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "Leveraged commodity ETF excluded per hard rules; DEms 6 insufficient",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "DEMS 6 fails rotation criteria despite weekly streaks",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "DEMS 8 below threshold for selection and negative 4w relative performance",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
         "ticker": "VAL",
-        "reason": "pcs exactly at threshold with down cross signal and negative recent performance.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "pcs crossed down and below portfolio threshold.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "TSLA",
-        "reason": "pcs 75 insufficient for any mandated portfolio thresholds.",
+        "reason": "PCS exactly at threshold but crossed down in events and low DEMS",
         "rejection_category": "insufficient_conviction"
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-05-09\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-09_0915\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with macro_score 77.5 supports selective additions in high-conviction themes.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"COIN\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"PCS 83.5 crossed above 78 threshold with improving macro.\",\n      \"reason_full\": \"CONFIRMED_FLOW_LEADERS eligible with pcs 83.5 (prev 77.0), macro regime Bull Maduro Improving and rot 8, weekly relative strength positive despite low dems.\",\n      \"key_supporting_factors\": [\n        \"pcs_crossed_up\",\n        \"macro_improving\",\n        \"theme_strong_crypto\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"spike_flag true\",\n        \"low streak_weeks=1\"\n      ]\n    }\n  ],\n  \"watch\": [],\n  \"rejected\": [\n    {\n      \"ticker\": \"SASK.V\",\n      \"reason\": \"Insufficient weekly streak and dems below robust thresholds for selection.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"MSTR\",\n      \"reason\": \"Already in active picks; no new signal upgrade justifying addition.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"VAL\",\n      \"reason\": \"pcs exactly at threshold with down cross signal and negative recent performance.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"KOS\",\n      \"reason\": \"pcs crossed down and below portfolio threshold.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"TSLA\",\n      \"reason\": \"pcs 75 insufficient for any mandated portfolio thresholds.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    }\n  ]\n}"
+  "raw_response_head": "{\n  \"date\": \"2026-05-09\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-09_2042\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with macro score 77.5 supporting thematic rotation.\",\n    \"risk_posture\": \"aggressive\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"TSLA\",\n      \"portfolio\": \"EARLY_ROTATION\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"DEMS 15 with spike_flag=false and strong multi-day RS\",\n      \"reason_full\": \"DEMS score 15, PCS 75.0 exceeds EARLY_ROTATION threshold, spike_flag false, outperform_d10=7, ret_5d_vs_spy=7.25, momentum_accel true in Bull Maduro regime.\",\n      \"key_supporting_factors\": [\n        \"dems >=14 with no spike\",\n        \"PCS above mandate threshold\",\n        \"outperform_d10 >=6\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"ret_13w_vs_spy negative\",\n        \"elevated volatility in EV theme\"\n      ]\n    }\n  ],\n  \"watch\": [\n    {\n      \"ticker\": \"NVDA\",\n      \"reason\": \"DEMS only 11 places it in 10-13 band; prefer watch over select per EARLY_ROTATION guidance\",\n      \"watch_trigger\": \"DEMS sustained above 14 or weekly streak extension with PCS hold\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"CORZ\",\n      \"reason\": \"Already held in active HIGH_CONVICTION portfolio; no new allocation needed\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Already held in active HIGH_CONVICTION portfolio; dems criteria borderline for rotation\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"COIN\",\n      \"reason\": \"Already entered today into CONFIRMED_FLOW_LEADERS; dems too low for additional rotation\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      \"reason\": \"DEMS only 8 fails early rotation threshold and spike_flag true\",\n      \"rejection_category\": \"insufficient_conv"
 }
