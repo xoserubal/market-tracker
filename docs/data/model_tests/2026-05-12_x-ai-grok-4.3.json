@@ -1,0 +1,88 @@
+{
+  "run_id": "2026-05-12_1030",
+  "model": "x-ai/grok-4.3",
+  "date": "2026-05-12",
+  "summary": {
+    "date": "2026-05-12",
+    "run_id": "2026-05-12_1030",
+    "model": "x-ai/grok-4.3",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 16,
+    "candidate_count": 15,
+    "input_tokens": 8713,
+    "output_tokens": 988,
+    "cost_usd": 0.013361,
+    "latency_ms": 15124.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 2,
+    "rejected_count": 6,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": []
+  },
+  "quality_score": 90,
+  "response": {
+    "date": "2026-05-12",
+    "model": "x-ai/grok-4.3",
+    "run_id": "2026-05-12_1030",
+    "decision_summary": {
+      "market_read": "Deteriorating Bull Maduro regime with sharply negative macro deltas and widespread macro_deteriorating flags on candidates.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "TSLA",
+        "reason": "DEMS 16 and outperform_d10 7 meet EARLY_ROTATION criteria but macro deterioration and IGNORAR signal prevent SELECT.",
+        "watch_trigger": "Macro stabilization (delta_1w > -5) plus PCS hold above 70."
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "Strong 4w/13w RS and outperform_d10 6 but PCS crossed below 78 threshold in deteriorating macro.",
+        "watch_trigger": "PCS rebound above 78 with macro_delta improvement."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "NBIS",
+        "reason": "PCS crossed down below 85 HIGH_CONVICTION threshold in deteriorating macro regime.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "CORZ",
+        "reason": "Already in active HIGH_CONVICTION portfolio; new PCS crossed down with spike_flag and macro headwinds.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "COIN",
+        "reason": "PCS crossed below 78 CONFIRMED_FLOW_LEADERS threshold amid macro deterioration.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "Low dems 5 and negative 5d/10d relative performance despite rot_score jump.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS below EARLY_ROTATION threshold and crypto theme under macro pressure.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "Already active; dems 7 too low for new rotation signal and PCS not upgraded.",
+        "rejection_category": "better_alternative_available"
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-05-12\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-12_1030\",\n  \"decision_summary\": {\n    \"market_read\": \"Deteriorating Bull Maduro regime with sharply negative macro deltas and widespread macro_deteriorating flags on candidates.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"TSLA\",\n      \"reason\": \"DEMS 16 and outperform_d10 7 meet EARLY_ROTATION criteria but macro deterioration and IGNORAR signal prevent SELECT.\",\n      \"watch_trigger\": \"Macro stabilization (delta_1w > -5) plus PCS hold above 70.\"\n    },\n    {\n      \"ticker\": \"MSTR\",\n      \"reason\": \"Strong 4w/13w RS and outperform_d10 6 but PCS crossed below 78 threshold in deteriorating macro.\",\n      \"watch_trigger\": \"PCS rebound above 78 with macro_delta improvement.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"PCS crossed down below 85 HIGH_CONVICTION threshold in deteriorating macro regime.\",\n      \"rejection_category\": \"macro_conflict\"\n    },\n    {\n      \"ticker\": \"CORZ\",\n      \"reason\": \"Already in active HIGH_CONVICTION portfolio; new PCS crossed down with spike_flag and macro headwinds.\",\n      \"rejection_category\": \"macro_conflict\"\n    },\n    {\n      \"ticker\": \"COIN\",\n      \"reason\": \"PCS crossed below 78 CONFIRMED_FLOW_LEADERS threshold amid macro deterioration.\",\n      \"rejection_category\": \"macro_conflict\"\n    },\n    {\n      \"ticker\": \"KOS\",\n      \"reason\": \"Low dems 5 and negative 5d/10d relative performance despite rot_score jump.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"BTCC-B.TO\",\n      \"reason\": \"PCS below EARLY_ROTATION threshold and crypto theme under macro pressure.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"NVDA\",\n      \"reason\": \"Already active; dems 7 too low for new rotation signal and PCS not upgraded.\",\n      \"rejection_category\": \"better_alternative_available\"\n    }\n  ]\n"
+}
