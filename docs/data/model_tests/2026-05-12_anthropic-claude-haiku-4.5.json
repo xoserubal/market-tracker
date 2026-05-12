@@ -1,34 +1,153 @@
 {
-  "run_id": "2026-05-12_1030",
+  "run_id": "2026-05-12_1439",
   "model": "anthropic/claude-haiku-4.5",
   "date": "2026-05-12",
   "summary": {
     "date": "2026-05-12",
-    "run_id": "2026-05-12_1030",
+    "run_id": "2026-05-12_1439",
     "model": "anthropic/claude-haiku-4.5",
     "provider": "openrouter",
     "should_call_ai": true,
-    "forced_run": false,
+    "forced_run": true,
     "event_count": 16,
     "candidate_count": 15,
-    "input_tokens": 10077,
-    "output_tokens": 4096,
-    "cost_usd": 0.030557,
-    "latency_ms": 32271.0,
-    "json_valid": false,
-    "schema_valid": false,
+    "input_tokens": 10715,
+    "output_tokens": 3780,
+    "cost_usd": 0.029615,
+    "latency_ms": 34625.0,
+    "json_valid": true,
+    "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 0,
+    "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 0,
+    "watch_count": 14,
+    "rejected_count": 7,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": []
   },
-  "quality_score": 0,
-  "response": null,
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-05-12\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-05-12_1030\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime deteriorating rapidly (macro_delta -16.79% 1w/1m), but crypto and uranium themes showing rotation momentum with strong relative strength leaders.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"portfolio\": \"HIGH_CONVICTION\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS 83.0 near 85 threshold, 93.54% 13w outperformance, 8-week streak\",\n      \"reason_full\": \"NBIS shows exceptional AI cloud leadership with PCS 83.0 (just 2 pts below HIGH_CONVICTION threshold of 85), combined with dominant 13-week outperformance of 93.54% vs SPY and sustained 8-week weekly streak. Already in active portfolio as high-conviction pick entered 2026-05-08. Despite spike_flag=true (5d move concentrated), the 10-day outperformance of 25.01% and 8-week continuation validate multi-day momentum. Macro deterioration is priced into signal.\",\n      \"key_supporting_factors\": [\n        \"PCS 83.0 qualifies as near-threshold entry (82.0 minimum)\",\n        \"13w streak of 8 weeks unbroken weekly outperformance\",\n        \"ret_13w_vs_spy 93.54% is elite relative strength\",\n        \"rot_score 8.0 indicates high rotation conviction\",\n        \"Already active pick with high conviction conviction entry\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"spike_flag=true: 5d move concentrated into single day, but 10d outperformance 25.01% validates follow-through\",\n        \"dems=8 is weak daily momentum (below 10 threshold), should not primary signal\",\n        \"Macro deteriorating trend may limit further upside\",\n        \"PCS crossed DOWN from 86.5 to 83.0 — signal is degrading\"\n      ]\n    },\n    {\n      \"ticker\": \"CORZ\",\n      \"portfolio\": \"HIGH_CONVICTION\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence"
+  "quality_score": 93,
+  "response": {
+    "date": "2026-05-12",
+    "model": "anthropic/claude-haiku-4.5",
+    "run_id": "2026-05-12_1439",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime deteriorating sharply (macro_delta -16.79% over 1 week and 1 month); crypto and AI themes show relative strength but risk-reward is increasingly skewed by macro headwinds.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "NBIS",
+        "reason": "PCS 83.0 remains above HIGH_CONVICTION entry (82.0), but spike_flag=true (dems=8, most gains in 1 day) and macro deteriorating by -16.79% 1w/1m contradict the 8-week streak and 93.5% 13w outperformance. Rotation score 8/10 is healthy, but the setup lacks multi-day continuation confirmation. Already in portfolio at 15% (entry 2026-05-08); monitoring whether daily spike evolves into sustained momentum before adding.",
+        "watch_trigger": "Outperform_d10 >= 7 sustained, spike_flag flip to false, or macro_delta stabilizes above -10% would restore conviction. Otherwise hold existing position and await fresh confirmation."
+      },
+      {
+        "ticker": "CORZ",
+        "reason": "PCS 80.2 (HIGH_CONVICTION threshold 82.0), rot_score 10 (highest in set), and strong 7-week streak support quality. However, spike_flag=true, dems=9, and macro deteriorating by -16.79% create contradictions. Already in portfolio at 15% (entry 2026-05-08). While ret_13w_vs_spy=16.9% and ret_4w_vs_spy=16.5% are solid, deteriorating macro and lack of sustained outperform_d10 momentum argue against scaling. Rotation trend (rot_now=10 vs prior patterns) remains constructive.",
+        "watch_trigger": "Spike_flag clears, dems rise to 12+, or macro delta recovers toward 0. If 10d outperformance sustains >=7, reconsider scaling position."
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "PCS 75.0 (CONFIRMED_FLOW_LEADERS entry 75.0), strong ret_4w=43.5% and ret_13w=34.7%, but streak_weeks=3 is the shortest of high-PCS peers and rot_score=7 lags CORZ (10) and NBIS (8). Already in portfolio at 7.5%. Dems=11 approaches usable signal (10-13 range). Macro headwind significant. Hold existing position; do not scale until streak resets or dems hits 14+.",
+        "watch_trigger": "Dems >=14 with spike_flag=false and outperform_d10>=6, or streak_weeks climbs to 5+. Macro delta must not deteriorate further."
+      },
+      {
+        "ticker": "COIN",
+        "reason": "PCS 74.0 (CONFIRMED_FLOW_LEADERS entry 75.0, borderline), signal_upgraded from VIGILAR to EN_RADAR (positive), but spike_flag=true and dems=7 (below usable 10+ threshold) indicate poor daily structure. Already in portfolio at 7.5%. Ret_4w=20.2% and ret_13w=22.7% are respectable; rot_score=7 is adequate. Macro deterioration and weak daily signals argue for holding existing rather than scaling.",
+        "watch_trigger": "Dems rise to 12+, spike_flag clears, outperform_d10 sustains >=6. Signal upgrade (VIGILAR→EN_RADAR) is noted but insufficient without daily flow confirmation."
+      },
+      {
+        "ticker": "TSLA",
+        "reason": "PCS 68.0 (EARLY_ROTATION threshold 68.0, entry eligible), signal=IGNORAR, but dems=16 (highest in set), momentum_accel=true, outperform_d10=7, and 4-day streak suggest early rotation spark. However, spike_flag=false is favorable, but rot_score=5 is weak, streak_weeks=0 shows no weekly rhythm, and 13w return vs SPY is -0.19% (negative). Already in portfolio at 8%. Macro headwind is severe. Daily momentum strong but contradicted by weak relative strength over intermediate timeframes. Watch for weekly streak establishment.",
+        "watch_trigger": "Streak_weeks climbs to 3+, rot_score improves to 7+, 13w outperformance turns positive. If dems sustains 14+ with no spike and outperform_d10 >=6 for 3+ days, reconsider conviction level."
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "PCS 79.0 (CONFIRMED_FLOW_LEADERS peer, above 75 entry), ret_13w_vs_spy=8.65%, rot_score=8, streak_weeks=6, dems=7 (below 10 usable threshold). Already in portfolio at 10%. While streak and rotation score are solid, recent 5d and 10d returns are mixed (ret_5d=7.6%, ret_10d=-2.07%), suggesting momentum exhaustion. Macro deteriorating. Hold existing position; do not scale without dems recovery or positive 10d continuation.",
+        "watch_trigger": "Dems >=12, outperform_d10 turns positive and sustains >=5, or macro delta stabilizes. If rot_score edges to 9+ and outperform_d10 resets high, revisit scaling decision."
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS 79.0, ret_4w_vs_spy=29.9%, ret_13w_vs_spy=26.9%, streak_weeks=6, rot_score=9, but spike_flag=true, dems=6 (very low), and macro deteriorating. Uranium/nuclear theme has thematic merit (energy transition, but currently struggling vs macro headwind). Outperform_d10=5, streak_days=0. Not in active_picks. Consider for future entry if spike resolves, dems rises, and macro stabilizes.",
+        "watch_trigger": "Spike_flag clears, dems >=12, macro_delta stabilizes above -10%, and outperform_d10 >=6. Uranium theme remains viable; timing is the issue."
+      },
+      {
+        "ticker": "KOS",
+        "reason": "PCS 68.0 (MACRO_THEMATIC entry 62.0), rot_score=8 (jumped from 6 to 8, positive), ret_13w_vs_spy=78.98% (exceptional), but streak_weeks=8 and ret_4w_vs_spy=3.26% (very weak recent momentum). Recent 5d and 10d returns negative (-14.89%, -5.08%). Oil/gas theme weak in deteriorating macro (macro_delta -16.79%). Macro-driven play now contradicted by negative daily flow. Watch for stabilization in 5d/10d momentum before entry.",
+        "watch_trigger": "Outperform_d10 >=6 sustained for 2+ days, 4w momentum turns positive, or macro_delta recovers. Rot_score jump to 8 is noted but not sufficient without price momentum recovery."
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS 71.0 (EARLY_ROTATION eligible at 68+), rot_score=8, streak_weeks=8 (longest weekly streak in set), ret_13w_vs_spy=32.69%, but ret_4w_vs_spy=3.79% and ret_5d_vs_spy=-5.8% show recent momentum collapse. Oil/gas theme weak relative to macro deterioration. Not in active picks. Watch for flow reversal; macro headwind and negative recent returns are disqualifying for now.",
+        "watch_trigger": "5d and 10d returns turn positive, outperform_d10 >=6, or macro_delta stabilizes. If rot_score climbs to 9+ and momentum_accel triggers, reconsider."
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 73.5 (EARLY_ROTATION eligible at 68+), rot_score=7, streak_weeks=4, ret_13w_vs_spy=9.43%, dems=10 (threshold border). Macro-broad exposure; deteriorating macro headwind (-16.79%) conflicts with thesis. Eligible but not sufficiently differentiated from peers. Watch for dems reaching 12+ and momentum_accel triggering before entry.",
+        "watch_trigger": "Dems >=12, momentum_accel=true, outperform_d10 >=7, or macro delta stabilizes. Broad index exposure less compelling in deteriorating regime."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 67.0 (EARLY_ROTATION entry eligible at 68.0, borderline low), rot_score=7, streak_weeks=3, but dems=6 (very low), ret_5d_vs_spy=-0.26%, spike_flag=false (neutral). Crypto ETF exposure; macro deteriorating. Not in active picks. Weak daily signals despite moderate weekly streak. Watch for dems rising to 10+ and positive 5d momentum before considering.",
+        "watch_trigger": "Dems >=12, spike_flag remains false, outperform_d10 >=6 sustained, or ret_5d turns positive."
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "PCS 64.8 (MACRO_THEMATIC entry 62.0), dems=13 (usable range), momentum_accel=true, spike_flag=true (majority of 5d move from 1 day, risk), signal=IGNORAR. Uranium/nuclear theme thematically sound but signal status contradicts entry consideration. Outperform_d10=5 (below 6 threshold). Watch for signal upgrade to EN_RADAR and spike_flag=false before escalation.",
+        "watch_trigger": "Signal upgraded to EN_RADAR, spike_flag clears, dems sustained at 12+, outperform_d10 >=6, and macro_delta stabilizes."
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "PCS 66.5 (MACRO_THEMATIC entry 62.0), rot_score=8, streak_weeks=8, but ret_4w_vs_spy=1.20% and ret_5d_vs_spy=-3.46% show weak recent momentum. Oil/gas theme weak in deteriorating macro. Dems=6 (very low). Not in active picks. Canadian exposure; macro headwind significant. Watch for reacceleration before entry.",
+        "watch_trigger": "Dems >=10, ret_5d_vs_spy turns positive, outperform_d10 >=6, or macro_delta stabilizes."
+      },
+      {
+        "ticker": "UCO",
+        "reason": "PCS 68.0, ret_13w_vs_spy=95.0% (exceptional), rot_score=8, but signal is leveraged crude oil ETF (commodity proxy). Eligible but not a tradable stock/equity per hard rules (though not explicitly excluded, leveraged commodity products carry structural decay risk). Ret_5d_vs_spy=-8.67%, ret_10d_vs_spy=4.71% mixed. Macro headwind. Watch for stabilization and consider only if macro regime stabilizes.",
+        "watch_trigger": "Macro_delta stabilizes above -10%, outperform_d10 >=7 sustained, and crude complex shows sustained weekly strength."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "MSOS",
+        "reason": "PCS 65.5 (MACRO_THEMATIC entry 62.0), but dems=2 (essentially zero, no daily momentum), spike_flag=true, outperform_d10=3 (well below 6 threshold), ret_10d_vs_spy=-5.12%, rot_score=9 contradicted by weak daily flow, and cannabis theme rated avg_poor in macro context. Macro deteriorating. Despite 4-week streak (weeks=4), recent flow is negative. Not in active picks. Signal EN_RADAR does not overcome fundamental weakness.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "PCS 57.5 (below MACRO_THEMATIC entry 62.0), signal_upgraded from VIGILAR to EN_RADAR but insufficient PCS and no candidate detail data (ret_4w, rot_score, streak_weeks, etc.) provided in candidates list. Healthcare special theme; macro deteriorating. Ineligible on PCS threshold alone.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "PCS 54.8 (below MACRO_THEMATIC entry 62.0), signal_upgraded from VIGILAR to EN_RADAR but insufficient PCS. Commodities/metals theme; macro deteriorating. No candidate detail data. Ineligible on PCS threshold.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "PNPN.V",
+        "reason": "PCS 53.5 (below MACRO_THEMATIC entry 62.0), signal_upgraded from VIGILAR to EN_RADAR but insufficient PCS. Commodities/metals theme; no candidate detail data. Ineligible on PCS threshold.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "JD",
+        "reason": "PCS 49.8 (well below entry thresholds), signal=VIGILAR (not EN_RADAR). China/EM theme; macro deteriorating. No candidate detail data. Ineligible on PCS and signal status.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "IE",
+        "reason": "PCS 40.0 (well below entry thresholds), signal=VIGILAR. Commodities/copper theme; macro deteriorating. Rot_score jumped 5→7 noted but PCS too low. Ineligible on PCS threshold.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "PCS 62.5 (MACRO_THEMATIC entry 62.0, borderline), but PCS crossed down (62.5 from 66.0 prior), signal EN_RADAR, and no candidate detail data provided (ret_4w, rot_score, streak_weeks, dems, etc.). Oil/gas theme weak in deteriorating macro. Insufficient data to construct conviction. Pcs_crossed_down event suggests deteriorating momentum.",
+        "rejection_category": "data_quality"
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-05-12\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-05-12_1439\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime deteriorating sharply (macro_delta -16.79% over 1 week and 1 month); crypto and AI themes show relative strength but risk-reward is increasingly skewed by macro headwinds.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"PCS 83.0 remains above HIGH_CONVICTION entry (82.0), but spike_flag=true (dems=8, most gains in 1 day) and macro deteriorating by -16.79% 1w/1m contradict the 8-week streak and 93.5% 13w outperformance. Rotation score 8/10 is healthy, but the setup lacks multi-day continuation confirmation. Already in portfolio at 15% (entry 2026-05-08); monitoring whether daily spike evolves into sustained momentum before adding.\",\n      \"watch_trigger\": \"Outperform_d10 >= 7 sustained, spike_flag flip to false, or macro_delta stabilizes above -10% would restore conviction. Otherwise hold existing position and await fresh confirmation.\"\n    },\n    {\n      \"ticker\": \"CORZ\",\n      \"reason\": \"PCS 80.2 (HIGH_CONVICTION threshold 82.0), rot_score 10 (highest in set), and strong 7-week streak support quality. However, spike_flag=true, dems=9, and macro deteriorating by -16.79% create contradictions. Already in portfolio at 15% (entry 2026-05-08). While ret_13w_vs_spy=16.9% and ret_4w_vs_spy=16.5% are solid, deteriorating macro and lack of sustained outperform_d10 momentum argue against scaling. Rotation trend (rot_now=10 vs prior patterns) remains constructive.\",\n      \"watch_trigger\": \"Spike_flag clears, dems rise to 12+, or macro delta recovers toward 0. If 10d outperformance sustains >=7, reconsider scaling position.\"\n    },\n    {\n      \"ticker\": \"MSTR\",\n      \"reason\": \"PCS 75.0 (CONFIRMED_FLOW_LEADERS entry 75.0), strong ret_4w=43.5% and ret_13w=34.7%, but streak_weeks=3 is the shortest of high-PCS pee"
 }

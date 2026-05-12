@@ -303,6 +303,52 @@ def export_prices():
     print(f"  ✓ prices_relative.json  ({len(df_norm)} semanas, {len(df_norm.columns)} tickers)")
 
 
+# ── 5b. Prices for open picks (absolute closes, last 10 días) ────────────────
+def export_picks_prices():
+    picks_path = OUT_DIR / "ai_picks.json"
+    if not picks_path.exists():
+        print("  ⚠ ai_picks.json no encontrado, saltando picks prices")
+        return
+
+    with open(picks_path, "r", encoding="utf-8") as f:
+        picks = json.load(f)
+
+    tickers: set[str] = set()
+    for ptf in (picks.get("portfolios") or {}).values():
+        for pos in (ptf.get("positions") or []):
+            if pos.get("ticker"):
+                tickers.add(pos["ticker"])
+
+    if not tickers:
+        print("  ⚠ No hay posiciones abiertas, saltando picks prices")
+        return
+
+    RAW_DIR = ROOT / "backtest" / "data" / "raw"
+    result: dict = {}
+
+    for ticker in sorted(tickers):
+        ticker_safe = ticker.replace("^", "").replace("=", "")
+        path = RAW_DIR / f"yahoo_{ticker_safe}.parquet"
+        if not path.exists():
+            print(f"  ⚠ {ticker}: raw parquet no encontrado")
+            continue
+        try:
+            df = pd.read_parquet(path, columns=["Close"])
+            df.index = pd.to_datetime(df.index)
+            df = df.sort_index().dropna()
+            recent = df.tail(10)
+            result[ticker] = {
+                "dates":  [str(d.date()) for d in recent.index],
+                "closes": [round(float(v), 2) for v in recent["Close"]],
+            }
+        except Exception as e:
+            print(f"  ⚠ {ticker}: {e}")
+
+    out = {"updated": str(pd.Timestamp.now().date()), "tickers": result}
+    write_json(out, "prices_picks.json")
+    print(f"  ✓ prices_picks.json  ({len(result)} tickers)")
+
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 def write_json(data: dict, filename: str):
     path = OUT_DIR / filename
@@ -351,6 +397,7 @@ if __name__ == "__main__":
     export_portfolio()
     export_confluence()
     export_prices()
+    export_picks_prices()
     export_stock_candidates()
     print(f"\nDatos exportados en: {OUT_DIR}")
 

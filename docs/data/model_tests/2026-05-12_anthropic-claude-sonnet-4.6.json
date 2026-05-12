@@ -1,0 +1,153 @@
+{
+  "run_id": "2026-05-12_1439",
+  "model": "anthropic/claude-sonnet-4.6",
+  "date": "2026-05-12",
+  "summary": {
+    "date": "2026-05-12",
+    "run_id": "2026-05-12_1439",
+    "model": "anthropic/claude-sonnet-4.6",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": true,
+    "event_count": 16,
+    "candidate_count": 15,
+    "input_tokens": 10716,
+    "output_tokens": 3822,
+    "cost_usd": 0.089478,
+    "latency_ms": 76191.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 93,
+    "selected_count": 0,
+    "watch_count": 15,
+    "rejected_count": 6,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": []
+  },
+  "quality_score": 93,
+  "response": {
+    "date": "2026-05-12",
+    "model": "anthropic/claude-sonnet-4.6",
+    "run_id": "2026-05-12_1439",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime deteriorating sharply (macro score 60.7, delta -16.79 over both 1w and 1m), favoring holds and reviews over new entries; most high-PCS candidates are crossing down through their portfolio thresholds, signaling weakening momentum across the board.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "NBIS",
+        "reason": "Already held in HIGH_CONVICTION at 15% size with entry from 2026-05-08. PCS has crossed down from 86.5 to 83.0, still above the 82.0 minimum entry threshold but below the 85.0 portfolio threshold. The 13-week return of +93.5% vs SPY remains the strongest in the candidate set, and the 8-week streak is intact. However, spike_flag=true with dems=8 and outperform_d10=5 (below the 6-day robustness level) make this a hold-and-monitor situation rather than a new add. The deteriorating macro environment adds further caution.",
+        "watch_trigger": "PCS stabilizing above 85 with macro delta recovering above -10; spike_flag clearing to false with dems sustaining above 12 and outperform_d10 reaching 7 or higher."
+      },
+      {
+        "ticker": "CORZ",
+        "reason": "Already held in HIGH_CONVICTION at 15% size. PCS dropped from 87.2 to 80.2, crossing below the 85.0 portfolio threshold. The rotation score remains best-in-class at 10/10 and the 7-week streak is intact, but ret_13w_vs_spy of only +16.9% is modest compared to NBIS (+93.5%). spike_flag=true with dems=9 and outperform_d10=6 provides borderline daily support. The crypto theme is holding but macro deterioration warrants no new add — existing position should be monitored for exit if PCS continues declining.",
+        "watch_trigger": "PCS recovering back above 85.0 with macro delta stabilizing; or exit review if PCS drops below 75 and streak_weeks breaks."
+      },
+      {
+        "ticker": "TSLA",
+        "reason": "Existing EARLY_ROTATION position entered at PCS 75.0. Today's PCS has fallen to 68.0, crossing below the 70.0 EARLY_ROTATION threshold and signaling IGNORAR. However, dems=16 with spike_flag=false and momentum_accel=true, outperform_d10=7, and streak_days=4 show genuine near-term daily momentum. The contradiction between the deteriorating weekly signal (streak_weeks=0, ret_13w_vs_spy=-0.2%) and strong daily momentum makes this a WATCH rather than a new entry — the existing position should be evaluated for partial reduction given the threshold breach.",
+        "watch_trigger": "PCS recovering above 70.0 with streak_weeks resuming (at least 2 consecutive weeks of outperformance) and ret_13w_vs_spy turning positive."
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS of 79.0 qualifies for CONFIRMED_FLOW_LEADERS (above 75.0 minimum) and shows the strongest 4-week return vs SPY (+29.9%) and strong 13-week return (+26.9%) among non-crypto candidates not already held. Rotation score of 9 and 6-week streak are compelling. However, spike_flag=true, dems=6, outperform_d10=5 (below the 6-day robustness threshold), and the macro regime deteriorating at -16.79 delta argue against a new entry today. No existing position to review.",
+        "watch_trigger": "spike_flag clearing to false with outperform_d10 reaching 6 or higher; macro delta improving above -8; or dems reaching 12+ with confirmed multi-day continuation."
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS at 10% size. PCS at 79.0 remains above the 75.0 minimum entry threshold. The 6-week streak and proximity to 52-week high (-1.29%) are positive, but ret_13w_vs_spy of only +8.7% is the weakest among the top candidates. dems=7 and ret_10d_vs_spy=-2.07% with outperform_d10=5 show recent softening. No new add warranted in this deteriorating macro environment; existing position monitored.",
+        "watch_trigger": "PCS recovering above 82 with macro delta improving; ret_10d_vs_spy turning positive and outperform_d10 reaching 7+."
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS at 7.5% size. PCS dropped from 81.0 to 75.0, crossing below the 78.0 portfolio threshold. The 4-week return of +43.5% and 13-week return of +34.7% vs SPY are strong, but streak_weeks=3 and dist_52w_high=-57.15% highlight the volatile nature of this bitcoin treasury proxy. dems=11 and outperform_d10=6 provide some daily support but are insufficient for a new add given macro headwinds. Existing position under review.",
+        "watch_trigger": "PCS recovering above 78.0 with streak_weeks extending to 5+ and dist_52w_high tightening above -40%."
+      },
+      {
+        "ticker": "COIN",
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS at 7.5% size. PCS has fallen from 83.5 (entry) to 74.0, crossing below the 75.0 minimum entry threshold. streak_weeks=2 (down from prior strength) and dist_52w_high=-51.29% show how far off highs this is. spike_flag=true with dems=7 and outperform_d10=5 give no daily basis for a new add. The signal_upgraded event today (VIGILAR to EN_RADAR) is a positive nuance, but in the context of a pcs_crossed_down event it is not enough to warrant adding. Existing position should be evaluated for reduction.",
+        "watch_trigger": "PCS stabilizing above 75.0 with streak_weeks rebuilding to 4+ and spike_flag clearing to false."
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 73.5 is above EARLY_ROTATION minimum of 68 but the mandate prefers individual high-momentum names over broad ETFs when stronger alternatives exist. outperform_d10=8 and streak_days=7 with spike_flag=false are the strongest daily continuity metrics in the candidate set, and dems=10 is borderline for EARLY_ROTATION entry. However, ret_13w_vs_spy of +9.4% and ret_4w_vs_spy of +7.9% are modest compared to candidates like SASK.V. Macro deterioration discourages new broad index positions.",
+        "watch_trigger": "Macro delta recovering above -5 with dems rising to 13+ and a breakout above the 52-week high (currently only -0.18% away), which would confirm broad market strength as an actionable signal."
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS 71.0 clears EARLY_ROTATION minimum and the 8-week streak with rot_score=8 and ret_13w_vs_spy=+32.7% are strong weekly metrics. However, ret_5d_vs_spy=-5.8% is the worst 5-day performance among oil candidates, and dems=8 with spike_flag=false does not reach the 14+ threshold for EARLY_ROTATION entry. The oil_gas theme is flagged as theme_weak in a deteriorating macro environment.",
+        "watch_trigger": "ret_5d_vs_spy recovering positive, dems reaching 12+, and macro delta stabilizing above -10."
+      },
+      {
+        "ticker": "KOS",
+        "reason": "Rotation score jumped from 6 to 8 and PCS crossed up from 62.5 to 68.0, qualifying for MACRO_THEMATIC_BENEFICIARIES. The 8-week streak and ret_13w_vs_spy of +79.0% are exceptional. However, ret_5d_vs_spy=-14.89% is the worst in the entire candidate set and dems=5 is well below any actionable threshold. The near-term selling pressure is severe and contradicts the longer-term strength — a classic case of a potentially fading leader rather than a fresh entry.",
+        "watch_trigger": "ret_5d_vs_spy recovering above zero, dems reaching 10+, and confirmation that the rot_score improvement is sustained for at least one more week."
+      },
+      {
+        "ticker": "UCO",
+        "reason": "UCO is a leveraged crude oil ETF — while technically eligible per the rules (it is an ETF on a theme, not a direct commodity), the oil_gas theme is flagged as theme_weak, macro is deteriorating, and ret_5d_vs_spy=-8.67% shows recent sharp reversal. The 13-week return of +95.0% vs SPY is remarkable but likely reflects the same dynamics making it risky now. No new position warranted.",
+        "watch_trigger": "Oil theme upgrades to theme_avg or stronger; ret_5d_vs_spy recovers above zero with dems reaching 10+."
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "PCS 66.5 clears MACRO_THEMATIC_BENEFICIARIES minimum of 62. The 8-week streak and rot_score=8 with dist_52w_high=-2.62% (near highs) are positive structural signals. However, ret_5d_vs_spy=-3.46% and dems=6 show no short-term momentum, and the oil_gas theme_weak flag in a deteriorating macro environment is a clear headwind for new Canadian oil positions.",
+        "watch_trigger": "Macro delta improving above -8; ret_5d_vs_spy turning positive; dems reaching 10+."
+      },
+      {
+        "ticker": "MSOS",
+        "reason": "PCS 65.5 clears MACRO_THEMATIC_BENEFICIARIES minimum. rot_score=9 and ret_4w_vs_spy=+25.1% are standout metrics for the cannabis theme. However, dems=2 is the lowest in the entire candidate set, outperform_d10=3 is well below the robustness threshold of 6, streak_days=0, and spike_flag=true — the recent 4-week gain appears concentrated in one spike rather than sustained accumulation. Cannabis is also flagged as theme_avg_poor.",
+        "watch_trigger": "dems recovering above 10 with outperform_d10 reaching 6+; spike_flag clearing; and sustained weekly momentum rebuilding streak_weeks above 5."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 67.0 crossed down from 73.0, falling below EARLY_ROTATION threshold of 70. As a bitcoin ETF it tracks crypto broadly but with weaker metrics than direct plays already held. ret_4w_vs_spy=+1.3% and ret_13w_vs_spy=+9.4% are the weakest among crypto candidates. dems=6 and outperform_d10=5 are below actionable thresholds.",
+        "watch_trigger": "PCS recovering above 70 with crypto theme strengthening; dems reaching 12+ with multi-day continuation confirmed."
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "PCS 62.5 crossed down from 66.0, falling below the MACRO_THEMATIC_BENEFICIARIES threshold of 65.0. No supporting daily momentum data stands out, and the oil_gas theme is weak in the current macro regime. Minimum qualifying candidate by PCS rule.",
+        "watch_trigger": "PCS recovering above 65.0 with a rot_score improvement event and positive ret_5d_vs_spy."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "ASPI",
+        "reason": "Despite dems=13 and momentum_accel=true, streak_weeks=0 disqualifies this from any weekly-anchored portfolio. spike_flag=true means the 5-day move is concentrated in a single session, making the dems reading unreliable as a sustained rotation signal. rot_score=4 is the lowest among all candidates above PCS 62, and ret_13w_vs_spy=+1.7% is nearly flat over the full quarter. PCS 64.8 is just above the MACRO_THEMATIC_BENEFICIARIES minimum but the signal reads IGNORAR. The combination of no weekly streak, spike-driven daily momentum, and minimal 13-week outperformance does not justify a new position.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "PCS 57.5 falls below all portfolio minimum entry thresholds (lowest is 62.0 for MACRO_THEMATIC_BENEFICIARIES). The signal_upgraded event from VIGILAR to EN_RADAR is noted but insufficient given the PCS level. Healthcare theme data is limited in the payload with no rotation score, streak, or daily metrics provided to support a position.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "PCS 54.8 is below all portfolio minimum entry thresholds. Australian-listed mining stock on a commodities_metals theme with signal_upgraded event but no supporting quantitative metrics (rot_score, streaks, return data) provided in the payload beyond the PCS figure.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "PNPN.V",
+        "reason": "PCS 53.5 is below all portfolio minimum entry thresholds. Canadian Venture Exchange listed with commodities_metals theme — insufficient PCS and no supporting momentum metrics provided to justify any position in a deteriorating macro environment.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "JD",
+        "reason": "PCS 49.8 is below all portfolio minimum entry thresholds. China EM theme faces additional macro headwinds in a Bull Maduro Deteriorating regime. Signal upgraded from IGNORAR to VIGILAR represents the very beginning of a potential setup — far too early for any portfolio entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "IE",
+        "reason": "PCS 40.0 is well below all portfolio minimum entry thresholds. Despite a rot_score jump from 5 to 7 on the copper theme, the signal remains VIGILAR and the PCS is 22 points below the lowest portfolio minimum. No basis for selection.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-05-12\",\n  \"model\": \"anthropic/claude-sonnet-4.6\",\n  \"run_id\": \"2026-05-12_1439\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime deteriorating sharply (macro score 60.7, delta -16.79 over both 1w and 1m), favoring holds and reviews over new entries; most high-PCS candidates are crossing down through their portfolio thresholds, signaling weakening momentum across the board.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Already held in HIGH_CONVICTION at 15% size with entry from 2026-05-08. PCS has crossed down from 86.5 to 83.0, still above the 82.0 minimum entry threshold but below the 85.0 portfolio threshold. The 13-week return of +93.5% vs SPY remains the strongest in the candidate set, and the 8-week streak is intact. However, spike_flag=true with dems=8 and outperform_d10=5 (below the 6-day robustness level) make this a hold-and-monitor situation rather than a new add. The deteriorating macro environment adds further caution.\",\n      \"watch_trigger\": \"PCS stabilizing above 85 with macro delta recovering above -10; spike_flag clearing to false with dems sustaining above 12 and outperform_d10 reaching 7 or higher.\"\n    },\n    {\n      \"ticker\": \"CORZ\",\n      \"reason\": \"Already held in HIGH_CONVICTION at 15% size. PCS dropped from 87.2 to 80.2, crossing below the 85.0 portfolio threshold. The rotation score remains best-in-class at 10/10 and the 7-week streak is intact, but ret_13w_vs_spy of only +16.9% is modest compared to NBIS (+93.5%). spike_flag=true with dems=9 and outperform_d10=6 provides borderline daily support. The crypto theme is holding but macro deterioration warrants no new add — existing position should be monitored for exit if PCS continues declining.\",\n      \"watch_trigger\": \"PCS recovering back above 85.0 with macro delta stabilizing; or exit review if PCS drops below 75 and streak_weeks breaks.\"\n    },\n    {\n  "
+}

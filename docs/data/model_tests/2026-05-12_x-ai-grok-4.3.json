@@ -1,88 +1,123 @@
 {
-  "run_id": "2026-05-12_1030",
+  "run_id": "2026-05-12_1439",
   "model": "x-ai/grok-4.3",
   "date": "2026-05-12",
   "summary": {
     "date": "2026-05-12",
-    "run_id": "2026-05-12_1030",
+    "run_id": "2026-05-12_1439",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
-    "forced_run": false,
+    "forced_run": true,
     "event_count": 16,
     "candidate_count": 15,
-    "input_tokens": 8713,
-    "output_tokens": 988,
-    "cost_usd": 0.013361,
-    "latency_ms": 15124.0,
+    "input_tokens": 9265,
+    "output_tokens": 1855,
+    "cost_usd": 0.016219,
+    "latency_ms": 16707.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 90,
+    "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 2,
-    "rejected_count": 6,
+    "watch_count": 13,
+    "rejected_count": 2,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": []
   },
-  "quality_score": 90,
+  "quality_score": 93,
   "response": {
     "date": "2026-05-12",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-05-12_1030",
+    "run_id": "2026-05-12_1439",
     "decision_summary": {
-      "market_read": "Deteriorating Bull Maduro regime with sharply negative macro deltas and widespread macro_deteriorating flags on candidates.",
+      "market_read": "Macro deteriorating sharply with -16.79 one-week delta and Bull Maduro regime weakening across metrics.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
-        "ticker": "TSLA",
-        "reason": "DEMS 16 and outperform_d10 7 meet EARLY_ROTATION criteria but macro deterioration and IGNORAR signal prevent SELECT.",
-        "watch_trigger": "Macro stabilization (delta_1w > -5) plus PCS hold above 70."
+        "ticker": "NBIS",
+        "reason": "PCS 83.0 near high-conviction threshold but macro delta -16.79 signals caution and recent downgrade from 86.5.",
+        "watch_trigger": "Macro delta turns positive with PCS reclaim above 85.0 and streak extension"
+      },
+      {
+        "ticker": "CORZ",
+        "reason": "PCS 80.2 with rot_score 10 and 7-week streak but macro deterioration and active position already held.",
+        "watch_trigger": "Macro stabilization plus continued multi-week outperformance without new drawdown"
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "PCS 79.0 with strong theme and 6-week streak but macro headwinds and active holding in related portfolio.",
+        "watch_trigger": "Macro delta improves and PCS exceeds 82 with sustained ret_13w_vs_spy leadership"
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS 79.0 with rot_score 9 and 29.9% 4-week outperformance but macro deteriorating regime unsupportive.",
+        "watch_trigger": "Positive macro delta and rot_score sustained above 9 with PCS over 80"
       },
       {
         "ticker": "MSTR",
-        "reason": "Strong 4w/13w RS and outperform_d10 6 but PCS crossed below 78 threshold in deteriorating macro.",
-        "watch_trigger": "PCS rebound above 78 with macro_delta improvement."
+        "reason": "PCS 75.0 with 43.5% 4-week outperformance but crossed down from 81 and macro conflict noted.",
+        "watch_trigger": "PCS recovery above 78 with dems above 12 and macro trend stabilization"
+      },
+      {
+        "ticker": "COIN",
+        "reason": "PCS 74.0 upgraded to EN_RADAR yet macro delta -16.79 and existing position size limit reached.",
+        "watch_trigger": "Macro improves and streak_weeks extends beyond 3 while PCS holds above 75"
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 73.5 with consistent 4-week outperformance but leveraged to weakening macro regime.",
+        "watch_trigger": "Macro delta turns positive alongside ret_10d_vs_spy extension beyond 8"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS 71.0 and oil exposure but macro deteriorating while ret_5d_vs_spy at -5.8 shows short-term weakness.",
+        "watch_trigger": "Macro delta recovers and 13-week relative strength holds above 30%"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "PCS 68.0 with 8-week streak and 79% 13-week outperformance but macro deterioration and weak dems 5.",
+        "watch_trigger": "Dems rises above 10 and macro delta stabilizes with sustained outperformance_d10"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "PCS 68.0 with 8-week streak but commodity-leveraged ETF and macro regime unsupportive for energy.",
+        "watch_trigger": "Macro improves materially and PCS exceeds 70 with positive ret_5d_vs_spy"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 67.0 crypto exposure with macro headwinds and limited streak duration of only 3 weeks.",
+        "watch_trigger": "Macro delta turns less negative and rot_score improves above 8"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "PCS 66.5 with 8-week streak yet macro deteriorating and weak recent 4-week relative return.",
+        "watch_trigger": "Macro score rises above 70 with positive ret_10d_vs_spy confirmation"
+      },
+      {
+        "ticker": "MSOS",
+        "reason": "PCS 65.5 with 4-week streak but macro deterioration and dems at only 2 with spike_flag present.",
+        "watch_trigger": "Dems improves above 10 and PCS holds above 68 without spike"
       }
     ],
     "rejected": [
       {
-        "ticker": "NBIS",
-        "reason": "PCS crossed down below 85 HIGH_CONVICTION threshold in deteriorating macro regime.",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "CORZ",
-        "reason": "Already in active HIGH_CONVICTION portfolio; new PCS crossed down with spike_flag and macro headwinds.",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "COIN",
-        "reason": "PCS crossed below 78 CONFIRMED_FLOW_LEADERS threshold amid macro deterioration.",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "Low dems 5 and negative 5d/10d relative performance despite rot_score jump.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "BTCC-B.TO",
-        "reason": "PCS below EARLY_ROTATION threshold and crypto theme under macro pressure.",
+        "ticker": "TSLA",
+        "reason": "PCS 68.0 but signal marked IGNORAR with zero streak_weeks and negative 13-week relative return.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "NVDA",
-        "reason": "Already active; dems 7 too low for new rotation signal and PCS not upgraded.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "ASPI",
+        "reason": "PCS 64.8 and signal IGNORAR with zero streak_weeks and macro deterioration conflict.",
+        "rejection_category": "insufficient_conviction"
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-05-12\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-12_1030\",\n  \"decision_summary\": {\n    \"market_read\": \"Deteriorating Bull Maduro regime with sharply negative macro deltas and widespread macro_deteriorating flags on candidates.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"TSLA\",\n      \"reason\": \"DEMS 16 and outperform_d10 7 meet EARLY_ROTATION criteria but macro deterioration and IGNORAR signal prevent SELECT.\",\n      \"watch_trigger\": \"Macro stabilization (delta_1w > -5) plus PCS hold above 70.\"\n    },\n    {\n      \"ticker\": \"MSTR\",\n      \"reason\": \"Strong 4w/13w RS and outperform_d10 6 but PCS crossed below 78 threshold in deteriorating macro.\",\n      \"watch_trigger\": \"PCS rebound above 78 with macro_delta improvement.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"PCS crossed down below 85 HIGH_CONVICTION threshold in deteriorating macro regime.\",\n      \"rejection_category\": \"macro_conflict\"\n    },\n    {\n      \"ticker\": \"CORZ\",\n      \"reason\": \"Already in active HIGH_CONVICTION portfolio; new PCS crossed down with spike_flag and macro headwinds.\",\n      \"rejection_category\": \"macro_conflict\"\n    },\n    {\n      \"ticker\": \"COIN\",\n      \"reason\": \"PCS crossed below 78 CONFIRMED_FLOW_LEADERS threshold amid macro deterioration.\",\n      \"rejection_category\": \"macro_conflict\"\n    },\n    {\n      \"ticker\": \"KOS\",\n      \"reason\": \"Low dems 5 and negative 5d/10d relative performance despite rot_score jump.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"BTCC-B.TO\",\n      \"reason\": \"PCS below EARLY_ROTATION threshold and crypto theme under macro pressure.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"NVDA\",\n      \"reason\": \"Already active; dems 7 too low for new rotation signal and PCS not upgraded.\",\n      \"rejection_category\": \"better_alternative_available\"\n    }\n  ]\n"
+  "raw_response_head": "{\n  \"date\": \"2026-05-12\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-12_1439\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro deteriorating sharply with -16.79 one-week delta and Bull Maduro regime weakening across metrics.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"PCS 83.0 near high-conviction threshold but macro delta -16.79 signals caution and recent downgrade from 86.5.\",\n      \"watch_trigger\": \"Macro delta turns positive with PCS reclaim above 85.0 and streak extension\"\n    },\n    {\n      \"ticker\": \"CORZ\",\n      \"reason\": \"PCS 80.2 with rot_score 10 and 7-week streak but macro deterioration and active position already held.\",\n      \"watch_trigger\": \"Macro stabilization plus continued multi-week outperformance without new drawdown\"\n    },\n    {\n      \"ticker\": \"NVDA\",\n      \"reason\": \"PCS 79.0 with strong theme and 6-week streak but macro headwinds and active holding in related portfolio.\",\n      \"watch_trigger\": \"Macro delta improves and PCS exceeds 82 with sustained ret_13w_vs_spy leadership\"\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      \"reason\": \"PCS 79.0 with rot_score 9 and 29.9% 4-week outperformance but macro deteriorating regime unsupportive.\",\n      \"watch_trigger\": \"Positive macro delta and rot_score sustained above 9 with PCS over 80\"\n    },\n    {\n      \"ticker\": \"MSTR\",\n      \"reason\": \"PCS 75.0 with 43.5% 4-week outperformance but crossed down from 81 and macro conflict noted.\",\n      \"watch_trigger\": \"PCS recovery above 78 with dems above 12 and macro trend stabilization\"\n    },\n    {\n      \"ticker\": \"COIN\",\n      \"reason\": \"PCS 74.0 upgraded to EN_RADAR yet macro delta -16.79 and existing position size limit reached.\",\n      \"watch_trigger\": \"Macro improves and streak_weeks extends beyond 3 while PCS holds above 75\"\n    },\n    {\n      \"ticker\": \"QQQ\",\n      \"reason\": \"PCS 73.5 with consistent 4-week outperformance but leveraged to w"
 }
