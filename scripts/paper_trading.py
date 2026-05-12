@@ -110,8 +110,9 @@ HARD_RULES = [
     "Return valid JSON only. No markdown, no explanation, no extra text.",
     "Do not invent data not present in the payload.",
     "With strong contradictions, use WATCH or REJECT, not SELECT.",
-    "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥50 chars).",
+    "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
     "Every rejected item must have: reason and a valid rejection_category.",
+    "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
 ]
 
 NON_TRADABLE_SUBTHEMES = frozenset({
@@ -276,8 +277,24 @@ HARD RULES (violations are flagged automatically):
 4. Use WATCH for uncertain/incomplete signals; REJECT for clearly insufficient ones.
 5. Do not invent data. Use only information from the payload.
 6. Every selected item needs: portfolio, signal_type, confidence, \
-reason_short (≥20 chars), reason_full (≥50 chars).
+reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars).
 7. Every rejected item needs: reason and a valid rejection_category.
+8. Every candidate with pcs >= 62 not selected must appear in watch or rejected.
+
+COMPARATIVE REASONING (mandatory — most common failure mode):
+- "PCS = 81 exceeds threshold of 82" is NOT a valid reason. PCS is a pre-filter;
+  every candidate in the list already cleared minimum eligibility. Repeating the
+  threshold is noise, not analysis.
+- reason_full must answer: "Why THIS ticker over the other high-PCS candidates
+  I did NOT select?" Cite specific differentiating metrics: streak_weeks vs peers,
+  rot_score vs peers, ret_13w_vs_spy vs peers, spike_flag, momentum_accel, dems.
+- comparative_edge must explicitly name at least one candidate you did NOT select
+  and state why it ranked lower on the deciding factors.
+  BAD:  "Strong relative strength and high PCS."
+  GOOD: "Selected over MARA (PCS=80) because streak_weeks=12 vs MARA's 2 and
+         rot_score=9 vs MARA's 4. MARA rejected as better_alternative_available."
+- Every candidate with pcs >= 62 that you do not SELECT must appear in watch or
+  rejected — silence on a high-PCS candidate is not acceptable.
 
 EARLY_ROTATION — daily signals guidance (dems, ret_5d_vs_spy, etc.):
 - dems (Daily Early Momentum Score 0-20): PRIMARY signal for EARLY_ROTATION.
@@ -308,7 +325,8 @@ REQUIRED OUTPUT SCHEMA (fill in all fields):
       "signal_type": "confirmed_leader|early_rotation|macro_thematic|high_conviction",
       "confidence": "low|medium|high",
       "reason_short": "<specific, ≥20 chars>",
-      "reason_full": "<specific factors, ≥50 chars>",
+      "reason_full": "<≥100 chars: what drives this ticker's signal strength right now>",
+      "comparative_edge": "<≥30 chars: name a peer with similar PCS you did NOT select and explain why this ranked higher on the deciding metrics>",
       "key_supporting_factors": ["<string>"],
       "key_risks_or_contradictions": ["<string>"]
     }
@@ -511,11 +529,12 @@ def compute_quality_score(
     if ratio <= 0.30:    score += 15
     elif ratio <= 0.50:  score += 8
 
-    # 15 pts: reason quality (length proxy for specificity)
+    # 15 pts: reason quality — rewards comparative_edge and longer reason_full
     if selected:
         reason_q = [
-            min(1.0, len(str(s.get("reason_short", ""))) / 40) * 0.4
-            + min(1.0, len(str(s.get("reason_full",  ""))) / 100) * 0.6
+            min(1.0, len(str(s.get("reason_short",    ""))) / 40)  * 0.25
+            + min(1.0, len(str(s.get("reason_full",   ""))) / 150) * 0.50
+            + min(1.0, len(str(s.get("comparative_edge", ""))) / 80) * 0.25
             for s in selected
         ]
         score += int(15 * (sum(reason_q) / len(reason_q)))
@@ -526,7 +545,7 @@ def compute_quality_score(
     if watch or rejected:
         score += 10
 
-    # 10 pts: coherence — PCS ≥ portfolio pcs_min_entry for each selected
+    # 5 pts: coherence — PCS ≥ portfolio pcs_min_entry for each selected
     cand_pcs = {c["ticker"]: c.get("pcs", 0) for c in payload.get("candidates", [])}
     if selected:
         coherent = sum(
@@ -534,7 +553,20 @@ def compute_quality_score(
             if cand_pcs.get(s.get("ticker", ""), 0)
             >= PORTFOLIOS.get(s.get("portfolio", ""), {}).get("pcs_min_entry", 999)
         )
-        score += int(10 * coherent / len(selected))
+        score += int(5 * coherent / len(selected))
+    else:
+        score += 3
+
+    # 5 pts: coverage — all candidates with pcs>=62 must appear in selected/watch/rejected
+    disposed = (
+        {s.get("ticker") for s in selected}
+        | {w.get("ticker") for w in watch}
+        | {r.get("ticker") for r in rejected}
+    )
+    high_pcs_cands = [c for c in payload.get("candidates", []) if c.get("pcs", 0) >= 62]
+    if high_pcs_cands:
+        coverage = sum(1 for c in high_pcs_cands if c["ticker"] in disposed)
+        score += int(5 * coverage / len(high_pcs_cands))
     else:
         score += 5
 
@@ -653,6 +685,22 @@ def _log_shadow_picks(
 
 # ── Portfolio updater (active model only) ──────────────────────────────────────
 
+def _get_entry_price(ticker: str) -> float | None:
+    """Lee el último cierre disponible del parquet raw del ticker."""
+    try:
+        import pandas as pd
+        ticker_safe = ticker.replace("^", "").replace("=", "")
+        path = ROOT / "backtest" / "data" / "raw" / f"yahoo_{ticker_safe}.parquet"
+        if not path.exists():
+            return None
+        df = pd.read_parquet(path, columns=["Close"]).dropna()
+        if df.empty:
+            return None
+        return round(float(df["Close"].iloc[-1]), 2)
+    except Exception:
+        return None
+
+
 def _size_from_conviction(conviction: str, size_range: tuple) -> float:
     lo, hi = size_range
     if conviction == "high": return float(hi)
@@ -676,16 +724,21 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> d
 
         pcs_val = (cand_pcs.get(t) if cand_pcs else None) or s.get("pcs")
         new_pos = {
-            "ticker":       t,
-            "entry_date":   today,
-            "entry_pcs":    pcs_val,
-            "entry_signal": s.get("signal_type"),
-            "size_pct":     _size_from_conviction(
-                                s.get("confidence", "medium"),
-                                PORTFOLIOS[ptf_id]["size_range"],
-                            ),
-            "conviction":   s.get("confidence"),
-            "rationale":    s.get("reason_short"),
+            "ticker":                  t,
+            "entry_date":              today,
+            "entry_price":             _get_entry_price(t),
+            "entry_pcs":               pcs_val,
+            "entry_signal":            s.get("signal_type"),
+            "size_pct":                _size_from_conviction(
+                                           s.get("confidence", "medium"),
+                                           PORTFOLIOS[ptf_id]["size_range"],
+                                       ),
+            "conviction":              s.get("confidence"),
+            "rationale":               s.get("reason_short"),
+            "reason_full":             s.get("reason_full"),
+            "comparative_edge":        s.get("comparative_edge"),
+            "key_supporting_factors":  s.get("key_supporting_factors", []),
+            "key_risks":               s.get("key_risks_or_contradictions", []),
         }
         positions.append(new_pos)
         ptf.setdefault("history", []).append({**new_pos, "event": "open"})
@@ -696,6 +749,8 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> d
         "market_read":   ds.get("market_read"),
         "risk_posture":  ds.get("risk_posture"),
         "should_select": ds.get("should_select_picks"),
+        "watch":         data.get("watch", []),
+        "rejected":      data.get("rejected", []),
     }
     picks["last_updated"] = today
     return picks
@@ -762,7 +817,7 @@ def run(force: bool = False, apply: bool = False) -> None:
 
         try:
             user_msg = build_user_message(payload, model, run_id)
-            raw, in_tok, out_tok, latency = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=4096)
+            raw, in_tok, out_tok, latency = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=6144)
             data, json_valid = parse_response(raw)
             cost = compute_cost(model, in_tok, out_tok)
             print(f"{latency:.0f}ms  ${cost:.5f}  {in_tok}+{out_tok}tok", end="  ")
@@ -777,7 +832,7 @@ def run(force: bool = False, apply: bool = False) -> None:
                 try:
                     user_msg = build_user_message(payload, config.fallback_model, run_id)
                     raw, in_tok, out_tok, latency = call_model(
-                        config.fallback_model, SYSTEM_PROMPT, user_msg
+                        config.fallback_model, SYSTEM_PROMPT, user_msg, max_tokens=6144
                     )
                     data, json_valid = parse_response(raw)
                     cost          = compute_cost(config.fallback_model, in_tok, out_tok)
@@ -824,6 +879,17 @@ def run(force: bool = False, apply: bool = False) -> None:
     if active_updated:
         _write_json(DATA / "ai_picks.json", picks)
         print("  ai_picks.json saved")
+        # Regenerar prices_picks.json con los nuevos tickers (para sparklines inmediatos)
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "export_to_json", Path(__file__).parent / "export_to_json.py"
+            )
+            exp = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(exp)
+            exp.export_picks_prices()
+        except Exception as _e:
+            print(f"  ⚠ prices_picks.json no actualizado: {_e}")
 
 
 if __name__ == "__main__":
