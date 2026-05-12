@@ -281,6 +281,19 @@ reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 
 7. Every rejected item needs: reason and a valid rejection_category.
 8. Every candidate with pcs >= 62 not selected must appear in watch or rejected.
 
+REASONING STYLE (applies to all text fields in selected, watch, rejected):
+- Do not use input field names or flag labels as content. "rs_strong_leader",
+  "pcs_above_threshold", "macro_improving" are data labels from the payload,
+  not reasoning. A label repeated back is not analysis.
+- Write complete sentences a portfolio manager could read aloud. Cite the actual
+  numbers, not the category names.
+  BAD:  ["pcs_above_threshold", "rs_strong_leader", "macro_improving"]
+  GOOD: ["13-week return of +93% vs SPY (highest in the candidate set)",
+         "Rotation score 8/10 with 6 consecutive weeks of outperformance",
+         "Macro delta improving 3 weeks in a row supports the crypto theme"]
+- key_supporting_factors and key_risks_or_contradictions must each have 3–5
+  items written as full, specific sentences with real numbers from the payload.
+
 COMPARATIVE REASONING (mandatory — most common failure mode):
 - "PCS = 81 exceeds threshold of 82" is NOT a valid reason. PCS is a pre-filter;
   every candidate in the list already cleared minimum eligibility. Repeating the
@@ -800,6 +813,7 @@ def run(force: bool = False, apply: bool = False) -> None:
         models.insert(0, config.active_model)
 
     active_updated = False
+    reasoning_by_model: dict = {}  # accumulated for ai_model_reasoning.json
 
     for model in models:
         is_active = (model == config.active_model)
@@ -857,6 +871,15 @@ def run(force: bool = False, apply: bool = False) -> None:
         _save_test_result(run_id, model_used, data, v, quality, raw, summary_rec)
 
         if data and json_valid:
+            reasoning_by_model[model_used] = {
+                "quality_score":    quality,
+                "decision_summary": data.get("decision_summary", {}),
+                "selected":         data.get("selected", []),
+                "watch":            data.get("watch", []),
+                "rejected":         data.get("rejected", []),
+            }
+
+        if data and json_valid:
             _log_shadow_picks(model_used, data, is_active,
                               run_id=run_id, is_valid_run=is_valid_run,
                               forced_run=force, cand_pcs=cand_pcs)
@@ -875,6 +898,15 @@ def run(force: bool = False, apply: bool = False) -> None:
             elif not v.schema_valid:  reasons.append("schema_invalid")
             else:                     reasons.append(f"{v.hard_rule_violations} violations")
             print(f"  [{model_used}] ACTIVE -> portfolio NOT updated ({', '.join(reasons)})")
+
+    if reasoning_by_model:
+        _write_json(DATA / "ai_model_reasoning.json", {
+            "date":    today,
+            "run_id":  run_id,
+            "candidates": [c["ticker"] for c in payload.get("candidates", [])],
+            "models":  reasoning_by_model,
+        })
+        print("  ai_model_reasoning.json saved")
 
     if active_updated:
         _write_json(DATA / "ai_picks.json", picks)

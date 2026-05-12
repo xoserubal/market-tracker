@@ -236,6 +236,7 @@
   <div class="ptf-tabs" id="aipicks-section-tabs" style="margin-bottom:12px">
     <button class="ptf-tab active" onclick="switchAISection('portfolio')">Portfolio</button>
     <button class="ptf-tab" onclick="switchAISection('abtest')">AB Test — Modelos</button>
+    <button class="ptf-tab" onclick="switchAISection('reasoning')">Razonamiento</button>
   </div>
 
   <div id="aipicks-portfolio-view">
@@ -246,6 +247,10 @@
 
   <div id="aipicks-abtest-view" style="display:none">
     <div id="aipicks-abtest-content"><!-- filled by renderABTest() --></div>
+  </div>
+
+  <div id="aipicks-reasoning-view" style="display:none">
+    <div id="aipicks-reasoning-content"><!-- filled by renderReasoning() --></div>
   </div>
 </div>
 
@@ -922,11 +927,12 @@ function modelShort(slug) {
 
 function switchAISection(id) {
   _aiSection = id;
-  document.getElementById('aipicks-portfolio-view').style.display = id === 'portfolio' ? '' : 'none';
-  document.getElementById('aipicks-abtest-view').style.display    = id === 'abtest'    ? '' : 'none';
+  document.getElementById('aipicks-portfolio-view').style.display  = id === 'portfolio'  ? '' : 'none';
+  document.getElementById('aipicks-abtest-view').style.display     = id === 'abtest'     ? '' : 'none';
+  document.getElementById('aipicks-reasoning-view').style.display  = id === 'reasoning'  ? '' : 'none';
+  const labels = { portfolio: 'Portfolio', abtest: 'AB Test — Modelos', reasoning: 'Razonamiento' };
   document.querySelectorAll('#aipicks-section-tabs .ptf-tab').forEach(b => {
-    const isPortfolio = b.textContent.trim() === 'Portfolio';
-    b.classList.toggle('active', id === 'portfolio' ? isPortfolio : !isPortfolio);
+    b.classList.toggle('active', b.textContent.trim() === labels[id]);
   });
   if (id === 'abtest' && _abTestRows) renderABTest(_abTestRows);
 }
@@ -1068,6 +1074,109 @@ function renderABTest(rows) {
   el.innerHTML = html;
 }
 
+// ── Reasoning comparison ──────────────────────────────────────────────────────
+let _reasoningData = null;
+
+function renderReasoning(data) {
+  _reasoningData = data;
+  const el = document.getElementById('aipicks-reasoning-content');
+  if (!data || !data.models) {
+    el.innerHTML = '<div class="no-positions">No hay datos de razonamiento todavia. Ejecuta un run para generarlos.</div>';
+    return;
+  }
+
+  const modelKeys = Object.keys(data.models);
+  const candidates = data.candidates || [];
+
+  // Build lookup: for each model, map ticker → {decision, reason, reason_full, comparative_edge, ...}
+  const lookup = {};
+  modelKeys.forEach(m => {
+    lookup[m] = {};
+    const mr = data.models[m];
+    (mr.selected || []).forEach(s => {
+      lookup[m][s.ticker] = { decision: 'SELECT', portfolio: s.portfolio, confidence: s.confidence,
+        reason: s.reason_short, reason_full: s.reason_full,
+        comparative_edge: s.comparative_edge,
+        factors: s.key_supporting_factors || [], risks: s.key_risks_or_contradictions || [] };
+    });
+    (mr.watch || []).forEach(w => {
+      lookup[m][w.ticker] = { decision: 'WATCH', reason: w.reason, watch_trigger: w.watch_trigger };
+    });
+    (mr.rejected || []).forEach(r => {
+      lookup[m][r.ticker] = { decision: 'REJECT', reason: r.reason, category: r.rejection_category };
+    });
+  });
+
+  const decisionBadge = (d) => {
+    if (!d) return '<span style="color:var(--text2);font-size:11px">—</span>';
+    const colors = { SELECT: 'var(--green)', WATCH: '#d4a520', REJECT: 'var(--red)' };
+    return `<span style="color:${colors[d.decision]||'var(--text2)'};font-weight:700;font-size:11px">${d.decision}</span>`;
+  };
+
+  const decisionDetail = (d) => {
+    if (!d) return '';
+    let lines = [];
+    if (d.portfolio)    lines.push(`<span style="color:var(--text2);font-size:10px">${d.portfolio.replace(/_/g,' ')}</span>`);
+    if (d.category)     lines.push(`<span style="color:var(--text2);font-size:10px">${d.category.replace(/_/g,' ')}</span>`);
+    if (d.watch_trigger) lines.push(`<span style="color:var(--text2);font-size:10px">trigger: ${d.watch_trigger}</span>`);
+    const summaryText = d.reason ? `<span style="font-size:11px;color:var(--text2)">${d.reason.slice(0,100)}${d.reason.length>100?'…':''}</span>` : '';
+    const hasDetail = d.reason_full || d.comparative_edge || d.factors?.length || d.risks?.length || (d.reason && d.reason.length > 100);
+    if (!hasDetail) return [...lines, summaryText].filter(Boolean).join('<br>');
+    const fullHtml = `<div class="rf-detail">
+      ${d.reason_full ? `<div class="rf-full">${d.reason_full}</div>` : (d.reason ? `<div class="rf-full">${d.reason}</div>` : '')}
+      ${d.comparative_edge ? `<div style="margin:4px 0 2px;color:var(--purple);font-size:10px;font-weight:700">VS PEERS</div><div style="color:var(--text2)">${d.comparative_edge}</div>` : ''}
+      ${d.factors?.length ? `<div style="margin-top:4px" class="rf-factors">${d.factors.map(f=>`✓ ${f}`).join('<br>')}</div>` : ''}
+      ${d.risks?.length ? `<div class="rf-risks">${d.risks.map(r=>`⚠ ${r}`).join('<br>')}</div>` : ''}
+      ${d.watch_trigger ? `<div style="color:#d4a520;margin-top:4px">Trigger: ${d.watch_trigger}</div>` : ''}
+    </div>`;
+    return [...lines, `<details><summary style="color:var(--text2);font-size:11px">${d.reason?.slice(0,90)||'Ver detalle'}${(d.reason?.length||0)>90?'…':''}</summary>${fullHtml}</details>`].filter(Boolean).join('<br>');
+  };
+
+  let html = '';
+
+  // Header cards per model
+  html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">';
+  modelKeys.forEach(m => {
+    const mr = data.models[m];
+    const ds = mr.decision_summary || {};
+    const rpColor = { aggressive: 'var(--green)', normal: 'var(--text1)', cautious: '#d4a520', defensive: 'var(--red)' };
+    html += `<div class="chart-box" style="flex:1;min-width:260px;padding:12px 16px">
+      <div class="chart-title" style="margin-bottom:6px">${modelShort(m)} <span style="color:var(--text2);font-size:10px">Q=${mr.quality_score}</span></div>
+      <div style="font-size:12px;margin-bottom:6px">${ds.market_read||'—'}</div>
+      <div style="display:flex;gap:8px;font-size:11px">
+        ${ds.risk_posture ? `<span style="color:${rpColor[ds.risk_posture]||'var(--text2)'};font-weight:700;text-transform:uppercase">${ds.risk_posture}</span>` : ''}
+        <span style="color:var(--green)">${(mr.selected||[]).length}S</span>
+        <span style="color:#d4a520">${(mr.watch||[]).length}W</span>
+        <span style="color:var(--red)">${(mr.rejected||[]).length}R</span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Candidate × model comparison table
+  html += `<div class="chart-box">
+    <div class="chart-title">Candidato × Modelo — ${data.date} / ${data.run_id}</div>
+    <table class="picks-table">
+      <thead><tr>
+        <th style="min-width:70px">Ticker</th>
+        ${modelKeys.map(m => `<th style="min-width:200px">${modelShort(m)}</th>`).join('')}
+      </tr></thead><tbody>`;
+
+  candidates.forEach(ticker => {
+    const anyDecision = modelKeys.some(m => lookup[m][ticker]);
+    if (!anyDecision) return;
+    html += `<tr><td style="font-weight:700;vertical-align:top;padding-top:10px">${ticker}</td>`;
+    modelKeys.forEach(m => {
+      const d = lookup[m][ticker];
+      html += `<td style="vertical-align:top">${d ? decisionBadge(d) + '<br>' + decisionDetail(d) : '<span style="color:var(--text2);font-size:11px">sin mención</span>'}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
 // ── Main init ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -1156,6 +1265,11 @@ async function init() {
     loadText('ai_model_test_summary.jsonl').then(text => {
       const rows = parseJSONL(text);
       renderABTest(rows);
+    }).catch(() => {});
+
+    // Reasoning comparison (non-blocking)
+    loadJSON('ai_model_reasoning.json').then(data => {
+      renderReasoning(data);
     }).catch(() => {});
 
   } catch (e) {
