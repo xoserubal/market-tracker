@@ -278,6 +278,9 @@ TASK: Review the market signals in the payload and return a structured JSON deci
 CRITICAL: Respond ONLY with valid JSON — no markdown fences, no explanation, \
 no text before or after the JSON object.
 
+RESPONSE LENGTH: Keep the total JSON under 3500 tokens. Use tight, specific \
+language — one precise sentence beats three vague ones.
+
 HARD RULES (violations are flagged automatically):
 1. Only SELECT tickers present in candidates with eligible=true.
 2. Do not SELECT futures, commodities, or macro indices.
@@ -345,11 +348,11 @@ REQUIRED OUTPUT SCHEMA (fill in all fields):
       "portfolio": "HIGH_CONVICTION|CONFIRMED_FLOW_LEADERS|EARLY_ROTATION|MACRO_THEMATIC_BENEFICIARIES",
       "signal_type": "confirmed_leader|early_rotation|macro_thematic|high_conviction",
       "confidence": "low|medium|high",
-      "reason_short": "<specific, ≥20 chars>",
-      "reason_full": "<≥100 chars: what drives this ticker's signal strength right now>",
-      "comparative_edge": "<≥30 chars: name a peer with similar PCS you did NOT select and explain why this ranked higher on the deciding metrics>",
-      "key_supporting_factors": ["<string>"],
-      "key_risks_or_contradictions": ["<string>"]
+      "reason_short": "<specific, 20-80 chars>",
+      "reason_full": "<100-250 chars: what drives this ticker's signal strength right now>",
+      "comparative_edge": "<30-120 chars: name a peer with similar PCS you did NOT select and explain why this ranked higher on the deciding metrics>",
+      "key_supporting_factors": ["<1 sentence each, ≤80 chars, 3-4 items>"],
+      "key_risks_or_contradictions": ["<1 sentence each, ≤80 chars, 2-3 items>"]
     }
   ],
   "watch": [
