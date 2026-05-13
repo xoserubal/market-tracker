@@ -10,12 +10,15 @@
       "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
       "Do not fill portfolios with mediocre picks — empty selected list is valid.",
       "Return valid JSON only. No markdown, no explanation, no extra text.",
-      "Do not invent data not present in the payload.",
+      "Do not invent data not present in the payload. If prev_snapshot_available=false, do not speculate on PCS or score changes between weeks.",
       "With strong contradictions, use WATCH or REJECT, not SELECT.",
       "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
       "Every rejected item must have: reason and a valid rejection_category.",
-      "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason."
-    ]
+      "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
+      "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
+      "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead."
+    ],
+    "prev_snapshot_available": false
   },
   "macro_context": {
     "macro_score": 91.6667,
@@ -336,14 +339,14 @@
         "rot_high",
         "signal_en_radar"
       ],
-      "dems": 8,
-      "ret_5d_vs_spy": -0.18,
-      "ret_10d_vs_spy": 28.45,
+      "dems": 9,
+      "ret_5d_vs_spy": 5.09,
+      "ret_10d_vs_spy": 42.48,
       "outperform_d10": 5,
-      "streak_days": 0,
+      "streak_days": 1,
       "momentum_accel": false,
-      "vol_5d_20d": 1.02,
-      "spike_flag": false
+      "vol_5d_20d": 1.19,
+      "spike_flag": true
     },
     {
       "ticker": "CORZ",
@@ -367,13 +370,13 @@
         "signal_en_radar"
       ],
       "dems": 9,
-      "ret_5d_vs_spy": 0.71,
-      "ret_10d_vs_spy": 10.11,
-      "outperform_d10": 6,
-      "streak_days": 0,
+      "ret_5d_vs_spy": -3.71,
+      "ret_10d_vs_spy": 18.38,
+      "outperform_d10": 7,
+      "streak_days": 1,
       "momentum_accel": false,
-      "vol_5d_20d": 1.38,
-      "spike_flag": true
+      "vol_5d_20d": 1.08,
+      "spike_flag": false
     },
     {
       "ticker": "MSTR",
@@ -397,12 +400,12 @@
         "signal_en_radar"
       ],
       "dems": 8,
-      "ret_5d_vs_spy": -3.32,
-      "ret_10d_vs_spy": 7.57,
+      "ret_5d_vs_spy": -5.86,
+      "ret_10d_vs_spy": 8.22,
       "outperform_d10": 6,
       "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 0.81,
+      "vol_5d_20d": 0.79,
       "spike_flag": false
     },
     {
@@ -426,13 +429,13 @@
         "rot_high",
         "signal_en_radar"
       ],
-      "dems": 9,
-      "ret_5d_vs_spy": 10.37,
-      "ret_10d_vs_spy": -0.15,
-      "outperform_d10": 6,
-      "streak_days": 5,
-      "momentum_accel": false,
-      "vol_5d_20d": 1.07,
+      "dems": 13,
+      "ret_5d_vs_spy": 7.51,
+      "ret_10d_vs_spy": 3.6,
+      "outperform_d10": 7,
+      "streak_days": 6,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.02,
       "spike_flag": false
     },
     {
@@ -457,13 +460,13 @@
         "signal_en_radar"
       ],
       "dems": 4,
-      "ret_5d_vs_spy": 3.01,
-      "ret_10d_vs_spy": -0.78,
-      "outperform_d10": 5,
+      "ret_5d_vs_spy": -10.89,
+      "ret_10d_vs_spy": -4.32,
+      "outperform_d10": 4,
       "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 0.87,
-      "spike_flag": true
+      "vol_5d_20d": 0.84,
+      "spike_flag": false
     },
     {
       "ticker": "COIN",
@@ -487,12 +490,12 @@
         "signal_en_radar"
       ],
       "dems": 6,
-      "ret_5d_vs_spy": 3.01,
-      "ret_10d_vs_spy": 3.25,
+      "ret_5d_vs_spy": 0.78,
+      "ret_10d_vs_spy": 6.73,
       "outperform_d10": 5,
       "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 1.03,
+      "vol_5d_20d": 1.06,
       "spike_flag": true
     },
     {
@@ -516,14 +519,14 @@
         "rot_good",
         "signal_en_radar"
       ],
-      "dems": 9,
-      "ret_5d_vs_spy": 1.77,
-      "ret_10d_vs_spy": 3.83,
+      "dems": 7,
+      "ret_5d_vs_spy": 1.57,
+      "ret_10d_vs_spy": 3.71,
       "outperform_d10": 8,
-      "streak_days": 0,
+      "streak_days": 1,
       "momentum_accel": false,
-      "vol_5d_20d": 1.04,
-      "spike_flag": false
+      "vol_5d_20d": 1.05,
+      "spike_flag": true
     },
     {
       "ticker": "BTCC-B.TO",
@@ -547,12 +550,12 @@
         "signal_en_radar"
       ],
       "dems": 5,
-      "ret_5d_vs_spy": -2.44,
-      "ret_10d_vs_spy": 2.27,
+      "ret_5d_vs_spy": -2.9,
+      "ret_10d_vs_spy": 1.24,
       "outperform_d10": 4,
       "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 0.64,
+      "vol_5d_20d": 0.8,
       "spike_flag": false
     },
     {
@@ -576,14 +579,14 @@
         "rot_high",
         "signal_en_radar"
       ],
-      "dems": 7,
-      "ret_5d_vs_spy": -3.44,
-      "ret_10d_vs_spy": 5.72,
-      "outperform_d10": 6,
-      "streak_days": 2,
+      "dems": 3,
+      "ret_5d_vs_spy": 1.08,
+      "ret_10d_vs_spy": -1.12,
+      "outperform_d10": 5,
+      "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 1.1,
-      "spike_flag": false
+      "vol_5d_20d": 0.84,
+      "spike_flag": true
     },
     {
       "ticker": "UCO",
@@ -607,12 +610,12 @@
         "signal_en_radar"
       ],
       "dems": 8,
-      "ret_5d_vs_spy": -0.07,
-      "ret_10d_vs_spy": 6.89,
-      "outperform_d10": 6,
-      "streak_days": 4,
+      "ret_5d_vs_spy": 10.1,
+      "ret_10d_vs_spy": -3.82,
+      "outperform_d10": 5,
+      "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 1.09,
+      "vol_5d_20d": 0.99,
       "spike_flag": false
     },
     {
@@ -636,13 +639,13 @@
         "rot_good",
         "signal_en_radar"
       ],
-      "dems": 16,
-      "ret_5d_vs_spy": 9.33,
-      "ret_10d_vs_spy": 11.55,
-      "outperform_d10": 7,
-      "streak_days": 0,
+      "dems": 17,
+      "ret_5d_vs_spy": 10.52,
+      "ret_10d_vs_spy": 15.12,
+      "outperform_d10": 8,
+      "streak_days": 1,
       "momentum_accel": true,
-      "vol_5d_20d": 0.99,
+      "vol_5d_20d": 1.06,
       "spike_flag": false
     },
     {
@@ -666,13 +669,13 @@
         "rot_high",
         "macd_rsi_positive"
       ],
-      "dems": 15,
-      "ret_5d_vs_spy": 14.38,
-      "ret_10d_vs_spy": 10.21,
-      "outperform_d10": 5,
-      "streak_days": 0,
+      "dems": 16,
+      "ret_5d_vs_spy": 12.92,
+      "ret_10d_vs_spy": 23.62,
+      "outperform_d10": 6,
+      "streak_days": 1,
       "momentum_accel": true,
-      "vol_5d_20d": 1.21,
+      "vol_5d_20d": 1.32,
       "spike_flag": true
     },
     {
@@ -696,14 +699,14 @@
         "rot_high",
         "signal_en_radar"
       ],
-      "dems": 6,
-      "ret_5d_vs_spy": -2.63,
-      "ret_10d_vs_spy": 1.01,
-      "outperform_d10": 6,
-      "streak_days": 2,
+      "dems": 4,
+      "ret_5d_vs_spy": 2.3,
+      "ret_10d_vs_spy": -6.61,
+      "outperform_d10": 5,
+      "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 0.95,
-      "spike_flag": false
+      "vol_5d_20d": 0.78,
+      "spike_flag": true
     },
     {
       "ticker": "TDOC",
@@ -727,12 +730,12 @@
         "signal_en_radar"
       ],
       "dems": 8,
-      "ret_5d_vs_spy": -0.34,
-      "ret_10d_vs_spy": 9.11,
+      "ret_5d_vs_spy": -1.3,
+      "ret_10d_vs_spy": 9.8,
       "outperform_d10": 6,
       "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 1.03,
+      "vol_5d_20d": 1.02,
       "spike_flag": false
     },
     {
@@ -756,14 +759,14 @@
         "rot_high",
         "signal_en_radar"
       ],
-      "dems": 5,
-      "ret_5d_vs_spy": -3.28,
-      "ret_10d_vs_spy": -0.46,
-      "outperform_d10": 6,
-      "streak_days": 2,
+      "dems": 3,
+      "ret_5d_vs_spy": 1.45,
+      "ret_10d_vs_spy": -3.25,
+      "outperform_d10": 5,
+      "streak_days": 0,
       "momentum_accel": false,
-      "vol_5d_20d": 0.95,
-      "spike_flag": false
+      "vol_5d_20d": 0.84,
+      "spike_flag": true
     }
   ],
   "active_picks_relevant": [
