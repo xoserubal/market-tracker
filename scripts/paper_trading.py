@@ -402,6 +402,15 @@ def build_user_message(payload: dict, model: str, run_id: str) -> str:
 
 # ── Model caller ───────────────────────────────────────────────────────────────
 
+def _model_max_tokens(model: str) -> int:
+    """Output token limit per model family (OpenRouter enforces the model's native cap)."""
+    if "haiku" in model.lower():
+        return 8192   # Claude Haiku 4.5 native max
+    if "sonnet" in model.lower():
+        return 16000  # Claude Sonnet 4.x native max
+    return 6144       # conservative default for grok / others
+
+
 def call_model(
     model: str,
     system: str,
@@ -864,7 +873,7 @@ def run(force: bool = False, apply: bool = False) -> None:
 
         try:
             user_msg = build_user_message(payload, model, run_id)
-            raw, in_tok, out_tok, latency = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=6144)
+            raw, in_tok, out_tok, latency = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=_model_max_tokens(model))
             data, json_valid = parse_response(raw)
             cost = compute_cost(model, in_tok, out_tok)
             print(f"{latency:.0f}ms  ${cost:.5f}  {in_tok}+{out_tok}tok", end="  ")
@@ -879,7 +888,8 @@ def run(force: bool = False, apply: bool = False) -> None:
                 try:
                     user_msg = build_user_message(payload, config.fallback_model, run_id)
                     raw, in_tok, out_tok, latency = call_model(
-                        config.fallback_model, SYSTEM_PROMPT, user_msg, max_tokens=6144
+                        config.fallback_model, SYSTEM_PROMPT, user_msg,
+                        max_tokens=_model_max_tokens(config.fallback_model),
                     )
                     data, json_valid = parse_response(raw)
                     cost          = compute_cost(config.fallback_model, in_tok, out_tok)
