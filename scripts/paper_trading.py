@@ -41,10 +41,11 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
 DATA        = ROOT / "docs" / "data"
-PAYLOAD_DIR = DATA / "ai_model_payloads"
-TESTS_DIR   = DATA / "model_tests"
-SUMMARY_LOG = DATA / "ai_model_test_summary.jsonl"
-SHADOW_LOG  = DATA / "shadow_picks.jsonl"
+PAYLOAD_DIR   = DATA / "ai_model_payloads"
+TESTS_DIR     = DATA / "model_tests"
+SUMMARY_LOG   = DATA / "ai_model_test_summary.jsonl"
+SHADOW_LOG    = DATA / "shadow_picks.jsonl"
+BASELINES_LOG = DATA / "baselines.jsonl"
 
 # ── Pricing  (USD / 1M tokens) — OpenRouter prices: openrouter.ai/models ──────
 # Use OpenRouter model slugs as keys (e.g. "anthropic/claude-haiku-4-5-20251001")
@@ -108,11 +109,13 @@ HARD_RULES = [
     "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
     "Do not fill portfolios with mediocre picks — empty selected list is valid.",
     "Return valid JSON only. No markdown, no explanation, no extra text.",
-    "Do not invent data not present in the payload.",
+    "Do not invent data not present in the payload. If prev_snapshot_available=false, do not speculate on PCS or score changes between weeks.",
     "With strong contradictions, use WATCH or REJECT, not SELECT.",
     "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
     "Every rejected item must have: reason and a valid rejection_category.",
     "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
+    "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
+    "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead.",
 ]
 
 NON_TRADABLE_SUBTHEMES = frozenset({
@@ -221,6 +224,10 @@ def build_payload(
         reverse=True,
     )[:config.max_candidates]
 
+    prev_data = _load("ai_candidates_prev.json")
+    prev_date = prev_data.get("date") if prev_data else None
+    prev_snapshot_available = bool(prev_date and prev_date != cands_data.get("date"))
+
     active_positions = [
         {**pos, "portfolio": pid}
         for pid, ptf in picks.get("portfolios", {}).items()
@@ -243,6 +250,7 @@ def build_payload(
             "project":   "AI Picks Lab",
             "objective": "select high-conviction paper-trading picks from prefiltered quantitative events",
             "hard_rules": HARD_RULES,
+            "prev_snapshot_available": prev_snapshot_available,
         },
         "macro_context": {
             "macro_score":    macro.get("score"),
@@ -363,6 +371,25 @@ technical_overextension|data_quality|not_tradable|better_alternative_available"
 }"""
 
 
+def compute_baselines(cands_data: dict, n: int = 3) -> dict:
+    """Computes simple mechanical baselines to compare against AI picks."""
+    eligible = [c for c in cands_data.get("candidates", []) if c.get("eligible")]
+
+    def top_n(key: str) -> list[dict]:
+        ranked = sorted(
+            [c for c in eligible if c.get(key) is not None],
+            key=lambda x: x.get(key, 0), reverse=True,
+        )
+        return [{"ticker": c["ticker"], "value": c.get(key)} for c in ranked[:n]]
+
+    return {
+        "top_pcs":       top_n("pcs"),
+        "top_rot_score": top_n("rot_score"),
+        "top_ret_4w":    top_n("ret_4w_vs_spy"),
+        "top_ret_13w":   top_n("ret_13w_vs_spy"),
+    }
+
+
 def build_user_message(payload: dict, model: str, run_id: str) -> str:
     annotated = dict(payload)
     annotated["_meta"] = {
@@ -468,6 +495,7 @@ def validate_model_response(
         if c.get("subtheme", "") in NON_TRADABLE_SUBTHEMES
     }
     cand_pcs_map = {c["ticker"]: c.get("pcs", 0.0) for c in payload.get("candidates", [])}
+    open_tickers = {p.get("ticker") for p in payload.get("active_picks_relevant", [])}
 
     seen: set[str]           = set()
     ptf_counts: dict[str, int] = {}
@@ -479,6 +507,7 @@ def validate_model_response(
         if t not in cand_tickers:  r.add(f"SELECT {t}: not in candidates")
         if t not in eligible:      r.add(f"SELECT {t}: not eligible")
         if t in non_tradable:      r.add(f"SELECT {t}: non-tradable subtheme")
+        if t in open_tickers:      r.add(f"SELECT {t}: already an open position (use HOLD, not SELECT)")
         ptf = s.get("portfolio", "")
         if ptf not in VALID_PORTFOLIOS:
             r.add(f"SELECT {t}: invalid portfolio '{ptf}'")
@@ -803,6 +832,10 @@ def run(force: bool = False, apply: bool = False) -> None:
 
     payload = build_payload(cands_data, events_for_payload, picks, config)
     _write_json(PAYLOAD_DIR / f"{today}.json", payload)
+
+    baselines = compute_baselines(cands_data)
+    _append_jsonl(BASELINES_LOG, {"date": today, "run_id": run_id, **baselines})
+
     print(
         f"[{run_id}] Payload ready - "
         f"{len(payload['candidates'])} candidates, {len(payload['events'])} events"

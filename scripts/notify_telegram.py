@@ -141,6 +141,23 @@ def build_message(today: str, picks: dict, summary_rows: list[dict]) -> str | No
     return "\n".join(lines)
 
 
+def check_reminders(token: str, chat_id: str, today: str) -> None:
+    """Sends a reminder message if today matches any scheduled reminder date."""
+    reminders_path = DATA / "reminders.json"
+    if not reminders_path.exists():
+        return
+    try:
+        reminders = json.loads(reminders_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+
+    for reminder in reminders:
+        if reminder.get("date") == today and reminder.get("message"):
+            print(f"Sending reminder: {reminder.get('id', '?')}")
+            ok = send_telegram(token, chat_id, reminder["message"])
+            print("Reminder OK" if ok else "Reminder FAILED")
+
+
 def run() -> None:
     token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
@@ -152,6 +169,8 @@ def run() -> None:
     today        = str(date.today())
     picks        = _load("ai_picks.json")
     summary_rows = _load_jsonl("ai_model_test_summary.jsonl")
+
+    check_reminders(token, chat_id, today)
 
     if not isinstance(picks, dict):
         print("ai_picks.json not found or invalid — skipping")

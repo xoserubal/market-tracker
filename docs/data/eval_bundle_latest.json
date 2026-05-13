@@ -1,0 +1,896 @@
+{
+  "bundle_meta": {
+    "purpose": "Evaluación de calidad del razonamiento de modelos de IA para selección de picks en un sistema de paper trading cuantitativo.",
+    "analysis_date": "2026-05-12",
+    "run_id": "2026-05-12_2116",
+    "generated_at": "2026-05-13T12:19:26",
+    "models_evaluated": [
+      "x-ai/grok-4.3"
+    ]
+  },
+  "system_rules": {
+    "description": "Reglas que el modelo debía seguir al generar sus decisiones.",
+    "portfolio_mandates": {
+      "HIGH_CONVICTION": {
+        "description": "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
+        "pcs_threshold": 85.0,
+        "pcs_min_entry": 82.0,
+        "max_positions": 8,
+        "size_range": [
+          8,
+          15
+        ]
+      },
+      "CONFIRMED_FLOW_LEADERS": {
+        "description": "Líderes con flujo confirmado en múltiples timeframes.",
+        "pcs_threshold": 78.0,
+        "pcs_min_entry": 75.0,
+        "max_positions": 12,
+        "size_range": [
+          5,
+          10
+        ]
+      },
+      "EARLY_ROTATION": {
+        "description": "Captura rotaciones tempranas antes de que sean obvias.",
+        "pcs_threshold": 70.0,
+        "pcs_min_entry": 68.0,
+        "max_positions": 15,
+        "size_range": [
+          4,
+          8
+        ]
+      },
+      "MACRO_THEMATIC_BENEFICIARIES": {
+        "description": "Beneficiarios del régimen macro actual.",
+        "pcs_threshold": 65.0,
+        "pcs_min_entry": 62.0,
+        "max_positions": 20,
+        "size_range": [
+          3,
+          6
+        ]
+      }
+    },
+    "hard_rules": [
+      "Only SELECT tickers present in the candidates list.",
+      "Only SELECT tickers with eligible=true.",
+      "Do not SELECT futures, commodities, or macro indices directly.",
+      "Empty selected list is valid — do not fill portfolios with mediocre picks.",
+      "With strong contradictions, use WATCH or REJECT, not SELECT.",
+      "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate).",
+      "Every rejected item must have: reason and a valid rejection_category.",
+      "Every candidate with pcs >= 62 that is NOT selected must appear in watch or rejected."
+    ],
+    "reasoning_style_rules": [
+      "Do NOT repeat input field names as reasoning (e.g. 'pcs_above_threshold', 'rs_strong_leader' are labels, not analysis).",
+      "Write complete sentences citing actual numbers from the payload.",
+      "reason_full must answer: why THIS ticker over the other high-PCS candidates NOT selected?",
+      "comparative_edge must explicitly name at least one candidate NOT selected and state why it ranked lower.",
+      "key_supporting_factors and key_risks_or_contradictions must each have 3–5 items with real numbers."
+    ],
+    "daily_signals_rules": [
+      "dems (Daily Early Momentum Score 0-20): primary signal for EARLY_ROTATION only.",
+      "dems >= 14 + spike_flag=false → can SELECT if PCS >= 68.",
+      "dems 10-13 → prefer WATCH over SELECT.",
+      "spike_flag=true → prefer WATCH unless outperform_d10 >= 6.",
+      "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS: weekly metrics (ret_4w, ret_13w, streak_weeks) are primary. Ignore dems."
+    ]
+  },
+  "input_context": {
+    "description": "Datos que el modelo recibió como input para tomar sus decisiones.",
+    "macro_context": {
+      "score": 83.3333,
+      "regime": "Bull Maduro",
+      "trend": "Improving",
+      "phase_quality": "Bull Maduro Improving",
+      "delta_1w": 5.83,
+      "delta_1m": 5.83
+    },
+    "universe_summary": {
+      "total": 91,
+      "eligible": 71,
+      "pcs_ge_85": 2,
+      "pcs_ge_78": 7,
+      "pcs_ge_70": 14,
+      "pcs_lt_50": 33
+    },
+    "candidates_sent_to_model": [
+      {
+        "ticker": "NBIS",
+        "name": "Nebius Group (AI cloud)",
+        "theme": "us_tech_ai",
+        "subtheme": "ai_cloud",
+        "pcs": 88.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 8.0,
+        "ret_4w_vs_spy": 19.5644,
+        "ret_13w_vs_spy": 93.5401,
+        "streak_weeks": 8,
+        "dist_52w_high": -5.96,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_strong",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 22.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 18.5,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 8,
+        "ret_5d_vs_spy": -0.18,
+        "ret_10d_vs_spy": 28.45,
+        "outperform_d10": 5,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.02,
+        "spike_flag": false
+      },
+      {
+        "ticker": "CORZ",
+        "name": "Core Scientific",
+        "theme": "crypto",
+        "subtheme": "bitcoin_mining",
+        "pcs": 85.2,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 10.0,
+        "ret_4w_vs_spy": 16.4659,
+        "ret_13w_vs_spy": 16.8937,
+        "streak_weeks": 7,
+        "dist_52w_high": -8.24,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_good",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 18.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 19.8,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 9,
+        "ret_5d_vs_spy": 0.71,
+        "ret_10d_vs_spy": 10.11,
+        "outperform_d10": 6,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.38,
+        "spike_flag": true
+      },
+      {
+        "ticker": "NVDA",
+        "name": "NVIDIA",
+        "theme": "us_tech_ai",
+        "subtheme": "ai_chips",
+        "pcs": 84.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 8.0,
+        "ret_4w_vs_spy": 7.5266,
+        "ret_13w_vs_spy": 8.6507,
+        "streak_weeks": 6,
+        "dist_52w_high": -1.29,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_strong",
+          "rs_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 22.0,
+          "C_individual_rs": 19.0,
+          "D_individual_flow": 18.5,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 9,
+        "ret_5d_vs_spy": 10.37,
+        "ret_10d_vs_spy": -0.15,
+        "outperform_d10": 6,
+        "streak_days": 5,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.07,
+        "spike_flag": false
+      },
+      {
+        "ticker": "SASK.V",
+        "name": "Atha Energy",
+        "theme": "uranium_nuclear",
+        "subtheme": "uranium_exploration",
+        "pcs": 84.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 9.0,
+        "ret_4w_vs_spy": 29.943,
+        "ret_13w_vs_spy": 26.9089,
+        "streak_weeks": 6,
+        "dist_52w_high": -10.48,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_avg_strong",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 18.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 19.0,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.0
+        },
+        "dems": 4,
+        "ret_5d_vs_spy": 3.01,
+        "ret_10d_vs_spy": -0.78,
+        "outperform_d10": 5,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 0.87,
+        "spike_flag": true
+      },
+      {
+        "ticker": "MSTR",
+        "name": "MicroStrategy",
+        "theme": "crypto",
+        "subtheme": "bitcoin_treasury",
+        "pcs": 80.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 7.0,
+        "ret_4w_vs_spy": 43.5096,
+        "ret_13w_vs_spy": 34.7082,
+        "streak_weeks": 3,
+        "dist_52w_high": -57.15,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_good",
+          "rs_strong_leader",
+          "rot_good",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 18.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 14.5,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 8,
+        "ret_5d_vs_spy": -3.32,
+        "ret_10d_vs_spy": 7.57,
+        "outperform_d10": 6,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 0.81,
+        "spike_flag": false
+      },
+      {
+        "ticker": "COIN",
+        "name": "Coinbase",
+        "theme": "crypto",
+        "subtheme": "crypto_infrastructure",
+        "pcs": 79.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 7.0,
+        "ret_4w_vs_spy": 20.2368,
+        "ret_13w_vs_spy": 22.6807,
+        "streak_weeks": 2,
+        "dist_52w_high": -51.29,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_good",
+          "rs_strong_leader",
+          "rot_good",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 18.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 14.5,
+          "E_early_acceleration": 6.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 6,
+        "ret_5d_vs_spy": 3.01,
+        "ret_10d_vs_spy": 3.25,
+        "outperform_d10": 5,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.03,
+        "spike_flag": true
+      },
+      {
+        "ticker": "QQQ",
+        "name": "Invesco QQQ Trust",
+        "theme": "global_etf",
+        "subtheme": "nasdaq100",
+        "pcs": 78.5,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 7.0,
+        "ret_4w_vs_spy": 7.921,
+        "ret_13w_vs_spy": 9.4309,
+        "streak_weeks": 4,
+        "dist_52w_high": -0.18,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_strong",
+          "rs_leader",
+          "rot_good",
+          "signal_en_radar",
+          "partial_momentum"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 22.0,
+          "C_individual_rs": 19.0,
+          "D_individual_flow": 14.5,
+          "E_early_acceleration": 4.0,
+          "F_data_quality": 5
+        },
+        "dems": 9,
+        "ret_5d_vs_spy": 1.77,
+        "ret_10d_vs_spy": 3.83,
+        "outperform_d10": 8,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.03,
+        "spike_flag": false
+      },
+      {
+        "ticker": "CVE",
+        "name": "Cenovus Energy",
+        "theme": "oil_gas",
+        "subtheme": "canadian_oil",
+        "pcs": 76.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 8.0,
+        "ret_4w_vs_spy": 3.7945,
+        "ret_13w_vs_spy": 32.6913,
+        "streak_weeks": 8,
+        "dist_52w_high": -5.58,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_weak",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 10.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 18.5,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 7,
+        "ret_5d_vs_spy": -3.44,
+        "ret_10d_vs_spy": 5.72,
+        "outperform_d10": 6,
+        "streak_days": 2,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.08,
+        "spike_flag": false
+      },
+      {
+        "ticker": "TSLA",
+        "name": "Tesla",
+        "theme": "us_tech_ai",
+        "subtheme": "ev_tech",
+        "pcs": 73.0,
+        "eligible": true,
+        "signal": "IGNORAR",
+        "rot_score": 5.0,
+        "ret_4w_vs_spy": 18.7184,
+        "ret_13w_vs_spy": -0.1932,
+        "streak_weeks": 0,
+        "dist_52w_high": -10.79,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_strong",
+          "rs_leader",
+          "rot_moderate",
+          "partial_momentum",
+          "individual_data_ok"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 22.0,
+          "C_individual_rs": 19.0,
+          "D_individual_flow": 10.5,
+          "E_early_acceleration": 4.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 16,
+        "ret_5d_vs_spy": 9.33,
+        "ret_10d_vs_spy": 11.55,
+        "outperform_d10": 7,
+        "streak_days": 0,
+        "momentum_accel": true,
+        "vol_5d_20d": 0.99,
+        "spike_flag": false
+      },
+      {
+        "ticker": "KOS",
+        "name": "Kosmos Energy",
+        "theme": "oil_gas",
+        "subtheme": "africa_oil",
+        "pcs": 73.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 8.0,
+        "ret_4w_vs_spy": 3.2553,
+        "ret_13w_vs_spy": 78.9805,
+        "streak_weeks": 8,
+        "dist_52w_high": -13.25,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_weak",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "partial_momentum"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 10.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 19.0,
+          "E_early_acceleration": 4.0,
+          "F_data_quality": 3.0
+        },
+        "dems": 6,
+        "ret_5d_vs_spy": -2.63,
+        "ret_10d_vs_spy": 1.01,
+        "outperform_d10": 6,
+        "streak_days": 2,
+        "momentum_accel": false,
+        "vol_5d_20d": 0.94,
+        "spike_flag": false
+      },
+      {
+        "ticker": "UCO",
+        "name": "ProShares Ultra Bloomberg Crude Oil",
+        "theme": "oil_gas",
+        "subtheme": "crude_oil_leveraged",
+        "pcs": 73.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 8.0,
+        "ret_4w_vs_spy": 9.9898,
+        "ret_13w_vs_spy": 94.9976,
+        "streak_weeks": 8,
+        "dist_52w_high": -6.8,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_weak",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "partial_momentum"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 10.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 19.0,
+          "E_early_acceleration": 4.0,
+          "F_data_quality": 3.0
+        },
+        "dems": 8,
+        "ret_5d_vs_spy": -0.07,
+        "ret_10d_vs_spy": 6.89,
+        "outperform_d10": 6,
+        "streak_days": 4,
+        "momentum_accel": false,
+        "vol_5d_20d": 1.09,
+        "spike_flag": false
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "name": "Purpose Bitcoin ETF",
+        "theme": "crypto",
+        "subtheme": "bitcoin_etf",
+        "pcs": 72.0,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 7.0,
+        "ret_4w_vs_spy": 1.3451,
+        "ret_13w_vs_spy": 9.368,
+        "streak_weeks": 3,
+        "dist_52w_high": -36.96,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_good",
+          "rs_outperform",
+          "rot_good",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 18.0,
+          "C_individual_rs": 15.0,
+          "D_individual_flow": 14.5,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 5,
+        "ret_5d_vs_spy": -2.44,
+        "ret_10d_vs_spy": 2.27,
+        "outperform_d10": 4,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 0.64,
+        "spike_flag": false
+      },
+      {
+        "ticker": "WCP.TO",
+        "name": "Whitecap Resources",
+        "theme": "oil_gas",
+        "subtheme": "canadian_oil",
+        "pcs": 71.5,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 8.0,
+        "ret_4w_vs_spy": 1.2009,
+        "ret_13w_vs_spy": 19.2213,
+        "streak_weeks": 8,
+        "dist_52w_high": -2.62,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_weak",
+          "rs_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 10.0,
+          "C_individual_rs": 19.0,
+          "D_individual_flow": 18.5,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.0
+        },
+        "dems": 5,
+        "ret_5d_vs_spy": -3.28,
+        "ret_10d_vs_spy": -0.46,
+        "outperform_d10": 6,
+        "streak_days": 2,
+        "momentum_accel": false,
+        "vol_5d_20d": 0.95,
+        "spike_flag": false
+      },
+      {
+        "ticker": "MSOS",
+        "name": "AdvisorShares Pure US Cannabis ETF",
+        "theme": "cannabis",
+        "subtheme": "cannabis_us_mso",
+        "pcs": 70.5,
+        "eligible": true,
+        "signal": "EN_RADAR",
+        "rot_score": 9.0,
+        "ret_4w_vs_spy": 25.0554,
+        "ret_13w_vs_spy": 13.364,
+        "streak_weeks": 4,
+        "dist_52w_high": -30.21,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_avg_poor",
+          "rs_strong_leader",
+          "rot_high",
+          "signal_en_radar",
+          "macd_rsi_positive"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 4.0,
+          "C_individual_rs": 23.0,
+          "D_individual_flow": 19.0,
+          "E_early_acceleration": 7.0,
+          "F_data_quality": 3.5
+        },
+        "dems": 3,
+        "ret_5d_vs_spy": -5.17,
+        "ret_10d_vs_spy": -5.53,
+        "outperform_d10": 3,
+        "streak_days": 0,
+        "momentum_accel": false,
+        "vol_5d_20d": 0.5,
+        "spike_flag": false
+      },
+      {
+        "ticker": "ASPI",
+        "name": "ASP Isotopes",
+        "theme": "uranium_nuclear",
+        "subtheme": "nuclear_isotopes",
+        "pcs": 69.8,
+        "eligible": true,
+        "signal": "IGNORAR",
+        "rot_score": 4.0,
+        "ret_4w_vs_spy": 30.0323,
+        "ret_13w_vs_spy": 1.7255,
+        "streak_weeks": 0,
+        "dist_52w_high": -57.07,
+        "is_early": false,
+        "flags": [
+          "macro_improving",
+          "theme_avg_strong",
+          "rs_leader",
+          "rot_moderate",
+          "macd_rsi_positive",
+          "individual_data_ok"
+        ],
+        "pcs_components": {
+          "A_macro_permission": 14.0,
+          "B_theme_flow": 18.0,
+          "C_individual_rs": 19.0,
+          "D_individual_flow": 9.8,
+          "E_early_acceleration": 6.0,
+          "F_data_quality": 3.0
+        },
+        "dems": 15,
+        "ret_5d_vs_spy": 14.38,
+        "ret_10d_vs_spy": 10.21,
+        "outperform_d10": 5,
+        "streak_days": 0,
+        "momentum_accel": true,
+        "vol_5d_20d": 1.21,
+        "spike_flag": true
+      }
+    ],
+    "open_positions_at_decision": [
+      {
+        "ticker": "CORZ",
+        "entry_date": "2026-05-08",
+        "entry_pcs": null,
+        "entry_signal": "confirmed_leader",
+        "size_pct": 15.0,
+        "conviction": "high",
+        "rationale": "Bitcoin mining leader with 81.8 PCS and exceptional relative strength",
+        "portfolio": "HIGH_CONVICTION"
+      },
+      {
+        "ticker": "NBIS",
+        "entry_date": "2026-05-08",
+        "entry_pcs": null,
+        "entry_signal": "confirmed_leader",
+        "size_pct": 15.0,
+        "conviction": "high",
+        "rationale": "AI cloud infrastructure leader with 81.0 PCS and exceptional 129.5% 13w outperformance",
+        "portfolio": "HIGH_CONVICTION"
+      },
+      {
+        "ticker": "NVDA",
+        "entry_date": "2026-05-08",
+        "entry_pcs": null,
+        "entry_signal": "confirmed_leader",
+        "size_pct": 10.0,
+        "conviction": "high",
+        "rationale": "AI chip leader NVDA with 81.5 PCS, macro improving, sustained flow confirmation",
+        "portfolio": "CONFIRMED_FLOW_LEADERS"
+      },
+      {
+        "ticker": "MSTR",
+        "entry_date": "2026-05-08",
+        "entry_pcs": null,
+        "entry_signal": "confirmed_leader",
+        "size_pct": 7.5,
+        "conviction": "medium",
+        "rationale": "Bitcoin treasury proxy with 79.0 PCS, strong 4w/13w outperformance despite brief streak",
+        "portfolio": "CONFIRMED_FLOW_LEADERS"
+      },
+      {
+        "ticker": "COIN",
+        "entry_date": "2026-05-09",
+        "entry_pcs": 83.5,
+        "entry_signal": "confirmed_leader",
+        "size_pct": 7.5,
+        "conviction": "medium",
+        "rationale": "PCS 83.5 crossed above 78 threshold with improving macro.",
+        "portfolio": "CONFIRMED_FLOW_LEADERS"
+      },
+      {
+        "ticker": "TSLA",
+        "entry_date": "2026-05-09",
+        "entry_pcs": 75.0,
+        "entry_signal": "early_rotation",
+        "size_pct": 8.0,
+        "conviction": "high",
+        "rationale": "DEMS 15 with spike_flag=false and strong multi-day RS",
+        "portfolio": "EARLY_ROTATION"
+      }
+    ]
+  },
+  "previous_snapshot": null,
+  "model_decisions": {
+    "x-ai/grok-4.3": {
+      "quality_score": 100,
+      "decision_summary": {
+        "market_read": "Macro regime shifted to Bull Maduro Improving with macro_score reaching 83.3, supporting select AI and energy rotation names.",
+        "risk_posture": "normal",
+        "should_select_picks": true
+      },
+      "selected": [
+        {
+          "ticker": "NBIS",
+          "portfolio": "HIGH_CONVICTION",
+          "signal_type": "confirmed_leader",
+          "confidence": "high",
+          "reason_short": "Highest 13-week outperformance at +93.54% with sustained 8-week streak.",
+          "reason_full": "NBIS shows 13-week return versus SPY at +93.54 percent, the strongest in the candidate set, paired with an 8-week outperformance streak and rotation score of 8. Macro score improved to 83.3 from prior week, lifting PCS from 83 to 88 and crossing the 85 threshold for high conviction allocation.",
+          "comparative_edge": "Selected over NVDA (PCS 84) because NBIS posted 93.5 percent 13-week outperformance versus NVDA's 8.65 percent and higher ret_4w_vs_spy at 19.56 versus 7.53; NVDA placed in watch for comparatively modest relative strength.",
+          "key_supporting_factors": [
+            "13-week relative return of +93.54 percent is the largest among all candidates.",
+            "Eight consecutive weeks of outperformance with rot_score at 8.0.",
+            "PCS climbed from 83 to 88 on macro improvement to 83.3 score."
+          ],
+          "key_risks_or_contradictions": [
+            "dist_52w_high remains at -5.96 percent so near term volatility risk present.",
+            "ret_5d_vs_spy slightly negative at -0.18 percent signals short pause.",
+            "No momentum_accel flag, limiting immediate acceleration confirmation."
+          ]
+        }
+      ],
+      "watch": [
+        {
+          "ticker": "CORZ",
+          "reason": "PCS 85.2 meets threshold yet spike_flag true with single-day driven move and 57 percent distance to 52-week high creates caution.",
+          "watch_trigger": "Confirmation of two additional days with positive ret_5d_vs_spy above zero and dist_52w_high narrowing below -5 percent."
+        },
+        {
+          "ticker": "NVDA",
+          "reason": "PCS 84 near threshold but 13-week outperformance only +8.65 percent and ret_4w_vs_spy modest at +7.53 percent limits conviction relative to peers.",
+          "watch_trigger": "ret_13w_vs_spy climbing above +20 percent or streak_weeks extending to 7 with rot_score remaining at 8."
+        },
+        {
+          "ticker": "MSTR",
+          "reason": "PCS 80 crossed above 78 with strong ret_4w_vs_spy at +43.5 percent but streak_weeks only 3 and large -57 percent distance to 52-week high.",
+          "watch_trigger": "streak_weeks advancing to 5 or higher while maintaining ret_4w_vs_spy above +30 percent."
+        },
+        {
+          "ticker": "COIN",
+          "reason": "PCS crossed 78 threshold with improving macro but streak_weeks at 2, spike_flag true, and -51 percent gap to 52-week high.",
+          "watch_trigger": "streak_weeks reaching 4 with outperform_d10 sustained above 6 and no single-day spike dominance."
+        },
+        {
+          "ticker": "QQQ",
+          "reason": "PCS 78.5 crossed threshold but ret_13w_vs_spy modest at +9.43 percent and serves as broad benchmark rather than concentrated leader.",
+          "watch_trigger": "ret_13w_vs_spy exceeding +15 percent accompanied by rot_score increase above 8."
+        },
+        {
+          "ticker": "CVE",
+          "reason": "PCS 76, rot_score 8 and 8-week streak but theme_weak oil names and 13-week outperformance concentrated in narrow window.",
+          "watch_trigger": "Sustained macro_score above 80 with ret_13w_vs_spy holding above +25 percent without reversal."
+        },
+        {
+          "ticker": "KOS",
+          "reason": "PCS crossed 70 and 73 with rot_score 8 and strong 13-week +78.98 percent return but oil theme remains weak despite macro lift.",
+          "watch_trigger": "Theme flags improve to theme_good or better with maintainable 4-week outperformance streak above 5 weeks."
+        },
+        {
+          "ticker": "UCO",
+          "reason": "PCS 73 crossed 70 with 8-week streak and 13-week relative at +95 percent but leveraged oil ETF carries amplified volatility.",
+          "watch_trigger": "ret_5d_vs_spy stabilizing above +1 percent with vol_5d_20d declining below 1.0."
+        },
+        {
+          "ticker": "BTCC-B.TO",
+          "reason": "PCS 72 crossed 70 but dems at 5 and ret_4w_vs_spy low at +1.35 percent indicate weaker daily momentum continuation.",
+          "watch_trigger": "dems rising above 9 and streak_weeks extending to 5 or more."
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "PCS 71.5 near threshold with 8-week streak but modest ret_4w_vs_spy at +1.2 percent and oil theme constraints.",
+          "watch_trigger": "ret_4w_vs_spy advancing past +10 percent with rot_score sustained above 8."
+        },
+        {
+          "ticker": "MSOS",
+          "reason": "PCS crossed 70 with rot_score 9 but dems only 3, ret_5d_vs_spy -5.17, and cannabis theme_avg_poor limits broad support.",
+          "watch_trigger": "dems advancing above 8 and ret_10d_vs_spy turning positive above +5 percent."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "SASK.V",
+          "reason": "dems at 4 and spike_flag true create insufficient momentum confirmation despite 84 PCS and high 4-week return.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "TSLA",
+          "reason": "signal remains IGNORAR despite dems 16, with 0 streak_weeks and negative ret_13w_vs_spy at -0.19 percent.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "ASPI",
+          "reason": "signal IGNORAR, streak_weeks at 0, and spike_flag true with large -57 percent distance to 52-week high.",
+          "rejection_category": "insufficient_conviction"
+        }
+      ]
+    }
+  },
+  "evaluation_rubric": {
+    "description": "Preguntas que el evaluador debe responder sobre el razonamiento de Grok.",
+    "categories": {
+      "hard_rule_compliance": {
+        "weight": 30,
+        "questions": [
+          "¿Seleccionó solo tickers con eligible=true?",
+          "¿Todos los candidatos con PCS >= 62 aparecen en selected, watch o rejected?",
+          "¿Cada selected tiene reason_short, reason_full, comparative_edge y los campos requeridos?",
+          "¿Cada rejected tiene reason y rejection_category válida?"
+        ]
+      },
+      "reasoning_quality": {
+        "weight": 35,
+        "questions": [
+          "¿El reasoning cita números reales (%, streaks, scores) o solo repite etiquetas del payload?",
+          "¿El reason_full explica por qué ESE ticker sobre los otros de alta PCS?",
+          "¿El comparative_edge nombra explícitamente al menos un peer y explica la diferencia en métricas concretas?",
+          "¿Los watch_trigger son específicos y medibles (no vagas como 'si mejora')?"
+        ]
+      },
+      "decision_consistency": {
+        "weight": 25,
+        "questions": [
+          "¿Los tickers en HIGH_CONVICTION tienen PCS >= 82 y señales suficientemente fuertes?",
+          "¿Las decisiones WATCH vs SELECT son consistentes con los umbrales de los portfolios?",
+          "¿Las señales de riesgo (spike_flag, dist_52w_high) se reflejan en las decisiones?",
+          "¿El market_read del decision_summary es coherente con las decisiones individuales?"
+        ]
+      },
+      "coverage_and_balance": {
+        "weight": 10,
+        "questions": [
+          "¿El número de SELECTs es apropiado para el régimen macro (Bull Maduro Improving)?",
+          "¿Se justifica adecuadamente por qué no se seleccionaron más tickers?",
+          "¿Los REJECTs tienen categorías correctas según las razones dadas?"
+        ]
+      }
+    },
+    "scoring_scale": "0-10 por pregunta. Multiplica por el peso de la categoría para el score total.",
+    "output_requested": "Para cada categoría: score (0-10), justificación breve, ejemplos específicos de lo que hizo bien o mal Grok. Al final: score_total/100 y recomendación de mejora principal."
+  }
+}
