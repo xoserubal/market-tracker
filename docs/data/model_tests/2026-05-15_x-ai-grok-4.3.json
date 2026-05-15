@@ -1,0 +1,104 @@
+{
+  "run_id": "2026-05-15_1019",
+  "model": "x-ai/grok-4.3",
+  "date": "2026-05-15",
+  "summary": {
+    "date": "2026-05-15",
+    "run_id": "2026-05-15_1019",
+    "model": "x-ai/grok-4.3",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 27,
+    "candidate_count": 15,
+    "input_tokens": 11087,
+    "output_tokens": 1706,
+    "cost_usd": 0.018124,
+    "latency_ms": 22991.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 97,
+    "selected_count": 1,
+    "watch_count": 5,
+    "rejected_count": 2,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": []
+  },
+  "quality_score": 97,
+  "response": {
+    "date": "2026-05-15",
+    "model": "x-ai/grok-4.3",
+    "run_id": "2026-05-15_1019",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with improving macro score 81.25 supports selective energy leadership.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "CVE",
+        "portfolio": "HIGH_CONVICTION",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "PCS at 85 with 8-week RS streak and 32% 13w outperformance.",
+        "reason_full": "CVE crossed the 85 PCS threshold for high conviction with an 8-week streak, 11.6% 4w relative outperformance, and oil_gas theme aligned to the improving Bull Maduro macro delta of 3.75.",
+        "comparative_edge": "Selected over KOS (PCS=82) because CVE reached the 85 high-conviction threshold while KOS remains at 82 with weaker 5d RS of -0.88 versus CVE's +3.67.",
+        "key_supporting_factors": [
+          "8 consecutive weeks of outperformance with rot_score 8.0.",
+          "ret_13w_vs_spy at 32.1% exceeds most peers in energy.",
+          "dist_52w_high only -2.3% shows tight price action near highs.",
+          "macro delta improving 3.75 over both 1w and 1m supports theme."
+        ],
+        "key_risks_or_contradictions": [
+          "spike_flag false but dems only 6 indicates muted daily momentum.",
+          "ret_10d_vs_spy negative at -1% shows recent short-term pause.",
+          "vol_5d_20d at 0.73 remains moderate for leveraged sector exposure."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "KOS",
+        "reason": "PCS 82 eligible for confirmed_flow but already strong 70% 13w RS suggests waiting for dems recovery above 8.",
+        "watch_trigger": "dems rise to 9+ with ret_5d_vs_spy turning positive"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "PCS 80.5 with 8-week streak but recent spike_flag true and negative ret_10d_vs_spy of -3.1%.",
+        "watch_trigger": "multi-day continuation with outperform_d10 above 6"
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "PCS 79 but VIGILAR signal and extreme dist_52w_high of -58% signals high volatility risk.",
+        "watch_trigger": "sustained price recovery toward -30% from highs"
+      },
+      {
+        "ticker": "VAL",
+        "reason": "PCS 76.5 with 6 outperform_d10 but below confirmed_leader threshold.",
+        "watch_trigger": "PCS move above 78 with streak_weeks extending to 4"
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "PCS 76.5 with 8-week streak yet negative ret_4w_vs_spy of -0.57% shows mixed flow.",
+        "watch_trigger": "ret_4w_vs_spy turns positive above +5%"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "UCO",
+        "reason": "Direct leveraged commodity ETF exposure forbidden by mandate; prefer related equities like CVE.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 76 below confirmed flow threshold and 37% below 52w high indicates weak near-term setup.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-05-15\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-15_1019\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with improving macro score 81.25 supports selective energy leadership.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"CVE\",\n      \"portfolio\": \"HIGH_CONVICTION\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS at 85 with 8-week RS streak and 32% 13w outperformance.\",\n      \"reason_full\": \"CVE crossed the 85 PCS threshold for high conviction with an 8-week streak, 11.6% 4w relative outperformance, and oil_gas theme aligned to the improving Bull Maduro macro delta of 3.75.\",\n      \"comparative_edge\": \"Selected over KOS (PCS=82) because CVE reached the 85 high-conviction threshold while KOS remains at 82 with weaker 5d RS of -0.88 versus CVE's +3.67.\",\n      \"key_supporting_factors\": [\n        \"8 consecutive weeks of outperformance with rot_score 8.0.\",\n        \"ret_13w_vs_spy at 32.1% exceeds most peers in energy.\",\n        \"dist_52w_high only -2.3% shows tight price action near highs.\",\n        \"macro delta improving 3.75 over both 1w and 1m supports theme.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"spike_flag false but dems only 6 indicates muted daily momentum.\",\n        \"ret_10d_vs_spy negative at -1% shows recent short-term pause.\",\n        \"vol_5d_20d at 0.73 remains moderate for leveraged sector exposure.\"\n      ]\n    }\n  ],\n  \"watch\": [\n    {\n      \"ticker\": \"KOS\",\n      \"reason\": \"PCS 82 eligible for confirmed_flow but already strong 70% 13w RS suggests waiting for dems recovery above 8.\",\n      \"watch_trigger\": \"dems rise to 9+ with ret_5d_vs_spy turning positive\"\n    },\n    {\n      \"ticker\": \"WCP.TO\",\n      \"reason\": \"PCS 80.5 with 8-week streak but recent spike_flag true and negative ret_10d_vs_spy of -3.1%.\",\n      \"watch_trigger\": \"multi-day continuation with outperform_d10 above 6\"\n    "
+}
