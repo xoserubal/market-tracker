@@ -1,133 +1,83 @@
 {
-  "run_id": "2026-05-16_0929",
+  "run_id": "2026-05-16_2044",
   "model": "x-ai/grok-4.3",
   "date": "2026-05-16",
   "summary": {
     "date": "2026-05-16",
-    "run_id": "2026-05-16_0929",
+    "run_id": "2026-05-16_2044",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 29,
     "candidate_count": 15,
-    "input_tokens": 12359,
-    "output_tokens": 2002,
-    "cost_usd": 0.020454,
-    "latency_ms": 13265.0,
+    "input_tokens": 12723,
+    "output_tokens": 1457,
+    "cost_usd": 0.019546,
+    "latency_ms": 10480.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 99,
-    "selected_count": 1,
-    "watch_count": 4,
-    "rejected_count": 9,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 6,
+    "rejected_count": 1,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": []
   },
-  "quality_score": 99,
+  "quality_score": 90,
   "response": {
     "date": "2026-05-16",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-05-16_0929",
+    "run_id": "2026-05-16_2044",
     "decision_summary": {
-      "market_read": "Bull Maduro regime stable but with -1.25 macro delta contraction signals modest cooling in risk appetite.",
-      "risk_posture": "normal",
-      "should_select_picks": true
+      "market_read": "Bull Maduro Stable regime with -1.25 macro delta supports caution and no new high-conviction entries.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "SU",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "signal_type": "confirmed_leader",
-        "confidence": "high",
-        "reason_short": "Rot score 9.0 and 8-week streak confirm sustained leadership in energy.",
-        "reason_full": "SU delivers rot_score 9.0 with ret_4w_vs_spy of 1.66 percent and ret_13w_vs_spy of 14.19 percent while maintaining exactly eight consecutive weeks of outperformance at pcs 80.5 aligned to stable macro regime.",
-        "comparative_edge": "Selected over GLNG because SU rot_score holds at 9 with no spike_flag versus GLNG rot_score 9 accompanied by ret_5d_vs_spy of only 2.2 percent and spike_flag true that weakens continuation signal.",
-        "key_supporting_factors": [
-          "Rot_score reaches 9.0 exceeding most peers including VLE.TO at 8.0.",
-          "Eight-week streak remains intact with rot_high flag confirmed.",
-          "ret_13w_vs_spy of 14.19 percent supports steady energy leadership under Bull Maduro stable conditions."
-        ],
-        "key_risks_or_contradictions": [
-          "ret_10d_vs_spy negative at -1.47 percent shows brief consolidation.",
-          "dems at 8 remains below 10 indicating muted daily momentum.",
-          "Dist_52w_high at -2.85 percent is wider than several higher-ranked energy names."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
         "ticker": "VLE.TO",
-        "reason": "Pcs 80.0 and ret_13w_vs_spy 15.71 percent strong but dems 11 and outperform_d10 only 4 prevent immediate high-conviction entry.",
-        "watch_trigger": "Dems sustained above 12 with streak_weeks extending to nine would upgrade to SELECT."
+        "reason": "80 PCS and rot_score 8 with 8-week streak but already heavy oil exposure in active portfolio and negative ret_10d_vs_spy.",
+        "watch_trigger": "Rot_score sustained above 8 and ret_5d_vs_spy turning positive for 3 days while macro delta stabilizes."
       },
       {
         "ticker": "GLNG",
-        "reason": "Pcs 80.0 and rot_score 9.0 attractive but spike_flag true and ret_10d_vs_spy negative limit confidence.",
-        "watch_trigger": "Removal of spike_flag combined with positive ret_5d_vs_spy continuation would trigger SELECT."
+        "reason": "80 PCS with rot_score 9 but spike_flag true and ret_10d_vs_spy negative limits immediate entry despite oil theme.",
+        "watch_trigger": "Spike_flag clears and outperform_d10 exceeds 8 with no single-day dominance."
       },
       {
         "ticker": "OXY",
-        "reason": "Pcs 79.5 qualifies for CONFIRMED_FLOW_LEADERS yet streak_weeks only 1 and signal remains VIGILAR rather than EN_RADAR.",
-        "watch_trigger": "Streak_weeks advancing to three with signal upgraded to EN_RADAR would enable SELECT."
+        "reason": "79.5 PCS with rot_score jump to 8 and strong ret_5d_vs_spy of 12.22 but short 1-week streak needs confirmation.",
+        "watch_trigger": "Streak_weeks extends to 3+ and dems rises above 10 without spike_flag."
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "77.5 PCS crossed down from 78.5 with dems only 6 and weaker rot_score than energy peers.",
+        "watch_trigger": "ret_10d_vs_spy turns positive and rot_score climbs above 8 in Bull Maduro continuation."
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "75.5 PCS with 6-week streak yet negative ret_5d_vs_spy of -10.64 and dems at 4 shows weak daily momentum.",
+        "watch_trigger": "dems reaches 10+ and ret_13w_vs_spy stays above 25 with stable uranium theme."
       },
       {
         "ticker": "ASPI",
-        "reason": "Pcs 74.0 crosses MACRO_THEMATIC_BENEFICIARIES threshold but spike_flag true and dist_52w_high -59.97 percent raise volatility concerns.",
-        "watch_trigger": "Stabilization near 52-week highs with dems remaining above 12 would support upgrade."
+        "reason": "74 PCS yet extreme dist_52w_high of -59.97 and spike_flag true despite dems 14.",
+        "watch_trigger": "Price recovers above 52-week high by 5% with momentum_accel confirmed no spike."
       }
     ],
     "rejected": [
       {
         "ticker": "UCO",
-        "reason": "Commodity leveraged product violates rule against selecting futures or commodities.",
+        "reason": "Leveraged crude oil ETF violates rule against selecting commodities or futures vehicles.",
         "rejection_category": "not_tradable"
-      },
-      {
-        "ticker": "QQQ",
-        "reason": "Global ETF falls under macro index category excluded from direct selection.",
-        "rejection_category": "not_tradable"
-      },
-      {
-        "ticker": "NBIS",
-        "reason": "Ticker already held in active HIGH_CONVICTION portfolio.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "Ticker already held in active CONFIRMED_FLOW_LEADERS portfolio.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "Ticker already held in active CONFIRMED_FLOW_LEADERS portfolio.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CORZ",
-        "reason": "Ticker already held in active HIGH_CONVICTION portfolio.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CVE",
-        "reason": "Ticker already held in active HIGH_CONVICTION portfolio.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "NVDA",
-        "reason": "Ticker already held in active CONFIRMED_FLOW_LEADERS portfolio.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "MSTR",
-        "reason": "Ticker already held in active CONFIRMED_FLOW_LEADERS portfolio.",
-        "rejection_category": "better_alternative_available"
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-05-16\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-16_0929\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime stable but with -1.25 macro delta contraction signals modest cooling in risk appetite.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"SU\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"Rot score 9.0 and 8-week streak confirm sustained leadership in energy.\",\n      \"reason_full\": \"SU delivers rot_score 9.0 with ret_4w_vs_spy of 1.66 percent and ret_13w_vs_spy of 14.19 percent while maintaining exactly eight consecutive weeks of outperformance at pcs 80.5 aligned to stable macro regime.\",\n      \"comparative_edge\": \"Selected over GLNG because SU rot_score holds at 9 with no spike_flag versus GLNG rot_score 9 accompanied by ret_5d_vs_spy of only 2.2 percent and spike_flag true that weakens continuation signal.\",\n      \"key_supporting_factors\": [\n        \"Rot_score reaches 9.0 exceeding most peers including VLE.TO at 8.0.\",\n        \"Eight-week streak remains intact with rot_high flag confirmed.\",\n        \"ret_13w_vs_spy of 14.19 percent supports steady energy leadership under Bull Maduro stable conditions.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"ret_10d_vs_spy negative at -1.47 percent shows brief consolidation.\",\n        \"dems at 8 remains below 10 indicating muted daily momentum.\",\n        \"Dist_52w_high at -2.85 percent is wider than several higher-ranked energy names.\"\n      ]\n    }\n  ],\n  \"watch\": [\n    {\n      \"ticker\": \"VLE.TO\",\n      \"reason\": \"Pcs 80.0 and ret_13w_vs_spy 15.71 percent strong but dems 11 and outperform_d10 only 4 prevent immediate high-conviction entry.\",\n      \"watch_trigger\": \"Dems sustained above 12 with streak_weeks extending to nine would upgrade to SELECT.\"\n    },\n    {\n      \"ticker\": \"GLNG\",\n      \"reason\": \"Pcs 80.0 and rot_s"
+  "raw_response_head": "{\n  \"date\": \"2026-05-16\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-16_2044\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Stable regime with -1.25 macro delta supports caution and no new high-conviction entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"VLE.TO\",\n      \"reason\": \"80 PCS and rot_score 8 with 8-week streak but already heavy oil exposure in active portfolio and negative ret_10d_vs_spy.\",\n      \"watch_trigger\": \"Rot_score sustained above 8 and ret_5d_vs_spy turning positive for 3 days while macro delta stabilizes.\"\n    },\n    {\n      \"ticker\": \"GLNG\",\n      \"reason\": \"80 PCS with rot_score 9 but spike_flag true and ret_10d_vs_spy negative limits immediate entry despite oil theme.\",\n      \"watch_trigger\": \"Spike_flag clears and outperform_d10 exceeds 8 with no single-day dominance.\"\n    },\n    {\n      \"ticker\": \"OXY\",\n      \"reason\": \"79.5 PCS with rot_score jump to 8 and strong ret_5d_vs_spy of 12.22 but short 1-week streak needs confirmation.\",\n      \"watch_trigger\": \"Streak_weeks extends to 3+ and dems rises above 10 without spike_flag.\"\n    },\n    {\n      \"ticker\": \"QQQ\",\n      \"reason\": \"77.5 PCS crossed down from 78.5 with dems only 6 and weaker rot_score than energy peers.\",\n      \"watch_trigger\": \"ret_10d_vs_spy turns positive and rot_score climbs above 8 in Bull Maduro continuation.\"\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      \"reason\": \"75.5 PCS with 6-week streak yet negative ret_5d_vs_spy of -10.64 and dems at 4 shows weak daily momentum.\",\n      \"watch_trigger\": \"dems reaches 10+ and ret_13w_vs_spy stays above 25 with stable uranium theme.\"\n    },\n    {\n      \"ticker\": \"ASPI\",\n      \"reason\": \"74 PCS yet extreme dist_52w_high of -59.97 and spike_flag true despite dems 14.\",\n      \"watch_trigger\": \"Price recovers above 52-week high by 5% with momentum_accel confirmed no spike.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"UCO\",\n      \"r"
 }
