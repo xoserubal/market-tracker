@@ -174,6 +174,66 @@ Para añadir un recordatorio: editar `docs/data/reminders.json` directamente (si
 
 ---
 
+## Extension Risk y Theme Concentration Risk (implementado 2026-05-16)
+
+### Principio: fase OBSERVACIÓN, no bloqueo
+Ambos campos son **informativos**. El sistema está en paper trading. El objetivo es recoger datos para determinar si correlacionan con peor rendimiento antes de hacerlos bloqueantes.
+
+### Extension Risk
+
+Calculado en `scripts/pcs_calculator.py → compute_extension_risk()`. Responde: "¿estoy entrando tarde?"
+
+**No se mezcla con PCS.** PCS = ¿es fuerte esta señal? Extension risk = ¿llego tarde?
+
+| Campo | Fuente | Notas |
+|-------|--------|-------|
+| `dist_sma20_atr` | (close − SMA20) / ATR14 | Requiere High/Low diarios — extraídos del mismo `yf.download()` de DEMS |
+| `rsi_14` | RSI Wilder 14 períodos sobre close | Calculado en `fetch_daily_metrics()` |
+| `momentum_decay` | `ret_5d_vs_spy < −1%` AND `ret_20d_vs_spy > 20%` | Move fuerte pero impulso frenándose |
+| `spike_flag` | Ya existía en DEMS | Doble efecto: reduce DEMS Y aumenta extension_points |
+
+**Fórmula de puntos → nivel:**
+- dist_sma20_atr > 3.0 → +3 pts (`dist_sma20_atr_extreme`); > 2.0 → +2 pts
+- ret_4w_vs_spy > 40% → +3 pts; > 25% → +2 pts
+- momentum_decay = true → +2 pts
+- spike_flag = true → +2 pts
+- RSI > 85 → +2 pts; > 78 → +1 pt
+- **≥6 pts = extreme · ≥4 = high · ≥2 = medium · <2 = low**
+
+**Campos en ai_candidates.json:** `extension_risk`, `extension_points`, `extension_flags`
+**Campos en payload del modelo:** `extension_risk`, `extension_points`, `extension_flags` (por candidato)
+**Campos en shadow_picks.jsonl:** `extension_risk`, `extension_points`, `extension_flags` (al seleccionar)
+
+**Soft guidance al modelo:** si extension_risk es "high" o "extreme", el modelo debe reconocerlo en `reason_full` o `key_risks`. Si no lo hace, se registra `extension_risk_not_acknowledged` en `validation.soft_warnings` del test result — sin penalización en quality_score.
+
+**Importante:** ret_4w_vs_spy > 25% será frecuente en este universo (crypto miners, energy small caps). Esto es esperado — serán etiquetados como "extended" habitualmente. El análisis de semana 3 dirá si eso importa.
+
+### Theme Concentration Risk
+
+Calculado en `scripts/paper_trading.py → compute_theme_concentration()`. Responde: "¿estoy comprando el mismo trade varias veces?"
+
+**Campos en payload por candidato:** `theme_concentration_risk`, `subtheme_concentration_risk`
+**Sección nueva en payload:** `theme_exposure` (nivel raíz, junto a `macro_context`)
+
+```
+theme_exposure = {
+  "oil_gas": {open_positions, open_tickers, open_weight_pct, new_candidates_today, risk}
+}
+```
+
+**Reglas de clasificación tema padre:** `high` si ≥3 posiciones o ≥30% weight; `medium` si ≥2 o ≥20%; `low` resto.
+**Reglas subtema:** `high` si ≥2 posiciones o ≥20% weight; `medium` si ≥1 o ≥10%; `low` resto.
+
+**Soft guidance al modelo:** cuando theme_concentration_risk es "high", reconocerlo en el razonamiento. Puede seleccionar igualmente. Preferir diversificación solo si candidatos son equivalentes.
+
+### Cuándo convertir en filtro duro
+1. Cuando haya ≥30–50 picks con datos de rendimiento real (ret_1w, ret_1m).
+2. Análisis: `rendimiento(extension_risk=low)` vs `rendimiento(extension_risk=high/extreme)`.
+3. Si diferencia es estadísticamente significativa y consistente → se justifica añadir como HARD_RULE.
+4. Mismo criterio para theme_concentration_risk.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

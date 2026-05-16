@@ -53,11 +53,15 @@ def fetch_daily_metrics(tickers: list[str]) -> dict[str, dict]:
     try:
         import pandas as pd
         if isinstance(raw.columns, pd.MultiIndex):
-            close_df  = raw["Close"].dropna(how="all")
-            vol_df    = raw["Volume"].dropna(how="all") if "Volume" in raw else pd.DataFrame()
+            close_df = raw["Close"].dropna(how="all")
+            high_df  = raw["High"].dropna(how="all")  if "High"   in raw else pd.DataFrame()
+            low_df   = raw["Low"].dropna(how="all")   if "Low"    in raw else pd.DataFrame()
+            vol_df   = raw["Volume"].dropna(how="all") if "Volume" in raw else pd.DataFrame()
         else:
             t0 = tickers[0] if tickers else "UNK"
             close_df = raw[["Close"]].rename(columns={"Close": t0})
+            high_df  = raw[["High"]].rename(columns={"High": t0})   if "High"   in raw else pd.DataFrame()
+            low_df   = raw[["Low"]].rename(columns={"Low": t0})     if "Low"    in raw else pd.DataFrame()
             vol_df   = raw[["Volume"]].rename(columns={"Volume": t0}) if "Volume" in raw else pd.DataFrame()
     except Exception:
         return {}
@@ -135,6 +139,49 @@ def fetch_daily_metrics(tickers: list[str]) -> dict[str, dict]:
                     v20 = float(v.iloc[-20:].mean())
                     vol_ratio = round(v5 / v20, 2) if v20 > 0 else None
 
+            # ATR14 + dist_sma20_atr (requires High/Low columns)
+            dist_sma20_atr: float | None = None
+            h_col = high_df.columns if not high_df.empty else []
+            l_col = low_df.columns  if not low_df.empty  else []
+            if t in h_col and t in l_col:
+                hlc = pd.concat(
+                    [high_df[t], low_df[t], close_df[t]], axis=1, join="inner"
+                ).dropna()
+                hlc.columns = ["h", "l", "c"]
+                if len(hlc) >= 15:
+                    prev_c = hlc["c"].shift(1)
+                    tr = pd.concat([
+                        hlc["h"] - hlc["l"],
+                        (hlc["h"] - prev_c).abs(),
+                        (hlc["l"] - prev_c).abs(),
+                    ], axis=1).max(axis=1)
+                    atr14 = float(tr.rolling(14).mean().iloc[-1])
+                    sma20 = float(hlc["c"].rolling(20).mean().iloc[-1])
+                    last_c = float(hlc["c"].iloc[-1])
+                    if atr14 > 0 and pd.notna(atr14) and pd.notna(sma20):
+                        dist_sma20_atr = round((last_c - sma20) / atr14, 2)
+
+            # RSI14 (standard Wilder, close prices only)
+            rsi_14: float | None = None
+            c_s = pd.Series(tc)
+            if len(c_s) >= 15:
+                delta   = c_s.diff()
+                gain    = delta.clip(lower=0).rolling(14).mean()
+                loss    = (-delta).clip(lower=0).rolling(14).mean()
+                avg_g   = float(gain.iloc[-1])
+                avg_l   = float(loss.iloc[-1])
+                if pd.notna(avg_g) and pd.notna(avg_l):
+                    if avg_l > 0:
+                        rsi_14 = round(100 - 100 / (1 + avg_g / avg_l), 1)
+                    elif avg_g > 0:
+                        rsi_14 = 100.0
+
+            # momentum_decay: strong multi-week move but short-term fading
+            momentum_decay = bool(
+                r5  is not None and r5  < -1.0
+                and r20 is not None and r20 > 20.0
+            )
+
             results[t] = {
                 "ret_5d_vs_spy":       r5,
                 "ret_10d_vs_spy":      r10,
@@ -144,6 +191,9 @@ def fetch_daily_metrics(tickers: list[str]) -> dict[str, dict]:
                 "momentum_accel":      momentum_accel,
                 "vol_5d_vs_20d":       vol_ratio,
                 "spike_flag":          spike_flag,
+                "dist_sma20_atr":      dist_sma20_atr,
+                "rsi_14":              rsi_14,
+                "momentum_decay":      momentum_decay,
             }
         except Exception:
             results[t] = {}
@@ -203,6 +253,53 @@ def compute_dems(d: dict) -> tuple[int, list[str]]:
         flags.append("dems_spike")
 
     return min(score, 20), flags
+
+
+# ── Extension Risk (informational — does not affect PCS) ─────────────────────
+# Measures "am I entering late?" independently of signal strength.
+# Phase: OBSERVATION. Fields are context for the model, not blockers.
+
+def compute_extension_risk(d: dict) -> dict:
+    """
+    d must contain daily metrics (from fetch_daily_metrics) plus ret_4w_vs_spy.
+    Returns extension_risk ("low"|"medium"|"high"|"extreme"), extension_points, extension_flags.
+    """
+    points = 0
+    flags: list[str] = []
+
+    dist = d.get("dist_sma20_atr")
+    if dist is not None:
+        if dist > 3.0:
+            points += 3; flags.append("dist_sma20_atr_extreme")
+        elif dist > 2.0:
+            points += 2; flags.append("dist_sma20_atr_high")
+
+    ret_4w = d.get("ret_4w_vs_spy")
+    if ret_4w is not None:
+        if ret_4w > 40:
+            points += 3; flags.append("ret_4w_extreme")
+        elif ret_4w > 25:
+            points += 2; flags.append("ret_4w_extended")
+
+    if d.get("momentum_decay"):
+        points += 2; flags.append("momentum_decay")
+
+    if d.get("spike_flag"):
+        points += 2; flags.append("spike_flag")
+
+    rsi = d.get("rsi_14")
+    if rsi is not None:
+        if rsi > 85:
+            points += 2; flags.append("rsi_extreme")
+        elif rsi > 78:
+            points += 1; flags.append("rsi_high")
+
+    if   points >= 6: risk = "extreme"
+    elif points >= 4: risk = "high"
+    elif points >= 2: risk = "medium"
+    else:             risk = "low"
+
+    return {"extension_risk": risk, "extension_points": points, "extension_flags": flags}
 
 
 # ── A. Macro Permission (0–15) ────────────────────────────────────────────────
@@ -412,6 +509,10 @@ def compute_pcs(
 
     dems, dems_flags = compute_dems(daily or {})
 
+    # Extension risk: needs both daily metrics and the weekly ret_4w_vs_spy
+    ext_input = {**(daily or {}), "ret_4w_vs_spy": raw.get("ret_4w_vs_spy")}
+    ext = compute_extension_risk(ext_input)
+
     return {
         "ticker":    ticker,
         "name":      meta.get("name", ""),
@@ -440,6 +541,10 @@ def compute_pcs(
         "dist_52w_high": raw.get("dist_52w_high"),
         "macd_pts":      comp.get("macd_pts", raw.get("macd_pts")),
         "rsi_pts":       comp.get("rsi_pts",  raw.get("rsi_pts")),
+        # Extension risk — informational, does not affect PCS
+        "extension_risk":   ext["extension_risk"],
+        "extension_points": ext["extension_points"],
+        "extension_flags":  ext["extension_flags"],
         # Daily early-rotation signals — independent of PCS, only for EARLY_ROTATION
         "daily_signals": {
             "ret_5d_vs_spy":              (daily or {}).get("ret_5d_vs_spy"),
@@ -450,6 +555,9 @@ def compute_pcs(
             "momentum_accel":             (daily or {}).get("momentum_accel"),
             "vol_5d_vs_20d":              (daily or {}).get("vol_5d_vs_20d"),
             "spike_flag":                 (daily or {}).get("spike_flag"),
+            "dist_sma20_atr":             (daily or {}).get("dist_sma20_atr"),
+            "rsi_14":                     (daily or {}).get("rsi_14"),
+            "momentum_decay":             (daily or {}).get("momentum_decay", False),
             "daily_early_momentum_score": dems,
             "dems_flags":                 dems_flags,
         } if daily else None,

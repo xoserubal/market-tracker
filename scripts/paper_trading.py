@@ -182,7 +182,7 @@ def _append_jsonl(path: Path, record: dict) -> None:
 
 # ── Payload builder ────────────────────────────────────────────────────────────
 
-def _compact_candidate(c: dict) -> dict:
+def _compact_candidate(c: dict, conc: dict | None = None) -> dict:
     ds = c.get("daily_signals") or {}
     return {
         "ticker":         c["ticker"],
@@ -208,7 +208,100 @@ def _compact_candidate(c: dict) -> dict:
         "momentum_accel": ds.get("momentum_accel"),
         "vol_5d_20d":     ds.get("vol_5d_vs_20d"),
         "spike_flag":     ds.get("spike_flag"),
+        # Extension risk — informational, does not block selections
+        "extension_risk":   c.get("extension_risk"),
+        "extension_points": c.get("extension_points"),
+        "extension_flags":  c.get("extension_flags"),
+        # Theme concentration — informational, does not block selections
+        "theme_concentration_risk":    (conc or {}).get("theme_risk"),
+        "subtheme_concentration_risk": (conc or {}).get("subtheme_risk"),
     }
+
+
+def compute_theme_concentration(
+    candidates: list[dict],
+    picks: dict,
+) -> tuple[dict[str, dict], dict[str, dict]]:
+    """
+    Cross-references open positions with candidates to compute theme concentration.
+
+    Returns:
+        conc_per_ticker: {ticker → {theme_risk, subtheme_risk}}
+        theme_exposure:  {theme → {open_positions, open_tickers, open_weight_pct,
+                                   new_candidates_today, risk}}
+    """
+    cand_theme = {c["ticker"]: (c.get("theme", ""), c.get("subtheme", "")) for c in candidates}
+
+    theme_data:   dict[str, dict] = {}
+    subtheme_data: dict[str, dict] = {}
+
+    for ptf in picks.get("portfolios", {}).values():
+        for pos in ptf.get("positions", []):
+            tk   = pos.get("ticker", "")
+            size = float(pos.get("size_pct") or 0)
+            theme, subtheme = cand_theme.get(tk, ("", ""))
+            if not theme:
+                continue
+            td = theme_data.setdefault(theme, {"tickers": [], "weight": 0.0})
+            td["tickers"].append(tk)
+            td["weight"] += size
+            if subtheme:
+                sd = subtheme_data.setdefault(subtheme, {"tickers": [], "weight": 0.0})
+                sd["tickers"].append(tk)
+                sd["weight"] += size
+
+    def _theme_risk(n: int, w: float) -> str:
+        if n >= 3 or w >= 30: return "high"
+        if n >= 2 or w >= 20: return "medium"
+        return "low"
+
+    def _subtheme_risk(n: int, w: float) -> str:
+        if n >= 2 or w >= 20: return "high"
+        if n >= 1 or w >= 10: return "medium"
+        return "low"
+
+    conc_per_ticker: dict[str, dict] = {}
+    for c in candidates:
+        tk = c["ticker"]
+        theme, subtheme = cand_theme.get(tk, ("", ""))
+        td = theme_data.get(theme, {"tickers": [], "weight": 0.0})
+        sd = subtheme_data.get(subtheme, {"tickers": [], "weight": 0.0})
+        conc_per_ticker[tk] = {
+            "theme_risk":    _theme_risk(len(td["tickers"]), td["weight"]),
+            "subtheme_risk": _subtheme_risk(len(sd["tickers"]), sd["weight"]),
+        }
+
+    cands_per_theme: dict[str, int] = {}
+    for c in candidates:
+        th = cand_theme.get(c["ticker"], ("", ""))[0]
+        if th:
+            cands_per_theme[th] = cands_per_theme.get(th, 0) + 1
+
+    theme_exposure: dict[str, dict] = {}
+    for theme, td in theme_data.items():
+        n = len(td["tickers"])
+        w = round(td["weight"], 1)
+        theme_exposure[theme] = {
+            "open_positions":       n,
+            "open_tickers":         td["tickers"],
+            "open_weight_pct":      w,
+            "new_candidates_today": cands_per_theme.get(theme, 0),
+            "risk":                 _theme_risk(n, w),
+        }
+
+    return conc_per_ticker, theme_exposure
+
+
+def _compact_candidates_with_concentration(
+    eligible: list[dict], picks: dict
+) -> list[dict]:
+    conc_map, _ = compute_theme_concentration(eligible, picks)
+    return [_compact_candidate(c, conc_map.get(c["ticker"])) for c in eligible]
+
+
+def _build_theme_exposure(eligible: list[dict], picks: dict) -> dict:
+    _, exposure = compute_theme_concentration(eligible, picks)
+    return exposure
 
 
 def build_payload(
@@ -262,9 +355,10 @@ def build_payload(
         },
         "portfolio_mandates":       mandates,
         "events":                   meaningful_events,
-        "candidates":               [_compact_candidate(c) for c in eligible],
+        "candidates":               _compact_candidates_with_concentration(eligible, picks),
         "active_picks_relevant":    active_positions,
         "recent_rejected_relevant": [],
+        "theme_exposure":           _build_theme_exposure(eligible, picks),
     }
 
 
@@ -319,6 +413,19 @@ COMPARATIVE REASONING (mandatory — most common failure mode):
          rot_score=9 vs MARA's 4. MARA rejected as better_alternative_available."
 - Every candidate with pcs >= 62 that you do not SELECT must appear in watch or
   rejected — silence on a high-PCS candidate is not acceptable.
+
+OBSERVATION FIELDS (informational — no hard rules, acknowledgement requested):
+- extension_risk measures whether an entry might be a late chase. Values: low/medium/high/extreme.
+  It does NOT block selections. If extension_risk is "high" or "extreme", acknowledge it briefly
+  in reason_full or key_risks — explain why the signal still justifies entry despite the extension.
+  If you SELECT a ticker with extension_risk "high"/"extreme" without any acknowledgement, that
+  will be logged as "extension_risk_not_acknowledged" for later analysis (no quality score penalty).
+- theme_exposure and theme_concentration_risk show how concentrated the open portfolio already is
+  by sector. When a theme shows risk "high", note the concentration in your reasoning. You may
+  still SELECT tickers in concentrated themes if the signal justifies it. When candidates are
+  otherwise equivalent, prefer the less-concentrated theme.
+- These fields exist to collect data: after 30-50 picks we will analyze whether extension_risk
+  and theme_concentration correlate with worse returns. Until then, treat them as context only.
 
 EARLY_ROTATION — daily signals guidance (dems, ret_5d_vs_spy, etc.):
 - dems (Daily Early Momentum Score 0-20): PRIMARY signal for EARLY_ROTATION.
@@ -480,10 +587,14 @@ class ValidationResult:
     schema_valid:           bool       = False
     hard_rule_violations:   int        = 0
     violations_detail:      list[str]  = field(default_factory=list)
+    soft_warnings:          list[str]  = field(default_factory=list)
 
     def add(self, msg: str) -> None:
         self.hard_rule_violations += 1
         self.violations_detail.append(msg)
+
+    def warn(self, msg: str) -> None:
+        self.soft_warnings.append(msg)
 
 
 def validate_model_response(
@@ -549,6 +660,19 @@ def validate_model_response(
         cat = rj.get("rejection_category", "")
         if cat not in VALID_REJECT_CATS:
             r.add(f"REJECT {t}: invalid rejection_category '{cat}'")
+
+    # Soft warnings: extension_risk high/extreme not acknowledged (no penalty, log only)
+    cand_ext = {c["ticker"]: c.get("extension_risk") for c in payload.get("candidates", [])}
+    for s in data.get("selected", []):
+        t = s.get("ticker", "")
+        ext = cand_ext.get(t)
+        if ext in ("high", "extreme"):
+            text_fields = " ".join([
+                str(s.get("reason_full", "")),
+                str(s.get("key_risks_or_contradictions", "")),
+            ]).lower()
+            if "extension" not in text_fields and "extend" not in text_fields and "chase" not in text_fields:
+                r.warn(f"extension_risk_not_acknowledged: {t} has extension_risk={ext}")
 
     return r
 
@@ -695,7 +819,10 @@ def _save_test_result(
         "model":            model,
         "date":             str(date.today()),
         "summary":          summary,
-        "validation":       {"violations": v.violations_detail},
+        "validation":       {
+            "violations":   v.violations_detail,
+            "soft_warnings": v.soft_warnings,
+        },
         "quality_score":    quality,
         "response":         data,
         "raw_response_head": raw[:2000],
@@ -713,9 +840,16 @@ def _log_shadow_picks(
 ) -> None:
     today = str(date.today())
     valid_for_tracking = is_valid_run and not forced_run
+    # Build lookup: ticker → candidate data (for extension/concentration fields)
+    cand_lookup: dict[str, dict] = {}
+    if cand_pcs:
+        for c in (cand_pcs if isinstance(cand_pcs, list) else []):
+            if isinstance(c, dict):
+                cand_lookup[c.get("ticker", "")] = c
     for s in data.get("selected", []):
         t = s.get("ticker", "")
-        pcs_val = (cand_pcs.get(t) if cand_pcs else None) or s.get("pcs")
+        pcs_val = (cand_pcs.get(t) if isinstance(cand_pcs, dict) else None) or s.get("pcs")
+        cand = cand_lookup.get(t, {})
         _append_jsonl(SHADOW_LOG, {
             "date":         today,
             "run_id":       run_id,
@@ -730,6 +864,13 @@ def _log_shadow_picks(
             "active_model": is_active,
             "forced_run":   forced_run,
             "valid_for_performance_tracking": valid_for_tracking,
+            # Extension risk at time of selection (for week-3 performance analysis)
+            "extension_risk":   cand.get("extension_risk"),
+            "extension_points": cand.get("extension_points"),
+            "extension_flags":  cand.get("extension_flags"),
+            # Theme concentration at time of selection
+            "theme_concentration_risk":    cand.get("theme_concentration_risk"),
+            "subtheme_concentration_risk": cand.get("subtheme_concentration_risk"),
             "entry_price":  None,   # filled by a separate price-fetch step
             "ret_1d":  None, "ret_3d":  None, "ret_1w":  None,
             "ret_2w":  None, "ret_1m":  None, "ret_3m":  None,
