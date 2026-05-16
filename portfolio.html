@@ -295,6 +295,7 @@ function Portfolio() {
   const [prevSnapshot, setPrevSnapshot] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('ticker_snapshot') || '{}'); } catch { return {}; }
   });
+  const [stockConfig, setStockConfig] = React.useState({});
   const saveTimer = React.useRef(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3200); };
@@ -311,6 +312,10 @@ function Portfolio() {
         }
       })
       .catch(() => showToast('❌ No se pudo cargar la cartera'));
+    fetch('/api/stock-config')
+      .then(r => r.json())
+      .then(d => setStockConfig(d || {}))
+      .catch(() => {});
   }, []);
 
   // ── Guardado automático (debounce 800 ms) ─────────────────────────────
@@ -542,6 +547,44 @@ function Portfolio() {
     }));
     setModal(null);
   };
+
+  // ── AI Picks Lab integration ───────────────────────────────────────────
+  const stockTickers = React.useMemo(() => {
+    const s = new Set();
+    Object.values(stockConfig).forEach(items => items.forEach(i => s.add(i.ticker)));
+    return s;
+  }, [stockConfig]);
+
+  const toggleStockConfig = React.useCallback(async (ticker) => {
+    const cfg = {};
+    Object.entries(stockConfig).forEach(([k, v]) => { cfg[k] = [...v]; });
+    let wasPresent = false;
+
+    for (const [cluster, items] of Object.entries(cfg)) {
+      const idx = items.findIndex(i => i.ticker === ticker);
+      if (idx >= 0) {
+        cfg[cluster] = items.filter(i => i.ticker !== ticker);
+        if (cfg[cluster].length === 0) delete cfg[cluster];
+        wasPresent = true;
+        break;
+      }
+    }
+    if (!wasPresent) {
+      cfg['Portfolio'] = [...(cfg['Portfolio'] || []), { ticker, note: 'desde Portfolio Tracker' }];
+    }
+
+    setStockConfig(cfg);
+    try {
+      const r = await fetch('/api/stock-config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      showToast(wasPresent ? `✓ ${ticker} quitado de AI Picks Lab` : `✓ ${ticker} añadido a AI Picks Lab`);
+    } catch(e) {
+      showToast('❌ Error al actualizar AI Picks: ' + e.message);
+      setStockConfig(stockConfig);
+    }
+  }, [stockConfig, showToast]);
 
   // ── Render ─────────────────────────────────────────────────────────────
   const dot        = <span style={{color:'#ccc'}}>···</span>;
@@ -788,8 +831,21 @@ function Portfolio() {
                       <tr key={item.id} style={{background:i%2===0?'white':'#fafafa'}}>
                         {/* Ticker */}
                         <td>
-                          <span style={{fontWeight:700,color:'#1a6baa',fontSize:12}}>{item.ticker}</span>
-                          <div style={{fontSize:8,color:'#bbb'}}>{item.addedAt}</div>
+                          <div style={{display:'flex',alignItems:'center',gap:4}}>
+                            <button
+                              title={stockTickers.has(item.ticker)
+                                ? `${item.ticker} está en AI Picks Lab — clic para quitar`
+                                : `Añadir ${item.ticker} a AI Picks Lab`}
+                              onClick={() => toggleStockConfig(item.ticker)}
+                              style={{width:10,height:10,borderRadius:'50%',border:'none',padding:0,
+                                cursor:'pointer',flexShrink:0,
+                                background: stockTickers.has(item.ticker) ? '#1a7a1a' : '#c0392b'}}
+                            />
+                            <div>
+                              <span style={{fontWeight:700,color:'#1a6baa',fontSize:12}}>{item.ticker}</span>
+                              <div style={{fontSize:8,color:'#bbb'}}>{item.addedAt}</div>
+                            </div>
+                          </div>
                         </td>
                         {/* Precio actual */}
                         <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600}}>

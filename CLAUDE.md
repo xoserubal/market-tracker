@@ -19,9 +19,10 @@ scripts/export_to_json.py     → parquets → docs/data/*.json
 scripts/pcs_calculator.py     → Pick Conviction Score (91 tickers)
 scripts/event_detector.py     → detecta eventos de señal
 scripts/paper_trading.py      → llama a los modelos IA → picks
-scripts/notify_telegram.py    → notificaciones + recordatorios
-scripts/build_eval_bundle.py  → bundle para evaluador externo
-scripts/chat_picks.py         → chat interactivo con el modelo
+scripts/notify_telegram.py         → notificaciones de picks + recordatorios
+scripts/telegram_portfolio_bot.py  → comandos Telegram para Portfolio Tracker
+scripts/build_eval_bundle.py       → bundle para evaluador externo
+scripts/chat_picks.py              → chat interactivo con el modelo
 ```
 
 **GitHub Actions** (`market-update.yml`): ejecuta todo el pipeline dos veces al día (08:00 y 20:00 UTC).
@@ -158,6 +159,45 @@ Con cada run de `paper_trading.py` se registra en `baselines.jsonl`:
 - `top_ret_13w`: top-3 por ret_13w_vs_spy
 
 **Propósito:** comparar rendimiento posterior del modelo vs estas baselines mecánicas. Si el modelo no bate consistentemente a top-3-PCS, el filtro IA no añade valor.
+
+---
+
+<!-- BOT_DOCS_START -->
+
+## Telegram Portfolio Bot
+
+> Sección auto-generada desde `scripts/telegram_portfolio_bot.py` — no editar manualmente.
+> Se regenera en cada run del pipeline. Para añadir comandos: editar `COMMANDS` en el script.
+
+Bot que procesa comandos de Telegram para gestionar el Portfolio Tracker
+(`portfolio.json` / `localhost:3000/portfolio.html`).
+Se ejecuta como Step 12 en el pipeline de GitHub Actions (2×/día, modo `--once`).
+También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_portfolio_bot.py`
+
+**Estado persistido en:** `docs/data/telegram_bot_state.json` (commiteado en cada run).
+
+**IMPORTANTE:** Gestiona `portfolio.json` (Portfolio Tracker), independiente de `ai_picks.json` (AI Picks Lab).
+
+### Comandos
+
+| Comando | Uso | Descripción |
+|---------|-----|-------------|
+| `/portfolio` | `/portfolio` | Lista todas las secciones y tickers del Portfolio Tracker, agrupados por sección (máx 12 por sección). |
+| `/check` | `/check TICKER` | Precio actual Yahoo Finance (15 min delay) + sección, shares, avgCost y P&L si la posición tiene datos de coste. |
+| `/add` | `/add TICKER [notas opcionales]` | Añade el ticker a la sección 'Watchlist' de portfolio.json. Crea la sección si no existe. Rechaza duplicados. |
+| `/remove` | `/remove TICKER` | Elimina el ticker de cualquier sección del portfolio. |
+
+### Flujo de datos (write commands)
+
+```
+Usuario → Telegram → getUpdates (pipeline 2×/día o local continuo)
+        → modifica portfolio.json en disco
+        → git commit + push  (paso "Commit updated data" del workflow)
+        → server.js git pull (al arrancar o botón Sincronizar)
+        → portfolio.html ve los cambios
+```
+
+<!-- BOT_DOCS_END -->
 
 ---
 
