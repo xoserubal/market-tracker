@@ -214,20 +214,35 @@ def export_portfolio():
         if not top_strats:
             top_strats = df_filt["strategy"].unique()[:5].tolist()
 
-        # Agregar SPY benchmark
-        spy_mask = df_h["strategy"] == "spy_benchmark"
-        if spy_mask.any():
-            top_strats = ["spy_benchmark"] + [s for s in top_strats if s != "spy_benchmark"][:4]
-
         curves = {}
         dates = None
-        for strat in top_strats:
+        for strat in [s for s in top_strats if s != "spy_benchmark"]:
             sub = df_filt[df_filt["strategy"] == strat].set_index("date")
             # Muestrear semanalmente (viernes)
             sub_w = sub["equity_norm"].resample("W-FRI").last().dropna()
             if dates is None:
                 dates = [str(d.date()) for d in sub_w.index]
             curves[strat] = [clean(v) for v in sub_w.tolist()]
+
+        # Añadir SPY y QQQ benchmark desde prices_daily
+        prices_path = DATA_DIR / "prices_daily.parquet"
+        if dates and prices_path.exists():
+            try:
+                prices = pd.read_parquet(prices_path)
+                prices.index = pd.to_datetime(prices.index)
+                date_start = pd.Timestamp(dates[0])
+                date_index = pd.Index(pd.to_datetime(dates))
+                for ticker, key in [("SPY", "spy_benchmark"), ("QQQ", "qqq_benchmark")]:
+                    if ticker in prices.columns:
+                        series = prices[ticker].dropna()
+                        series = series[series.index >= date_start]
+                        series_w = series.resample("W-FRI").last().dropna()
+                        if not series_w.empty:
+                            norm = series_w / series_w.iloc[0] * 100
+                            aligned = norm.reindex(date_index, method="ffill")
+                            curves[key] = [clean(v) for v in aligned.tolist()]
+            except Exception:
+                pass
 
         equity_curves = {
             "dates": dates or [],

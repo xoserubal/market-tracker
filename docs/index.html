@@ -519,6 +519,12 @@ function chartHeatmap(data, containerId, height) {
   }, { responsive: true, displayModeBar: height < 300 });
 }
 
+function _benchmarkStyle(name) {
+  if (name === 'spy_benchmark') return { label: 'SPY', color: '#8b949e', dash: 'dot', width: 1.5 };
+  if (name === 'qqq_benchmark') return { label: 'QQQ', color: '#e3b341', dash: 'dot', width: 1.5 };
+  return { label: name.replace(/_/g,' '), color: undefined, dash: 'solid', width: 2 };
+}
+
 function chartPortfolioMini(equity, containerId) {
   if (!equity.dates || !equity.dates.length) return;
   const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 5);
@@ -528,12 +534,12 @@ function chartPortfolioMini(equity, containerId) {
 
   const traces = Object.entries(equity.strategies).map(([name, vals]) => {
     const v = vals.slice(idxStart);
-    const isSpy = name === 'spy_benchmark';
+    const s = _benchmarkStyle(name);
     return {
       x: dates, y: v, type: 'scatter', mode: 'lines',
-      name: isSpy ? 'SPY' : name.replace(/_/g,' '),
-      line: { width: isSpy ? 1.5 : 2, dash: isSpy ? 'dot' : 'solid', color: isSpy ? '#8b949e' : undefined },
-      hovertemplate: `<b>${name}</b>: %{y:.0f}<extra></extra>`
+      name: s.label,
+      line: { width: s.width, dash: s.dash, color: s.color },
+      hovertemplate: `<b>${s.label}</b>: %{y:.0f}<extra></extra>`
     };
   });
 
@@ -545,12 +551,13 @@ function chartPortfolioMini(equity, containerId) {
 function chartEquityFull(equity) {
   if (!equity.dates || !equity.dates.length) return;
   const traces = Object.entries(equity.strategies).map(([name, vals]) => {
-    const isSpy = name === 'spy_benchmark';
+    const s = _benchmarkStyle(name);
+    const label = name === 'spy_benchmark' ? 'SPY benchmark' : name === 'qqq_benchmark' ? 'QQQ benchmark' : s.label;
     return {
       x: equity.dates, y: vals, type: 'scatter', mode: 'lines',
-      name: isSpy ? 'SPY benchmark' : name.replace(/_/g,' '),
-      line: { width: isSpy ? 1.5 : 2, dash: isSpy ? 'dot' : 'solid', color: isSpy ? '#8b949e' : undefined },
-      hovertemplate: `<b>${name}</b><br>%{x}<br>Base 100: %{y:.1f}<extra></extra>`
+      name: label,
+      line: { width: s.width, dash: s.dash, color: s.color },
+      hovertemplate: `<b>${label}</b><br>%{x}<br>Base 100: %{y:.1f}<extra></extra>`
     };
   });
 
