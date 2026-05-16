@@ -1,130 +1,158 @@
 {
-  "date": "2026-05-15",
-  "run_id": "2026-05-15_2103",
+  "date": "2026-05-16",
+  "run_id": "2026-05-16_0847",
   "candidates": [
     "CVE",
-    "COIN",
-    "KOS",
-    "UCO",
-    "CORZ",
     "WCP.TO",
-    "NBIS",
-    "ASPI",
-    "QQQ",
-    "MSTR",
+    "UCO",
     "NVDA",
+    "KOS",
+    "SU",
+    "CORZ",
     "VLE.TO",
-    "VAL",
     "GLNG",
-    "BTCC-B.TO"
+    "OXY",
+    "NBIS",
+    "QQQ",
+    "SASK.V",
+    "ASPI",
+    "MSTR"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 97,
+      "quality_score": 90,
       "decision_summary": {
-        "market_read": "Bull Maduro regime with improving macro delta of +3.75 supports continued energy leadership.",
+        "market_read": "Bull Maduro regime stable with mild weekly macro decline limits fresh high-conviction entries.",
+        "risk_posture": "normal",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [
+        {
+          "ticker": "SU",
+          "reason": "80.5 PCS, rot_score 9 and 8-week streak at oil theme support",
+          "watch_trigger": "pcs_hold_above_78 with ret_5d_vs_spy_turn_positive"
+        },
+        {
+          "ticker": "GLNG",
+          "reason": "80 PCS, rot_score 9 and 8-week streak showing lng flow",
+          "watch_trigger": "dems_above_10 and spike_flag_clear"
+        },
+        {
+          "ticker": "OXY",
+          "reason": "79.5 PCS with rot jumper to 8 after signal upgrade",
+          "watch_trigger": "streak_weeks_extend_to_4+ on macro_delta_stable"
+        },
+        {
+          "ticker": "UCO",
+          "reason": "83.5 PCS but leveraged oil futures exposure",
+          "watch_trigger": "shift to non-leveraged energy equity equivalent"
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "QQQ",
+          "reason": "77.5 PCS crossed below 78 with only 4-week streak",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "SASK.V",
+          "reason": "75.5 PCS and dems 4 insufficient for rotation entry",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "ASPI",
+          "reason": "74 PCS with 59.9% distance to 52w high and spike_flag true",
+          "rejection_category": "technical_overextension"
+        }
+      ]
+    },
+    "anthropic/claude-haiku-4.5": {
+      "quality_score": 72,
+      "decision_summary": {
+        "market_read": "Bull Maduro regime stable with macro delta declining slightly; energy and crypto themes sustain leadership while tech consolidates after recent spike.",
         "risk_posture": "normal",
         "should_select_picks": true
       },
       "selected": [
         {
-          "ticker": "KOS",
+          "ticker": "SU",
           "portfolio": "CONFIRMED_FLOW_LEADERS",
           "signal_type": "confirmed_leader",
           "confidence": "high",
-          "reason_short": "70.7% 13w vs SPY and 8-week outperformance streak",
-          "reason_full": "KOS posts 82 PCS with 70.7444% 13-week outperformance versus SPY, 6.6753% 4-week outperformance, rot_score of 8.0 and eight consecutive weeks of relative gains aligned to the Bull Maduro improving macro.",
-          "comparative_edge": "Selected over UCO (PCS=82) because KOS delivers higher 13w RS of 70.7 versus UCO's leveraged commodity exposure and lower streak stability.",
+          "reason_short": "PCS 80.5 with rot_score jump 7→9 and 8-week streak",
+          "reason_full": "SU crossed into CONFIRMED_FLOW_LEADERS territory at PCS 80.5 with rotation score accelerating from 7.0 to 9.0, demonstrating renewed institutional flow conviction. Eight consecutive weeks of outperformance with ret_13w_vs_spy of 14.2% and ret_4w_vs_spy of 1.7% align to Bull Maduro macro regime supporting energy.",
+          "comparative_edge": "Selected over VLE.TO (PCS=80.0) because SU's rot_score jumped to 9.0 versus VLE's static 8.0, and SU maintains momentum_accel=true while VLE shows negative ret_10d_vs_spy. Over GLNG (PCS=80.0) because SU avoids spike_flag=true and delivers rot_score 9 versus GLNG's 9 but SU has streak_weeks=8 versus GLNG's spike vulnerability.",
           "key_supporting_factors": [
-            "ret_13w_vs_spy reaches 70.74% topping most peers in candidate set.",
-            "Eight-week streak with rot_score 8.0 confirms sustained flow.",
-            "ret_4w_vs_spy at 6.68% exceeds WCP.TO's 5.35% while remaining eligible."
+            "Rotation score accelerated from 7.0 to 9.0, flagging institutional accumulation signal.",
+            "Eight-week outperformance streak with consistent 8.0 rot_score through prior week.",
+            "ret_13w_vs_spy of 14.2% validates multi-month relative strength.",
+            "Oil/gas theme remains supported under Bull Maduro with macro_delta improving themes."
           ],
           "key_risks_or_contradictions": [
-            "dems at 9 shows moderate daily momentum versus VAL's 13.",
-            "ret_10d_vs_spy negative at -1.63% indicates short-term consolidation."
+            "ret_4w_vs_spy only 1.7% lags CVE and KOS, showing recent consolidation.",
+            "dems score of 8 indicates weak daily momentum despite weekly strength.",
+            "ret_10d_vs_spy at -1.47% signals short-term pause before rotation resumes."
           ]
         },
         {
-          "ticker": "WCP.TO",
+          "ticker": "CORZ",
           "portfolio": "CONFIRMED_FLOW_LEADERS",
           "signal_type": "confirmed_leader",
-          "confidence": "medium",
-          "reason_short": "8-week streak and rot_score 8.0 with tight 52w high distance",
-          "reason_full": "WCP.TO reaches 80.5 PCS with eight consecutive weeks of outperformance, rot_score 8.0, ret_4w_vs_spy 5.35% and dist_52w_high only -1.46% while macro delta improves 3.75 supporting oil theme.",
-          "comparative_edge": "Selected over GLNG (PCS=76.5) because WCP.TO maintains streak_weeks 8 versus GLNG's spike_flag true and weaker rot_score of 7.0.",
+          "confidence": "high",
+          "reason_short": "PCS 80.2, rot_score 10/10, held in active HIGH_CONVICTION",
+          "reason_full": "CORZ maintains exceptional rotation score of 10.0 (highest in candidate set) with PCS 80.2, demonstrating highest institutional conviction among crypto exposures. Seven-week outperformance streak, ret_13w_vs_spy of 27.0%, and ret_4w_vs_spy of 19.2% position it as crypto flow leader. Already held in active HIGH_CONVICTION portfolio entered 2026-05-08; continued monitoring supports staying engaged through rotation confirmation phase.",
+          "comparative_edge": "Retained over MSTR (PCS=72.5) because CORZ's rot_score=10.0 is unmatched and ret_13w_vs_spy=27.0 vs MSTR's 23.8%. MSTR shows only 3-week streak versus CORZ's 7 weeks, and MSTR's ret_10d_vs_spy=-2.43% contradicts CORZ's +16.4% outperformance over 10d.",
           "key_supporting_factors": [
-            "rot_score 8.0 matches KOS while remaining non-leveraged equity.",
-            "ret_13w_vs_spy 16.15% with eight-week consistency.",
-            "dist_52w_high -1.46% shows price hugging highs better than peers."
+            "rot_score of 10.0 is the single highest rotation conviction in entire candidate set.",
+            "ret_13w_vs_spy of 27.0% with 7-week consistency validates institutional accumulation.",
+            "ret_10d_vs_spy at +16.4% shows acceleration even as spike_flag=true indicates concentration.",
+            "Bitcoin mining theme benefits from stable macro supporting crypto thesis."
           ],
           "key_risks_or_contradictions": [
-            "ret_4w_vs_spy 5.35% trails UCO and KOS relative moves.",
-            "dems 9 lower than VAL and CVE daily readings."
+            "spike_flag=true means 5d move concentrated into single day; streak_days=0 shows pause after spike.",
+            "dems at 10 is moderate, not driving daily momentum as primary signal.",
+            "dist_52w_high at -3.81% suggests recent volatility pull-back from extremes."
           ]
-        }
-      ],
-      "watch": [
-        {
-          "ticker": "VAL",
-          "reason": "PCS 76.5 with strong outperform_d10 7 and dems 13 but streak_weeks only 3 limits conviction",
-          "watch_trigger": "Extend streak to six weeks with rot_score holding at 8.0"
-        },
-        {
-          "ticker": "VLE.TO",
-          "reason": "PCS 77.0 but negative ret_4w_vs_spy of -5.24% and dist_52w_high -16.99% signal incomplete setup",
-          "watch_trigger": "Reclaim positive 4-week relative returns above 5%"
-        },
-        {
-          "ticker": "ASPI",
-          "reason": "PCS 79.0 yet streak_weeks 1 and spike_flag true with -57.97% from 52w high",
-          "watch_trigger": "Achieve streak_weeks >=4 with rot_score sustained at 8"
-        }
-      ],
-      "rejected": [
-        {
-          "ticker": "UCO",
-          "reason": "Leveraged oil commodity ETF violates explicit rule against selecting futures or commodities",
-          "rejection_category": "not_tradable"
         },
         {
           "ticker": "GLNG",
-          "reason": "Spike_flag true with ret_4w_vs_spy negative at -0.57% and lower rot_score 7.0",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "BTCC-B.TO",
-          "reason": "PCS 76.0 with dems only 4 and weak 13w ret 14.94% versus energy peers",
-          "rejection_category": "weak_relative_strength"
-        }
-      ]
-    },
-    "anthropic/claude-haiku-4.5": {
-      "quality_score": 71,
-      "decision_summary": {
-        "market_read": "Bull Maduro regime with improving macro delta (3.75 over 1w/1m) supports energy and crypto themes; oil_gas and AI infrastructure showing strongest relative strength streaks.",
-        "risk_posture": "aggressive",
-        "should_select_picks": true
-      },
-      "selected": [
-        {
-          "ticker": "KOS",
           "portfolio": "CONFIRMED_FLOW_LEADERS",
           "signal_type": "confirmed_leader",
-          "confidence": "high",
-          "reason_short": "PCS 82 with 70.7% 13w outperformance and 8-week streak",
-          "reason_full": "KOS crossed 78 PCS threshold with 8 consecutive weeks of outperformance, rot_score 8.0, and exceptional 70.7% 13-week relative strength versus SPY. The African oil producer benefits from Bull Maduro improving macro and maintains dist_52w_high of only -11.75%, indicating sustained momentum without excessive overextension.",
-          "comparative_edge": "Selected over VAL (PCS 76.5) because KOS delivers 70.7% 13w vs_spy outperformance compared to VAL's 6.1%, and KOS maintains 8-week streak versus VAL's 3 weeks. Despite VAL's stronger 5d outperformance (+10.75%), KOS's multi-week consistency and higher PCS threshold breach justify priority.",
+          "confidence": "medium",
+          "reason_short": "PCS 80.0, rot_score jumped 7→9, LNG supply theme strong",
+          "reason_full": "GLNG crossed CONFIRMED_FLOW_LEADERS threshold at PCS 80.0 with rotation score accelerating from 7.0 to 9.0. Eight-week outperformance streak with ret_13w_vs_spy of 23.3% and rot_score 9.0 indicate institutional recognition of LNG supply tightness theme. Despite spike_flag=true, outperform_d10=8 validates multi-day continuation beneath the single-day spike concentration.",
+          "comparative_edge": "Selected over VLE.TO (PCS=80.0) because GLNG's rot_score jumped to 9.0 and outperform_d10=8 shows robust 10-day outperformance despite spike, whereas VLE remains static. GLNG's streak_weeks=8 matches standard, and energy macro supports both but GLNG's LNG specialization aligns to supply-constrained narrative.",
           "key_supporting_factors": [
-            "70.7% ret_13w_vs_spy outpaces all energy peers in candidates list.",
-            "8-week consecutive outperformance with rot_score 8.0 indicates sustained flow.",
-            "dist_52w_high at -11.75% shows room for continuation without extreme extension.",
-            "Macro delta improving supports oil_gas theme strength."
+            "Rotation score jumped from 7.0 to 9.0, signaling institutional inflow acceleration.",
+            "ret_13w_vs_spy at 23.3% with 8-week streak confirms sustained flow leadership.",
+            "outperform_d10=8 demonstrates that beneath spike_flag=true, underlying 10-day outperformance is robust.",
+            "LNG supply theme fundamental to energy rotation under Bull Maduro regime."
           ],
           "key_risks_or_contradictions": [
-            "ret_5d_vs_spy spiked at 17.24% with spike_flag false but streak_days only 1 warrants monitoring.",
-            "ret_10d_vs_spy negative at -1.63% shows recent consolidation or pullback.",
-            "dems score 9 indicates moderate daily early momentum, not exceptional short-term acceleration."
+            "spike_flag=true means majority of 5d gains concentrated in single trading day.",
+            "dems at 7 is below portfolio average, suggesting weak daily momentum driver.",
+            "ret_4w_vs_spy of only 1.7% trails energy peers like CVE and KOS."
+          ]
+        },
+        {
+          "ticker": "OXY",
+          "portfolio": "CONFIRMED_FLOW_LEADERS",
+          "signal_type": "confirmed_leader",
+          "confidence": "medium",
+          "reason_short": "PCS 79.5, rot_score 5→8 jump, signal upgraded VIGILAR",
+          "reason_full": "OXY reached PCS 79.5 with rotation score accelerating from 5.0 to 8.0 and signal status upgraded from IGNORAR to VIGILAR. This represents meaningful acceleration in institutional interest for the US oil leader. ret_13w_vs_spy of 21.3% validates multi-week outperformance, though streak_weeks=1 indicates recent re-entry point. ret_5d_vs_spy of +12.22% and positive momentum_accel=false suggest steady accumulation rather than parabolic spike.",
+          "comparative_edge": "Selected over ASPI (PCS=74.0) because OXY's rot_score jumped to 8.0 versus ASPI's static 8.0, OXY has ret_13w_vs_spy=21.3% versus ASPI's 2.4%, and OXY's 1-week streak reflects fresh entry point versus ASPI's overextension (dist_52w_high=-59.97%). OXY's signal upgrade to VIGILAR confirms institutional recognition.",
+          "key_supporting_factors": [
+            "Rotation score accelerated from 5.0 to 8.0, demonstrating fresh institutional conviction build.",
+            "Signal upgraded from IGNORAR to VIGILAR confirms systematic re-engagement.",
+            "ret_13w_vs_spy at 21.3% validates multi-week outperformance despite 1-week streak reset.",
+            "ret_5d_vs_spy at +12.22% shows immediate strong demand after signal upgrade trigger."
+          ],
+          "key_risks_or_contradictions": [
+            "streak_weeks=1 means only single week of outperformance; fresh entry carries re-validation risk.",
+            "ret_4w_vs_spy at -0.51% shows 4-week drag despite 13-week gains, indicating lagged entry.",
+            "dist_52w_high at -11.61% shows significant distance from recent highs; risk of consolidation."
           ]
         },
         {
@@ -132,219 +160,114 @@
           "portfolio": "HIGH_CONVICTION",
           "signal_type": "confirmed_leader",
           "confidence": "high",
-          "reason_short": "PCS 80.2 with 136% 13w outperformance, dems 18, momentum_accel true",
-          "reason_full": "NBIS (already held, confirmed continuing conviction) maintains PCS 80.2 with AI cloud theme alignment and extraordinary 136.3% 13-week outperformance versus SPY. Daily early momentum score of 18 (highest in candidates) plus momentum_accel true and 3-day streak indicate accelerating flow. The 39.8% ret_10d_vs_spy demonstrates multi-day conviction beyond single-day spike (spike_flag false confirms clean setup).",
-          "comparative_edge": "NBIS outperforms NVDA (PCS 77.0, ret_13w_vs_spy 15.99%) on both absolute PCS and relative strength metrics. While NVDA shows rot_score 7 with outperform_d10 of 8, NBIS's dems 18 vs NVDA's dems 13 and momentum_accel true vs false provide superior early rotation signal quality for high-conviction reaffirmation.",
+          "reason_short": "PCS 79.2, dems 18, ret_13w +116%, held active HIGH_CONVICTION",
+          "reason_full": "NBIS delivers PCS 79.2 with dems=18 (highest daily momentum in candidate set), momentum_accel=true, and ret_13w_vs_spy of 115.7% representing explosive relative strength. Eight-week outperformance streak with ret_4w_vs_spy of 27.7% confirms sustained institutional accumulation. AI cloud infrastructure theme aligns to Bull Maduro regime. Already in active HIGH_CONVICTION portfolio entered 2026-05-08; metrics continue supporting conviction hold.",
+          "comparative_edge": "Retained over NVDA (PCS=83.0) because NBIS delivers dems=18 versus NVDA's 13, ret_13w_vs_spy=115.7% versus NVDA's 14.5%, and momentum_accel=true versus NVDA's spike_flag=true. NBIS maintains ret_10d_vs_spy=+39.8% while NVDA shows streak_days=0 post-spike. NBIS is single highest daily momentum scorer.",
           "key_supporting_factors": [
-            "136.3% ret_13w_vs_spy represents exceptional outperformance across all macro themes.",
-            "dems 18 with momentum_accel true indicates strongest early daily momentum in dataset.",
-            "ret_10d_vs_spy 39.8% confirms multi-day continuation, not single-day volatility (spike_flag false).",
-            "Macro improving regime supports AI infrastructure theme."
+            "dems score of 18 is highest in entire candidate set, validating extraordinary daily flow conviction.",
+            "ret_13w_vs_spy of 115.7% with 8-week streak represents unmatched relative strength.",
+            "ret_10d_vs_spy at +39.8% and momentum_accel=true show acceleration continuing.",
+            "rot_score 6.0 paired with exceptional returns indicates institutional quality over quantity."
           ],
           "key_risks_or_contradictions": [
-            "vol_5d_20d 1.35 indicates elevated volatility relative to 20-day average.",
-            "dist_52w_high at -5.38% shows near 52-week highs with limited upside cushion.",
-            "Already at 15% portfolio weight; size constraints limit additional allocation."
-          ]
-        },
-        {
-          "ticker": "UCO",
-          "portfolio": "CONFIRMED_FLOW_LEADERS",
-          "signal_type": "confirmed_leader",
-          "confidence": "high",
-          "reason_short": "PCS 82 with 102.8% 13w outperformance, 8-week streak, leveraged oil",
-          "reason_full": "UCO crossed 78 PCS threshold with leveraged crude oil exposure delivering 102.8% 13-week outperformance—the highest energy allocation in candidates. Eight-week consistent outperformance, rot_score 8.0, and relatively clean 0.67 vol_5d_20d ratio support structural momentum. Bull Maduro improving macro (delta +3.75) directly benefits crude-linked instruments; dist_52w_high of only -5.7% shows controlled positioning near highs.",
-          "comparative_edge": "Selected over WCP.TO (PCS 80.5, ret_13w_vs_spy 16.1%) because UCO's 102.8% outperformance vastly exceeds WCP's 16.1%, and UCO's 8-week streak matches WCP's consistency but with superior macro leverage. WCP rejected as better_alternative_available due to PCS threshold and concentrated exposure redundancy with CVE and KOS.",
-          "key_supporting_factors": [
-            "102.8% ret_13w_vs_spy is the strongest energy allocation outperformance.",
-            "8-week streak with rot_score 8.0 confirms sustained flow in bull regime.",
-            "ret_10d_vs_spy 4.79% and outperform_d10 6 show clean multi-day outperformance.",
-            "Leveraged crude oil benefits directly from macro improving signal."
-          ],
-          "key_risks_or_contradictions": [
-            "Leveraged ETF structure introduces decay risk during sideways/choppy markets.",
-            "dems 12 moderate; daily acceleration not exceptional versus peers.",
-            "spike_flag false but spike_days indicator requires monitoring for reversion patterns."
-          ]
-        },
-        {
-          "ticker": "WCP.TO",
-          "portfolio": "CONFIRMED_FLOW_LEADERS",
-          "signal_type": "confirmed_leader",
-          "confidence": "medium",
-          "reason_short": "PCS 80.5 with 8-week streak and 5.3% 4w outperformance",
-          "reason_full": "WCP.TO crossed 78 PCS threshold with 8 consecutive weeks of outperformance and rot_score 8.0, capturing Canadian oil upside in Bull Maduro regime. While 13-week outperformance of 16.1% trails KOS and UCO, the consistency (8-week streak), clean dist_52w_high (-1.46%), and non-spiking momentum (spike_flag false) support steady flow. Macro improving conditions align with energy theme; 5.3% ret_4w_vs_spy indicates sustainable pace.",
-          "comparative_edge": "Selected over VLE.TO (PCS 77.0, ret_4w_vs_spy -5.2%) because WCP reaches higher PCS threshold (80.5 vs 77.0), maintains positive 4w outperformance (+5.3% vs -5.2%), and holds matching 8-week streak without the negative consolidation pressure evident in VLE's recent pullback.",
-          "key_supporting_factors": [
-            "PCS 80.5 exceeds CONFIRMED_FLOW_LEADERS min_entry 75 and approaches threshold 78.",
-            "8-week consecutive outperformance with rot_score 8.0 indicates sustained institutional interest.",
-            "dist_52w_high -1.46% shows price consolidation near cycle highs with limited risk.",
-            "Canadian oil producer benefits from macro improving and oil_gas theme strength."
-          ],
-          "key_risks_or_contradictions": [
-            "13-week outperformance 16.1% lags KOS (70.7%) and UCO (102.8%); relative weakness on longer horizons.",
-            "ret_10d_vs_spy 2.91% and outperform_d10 6 show weaker short-term acceleration than top energy plays.",
-            "dems 9 indicates moderate daily early momentum; not a daily rotation driver."
-          ]
-        },
-        {
-          "ticker": "VAL",
-          "portfolio": "EARLY_ROTATION",
-          "signal_type": "early_rotation",
-          "confidence": "medium",
-          "reason_short": "PCS 76.5 with dems 13, momentum_accel true, 6-day streak",
-          "reason_full": "VAL crossed 68 EARLY_ROTATION threshold with early daily momentum signal (dems 13, momentum_accel true, streak_days 6). The 10.75% ret_5d_vs_spy and 7 outperform_d10 demonstrate multi-day outperformance without spike dependency (spike_flag false). While 13-week outperformance modest at 6.1%, the recent acceleration in daily metrics and 8 rot_score indicate emerging flow rotation worthy of early capture in Bull Maduro regime supporting energy themes.",
-          "comparative_edge": "Selected over BTCC-B.TO (PCS 76.0, dems 4) because VAL's dems 13 vs BTCC's dems 4 represents superior early rotation signal, and VAL's momentum_accel true vs BTCC's false indicates stronger daily acceleration. VAL's streak_days 6 vs BTCC's 0 confirms multi-day continuation potential.",
-          "key_supporting_factors": [
-            "dems 13 with momentum_accel true provides primary early rotation signal.",
-            "6-day streak with 10.75% ret_5d_vs_spy confirms multi-day outperformance conviction.",
-            "outperform_d10 7 shows 10-day robustness despite modest 3-week baseline streak.",
-            "Macro improving supports African oil producer theme."
-          ],
-          "key_risks_or_contradictions": [
-            "13-week outperformance only 6.1% lags established leaders; short-term focused setup.",
-            "ret_10d_vs_spy 0.56% near flat indicates short-term outperformance may not extend.",
-            "PCS 76.5 at lower end of EARLY_ROTATION range; limited conviction buffer."
-          ]
-        },
-        {
-          "ticker": "ASPI",
-          "portfolio": "CONFIRMED_FLOW_LEADERS",
-          "signal_type": "confirmed_leader",
-          "confidence": "medium",
-          "reason_short": "PCS 79.0 with dems 14, momentum_accel true, strong daily metrics",
-          "reason_full": "ASPI crossed 78 CONFIRMED_FLOW_LEADERS threshold with signal upgraded to VIGILAR and dems 14 indicating strong early momentum acceleration (momentum_accel true, spike_flag true but outperform_d10 5 validates multi-day follow-through). The 7.6% ret_5d_vs_spy with 10.05% ret_10d_vs_spy shows sustained two-week conviction despite 57.97% dist_52w_high indicating recent volatility from cycle lows. Uranium nuclear theme aligns with macro improving regime seeking non-traditional energy.",
-          "comparative_edge": "Selected over LCX.V (PCS 72.8, signal IGNORAR) because ASPI crossed threshold with signal upgraded and dems 14 vs LCX absent early momentum signal, plus ASPI's momentum_accel true vs implied false. ASPI's 7.6% ret_5d outperforms LCX's implied weaker early position.",
-          "key_supporting_factors": [
-            "dems 14 with momentum_accel true indicates strong daily early rotation.",
-            "Signal upgraded to VIGILAR and rot_score 8.0 show macro theme recognition.",
-            "ret_10d_vs_spy 10.05% confirms multi-day outperformance despite spike_flag true.",
-            "Uranium nuclear theme benefits from macro improving energy diversification."
-          ],
-          "key_risks_or_contradictions": [
-            "spike_flag true with dist_52w_high -57.97% indicates recent volatility; timing risk present.",
-            "streak_weeks 1 weak; early rotation signal not yet multi-week confirmed.",
-            "ret_13w_vs_spy 8.6% minimal; long-term conviction low despite near-term acceleration."
+            "vol_5d_20d at 1.35 indicates elevated volatility; requires tight risk management.",
+            "streak_days=3 shows daily winning streak may face consolidation or pullback.",
+            "dist_52w_high at -5.9% means slight distance from record highs; room to reset if conviction wavers."
           ]
         }
       ],
       "watch": [
         {
-          "ticker": "COIN",
-          "reason": "Already active at PCS 83.5 in CONFIRMED_FLOW_LEADERS; holding for macro improving support. dems 5 and ret_5d_vs_spy -3.06% show recent consolidation despite strong 13w outperformance (40.1%). Watch for daily momentum reacceleration or macro regime deterioration before adjustment.",
-          "watch_trigger": "Either dems rises to 12+ with 3+ day streak for upside confirmation, or macro_delta falls below +2.0 signaling regime weakness warranting exit."
-        },
-        {
-          "ticker": "CORZ",
-          "reason": "Already active at PCS 81.8 in HIGH_CONVICTION. spike_flag true with ret_5d_vs_spy 5.42% indicates single-day event; outperform_d10 6 validates multi-day follow-through. Monitor for continuation or reversion given 0.99% dist_52w_high (cycle highs) and vol_5d_20d 0.79 volatility. Current position sizing justified but watch for momentum deceleration.",
-          "watch_trigger": "If outperform_d10 drops below 4 or ret_5d_vs_spy reverses negative, reassess HIGH_CONVICTION conviction; upgrade to REJECT if macro_delta deteriorates and vol_5d_20d exceeds 1.2."
+          "ticker": "CVE",
+          "reason": "PCS 84.0 exceeds HIGH_CONVICTION threshold at 82.0 min entry but already held in active HIGH_CONVICTION portfolio. Event shows pcs_crossed_down from 85.0 to 84.0. Monitor for stabilization above 82 or re-acceleration to 85+ for reconfirmation. Current position sizing adequate; no new selection warranted per hard rule avoiding duplicate active positions.",
+          "watch_trigger": "Re-entry signal if CVE drops below 82.0 PCS and re-crosses upward with rot_score acceleration, or if new event data shows material shift in macro delta supporting theme at higher PCS."
         },
         {
           "ticker": "NVDA",
-          "reason": "Already active at PCS 77.0 in CONFIRMED_FLOW_LEADERS. spike_flag true with ret_10d_vs_spy 10.97% shows strong multi-day confirmation (outperform_d10 8). dems 13 with momentum_accel true supports continued flow. Watch for AI theme momentum sustainability and near-term consolidation given -0.34% dist_52w_high positioning near cycle highs.",
-          "watch_trigger": "Maintain current position while dems remains 12+. If dems falls below 10 and streak_days resets to 0, downgrade to WATCH status; if rot_score drops below 6, reassess allocation weight."
-        },
-        {
-          "ticker": "MSTR",
-          "reason": "Already active at PCS 77.5 in CONFIRMED_FLOW_LEADERS. dems 4 and ret_5d_vs_spy -5.63% show recent underperformance despite strong 13w outperformance (41.9%). Bitcoin treasury proxy positioned for macro improving, but near-term daily momentum weak. Watch for mean reversion or sustained consolidation.",
-          "watch_trigger": "If dems rises to 12+ with outperform_d10 reaching 6+, potential upgrade to add size. If dems remains <5 for 3+ consecutive days and rot_score falls below 6, consider trimming size pending crypto flow reacceleration."
-        },
-        {
-          "ticker": "TSLA",
-          "reason": "Already active at PCS 71.0 in EARLY_ROTATION (signal upgraded from IGNORAR to EN_RADAR on 2026-05-15). Positioned as early rotation entry, but insufficient detail on daily metrics (dems, spike_flag, streak_days not provided in candidate record). Watch for sustained confirmation above 71 PCS or daily momentum acceleration into established flow.",
-          "watch_trigger": "Upgrade to HIGH_CONVICTION allocation if PCS reaches 78+ and dems 14+. Reduce if PCS drops below 68 or signal downgrades to IGNORAR; macro conflict with tech theme would trigger exit."
+          "reason": "PCS 83.0 crossed up from 77.0 into CONFIRMED_FLOW_LEADERS territory. However, spike_flag=true indicates 5d move concentration in single day, streak_days=0 shows pause post-spike, and ret_10d_vs_spy shows mixed recent action. dems=13 supports daily momentum but does not override spike concern. Already held in active CONFIRMED_FLOW_LEADERS portfolio entered 2026-05-08. Watch for confirmation: if outperform_d10 extends to 10+ or dems sustains above 14 over next 2-3 days, can reassess for upsize.",
+          "watch_trigger": "Escalate from WATCH to SELECT if spike resolves into multi-day continuation with outperform_d10 >= 8 sustained, or if rot_score re-accelerates to 9.0 next week with dems >= 14."
         },
         {
           "ticker": "VLE.TO",
-          "reason": "PCS 77.0 with signal EN_RADAR meets EARLY_ROTATION threshold (68+). rot_score 8.0 and -5.2% ret_4w_vs_spy indicate recent consolidation despite momentum_accel true. 7.93% ret_5d_vs_spy and -16.99% dist_52w_high show partial price recovery with upside potential. Watch for daily outperformance acceleration before entry.",
-          "watch_trigger": "Enter EARLY_ROTATION position if ret_4w_vs_spy turns positive and dems rises to 12+, or if outperform_d10 reaches 7. Exit if signal downgrades to IGNORAR or macro_delta deteriorates below +2.0."
+          "reason": "PCS 80.0 meets CONFIRMED_FLOW_LEADERS min entry at 75.0. rot_score 8.0, ret_13w_vs_spy 15.7%, and 8-week streak justify eligibility. However, ret_4w_vs_spy of only 0.85% is weakest among peers, and ret_10d_vs_spy=+0.63% shows minimal recent momentum despite dems=11 daily signal. Placed on watch to confirm whether SU, GLNG, and OXY momentum does not cannibalize VLE's entry. If rel strength differentiator clarifies, can prioritize.",
+          "watch_trigger": "SELECT if VLE's rot_score accelerates 8→9, or if ret_5d_vs_spy re-accelerates above +8 with momentum_accel=true in next 2-3 days confirming institutional inflow."
         },
         {
-          "ticker": "BTCC-B.TO",
-          "reason": "PCS 76.0 meets EARLY_ROTATION threshold (68+) with signal EN_RADAR. dems 4 and ret_5d_vs_spy -0.93% show weak daily early momentum; spike_flag false but outperform_d10 only 4 indicate insufficient multi-day conviction. Bitcoin ETF theme benefits from macro improving, but daily acceleration not yet evident.",
-          "watch_trigger": "If dems rises to 12+ and streak_days reaches 3+, enter as early rotation position. Monitor crypto macro theme alongside Bitcoin price momentum; upgrade if outperform_d10 reaches 6+."
+          "ticker": "QQQ",
+          "reason": "PCS 77.5 below CONFIRMED_FLOW_LEADERS min threshold of 78.0 and shows pcs_crossed_down from 78.5 to 77.5. Broad Nasdaq proxy lacks thematic conviction relative to single-name AI and energy leaders already selected. ret_4w_vs_spy of 5.3% trails peers. dems=6 weak. Currently just below threshold; watch for stabilization or re-cross above 78.0 with rot_score >= 7 sustained and dems >= 10.",
+          "watch_trigger": "SELECT if QQQ re-crosses above 78.0 PCS with rot_score >= 8 and dems >= 10, signaling renewed broad-market institutional conviction aligned to macro regime."
         },
         {
-          "ticker": "GLNG",
-          "reason": "PCS 76.5 with signal EN_RADAR meets EARLY_ROTATION threshold (68+). However, spike_flag true with ret_5d_vs_spy 2.2% indicates single-day event; outperform_d10 8 validates multi-day follow-through. ret_13w_vs_spy 21.8% and 8-week streak show established flow, but neg ret_4w_vs_spy -0.57% and vol_5d_20d 1.29% suggest consolidation phase. Watch before entry.",
-          "watch_trigger": "Enter if ret_4w_vs_spy turns positive and dems rises to 11+. Monitor LNG shipping theme; exit if macro_delta deteriorates or Signal downgrades to IGNORAR."
+          "ticker": "MSTR",
+          "reason": "PCS 72.5 well above EARLY_ROTATION min at 68.0 but below CONFIRMED_FLOW_LEADERS at 75.0. rot_score 7.0 solid, ret_13w_vs_spy 23.8%, ret_4w_vs_spy 13.8% strong. However, already held in active CONFIRMED_FLOW_LEADERS portfolio entered 2026-05-08 with medium conviction. dems=4 is weak, and ret_10d_vs_spy=-2.43% contradicts recent strength. Watch for dems re-acceleration or clarification on whether CORZ cannibalization of crypto flow affects MSTR outlook.",
+          "watch_trigger": "If ret_5d_vs_spy re-accelerates > +5 with dems >= 8 over next 3 days, can maintain active position. If dems falls further or PCS drops below 70, consider rotation exit."
         },
         {
-          "ticker": "VIST",
-          "reason": "PCS 62.8 below MACRO_THEMATIC_BENEFICIARIES entry threshold (62); signal upgraded to VIGILAR with rot_score jumped from 5.0 to 7.0. Argentina theme emerging, but PCS at marginal entry level and insufficient detail on full metrics. Watch for PCS breakout above 65 and macro alignment before entry consideration.",
-          "watch_trigger": "If PCS reaches 65+ and macro_delta sustains improving trajectory, upgrade to MACRO_THEMATIC candidate. Reject if PCS drops below 62 or Argentina macro conflict signals deterioration."
+          "ticker": "ASPI",
+          "reason": "PCS 74.0 below CONFIRMED_FLOW_LEADERS threshold at 75.0 and shows pcs_crossed_down from 79.0 to 74.0. Despite dems=14 daily momentum and momentum_accel=true, weekly metrics reveal streak_weeks=1 (fresh entry only) and ret_13w_vs_spy of just 2.4% vs 21+ for energy peers. dist_52w_high at -59.97% suggests technical overextension. Uranium theme solid but entry timing poor. Watch for stabilization.",
+          "watch_trigger": "SELECT if ASPI stabilizes above 74.0 PCS with rot_score >= 8 sustained 2+ weeks and ret_13w_vs_spy momentum clarifies upward toward 10%+. Also watch for uranium macro delta improvement supporting theme."
+        },
+        {
+          "ticker": "SASK.V",
+          "reason": "PCS 75.5 below CONFIRMED_FLOW_LEADERS min at 75.0 (just marginal miss). rot_score 7.0, ret_13w_vs_spy 26.8%, ret_4w_vs_spy 4.2% show solid weekly metrics. However, dems=4 is weak daily driver, streak_weeks=6 shows elongated entry, and ret_5d_vs_spy=-10.64% indicates recent pullback from highs. Uranium exploration theme moderate. Watch for momentum reset.",
+          "watch_trigger": "SELECT if SASK.V crosses above 76.0 PCS with dems >= 8 and ret_5d_vs_spy re-accelerates positive, confirming institutional inflow renewal in uranium exposure."
         }
       ],
       "rejected": [
         {
-          "ticker": "CORZ",
-          "reason": "Already held at 15% in HIGH_CONVICTION portfolio from 2026-05-08 entry; rule prohibits re-entry of active_picks_relevant positions. No new selection warranted despite PCS 81.8 remaining elevated.",
+          "ticker": "UCO",
+          "reason": "PCS 83.5 meets HIGH_CONVICTION min entry at 82.0, but UCO is a leveraged commodity ETF tracking crude oil futures (2x inverse crude oil via short-dated futures contracts). Hard rule prohibits direct selection of futures or commodities. While theme (oil_gas) is strong, the instrument itself is a leveraged derivative exposure unsuitable for paper-trading portfolio mandate structure requiring tradable equities and eligible ETFs.",
           "rejection_category": "not_tradable"
         },
         {
-          "ticker": "NVDA",
-          "reason": "Already held in CONFIRMED_FLOW_LEADERS portfolio from 2026-05-08 entry at 10% size; rule prohibits re-selection of active positions. Maintain current allocation pending momentum deceleration or macro conflict signals.",
-          "rejection_category": "not_tradable"
-        },
-        {
-          "ticker": "MSTR",
-          "reason": "Already held in CONFIRMED_FLOW_LEADERS portfolio from 2026-05-08 entry at 7.5% size; rule prohibits re-selection. No new allocation warranted despite sustained crypto theme alignment.",
-          "rejection_category": "not_tradable"
-        },
-        {
-          "ticker": "QQQ",
-          "reason": "PCS 78.5 meets CONFIRMED_FLOW_LEADERS threshold (75+), but ticker is macro index ETF tracking Nasdaq-100. Hard rule prohibits direct selection of macro indices. dems 6 and ret_5d_vs_spy -0.53% show weak daily early rotation signal; rot_score 7 and 4-week streak indicate established trend but not early entry compelling reason.",
-          "rejection_category": "not_tradable"
-        },
-        {
-          "ticker": "LCX.V",
-          "reason": "PCS 72.8 with signal IGNORAR indicates active exclusion signal despite pcs_crossed_up event. dems not provided but implied weak given IGNORAR signal. Oil_gas theme benefits from macro improving, but signal designation precludes entry. No compensating daily metrics (dems, momentum_accel, outperform_d10 data) provided to override IGNORAR directive.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "OXY",
-          "reason": "PCS 69.2 with signal IGNORAR indicates active exclusion despite pcs_crossed_up event in MACRO_THEMATIC_BENEFICIARIES mandate (threshold 65, entry 62). Signal IGNORAR designation overrides marginal PCS and macro theme alignment; no compensating daily metrics provided to justify override.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "OSCR",
-          "reason": "PCS 69.2 with signal EN_RADAR meets MACRO_THEMATIC_BENEFICIARIES entry threshold (62+). Healthcare special theme shows pcs_crossed_up from 64.5 to 69.2. However, no daily momentum metrics (dems, momentum_accel, streak_days) provided in candidate record; insufficient data quality for conviction judgment. Prefer established oil_gas/energy/crypto/AI themes with complete signal visibility.",
-          "rejection_category": "data_quality"
-        },
-        {
-          "ticker": "KIST.L",
-          "reason": "PCS 68.8 meets MACRO_THEMATIC_BENEFICIARIES entry threshold (62+) with signal EN_RADAR and oil_gas theme. However, London-listed ticker (.L suffix) introduces FX and regulatory complexity; eligible=true confirmed but lower priority versus primary-listed alternatives (KOS, VAL, UCO, CVE, WCP.TO). Energy theme already well-represented with higher-conviction selections.",
+          "ticker": "WCP.TO",
+          "reason": "PCS 83.5 exceeds CONFIRMED_FLOW_LEADERS threshold at 75.0. However, WCP.TO is already held in active CONFIRMED_FLOW_LEADERS portfolio entered 2026-05-15 with size_pct 7.5 and conviction medium. Hard rule prohibits re-selecting tickers already in active_picks_relevant. Current position adequate; no new entry warranted.",
           "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "TOU.TO",
-          "reason": "PCS 68.5 meets MACRO_THEMATIC_BENEFICIARIES entry threshold (62+) with oil_gas theme and signal EN_RADAR. pcs_crossed_up from 59.5 indicates early rotation, but insufficient daily metrics in candidate record. Energy theme well-covered by VAL (76.5 PCS, EARLY_ROTATION with dems 13), KOS (82.0 PCS), and UCO (82.0 PCS); TOU.TO rejected as redundant exposure at lower conviction.",
+          "ticker": "KOS",
+          "reason": "PCS 81.0 exceeds CONFIRMED_FLOW_LEADERS threshold at 75.0 with ret_13w_vs_spy of 83.5% (highest in candidate set) and 8-week streak. However, KOS is already held in active CONFIRMED_FLOW_LEADERS portfolio entered 2026-05-15 with size_pct 10.0 and conviction high. Hard rule prevents duplicate selection. Current position is primary energy flow proxy and sized appropriately.",
           "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "HIMS",
-          "reason": "PCS 60.2 below MACRO_THEMATIC_BENEFICIARIES entry threshold of 62; pcs_crossed_down from 65.0 to 60.2 indicates deteriorating conviction. Signal IGNORAR not provided in event record, but PCS drop below mandate entry level disqualifies selection. Healthcare theme lacks macro improving support versus energy/crypto/AI themes.",
+          "ticker": "COIN",
+          "reason": "PCS 66.0 dropped significantly from pcs_prev=83.5 (pcs_crossed_down event). Current PCS 66.0 falls below EARLY_ROTATION min entry at 68.0 and far below CONFIRMED_FLOW_LEADERS. Additionally, COIN is already held in active CONFIRMED_FLOW_LEADERS portfolio entered 2026-05-09 with size_pct 7.5 and conviction medium. Rapid 17.5-point PCS drop suggests conviction fade. Position should be monitored for exit; no new selection warranted.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "TSLA",
+          "reason": "PCS 66.5 shows pcs_crossed_down from 71.0, placing it below EARLY_ROTATION min entry at 68.0. However, TSLA is already held in active EARLY_ROTATION portfolio entered 2026-05-09 with size_pct 8.0 and conviction high. Hard rule prohibits duplicate selection. While no new events on TSLA are flagged today, existing position remains monitored for continuation of DEMS strength.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "BTCC-B.TO",
+          "reason": "PCS 64.5 shows pcs_crossed_down events from pcs_prev=76.0 across both EARLY_ROTATION (threshold 70.0) and MACRO_THEMATIC_BENEFICIARIES (threshold 65.0) portfolios. Current 64.5 sits just below MACRO threshold at 65.0. Rapid 11.5-point drop indicates conviction fade in crypto theme. No supporting rot_score jump or signal upgrade to counter the PCS decline. Further deterioration may accelerate.",
           "rejection_category": "insufficient_conviction"
         },
         {
-          "ticker": "MSOS",
-          "reason": "PCS 59.0 below MACRO_THEMATIC_BENEFICIARIES entry threshold of 62; pcs_crossed_down from 67.5 to 59.0. Cannabis theme shows deteriorating conviction despite macro improving regime. Signal EN_RADAR provided but PCS decline contradicts early momentum setup; no daily metrics detail provided.",
+          "ticker": "TDOC",
+          "reason": "PCS 60.5 falls below all portfolio thresholds (MACRO_THEMATIC_BENEFICIARIES min=62.0). pcs_crossed_down events from pcs_prev=72.0 across both EARLY_ROTATION (threshold 70.0) and MACRO_THEMATIC_BENEFICIARIES (threshold 65.0). Telehealth theme is neutral to macro regime; no supporting events (rot jump, signal upgrade, dems acceleration) counterbalance the 11.5-point PCS decline.",
           "rejection_category": "insufficient_conviction"
         },
         {
-          "ticker": "USAU",
-          "reason": "PCS 50.0 well below any mandate threshold (HIGH_CONVICTION 82, CONFIRMED_FLOW_LEADERS 75, EARLY_ROTATION 68, MACRO_THEMATIC 62). Signal upgraded to EN_RADAR from IGNORAR, but silver/gold miners theme shows insufficient quantitative conviction. Macro improving regime favors energy/crypto/AI over traditional precious metals.",
+          "ticker": "VIST",
+          "reason": "PCS 66.5, signal VIGILAR, pcs_crossed_up from 62.8 into MACRO_THEMATIC_BENEFICIARIES territory (threshold 65.0). Argentina theme exposure is speculative; macro_delta for Argentina exposure not explicitly improved in current context, and Bull Maduro regime is global stable rather than specific Argentina-supportive. Minimal supporting events (single pcs cross, signal label VIGILAR not EN_RADAR). Insufficient data to commit capital.",
           "rejection_category": "insufficient_conviction"
         },
         {
-          "ticker": "EXK",
-          "reason": "PCS 48.8 well below all mandate thresholds. Signal upgraded to VIGILAR from IGNORAR, but precious metals theme (silver/gold miners) lacks macro regime support. Insufficient conviction despite signal upgrade.",
+          "ticker": "VNOM",
+          "reason": "PCS 69.0 sits between EARLY_ROTATION min entry (68.0) and MACRO_THEMATIC (65.0 threshold crossed). pcs_crossed_up from 61.5, signal upgraded IGNORAR→EN_RADAR, and rot_score jumped 4→7, all supporting institutional accumulation. However, VNOM is described as oil_gas theme in candidates, and energy exposure is already comprehensively covered by CVE (84.0), SU (80.5), GLNG (80.0), OXY (79.5), and KOS via active positions. VNOM represents marginal diversification with no differentiation vs. existing energy selections.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "SSV.V",
+          "reason": "PCS 44.0 far below all portfolio thresholds. Signal upgraded IGNORAR→VIGILAR but PCS remains critically low at 44.0 (only 37% above minimum possible). Silver/gold mining theme is niche speculative play without current macro support (uranium and energy are thematic leads). Insufficient quantitative conviction to overcome low PCS baseline.",
           "rejection_category": "insufficient_conviction"
         },
         {
-          "ticker": "ASTS",
-          "reason": "PCS 45.5 well below all mandate thresholds. Signal upgraded to VIGILAR from IGNORAR on defense_space theme. Defense/space sector does not align with Bull Maduro macro improving regime favoring energy, crypto, and AI themes. Insufficient conviction and theme mismatch.",
-          "rejection_category": "macro_conflict"
+          "ticker": "MAPS",
+          "reason": "PCS 44.0 far below all portfolio thresholds. Signal upgraded IGNORAR→VIGILAR but PCS remains at 44.0. Cannabis theme is not aligned to current Bull Maduro regime priorities (energy, AI, crypto are leaders). No supporting events beyond signal label change. Insufficient conviction for portfolio commitment.",
+          "rejection_category": "insufficient_conviction"
         }
       ]
     }

@@ -1,0 +1,83 @@
+{
+  "run_id": "2026-05-16_0847",
+  "model": "x-ai/grok-4.3",
+  "date": "2026-05-16",
+  "summary": {
+    "date": "2026-05-16",
+    "run_id": "2026-05-16_0847",
+    "model": "x-ai/grok-4.3",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 29,
+    "candidate_count": 15,
+    "input_tokens": 12359,
+    "output_tokens": 968,
+    "cost_usd": 0.017869,
+    "latency_ms": 10478.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 4,
+    "rejected_count": 3,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": []
+  },
+  "quality_score": 90,
+  "response": {
+    "date": "2026-05-16",
+    "model": "x-ai/grok-4.3",
+    "run_id": "2026-05-16_0847",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime stable with mild weekly macro decline limits fresh high-conviction entries.",
+      "risk_posture": "normal",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "SU",
+        "reason": "80.5 PCS, rot_score 9 and 8-week streak at oil theme support",
+        "watch_trigger": "pcs_hold_above_78 with ret_5d_vs_spy_turn_positive"
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "80 PCS, rot_score 9 and 8-week streak showing lng flow",
+        "watch_trigger": "dems_above_10 and spike_flag_clear"
+      },
+      {
+        "ticker": "OXY",
+        "reason": "79.5 PCS with rot jumper to 8 after signal upgrade",
+        "watch_trigger": "streak_weeks_extend_to_4+ on macro_delta_stable"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "83.5 PCS but leveraged oil futures exposure",
+        "watch_trigger": "shift to non-leveraged energy equity equivalent"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "QQQ",
+        "reason": "77.5 PCS crossed below 78 with only 4-week streak",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "75.5 PCS and dems 4 insufficient for rotation entry",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "74 PCS with 59.9% distance to 52w high and spike_flag true",
+        "rejection_category": "technical_overextension"
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-05-16\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-16_0847\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime stable with mild weekly macro decline limits fresh high-conviction entries.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"SU\", \"reason\": \"80.5 PCS, rot_score 9 and 8-week streak at oil theme support\", \"watch_trigger\": \"pcs_hold_above_78 with ret_5d_vs_spy_turn_positive\"},\n    {\"ticker\": \"GLNG\", \"reason\": \"80 PCS, rot_score 9 and 8-week streak showing lng flow\", \"watch_trigger\": \"dems_above_10 and spike_flag_clear\"},\n    {\"ticker\": \"OXY\", \"reason\": \"79.5 PCS with rot jumper to 8 after signal upgrade\", \"watch_trigger\": \"streak_weeks_extend_to_4+ on macro_delta_stable\"},\n    {\"ticker\": \"UCO\", \"reason\": \"83.5 PCS but leveraged oil futures exposure\", \"watch_trigger\": \"shift to non-leveraged energy equity equivalent\"}\n  ],\n  \"rejected\": [\n    {\"ticker\": \"QQQ\", \"reason\": \"77.5 PCS crossed below 78 with only 4-week streak\", \"rejection_category\": \"weak_relative_strength\"},\n    {\"ticker\": \"SASK.V\", \"reason\": \"75.5 PCS and dems 4 insufficient for rotation entry\", \"rejection_category\": \"insufficient_conviction\"},\n    {\"ticker\": \"ASPI\", \"reason\": \"74 PCS with 59.9% distance to 52w high and spike_flag true\", \"rejection_category\": \"technical_overextension\"}\n  ]\n}"
+}
