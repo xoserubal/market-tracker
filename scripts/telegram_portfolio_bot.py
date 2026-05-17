@@ -20,6 +20,7 @@ so it survives across GitHub Actions runs.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -43,6 +44,44 @@ WATCHLIST_NAME = "Watchlist"
 DOCS_START = "<!-- BOT_DOCS_START -->"
 DOCS_END   = "<!-- BOT_DOCS_END -->"
 
+# GitHub API — used when running on Railway (or USE_GITHUB_API=true)
+GITHUB_TOKEN   = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO    = os.environ.get("GITHUB_REPO", "")   # e.g. "owner/market-tracker"
+USE_GITHUB_API = bool(os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("USE_GITHUB_API"))
+
+# Paths relative to repo root used by the GitHub Contents API
+_PORTFOLIO_PATH = "portfolio.json"
+_STATE_PATH     = "docs/data/telegram_bot_state.json"
+
+_sha_cache: dict[str, str] = {}   # path → current sha
+
+
+def _gh_read(path: str) -> tuple[dict | list, str]:
+    """Fetch a JSON file from GitHub. Returns (parsed_data, sha)."""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+    r   = requests.get(url, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=10)
+    r.raise_for_status()
+    blob    = r.json()
+    content = base64.b64decode(blob["content"]).decode("utf-8")
+    return json.loads(content), blob["sha"]
+
+
+def _gh_write(path: str, data: dict | list, message: str = "bot: update") -> None:
+    """Write a JSON file to GitHub and refresh the sha cache."""
+    sha = _sha_cache.get(path, "")
+    if not sha:
+        _, sha = _gh_read(path)
+    url         = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+    content_b64 = base64.b64encode(json.dumps(data, indent=2).encode()).decode()
+    r = requests.put(
+        url,
+        json={"message": message, "content": content_b64, "sha": sha},
+        headers={"Authorization": f"token {GITHUB_TOKEN}"},
+        timeout=15,
+    )
+    r.raise_for_status()
+    _sha_cache[path] = r.json()["content"]["sha"]
+
 COMMANDS = [
     {
         "cmd":   "/portfolio",
@@ -63,6 +102,11 @@ COMMANDS = [
         "cmd":   "/remove",
         "usage": "/remove TICKER",
         "desc":  "Elimina el ticker de cualquier sección del portfolio.",
+    },
+    {
+        "cmd":   "/help",
+        "usage": "/help",
+        "desc":  "Muestra este mensaje de ayuda.",
     },
 ]
 
@@ -159,6 +203,14 @@ def _get_updates(token: str, offset: int | None) -> list[dict]:
 # ── State / portfolio I/O ─────────────────────────────────────────────────
 
 def _load_state() -> dict:
+    if USE_GITHUB_API:
+        try:
+            data, sha = _gh_read(_STATE_PATH)
+            _sha_cache[_STATE_PATH] = sha
+            return data
+        except Exception as exc:
+            print(f"GitHub state read failed: {exc}")
+            return {"offset": None}
     try:
         if STATE_FILE.exists():
             return json.loads(STATE_FILE.read_text(encoding="utf-8"))
@@ -168,10 +220,24 @@ def _load_state() -> dict:
 
 
 def _save_state(state: dict) -> None:
+    if USE_GITHUB_API:
+        try:
+            _gh_write(_STATE_PATH, state, "bot: update state")
+        except Exception as exc:
+            print(f"GitHub state write failed: {exc}")
+        return
     STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
 def _load_portfolio() -> dict:
+    if USE_GITHUB_API:
+        try:
+            data, sha = _gh_read(_PORTFOLIO_PATH)
+            _sha_cache[_PORTFOLIO_PATH] = sha
+            return data
+        except Exception as exc:
+            print(f"GitHub portfolio read failed: {exc}")
+            return {"sections": []}
     try:
         if PORTFOLIO_FILE.exists():
             return json.loads(PORTFOLIO_FILE.read_text(encoding="utf-8"))
@@ -181,6 +247,12 @@ def _load_portfolio() -> dict:
 
 
 def _save_portfolio(data: dict) -> None:
+    if USE_GITHUB_API:
+        try:
+            _gh_write(_PORTFOLIO_PATH, data, "bot: update portfolio")
+        except Exception as exc:
+            print(f"GitHub portfolio write failed: {exc}")
+        return
     PORTFOLIO_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
@@ -369,6 +441,15 @@ def cmd_remove(token: str, chat_id: str, ticker: str, portfolio: dict) -> bool:
 
 # ── Dispatcher ────────────────────────────────────────────────────────────
 
+def cmd_help(token: str, chat_id: str) -> None:
+    lines = ["<b>Comandos disponibles:</b>", ""]
+    for c in COMMANDS:
+        lines.append(f"<code>{c['usage']}</code>")
+        lines.append(f"  {c['desc']}")
+        lines.append("")
+    _send(token, chat_id, "\n".join(lines).rstrip())
+
+
 def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
     """Returns True if portfolio.json was modified."""
     parts = text.strip().split()
@@ -378,7 +459,9 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
     cmd  = parts[0].lower().lstrip("/").split("@")[0]
     args = parts[1:]
 
-    if cmd == "portfolio":
+    if cmd == "help":
+        cmd_help(token, chat_id)
+    elif cmd == "portfolio":
         cmd_portfolio(token, chat_id, portfolio)
     elif cmd == "check":
         if args:
