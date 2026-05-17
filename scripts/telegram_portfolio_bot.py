@@ -50,8 +50,13 @@ GITHUB_REPO    = os.environ.get("GITHUB_REPO", "")   # e.g. "owner/market-tracke
 USE_GITHUB_API = bool(os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("USE_GITHUB_API"))
 
 # Paths relative to repo root used by the GitHub Contents API
-_PORTFOLIO_PATH = "portfolio.json"
-_STATE_PATH     = "docs/data/telegram_bot_state.json"
+_PORTFOLIO_PATH   = "portfolio.json"
+_STATE_PATH       = "docs/data/telegram_bot_state.json"
+_ALERTS_PATH      = "docs/data/bot_alerts.json"
+_PICKS_PATH       = "docs/data/ai_picks.json"
+_CANDIDATES_PATH  = "docs/data/ai_candidates.json"
+
+ALERTS_CHECK_EVERY = 5   # check price alerts every N polling cycles (~2.5 min)
 
 _sha_cache: dict[str, str] = {}   # path → current sha
 
@@ -102,6 +107,41 @@ COMMANDS = [
         "cmd":   "/remove",
         "usage": "/remove TICKER",
         "desc":  "Elimina el ticker de cualquier sección del portfolio.",
+    },
+    {
+        "cmd":   "/picks",
+        "usage": "/picks",
+        "desc":  "Muestra las posiciones abiertas del AI Picks Lab con precio actual.",
+    },
+    {
+        "cmd":   "/gainers",
+        "usage": "/gainers",
+        "desc":  "Top 5 tickers del portfolio con mayor subida en el día.",
+    },
+    {
+        "cmd":   "/losers",
+        "usage": "/losers",
+        "desc":  "Top 5 tickers del portfolio con mayor caída en el día.",
+    },
+    {
+        "cmd":   "/macro",
+        "usage": "/macro",
+        "desc":  "MacroScore actual, régimen y tendencia del pipeline.",
+    },
+    {
+        "cmd":   "/alert",
+        "usage": "/alert TICKER PRECIO",
+        "desc":  "Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO.",
+    },
+    {
+        "cmd":   "/alerts",
+        "usage": "/alerts",
+        "desc":  "Lista tus alertas de precio activas.",
+    },
+    {
+        "cmd":   "/delalert",
+        "usage": "/delalert TICKER",
+        "desc":  "Elimina la alerta de precio de un ticker.",
     },
     {
         "cmd":   "/help",
@@ -254,6 +294,82 @@ def _save_portfolio(data: dict) -> None:
             print(f"GitHub portfolio write failed: {exc}")
         return
     PORTFOLIO_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _load_alerts() -> list:
+    if USE_GITHUB_API:
+        try:
+            data, sha = _gh_read(_ALERTS_PATH)
+            _sha_cache[_ALERTS_PATH] = sha
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+    alerts_file = ROOT / "docs" / "data" / "bot_alerts.json"
+    try:
+        if alerts_file.exists():
+            return json.loads(alerts_file.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return []
+
+
+def _save_alerts(alerts: list) -> None:
+    if USE_GITHUB_API:
+        try:
+            if _ALERTS_PATH not in _sha_cache:
+                try:
+                    _, sha = _gh_read(_ALERTS_PATH)
+                    _sha_cache[_ALERTS_PATH] = sha
+                except Exception:
+                    _sha_cache[_ALERTS_PATH] = ""
+            sha = _sha_cache.get(_ALERTS_PATH, "")
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{_ALERTS_PATH}"
+            content_b64 = base64.b64encode(json.dumps(alerts, indent=2).encode()).decode()
+            payload: dict = {"message": "bot: update alerts", "content": content_b64}
+            if sha:
+                payload["sha"] = sha
+            r = requests.put(url, json=payload,
+                             headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=15)
+            r.raise_for_status()
+            _sha_cache[_ALERTS_PATH] = r.json()["content"]["sha"]
+        except Exception as exc:
+            print(f"GitHub alerts write failed: {exc}")
+        return
+    alerts_file = ROOT / "docs" / "data" / "bot_alerts.json"
+    alerts_file.write_text(json.dumps(alerts, indent=2), encoding="utf-8")
+
+
+def _load_picks() -> dict:
+    if USE_GITHUB_API:
+        try:
+            data, _ = _gh_read(_PICKS_PATH)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    picks_file = ROOT / "docs" / "data" / "ai_picks.json"
+    try:
+        if picks_file.exists():
+            return json.loads(picks_file.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _load_macro() -> dict:
+    if USE_GITHUB_API:
+        try:
+            data, _ = _gh_read(_CANDIDATES_PATH)
+            return data.get("macro_context", {}) if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    candidates_file = ROOT / "docs" / "data" / "ai_candidates.json"
+    try:
+        if candidates_file.exists():
+            data = json.loads(candidates_file.read_text(encoding="utf-8"))
+            return data.get("macro_context", {})
+    except Exception:
+        pass
+    return {}
 
 
 def _next_item_id(portfolio: dict) -> str:
@@ -439,6 +555,177 @@ def cmd_remove(token: str, chat_id: str, ticker: str, portfolio: dict) -> bool:
     return False
 
 
+# ── New command handlers ──────────────────────────────────────────────────
+
+def cmd_picks(token: str, chat_id: str) -> None:
+    picks_data  = _load_picks()
+    portfolios  = picks_data.get("portfolios", {})
+    last_updated = picks_data.get("last_updated", "?")
+
+    all_positions: list[tuple[str, str, dict]] = []  # (portfolio_name, ticker, position)
+    for port_name, port in portfolios.items():
+        for pos in port.get("positions", []):
+            all_positions.append((port_name, pos.get("ticker", "?"), pos))
+
+    if not all_positions:
+        _send(token, chat_id, "No hay posiciones abiertas en AI Picks.")
+        return
+
+    lines = [f"<b>AI Picks Lab</b> — <i>{last_updated}</i>", ""]
+    for port_name, ticker, pos in all_positions:
+        quote = _get_quote(ticker)
+        price_str = ""
+        if quote:
+            p    = quote["price"]
+            chg  = quote.get("change_pct")
+            sign = "+" if (chg or 0) >= 0 else ""
+            chg_s = f" ({sign}{chg}%)" if chg is not None else ""
+            price_str = f" → <b>{p}{chg_s}</b>"
+        conv  = pos.get("conviction", "")
+        size  = pos.get("size_pct", "")
+        entry = pos.get("entry_date", "")
+        label = port_name.replace("_", " ").title()
+        lines.append(f"<b>{ticker}</b>{price_str}")
+        lines.append(f"  {label} · {size}% · {conv} · desde {entry}")
+        lines.append("")
+
+    _send(token, chat_id, "\n".join(lines).rstrip())
+
+
+def cmd_movers(token: str, chat_id: str, portfolio: dict, top_n: int = 5, gainers: bool = True) -> None:
+    tickers: list[str] = []
+    for sec in portfolio.get("sections", []):
+        for item in sec.get("items", []):
+            t = item.get("ticker", "")
+            if t and t not in tickers:
+                tickers.append(t)
+
+    if not tickers:
+        _send(token, chat_id, "Portfolio vacío.")
+        return
+
+    results: list[tuple[float, str, float]] = []  # (change_pct, ticker, price)
+    for t in tickers:
+        q = _get_quote(t)
+        if q and q.get("change_pct") is not None:
+            results.append((q["change_pct"], t, q["price"]))
+
+    if not results:
+        _send(token, chat_id, "No se pudieron obtener precios.")
+        return
+
+    results.sort(key=lambda x: x[0], reverse=gainers)
+    subset = results[:top_n]
+
+    title = "Gainers" if gainers else "Losers"
+    emoji = "▲" if gainers else "▼"
+    lines = [f"<b>{emoji} Top {top_n} {title} hoy</b>", ""]
+    for chg, ticker, price in subset:
+        sign = "+" if chg >= 0 else ""
+        lines.append(f"<b>{ticker}</b>  {price}  <b>{sign}{chg}%</b>")
+    _send(token, chat_id, "\n".join(lines))
+
+
+def cmd_macro(token: str, chat_id: str) -> None:
+    macro = _load_macro()
+    if not macro:
+        _send(token, chat_id, "No se pudo obtener el MacroScore.")
+        return
+
+    score   = macro.get("score", "?")
+    regime  = macro.get("regime", "?")
+    trend   = macro.get("trend", "?")
+    d1w     = macro.get("delta_1w")
+    d1m     = macro.get("delta_1m")
+
+    lines = [
+        "<b>MacroScore</b>",
+        "",
+        f"Score: <b>{score}</b>",
+        f"Régimen: <b>{regime}</b>",
+        f"Tendencia: {trend}",
+    ]
+    if d1w is not None:
+        sign = "+" if d1w >= 0 else ""
+        lines.append(f"Δ 1 semana: {sign}{d1w}")
+    if d1m is not None:
+        sign = "+" if d1m >= 0 else ""
+        lines.append(f"Δ 1 mes: {sign}{d1m}")
+
+    _send(token, chat_id, "\n".join(lines))
+
+
+def cmd_alert_set(token: str, chat_id: str, ticker: str, target: float) -> None:
+    ticker  = ticker.upper()
+    alerts  = _load_alerts()
+    quote   = _get_quote(ticker)
+    current = quote["price"] if quote else None
+    direction = "above" if (current is None or target > current) else "below"
+
+    alerts = [a for a in alerts if a.get("ticker") != ticker]  # replace if exists
+    alerts.append({
+        "ticker":    ticker,
+        "target":    target,
+        "direction": direction,
+        "created":   str(date.today()),
+    })
+    _save_alerts(alerts)
+
+    dir_str = "suba a" if direction == "above" else "baje a"
+    curr_str = f" (ahora {current})" if current else ""
+    _send(token, chat_id, f"Alerta activada: te aviso cuando <b>{ticker}</b> {dir_str} <b>{target}</b>{curr_str}.")
+
+
+def cmd_alerts_list(token: str, chat_id: str) -> None:
+    alerts = _load_alerts()
+    if not alerts:
+        _send(token, chat_id, "No tienes alertas activas.")
+        return
+    lines = ["<b>Alertas activas:</b>", ""]
+    for a in alerts:
+        dir_str = "↑" if a.get("direction") == "above" else "↓"
+        lines.append(f"{dir_str} <b>{a['ticker']}</b> @ {a['target']}  <i>({a.get('created','')})</i>")
+    _send(token, chat_id, "\n".join(lines))
+
+
+def cmd_alert_delete(token: str, chat_id: str, ticker: str) -> None:
+    ticker = ticker.upper()
+    alerts = _load_alerts()
+    before = len(alerts)
+    alerts = [a for a in alerts if a.get("ticker") != ticker]
+    if len(alerts) < before:
+        _save_alerts(alerts)
+        _send(token, chat_id, f"Alerta de <b>{ticker}</b> eliminada.")
+    else:
+        _send(token, chat_id, f"No hay alerta activa para <b>{ticker}</b>.")
+
+
+def check_alerts(token: str, chat_id: str) -> None:
+    alerts = _load_alerts()
+    if not alerts:
+        return
+    fired: list[str] = []
+    updated = list(alerts)
+    for a in alerts:
+        ticker    = a.get("ticker", "")
+        target    = a.get("target", 0)
+        direction = a.get("direction", "above")
+        quote     = _get_quote(ticker)
+        if not quote:
+            continue
+        price = quote["price"]
+        triggered = (direction == "above" and price >= target) or \
+                    (direction == "below" and price <= target)
+        if triggered:
+            dir_str = "subió a" if direction == "above" else "bajó a"
+            _send(token, chat_id, f"🔔 <b>Alerta: {ticker}</b> {dir_str} <b>{price}</b> (objetivo: {target})")
+            fired.append(ticker)
+
+    if fired:
+        updated = [a for a in updated if a.get("ticker") not in fired]
+        _save_alerts(updated)
+
+
 # ── Dispatcher ────────────────────────────────────────────────────────────
 
 def cmd_help(token: str, chat_id: str) -> None:
@@ -479,6 +766,29 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
             return cmd_remove(token, chat_id, args[0], portfolio)
         else:
             _send(token, chat_id, "Uso: /remove TICKER")
+    elif cmd == "picks":
+        cmd_picks(token, chat_id)
+    elif cmd == "gainers":
+        cmd_movers(token, chat_id, portfolio, gainers=True)
+    elif cmd == "losers":
+        cmd_movers(token, chat_id, portfolio, gainers=False)
+    elif cmd == "macro":
+        cmd_macro(token, chat_id)
+    elif cmd == "alert":
+        if len(args) >= 2:
+            try:
+                cmd_alert_set(token, chat_id, args[0], float(args[1]))
+            except ValueError:
+                _send(token, chat_id, "Uso: /alert TICKER PRECIO  (ej: /alert AAPL 200)")
+        else:
+            _send(token, chat_id, "Uso: /alert TICKER PRECIO  (ej: /alert AAPL 200)")
+    elif cmd == "alerts":
+        cmd_alerts_list(token, chat_id)
+    elif cmd == "delalert":
+        if args:
+            cmd_alert_delete(token, chat_id, args[0])
+        else:
+            _send(token, chat_id, "Uso: /delalert TICKER")
     return False
 
 
@@ -518,13 +828,14 @@ def run_once(token: str, chat_id: str) -> None:
 def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
     """Continuous polling loop. For local/daemon use."""
     print(f"Portfolio bot running. Polling every {interval}s. Ctrl+C to stop.")
-    state = _load_state()
+    state        = _load_state()
+    alert_cycles = 0
 
     while True:
         try:
-            updates      = _get_updates(token, offset=state.get("offset"))
+            updates       = _get_updates(token, offset=state.get("offset"))
             offset_before = state.get("offset")
-            portfolio    = _load_portfolio()
+            portfolio     = _load_portfolio()
 
             for update in updates:
                 uid       = update.get("update_id")
@@ -542,6 +853,14 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
 
             if state.get("offset") != offset_before:
                 _save_state(state)
+
+            alert_cycles += 1
+            if alert_cycles >= ALERTS_CHECK_EVERY:
+                alert_cycles = 0
+                try:
+                    check_alerts(token, chat_id)
+                except Exception as exc:
+                    print(f"Alert check error: {exc}")
 
         except KeyboardInterrupt:
             print("Bot stopped.")
