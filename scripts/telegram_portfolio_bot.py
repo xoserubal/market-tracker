@@ -522,8 +522,9 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
 
     while True:
         try:
-            updates   = _get_updates(token, offset=state.get("offset"))
-            portfolio = _load_portfolio()
+            updates      = _get_updates(token, offset=state.get("offset"))
+            offset_before = state.get("offset")
+            portfolio    = _load_portfolio()
 
             for update in updates:
                 uid       = update.get("update_id")
@@ -539,7 +540,8 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
                 if uid is not None:
                     state["offset"] = uid + 1
 
-            _save_state(state)
+            if state.get("offset") != offset_before:
+                _save_state(state)
 
         except KeyboardInterrupt:
             print("Bot stopped.")
