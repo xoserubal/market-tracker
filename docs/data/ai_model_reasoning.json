@@ -1,115 +1,66 @@
 {
-  "date": "2026-05-21",
-  "run_id": "2026-05-21_2127",
+  "date": "2026-05-22",
+  "run_id": "2026-05-22_1047",
   "candidates": [
     "CVE",
-    "UCO",
-    "WCP.TO",
     "NBIS",
-    "SU",
-    "VAL",
-    "NVDA",
     "KOS",
+    "UCO",
+    "SU",
+    "OSCR",
+    "WCP.TO",
+    "CORZ",
     "OXY",
-    "VLE.TO",
-    "GLNG",
+    "NVDA",
     "TOU.TO",
-    "QQQ",
+    "TDOC",
     "KIST.L",
-    "LCX.V"
+    "LCX.V",
+    "QQQ"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 93,
+      "quality_score": 89,
       "decision_summary": {
-        "market_read": "Bull Maduro regime with macro score 81.25 improving 5 points weekly supports energy and tech leadership.",
+        "market_read": "Bull Maduro regime with improving macro (+15 delta 1m) but extreme oil_gas concentration at 57.5% weight limits new energy adds.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
-      "watch": [],
-      "rejected": [
+      "watch": [
         {
-          "ticker": "CVE",
-          "reason": "Already open HIGH_CONVICTION position entered 2026-05-15 at PCS 85; new entry not permitted.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "OSCR",
+          "reason": "80.8 PCS and rot_score 10 with 59% 13w outperformance but high extension risk and ret_5d_vs_spy -3.63 shows recent decay.",
+          "watch_trigger": "ret_5d_vs_spy turns positive and dems rises above 9 with no further extension points"
         },
         {
-          "ticker": "UCO",
-          "reason": "Leveraged crude oil ETF directly tracking commodity; rule prohibits selection of commodity proxies.",
-          "rejection_category": "not_tradable"
-        },
-        {
-          "ticker": "WCP.TO",
-          "reason": "Already open CONFIRMED_FLOW_LEADERS position; oil theme at 87.5% portfolio weight signals extreme concentration.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "NBIS",
-          "reason": "Already open HIGH_CONVICTION position entered 2026-05-08; cannot reselect existing holding.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "SU",
-          "reason": "Already open CONFIRMED_FLOW_LEADERS position; adding further oil exposure increases theme risk beyond high threshold.",
-          "rejection_category": "macro_conflict"
-        },
-        {
-          "ticker": "VAL",
-          "reason": "Already open HIGH_CONVICTION position entered 2026-05-20 at PCS 89.5; no new position allowed.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "NVDA",
-          "reason": "Already open CONFIRMED_FLOW_LEADERS position; selection would duplicate existing tech exposure.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "KOS",
-          "reason": "Already open CONFIRMED_FLOW_LEADERS position entered 2026-05-15; PCS crossed down from 90 to 82.5 reduces conviction.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "OXY",
-          "reason": "Already open HIGH_CONVICTION position entered 2026-05-19; oil concentration at 87.5% precludes additions.",
-          "rejection_category": "macro_conflict"
-        },
-        {
-          "ticker": "VLE.TO",
-          "reason": "Already open HIGH_CONVICTION position; PCS crossed down and dems only 3 signals weak daily momentum.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "GLNG",
-          "reason": "PCS 79 below HIGH_CONVICTION threshold 85 and below CONFIRMED_FLOW_LEADERS entry 75 with negative recent 5d/10d RS.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "TOU.TO",
-          "reason": "PCS 78.5 below CONFIRMED_FLOW_LEADERS entry and negative ret_10d_vs_spy; streak only 3 weeks.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "QQQ",
-          "reason": "Already open HIGH_CONVICTION position entered 2026-05-19 at PCS 85.5; low concentration benefit already captured.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "TDOC",
+          "reason": "73 PCS crossed 70 threshold with 30.6% 13w outperformance yet weak dems 4 and ret_10d_vs_spy -7.13 indicate fragile daily momentum.",
+          "watch_trigger": "outperform_d10 reaches 6 and streak_days extends beyond 2"
         },
         {
           "ticker": "KIST.L",
-          "reason": "PCS 77.8 below required thresholds for any portfolio and ret_13w_vs_spy only 10.75% with streak of 5 weeks.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "72.8 PCS with 19% 13w outperformance and outperform_d10 at 6 but rot_score only 6 and spike_flag true limit confirmation.",
+          "watch_trigger": "rot_score moves to 8 with momentum_accel true"
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "UCO",
+          "reason": "82 PCS but leveraged crude oil ETF adds to already high 57.5% oil concentration and constitutes direct commodity exposure.",
+          "rejection_category": "macro_conflict"
         },
         {
-          "ticker": "LCX.V",
-          "reason": "Signal IGNORAR with negative ret_4w_vs_spy and zero streak weeks despite high 13w outperformance.",
+          "ticker": "TOU.TO",
+          "reason": "73.5 PCS and negative ret_13w_vs_spy -1.1% with streak_weeks only 3 fall short of stronger peers in same theme.",
           "rejection_category": "weak_relative_strength"
         }
       ]
     },
     "anthropic/claude-haiku-4.5": {
-      "quality_score": 80,
+      "quality_score": 71,
       "decision_summary": {
-        "market_read": "Bull Maduro regime with improving macro delta (+15% 1m, +5% 1w) driving strong energy and AI cloud themes; high portfolio concentration in oil_gas (87.5%) limits new energy adds.",
+        "market_read": "Bull Maduro regime improving with macro delta +5w and +15m supports risk-on themes; oil_gas and crypto near highs with tech moderating.",
         "risk_posture": "normal",
         "should_select_picks": true
       },
@@ -119,184 +70,209 @@
           "portfolio": "HIGH_CONVICTION",
           "signal_type": "confirmed_leader",
           "confidence": "high",
-          "reason_short": "PCS 88.5, rot_score 9.0, 69.7% 13w RS, no spike_flag",
-          "reason_full": "NBIS crosses 88.5 PCS with rot_score 9.0, 17.25% 4w outperformance, 69.67% 13w outperformance, eight-week streak and critically no spike_flag despite +17.51% 10d move. Daily dems=9 supports entry without extension risk concerns. AI cloud theme aligns with Bull Maduro macro improving +15% over 1m. Significantly outpaces legacy tech like NVDA (84.5 PCS) already in portfolio.",
-          "comparative_edge": "Selected over NVDA (PCS 84.5, already open) and QQQ (78.5 PCS) because NBIS alone shows PCS ≥88, ret_13w_vs_spy 69.67% beats NVDA's 10.35%, and rot_score 9 matches peers while maintaining clean 10d move without spike compression.",
+          "reason_short": "PCS 84 with 116.6% 13w outperformance and 8-week streak.",
+          "reason_full": "NBIS reached PCS 84 with exceptional 116.58% 13-week outperformance versus SPY, ret_4w_vs_spy 36.42%, rot_score 8.0 and eight consecutive weeks of relative gains in AI cloud theme. Despite spike_flag=false and dems=9 supporting entry, extension risk is medium due to +36% 4w move. However, outperform_d10=5 and multi-day momentum (streak_days=1, momentum_accel=false) provide robustness beyond the spike. The improving macro regime (+5w delta, +15m delta) aligns with tech AI theme that benefits from liquidity rotation.",
+          "comparative_edge": "Selected over OSCR (PCS=80.8) because NBIS PCS 84 exceeds OSCR's threshold by 3.2 points; NBIS ret_13w_vs_spy 116.6% far exceeds OSCR's 59.3%, and NBIS shows no momentum_decay flag whereas OSCR has extension_risk=high with momentum_decay contradiction.",
           "key_supporting_factors": [
-            "Rotation score 9.0 with eight-week streak confirms sustained AI cloud leadership flow.",
-            "ret_13w_vs_spy 69.67% tops all non-leveraged candidates in set; 10d move +17.51% validated by outperform_d10=5 (no spike spike compression).",
-            "dems=9 with spike_flag=false indicates multi-day conviction, not single-day spike reversal.",
-            "Theme concentration US_tech_ai at 25% (2 open) allows room versus saturated oil_gas at 87.5%."
+            "ret_13w_vs_spy 116.6% ranks highest among all eligible candidates.",
+            "ret_4w_vs_spy 36.4% combined with 8-week streak confirms sustained AI/cloud capital rotation.",
+            "PCS 84 meets HIGH_CONVICTION minimum entry threshold of 82.",
+            "Macro improving +5w supports tech risk-on positioning in Bull Maduro regime."
           ],
           "key_risks_or_contradictions": [
-            "dist_52w_high -17.93% widest in set; extension_risk low (0 points) mitigates but price recovery late in move.",
-            "vol_5d_20d 1.04 shows elevated intraday swings; rotation may face volatility headwinds if macro weakens.",
-            "ret_5d_vs_spy only +0.18% despite 10d strength suggests consolidation; momentum may pause before next leg."
+            "Extension risk medium with ret_4w_extended flag; 36% 4-week gain is subject to consolidation risk.",
+            "dems 9 is moderate relative to daily rotation intensity; spike_flag=false mitigates but does not eliminate extension concern.",
+            "vol_5d_20d 1.04 shows normalized volatility after strong run, typical of late-stage momentum."
           ]
         },
         {
-          "ticker": "VAL",
+          "ticker": "CVE",
+          "portfolio": "HIGH_CONVICTION",
+          "signal_type": "confirmed_leader",
+          "confidence": "high",
+          "reason_short": "PCS 85.5 with rot_score 9.0, 8-week streak, 27.1% 13w outperformance.",
+          "reason_full": "CVE posted PCS 85.5 (above HIGH_CONVICTION 82 threshold) with rot_score 9.0—highest among energy peers—ret_13w_vs_spy 27.07%, ret_4w_vs_spy 12.47% and streak_weeks=8. Extension risk is medium (spike_flag=true, extension_points=2) but outperform_d10=6 confirms multi-day continuation beyond the spike. Macro delta +5w and +15m directly support oil_gas theme. Theme concentration risk high (oil already 57.5% open) but CVE's rot_score 9.0 and clean 8-week performance justify entry within mandate.",
+          "comparative_edge": "Selected over KOS (PCS=82) because CVE PCS 85.5 clears the 85 threshold while KOS remains at 82; CVE rot_score 9.0 exceeds KOS's 8.0; CVE ret_13w_vs_spy 27.1% beats KOS 36.4% in absolute terms but without spike_flag=true spike risk.",
+          "key_supporting_factors": [
+            "PCS 85.5 meets HIGH_CONVICTION entry minimum of 82 with 3.5-point buffer.",
+            "rot_score 9.0 ties highest in candidate set, indicating sustained flow leader status.",
+            "streak_weeks 8 with ret_4w/13w positive confirms oil theme leadership through consistent weeks.",
+            "Macro delta improving +5w supports energy positioning in Bull Maduro."
+          ],
+          "key_risks_or_contradictions": [
+            "spike_flag=true with extension_points 2 indicates 5-day move concentrated; justified by outperform_d10=6 showing 10-day outperformance.",
+            "Oil_gas theme concentration already high at 57.5%; CVE adds to sector risk despite quality signal.",
+            "dems 6 is moderate; daily momentum not primary driver but weekly metrics robust."
+          ]
+        },
+        {
+          "ticker": "CORZ",
           "portfolio": "CONFIRMED_FLOW_LEADERS",
           "signal_type": "confirmed_leader",
           "confidence": "high",
-          "reason_short": "PCS 85.5, dems 8, rot_score 8.0, 16.1% 4w RS, no spike",
-          "reason_full": "VAL reaches 85.5 PCS with rot_score 8.0, four-week streak, dems=8, ret_4w_vs_spy 16.12%, ret_10d_vs_spy 9.05% and zero spike_flag. Macro delta +15.42 1w aligns directly with Africa oil theme. Already in active_picks since 2026-05-20 at 89.5 entry PCS but now shows sustained 85.5 level confirming flow durability. Selected to reinforce confirmed flow leader status versus marginal candidates falling below threshold.",
-          "comparative_edge": "Selected over TOU.TO (PCS 78.5, pcs_crossed_down, signal EN_RADAR) and GLNG (PCS 79.0) because VAL maintains pcs above CONFIRMED_FLOW threshold (85.5 vs 78.5/79.0), rot_score 8 matches TOU/GLNG at 7, and clean no-spike 4w momentum versus TOU.TO spike_flag=true. VAL already open position validates entry as flow persistence signal.",
+          "reason_short": "PCS 78.2 with 12.7% 4w, 35.4% 13w outperformance, 8-week streak, rot_score 9.",
+          "reason_full": "CORZ reached PCS 78.2 crossing CONFIRMED_FLOW_LEADERS threshold of 75; rot_score 9.0, ret_4w_vs_spy 12.7%, ret_13w_vs_spy 35.44%, streak_weeks=8, dems=8, spike_flag=false, extension_risk=low (zero extension_points). Bitcoin mining theme aligns with improving macro +5w and +15m. Already open position at PCS ~81.8 from 2026-05-08 entry; current PCS 78.2 represents position-sizing opportunity at maintained signal strength. No hard rule blocks re-evaluation if signal deteriorates; current metrics show continued flow leadership.",
+          "comparative_edge": "Selected over OXY (PCS=76.5) because CORZ PCS 78.2 exceeds OXY by 1.7 points; CORZ ret_13w_vs_spy 35.4% beats OXY's 6.0%; CORZ extension_risk low versus OXY medium with spike_flag=true; CORZ already active pick with sustained conviction justifies reconfirmation.",
           "key_supporting_factors": [
-            "rot_score 8.0 with four-week streak (shorter than CVE/KOS but cleaner); ret_10d_vs_spy +9.05% exceeds most peers.",
-            "dems=8 provides steady daily support without extreme momentum; outperform_d10=7 confirms multi-day RS.",
-            "Already positioned 2026-05-20; reconfirming today signals durable leadership flow within Africa oil subtheme.",
-            "Macro delta improving 15.42% 1w and 25.42% 1m strongly supports oil_gas allocation despite concentration risk."
+            "PCS 78.2 maintains CONFIRMED_FLOW_LEADERS threshold (75) with +3.2 buffer.",
+            "rot_score 9.0 ranks among highest; 8-week streak confirms sustained Bitcoin/crypto capital rotation.",
+            "ret_13w_vs_spy 35.4% with 12.7% 4w shows consistent theme outperformance.",
+            "Extension_risk low with zero extension_points and no spike_flag supports continuation."
           ],
           "key_risks_or_contradictions": [
-            "Oil_gas theme concentration already 87.5% (7 open); VAL addition pushes exposure further into single-theme dependency.",
-            "dist_52w_high -3.97% shows moderate price proximity; extension_risk low but overall portfolio extension risk mounting.",
-            "ret_5d_vs_spy -1.0% shows recent lag; short-term consolidation may persist before next leg given macro tail-risk."
+            "Already open position; re-selecting reflects continued conviction, not new entry.",
+            "Crypto theme risk currently low (15% open weight) but concentrated in single ticker CORZ.",
+            "dems 8 moderate; daily momentum not primary driver for CONFIRMED_FLOW_LEADERS portfolio."
           ]
         },
         {
-          "ticker": "UCO",
+          "ticker": "OSCR",
+          "portfolio": "CONFIRMED_FLOW_LEADERS",
+          "signal_type": "confirmed_leader",
+          "confidence": "medium",
+          "reason_short": "PCS 80.8 with rot_score 10.0, 30.2% 4w, 59.3% 13w outperformance, 5-week streak.",
+          "reason_full": "OSCR reached PCS 80.8 with highest rot_score in candidate set (10.0), ret_4w_vs_spy 30.24%, ret_13w_vs_spy 59.32%, streak_weeks=5. Healthcare special theme shows emerging rotation. Extension_risk=high (4 points, flags: ret_4w_extended, momentum_decay) requires acknowledgement: +30% 4-week move and momentum_decay indicate late-stage extension. However, rot_score 10.0 and ret_13w_vs_spy 59.3% confirm sustained multi-week leadership beyond daily spike. dems=6 and ret_5d_vs_spy -3.63% show recent pullback that may validate consolidation rather than invalidate strength. For CONFIRMED_FLOW_LEADERS mandate with PCS 80.8 > threshold 75, the rot_score 10.0 overrides extension_risk concerns; momentum decay in week 5 is typical of confirmed flows pausing before next leg.",
+          "comparative_edge": "Selected over TDOC (PCS=73.0) because OSCR PCS 80.8 exceeds TDOC by 7.8 points; OSCR ret_13w_vs_spy 59.3% beats TDOC's 30.6%; OSCR rot_score 10.0 tops TDOC's 7.0; despite OSCR extension_risk=high, the rot_score and 13w outperformance justify entry over lower-conviction healthcare rotation in TDOC.",
+          "key_supporting_factors": [
+            "rot_score 10.0 is highest in entire candidate set; signals strongest confirmed flow leadership.",
+            "ret_13w_vs_spy 59.3% and ret_4w_vs_spy 30.2% confirm multi-timeframe outperformance.",
+            "PCS 80.8 meets CONFIRMED_FLOW_LEADERS minimum entry threshold of 75.",
+            "Healthcare special theme underexposed in portfolio (0% weight) provides diversification benefit."
+          ],
+          "key_risks_or_contradictions": [
+            "extension_risk=high acknowledged; 4-week move of +30% is extended but ret_5d_vs_spy -3.63% shows pullback, potentially validating consolidation risk rather than invalidating the setup.",
+            "momentum_decay flag present but rot_score 10 indicates flow confirmation persists despite weekly pause.",
+            "dist_52w_high -13.45% shows trade remains 13% below all-time highs, providing margin for safety vs absolute top."
+          ]
+        },
+        {
+          "ticker": "ASTS",
           "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
           "signal_type": "macro_thematic",
           "confidence": "medium",
-          "reason_short": "PCS 90.0, ret_13w +83.1%, macro delta improving +25.4%, leveraged crude proxy",
-          "reason_full": "UCO reaches 90.0 PCS as leveraged crude proxy with ret_13w_vs_spy 83.09%, matching CVE's strong outperformance but via commodity leverage. rot_score 9.0 with eight-week streak and dems=7 support Bull Maduro improving macro delta +25.42% 1m. Unlike direct oil equities (CVE, WCP, SU), UCO offers inverse volatility exposure and direct commodity beta. Selected for MACRO_THEMATIC tier given leverage and macro amplification benefits. Spike_flag=true but outperform_d10=6 validates 10d continuation despite single-day compression.",
-          "comparative_edge": "Selected over GLNG (PCS 79.0, no spike_flag) and TOU.TO (PCS 78.5, spike_flag=true) because UCO's ret_13w_vs_spy 83.09% dramatically exceeds peers (GLNG 13.95%, TOU.TO 1.60%) and leveraged structure directly captures macro delta improving +25.42% with rot_score 9. GLNG/TOU risk misalignment with leverage thesis.",
+          "reason_short": "PCS 65.8 with rot_score jumped 7→9, pcs_crossed_up 53.8→65.8, defense_space theme.",
+          "reason_full": "ASTS crossed PCS 65.8 (meets MACRO_THEMATIC threshold 62) with rot_score jump from 7.0→9.0 signaling emerging momentum in defense/space theme. pcs_crossed_up event from 53.8→65.8 (+12 points) confirms acceleration. Macro regime Bull Maduro improving +5w/+15m supports defense spending rotation. Theme_concentration_risk low (0% open exposure to defense_space) provides diversification. Extension_risk low (zero extension_points) supports early-stage entry. dems not provided but rot acceleration and PCS jump justify MACRO_THEMATIC positioning ahead of consensus.",
+          "comparative_edge": "Selected over LLY (PCS=63.8) because ASTS PCS 65.8 exceeds LLY's 63.8 by 2 points; ASTS rot_score jumped +2 (7→9) versus LLY's jump +7 (0→7), showing more dramatic acceleration; ASTS defense_space theme aligns with macro geopolitical rotation whereas LLY is healthcare largecap with zero prior rot (less sustained flow signal).",
           "key_supporting_factors": [
-            "ret_13w_vs_spy 83.09% exceeds all direct oil equities except KOS (61.47%); leveraged multiplier validates macro bet.",
-            "rot_score 9.0 with eight-week streak matches CVE; macro delta +25.42% 1m amplified by 2x leverage in crude.",
-            "Macro_thematic portfolio designed for leveraged macro beneficiaries; UCO's commodity leverage aligns mandate.",
-            "Theme concentration risk remains 'high' oil_gas but UCO subtheme 'crude_oil_leveraged' low-concentration versus Canadian/Africa oil."
+            "rot_score jump 7→9 (+2) shows acceleration in relative strength momentum.",
+            "pcs_crossed_up event +12 points (53.8→65.8) confirms threshold breakthrough and theme emerging.",
+            "Defense_space theme concentration risk low (0% open weight) provides thematic diversification.",
+            "Macro delta improving +5w supports geopolitical/defense spending themes in Bull Maduro regime."
           ],
           "key_risks_or_contradictions": [
-            "Spike_flag=true with ret_5d_vs_spy +0.77% suggests single-day compression; however outperform_d10=6 validates 10d hold despite spike.",
-            "Extension risk medium (2 points) and vol_5d_20d 0.96 show concentrated daily moves; leverage amplifies drawdown risk on macro pivot.",
-            "Leveraged 2x structure decays in sideways markets; if macro delta flattens from +25% 1m toward +5% 1w, UCO relative advantage shrinks rapidly."
+            "Early-stage entry with only rot_score jump and PCS cross as signals; limited 4w/13w outperformance data provided.",
+            "Theme_concentration_risk low but subtheme_concentration_risk data not provided; micro-cap/speculative exposure possible.",
+            "Extension_risk low is positive but lack of dems/daily momentum context limits conviction on daily follow-through."
           ]
         }
       ],
       "watch": [
         {
-          "ticker": "NVDA",
-          "reason": "PCS 84.5 (below HIGH_CONVICTION 85 threshold); already open since 2026-05-08 at CONFIRMED_FLOW_LEADERS size 10%. ret_13w_vs_spy 10.35% lags NBIS 69.67% and VAL 16.12%; dems=6 lowest among high-PCS tech. Watching for pcs reacceleration above 85 or dems spike above 12 to justify additional allocation.",
-          "watch_trigger": "PCS crosses 85+ or dems reaches 14+ with spike_flag=false and outperform_d10 ≥6"
-        },
-        {
-          "ticker": "SU",
-          "reason": "PCS 86.5, already open since 2026-05-16 at CONFIRMED_FLOW_LEADERS size 10%. Signal EN_RADAR with rot_score 9.0 validates open position but dems=10 below momentum threshold. ret_10d_vs_spy -1.47% shows recent consolidation. Watching for dems acceleration above 12 or ret_10d_vs_spy rebound to +5% to justify new allocation.",
-          "watch_trigger": "dems reaches 12+ or ret_10d_vs_spy rebounds >+5% while maintaining rot_score ≥8 and streak_weeks ≥5"
-        },
-        {
-          "ticker": "CVE",
-          "reason": "PCS 90.5, already open since 2026-05-15 at HIGH_CONVICTION size 15% and entry_pcs 85.0. Events show rot_score jumped 7→9 and pcs_crossed_up 83→90.5, confirming leadership but signal EN_RADAR with dems=6 is weak daily support. ret_10d_vs_spy -1% indicates recent pullback. Watching for sustained dems ≥8 or ret_4w_vs_spy acceleration >15% to justify additional sizing.",
-          "watch_trigger": "dems reaches 10+ or ret_4w_vs_spy exceeds 16% while rot_score maintains 9.0 and spike_flag stays false"
-        },
-        {
           "ticker": "KOS",
-          "reason": "PCS 82.5, already open since 2026-05-15 at CONFIRMED_FLOW_LEADERS size 10% and entry_pcs 82.0. Event shows pcs_crossed_down 90→82.5, signaling threshold breach. However ret_13w_vs_spy remains 61.47% (highest in set); dems=11 supports momentum and streak_weeks=8 intact. Watching for pcs reacceleration >85 to justify HIGH_CONVICTION upgrade or ret_4w stabilization >10% to confirm CONFIRMED_FLOW durability.",
-          "watch_trigger": "PCS rebounds >85 or ret_4w_vs_spy stabilizes >10% with dems ≥11 and streak_weeks ≥7"
+          "reason": "PCS 82 with ret_13w_vs_spy 70.7% (highest peer in energy) and 8-week streak (rot_score 8) qualify for CONFIRMED_FLOW_LEADERS entry, but active pick already open at PCS 82 from 2026-05-15. Monitor for PCS re-confirmation above 78 threshold or ret_13w_vs_spy deterioration below 50% as position-sizing decision point.",
+          "watch_trigger": "If PCS falls below 78 or ret_13w_vs_spy drops below 50%, downgrade to REJECT as flow leader status invalidated. If PCS sustains above 82 with ret_13w_vs_spy >70%, reconfirm as SELECTED for size increase."
         },
         {
           "ticker": "OXY",
-          "reason": "PCS 81.5, already open since 2026-05-19 at HIGH_CONVICTION size 15% and entry_pcs 89.5. Event shows pcs_crossed_down 89→81.5 below HIGH_CONVICTION 82 entry threshold. However rot_score 8.0, ret_13w_vs_spy 6.20%, dems=11, and outperform_d10=6 support continuation. ret_4w_vs_spy -0.77% shows short-term lag. Watching for pcs rebound >82 or ret_4w stabilization >2% with dems maintained ≥10 to confirm open position thesis.",
-          "watch_trigger": "PCS rebounds >82 or ret_4w_vs_spy stabilizes >+2% while maintaining dems ≥10 and rot_score ≥7"
+          "reason": "PCS 76.5 falls short of CONFIRMED_FLOW_LEADERS minimum entry 75 by 1.5 points; active pick from 2026-05-19 at PCS 89.5 now declining. ret_13w_vs_spy 6.0% and streak_weeks 2 show weakening flow vs. peers. dems 11 and outperform_d10 6 provide short-term continuation support but insufficient for new entry. Monitor OXY for stabilization above PCS 76 or ret_10d_vs_spy recovery above 5% before reconsidering.",
+          "watch_trigger": "If PCS rises back above 78 with ret_13w_vs_spy >15%, upgrade to CONFIRMED_FLOW_LEADERS SELECT. If PCS drops below 72, REJECT as theme alternative (CVE, SU) showing superior metrics."
         },
         {
-          "ticker": "OSCR",
-          "reason": "PCS 76.2 (below EARLY_ROTATION 68 entry but close to 70 threshold). Event shows pcs_crossed_up 69.2→76.2, crossing threshold. Healthcare_special theme orthogonal to oil_gas/tech concentration. However, insufficient data on ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks, dems, or spike_flag to assess momentum durability. Watching for PCS ≥78 (CONFIRMED_FLOW proximity) or dems ≥12 to justify entry.",
-          "watch_trigger": "PCS reaches 78+ or dems reaches 12+ with spike_flag=false and outperform_d10 ≥5"
+          "ticker": "TDOC",
+          "reason": "PCS 73.0 meets EARLY_ROTATION threshold (68) and pcs_crossed_up event 69→73 confirms acceleration in healthcare telehealth subtheme. rot_score 7.0, ret_13w_vs_spy 30.6%, extension_risk low (zero extension_points) support signal. However, dems 4 (lowest tier) and ret_10d_vs_spy -7.13% show recent pullback, suggesting early-stage rotation not yet confirmed on daily momentum. Await dems recovery ≥8 or ret_5d_vs_spy stabilization >0 before EARLY_ROTATION entry.",
+          "watch_trigger": "If dems rises to 8+ or ret_5d_vs_spy rebounds to positive territory with PCS sustained >70, upgrade to EARLY_ROTATION SELECT. If PCS falls below 68, REJECT as rotation signal invalidated."
         },
         {
-          "ticker": "WCP.TO",
-          "reason": "PCS 89.5, already open since 2026-05-15 at CONFIRMED_FLOW_LEADERS size 7.5% and entry_pcs 80.5. Event shows pcs_crossed_up 82.5→89.5, approaching HIGH_CONVICTION 85 threshold. rot_score 8.0 with streak_weeks=8 supports flow; dems=6 is weak daily signal. ret_13w_vs_spy 16.83% and ret_10d_vs_spy +5.6% sustain momentum. Watching for pcs reacceleration >90 or dems spike >10 to justify HIGH_CONVICTION upgrade.",
-          "watch_trigger": "PCS rebounds >90 or dems reaches 10+ with spike_flag=false and outperform_d10 ≥6"
+          "ticker": "NVDA",
+          "reason": "PCS 73.5 below CONFIRMED_FLOW_LEADERS threshold 75; active pick from 2026-05-08 at ~81.5 showing decay. ret_13w_vs_spy 7.62%, streak_weeks 7, rot_score 8 qualify for CONFIRMED_FLOW_LEADERS (threshold 75) but current PCS 73.5 signals momentum exhaustion. dems 6 and ret_5d_vs_spy -6.16% confirm recent lag. Position remains open but monitor for reversal above PCS 75 or dems recovery to 12+ before reconfirming entry.",
+          "watch_trigger": "If PCS rebounds above 75 or dems reaches 12+ with outperform_d10 ≥6, maintain as CONFIRMED_FLOW_LEADERS. If PCS falls below 70, consider exit as AI theme rotation pausing."
         },
         {
-          "ticker": "VLE.TO",
-          "reason": "PCS 81.5, already open since 2026-05-20 at HIGH_CONVICTION size 15% and entry_pcs 86.0. Event shows pcs_crossed_down 86→81.5 below HIGH_CONVICTION 82 entry threshold. However rot_score 8.0 with streak_weeks=8 sustained; dems=3 critically weak for daily confirmation. ret_5d_vs_spy -5.34% shows recent underperformance. Watching for pcs rebound >82 or dems acceleration >8 with ret_10d_vs_spy stabilization >-3% to confirm open thesis.",
-          "watch_trigger": "PCS rebounds >82 or dems reaches 8+ with ret_10d_vs_spy >-3% and rot_score maintained ≥8"
+          "ticker": "LLY",
+          "reason": "PCS 63.8 below MACRO_THEMATIC threshold 65; rot_score jumped 0→7 indicating emerging flow but signal too early and PCS not yet cleared. Healthcare largecap theme concentration risk unknown but macro improving +5w could support. Monitor for PCS crossing 65 threshold with sustained dems >10 before MACRO_THEMATIC entry.",
+          "watch_trigger": "If PCS rises above 65 and dems reaches 10+ with ret_5d_vs_spy positive, upgrade to MACRO_THEMATIC_BENEFICIARIES SELECT. If rot_score decays back below 5, REJECT as early rot spike not sustained."
         },
         {
           "ticker": "QQQ",
-          "reason": "PCS 78.5, already open since 2026-05-19 at HIGH_CONVICTION size 15% and entry_pcs 85.5. Event shows stable EN_RADAR signal with rot_score 7.0, streak_weeks=5, but no PCS event today. ret_13w_vs_spy 9.73%, ret_10d_vs_spy +1.29% sustain moderate flow. dems=5 is weakest in set; ret_5d_vs_spy -0.01% shows stalling momentum. Watching for pcs recovery >80 or dems spike >10 to validate global_etf diversification thesis versus oil_gas concentration.",
-          "watch_trigger": "PCS rebounds >80 or dems reaches 10+ with ret_4w_vs_spy >6% and spike_flag=false"
+          "reason": "PCS 72.5 below CONFIRMED_FLOW_LEADERS threshold 75; active pick from 2026-05-19 at PCS 85.5 showing decay. ret_13w_vs_spy 9.49%, streak_weeks 5, rot_score 6 remain qualified for CONFIRMED_FLOW_LEADERS (threshold 75) when above 75. Current PCS 73.5 signals momentum pause. dems 5 (lowest tier) and ret_5d_vs_spy -0.01% show flat recent action. Theme concentration risk low (global_etf, 15% open weight) supports diversification benefit. Monitor for PCS recovery above 75 before reconfirming entry.",
+          "watch_trigger": "If PCS rebounds to 75+ or dems rises to 8+ with outperform_d10 sustained ≥5, reconfirm as CONFIRMED_FLOW_LEADERS. If PCS falls below 70, exit as rotation paused."
         },
         {
-          "ticker": "TSLA",
-          "reason": "PCS 65.5, already open since 2026-05-09 at EARLY_ROTATION size 8% and entry_pcs 75.0. Events show pcs_crossed_up 63.5→65.5 and signal_upgraded IGNORAR→EN_RADAR today, but PCS remains below MACRO_THEMATIC entry 62 threshold and well below EARLY_ROTATION 68. dems metric unavailable to assess daily momentum. ret_5d_vs_spy and detailed momentum data absent from candidate fields. Watching for PCS rebound >68 or dems spike >14 to justify additional allocation.",
-          "watch_trigger": "PCS rebounds >68 or dems reaches 14+ with spike_flag=false and macro score improving >85"
+          "ticker": "SU",
+          "reason": "PCS 81.5 meets HIGH_CONVICTION entry minimum (82) threshold by 0.5 points but active pick from 2026-05-16 at PCS 80.5 remains above 75 for CONFIRMED_FLOW_LEADERS. rot_score 9.0 (tied highest), streak_weeks 8, ret_13w_vs_spy 14.43% confirm flow leader status. However, dems 10 (moderate) and ret_5d_vs_spy 2.14% show muted daily momentum. PCS near threshold edge suggests monitoring for either PCS confirmation >82 (HIGH_CONVICTION reclassification) or decay below 75 (downgrade to EARLY_ROTATION). Current position in CONFIRMED_FLOW_LEADERS appropriate given rot_score 9.0 and 8-week streak.",
+          "watch_trigger": "If PCS rises above 82, consider for HIGH_CONVICTION reclassification. If PCS falls below 75, downgrade to EARLY_ROTATION or consider exit as energy leadership rotation weakening."
         },
         {
-          "ticker": "CORZ",
-          "reason": "PCS 66.2, already open since 2026-05-08 at HIGH_CONVICTION size 15% and signal confirmed_leader. Event shows pcs_crossed_down 70.2→66.2 below EARLY_ROTATION 68 threshold. Crypto theme exposure orthogonal to oil_gas concentration but PCS deterioration signals loss of momentum. Insufficient candidate data on dems, ret_4w_vs_spy, streak_weeks to assess flow durability. Watching for pcs rebound >70 or macro crypto signals strengthening to reconfirm open position.",
-          "watch_trigger": "PCS rebounds >70 with dems ≥12 or macro crypto theme_score jumps >75 without deteriorating spike_flag"
+          "ticker": "WCP.TO",
+          "reason": "PCS 80.5 meets HIGH_CONVICTION entry minimum (82) by 1.5 points but active pick from 2026-05-15 remains strong. rot_score 8.0, streak_weeks 8, ret_13w_vs_spy 15.41% confirm Canadian oil leadership. dems 6 and spike_flag true indicate 5d move concentrated; offset by outperform_d10 5 showing 10-day outperformance. Oil_gas theme concentration already high (57.5% open weight). Position appropriate in CONFIRMED_FLOW_LEADERS but monitor for PCS fade below 78 as signal weakening in saturated theme.",
+          "watch_trigger": "If PCS falls below 78, downgrade to EARLY_ROTATION. If spike_flag continues and ret_10d_vs_spy turns negative, exit as momentum exhaustion signal."
+        },
+        {
+          "ticker": "VAL",
+          "reason": "PCS 69.0 (appeared in three event entries) falls below all portfolio thresholds (HIGH_CONVICTION 82, CONFIRMED_FLOW_LEADERS 75, EARLY_ROTATION 68, MACRO_THEMATIC 62). Active pick from 2026-05-20 at PCS 89.5 showing significant decay (−20.5 points). Signal degradation likely due to oil price correction. Monitor for PCS stabilization above 70 and dems recovery >12 before reconsidering. Current status: hold active position but do not add; prepare exit if PCS falls below 62.",
+          "watch_trigger": "If PCS rebounds above 75 with ret_13w_vs_spy >20%, reconfirm as CONFIRMED_FLOW_LEADERS. If PCS falls below 62 or dems drops below 8, exit position as flow leader status invalidated."
         }
       ],
       "rejected": [
         {
-          "ticker": "KOS",
-          "reason": "PCS 82.5 (below HIGH_CONVICTION 85 entry but above CONFIRMED_FLOW 75); already open at CONFIRMED_FLOW_LEADERS. Event shows pcs_crossed_down 90→82.5 representing -8.5 point deterioration in 1 week, signaling flow deceleration. While ret_13w_vs_spy 61.47% remains highest in set and streak_weeks=8 intact, momentum_accel=true and dems=11 suggest late-stage squeeze. ret_4w_vs_spy only 8.31% below most high-PCS peers. Spike_flag=true with ret_5d_vs_spy 7.21% concentrated in 5-day window; extension risk medium. Better to hold open position and watch for pcs reacceleration above 85 before adding new allocation.",
-          "rejection_category": "technical_overextension"
+          "ticker": "UCO",
+          "reason": "PCS 82.0 meets HIGH_CONVICTION entry minimum (82) but signal contradictions prevent entry: (1) UCO is leveraged commodity ETF (3x crude oil), which conflicts with hard rule against selecting commodities/macro indices directly; (2) spike_flag=true with extension_points 2 indicates concentrated 5-day move; (3) ret_4w_vs_spy 10.4% and ret_13w_vs_spy 85.5% are extended in absolute terms without multi-week streak (streak_weeks 8 but leveraged daily compounding invalidates weekly streak comparability); (4) dems 7 shows moderate daily momentum insufficient to justify leveraged commodity exposure.",
+          "rejection_category": "not_tradable"
         },
         {
-          "ticker": "OXY",
-          "reason": "PCS 81.5 (below HIGH_CONVICTION 85 entry); already open at HIGH_CONVICTION. Event shows pcs_crossed_down 89→81.5 representing significant threshold breach. While rot_score 8.0, dems=11, and outperform_d10=6 support continued flow, ret_4w_vs_spy -0.77% turns negative and ret_10d_vs_spy -3.82% shows short-term consolidation. Spike_flag=true with dems=11 may indicate late-momentum squeeze. Macro delta improving 19.46% 1m supports theme but individual ticker underperformance relative to CVE, VAL suggests selective weakness. Hold open position; reject new allocation pending pcs rebound >82 or ret_4w stabilization >+2%.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "VLE.TO",
-          "reason": "PCS 81.5 (below HIGH_CONVICTION 85 entry); already open at HIGH_CONVICTION. Event shows pcs_crossed_down 86→81.5 below entry threshold. rot_score 8.0 and streak_weeks=8 sustain, but dems=3 critically weak for daily support. ret_5d_vs_spy -5.34% and ret_10d_vs_spy -5.47% show sustained recent underperformance; momentum_accel=false. dist_52w_high -17.24% widest in set indicates extended pullback. Spike_flag=false but overall negative short-term momentum contradicts high-conviction positioning. Hold open; reject additional allocation pending dems recovery >8 and ret_10d stabilization >-3%.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "TOU.TO",
-          "reason": "PCS 78.5 (below EARLY_ROTATION 68 entry threshold despite EVENT pcs_crossed_down 86→78.5). rot_score 7.0 below peers CVE/SU/KOS (8-9.0); streak_weeks=3 half of top leaders. ret_4w_vs_spy 7.09% and ret_13w_vs_spy 1.60% trail most candidates; momentum_accel=false despite spike_flag=true suggesting late-stage move compression. ret_5d_vs_spy 2.32% concentrated in spike; ret_10d_vs_spy -1.08% turns negative. dems=4 weakest in set. Oil_gas theme already at 87.5% concentration with 7 open positions; TOU.TO offers no diversification edge. Better alternatives (VAL, CVE) available at higher conviction.",
+          "ticker": "SU",
+          "reason": "PCS 81.5 is below HIGH_CONVICTION minimum entry threshold of 82 by 0.5 points. While rot_score 9.0 and streak_weeks 8 qualify for CONFIRMED_FLOW_LEADERS (threshold 75), SU is already active position from 2026-05-16 entry. Do not re-SELECT already-open position; current activity in watch/hold status captures continued monitoring. New threshold rule: do not add existing portfolio holdings to selected list on same date unless explicit size/conviction increase warranted by signal deterioration requiring averaging down.",
           "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "GLNG",
-          "reason": "PCS 79.0 (below EARLY_ROTATION 68 entry but near CONFIRMED_FLOW threshold 75); EVENT signal EN_RADAR but no pcs event spike suggests stagnant conviction. rot_score 7.0 below high-conviction peers (8.0-9.0); streak_weeks=8 intact but ret_4w_vs_spy -0.30% and ret_13w_vs_spy 13.95% lag CVE (24.23%), KOS (61.47%), VAL (9.90%). ret_5d_vs_spy -7.87% and ret_10d_vs_spy -6.47% show pronounced recent underperformance; momentum_accel=false. vol_5d_20d 1.25 highest in set indicating elevated tail risk. dems=5 weak. LNG subtheme offers low concentration but overall candidate weakness versus available alternatives.",
+          "reason": "PCS 63.5 below all portfolio thresholds (HIGH_CONVICTION 82, CONFIRMED_FLOW_LEADERS 75, EARLY_ROTATION 68, MACRO_THEMATIC 62 by 1.5 points). Signal=IGNORAR flag explicitly instructs rejection. pcs_crossed_down events across three portfolios (79.0→63.5) confirm significant momentum deterioration. dems not provided but PCS collapse across all timeframes signals flow leader status invalidated. Three event entries all marked IGNORAR reinforce rejection.",
           "rejection_category": "weak_flow"
         },
         {
-          "ticker": "KIST.L",
-          "reason": "PCS 77.8 (below EARLY_ROTATION 68 entry; near CONFIRMED_FLOW 75); EVENT signal EN_RADAR with rot_score 6.0 below peers. streak_weeks=5 half of top leaders; ret_4w_vs_spy 5.41% and ret_13w_vs_spy 10.75% lag top candidates. ret_5d_vs_spy 0.9% but ret_10d_vs_spy 1.11% show stalling momentum; momentum_accel=false. Spike_flag=true but only modest 5-day move suggests late compression. dems=5 weak. North_sea subtheme concentration within oil_gas theme already saturated. Vol_5d_20d 0.52 lowest in set (technical data quality concern). Better alternatives (VAL, CVE, SU) available with higher rot and ret metrics.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "VLE.TO",
+          "reason": "PCS 60.8 falls below MACRO_THEMATIC threshold 62 by 1.2 points. Active pick from 2026-05-20 at PCS 86.0 showing decay (−25.2 points). Signal=IGNORAR flag (three event entries) explicitly instructs rejection. pcs_crossed_down events (81.5→60.8) confirm momentum deterioration across CONFIRMED_FLOW_LEADERS, EARLY_ROTATION, and MACRO_THEMATIC portfolios. Do not add existing open position to selected; current hold status captures active management.",
+          "rejection_category": "weak_flow"
+        },
+        {
+          "ticker": "OXY",
+          "reason": "PCS 76.5 falls 1.5 points below CONFIRMED_FLOW_LEADERS threshold 75. Active pick from 2026-05-19 entry at PCS 89.5 showing decay (−13 points). ret_13w_vs_spy 6.0% and streak_weeks 2 show weakened flow vs. peers CVE (27.1%, 8w) and SU (14.4%, 8w). While dems 11 and momentum_accel=true support daily continuation, PCS below threshold disqualifies for new entry. Position remains open but no reselection warranted on current metrics.",
+          "rejection_category": "weak_flow"
+        },
+        {
+          "ticker": "HIMS",
+          "reason": "PCS 68.2 meets MACRO_THEMATIC threshold 62 but signal=IGNORAR flag explicitly instructs rejection. pcs_crossed_up event (60.2→68.2) occurred but IGNORAR tag overrides thematic qualification. Healthcare special theme shows concentration risk concern (OSCR already selected with rot_score 10.0, TDOC in watch). HIMS represents weaker alternative within concentrated theme.",
+          "rejection_category": "weak_flow"
+        },
+        {
+          "ticker": "SASK.V",
+          "reason": "PCS 58.5 falls 6.5 points below MACRO_THEMATIC threshold 65. Uranium/nuclear theme shows emerging interest (rot_score context missing) but PCS deterioration from prior 65.5 indicates flow reversal. pcs_crossed_down event confirms rejection. Theme concentration in energy/commodities already high (oil_gas 57.5%, crypto 15% open weight); uranium adds speculative micro-cap exposure without sufficient PCS/flow confirmation.",
+          "rejection_category": "weak_flow"
         },
         {
           "ticker": "LCX.V",
-          "reason": "PCS 77.8 (below EARLY_ROTATION 68 entry); SIGNAL IGNORAR indicates model downgrade. ret_4w_vs_spy -12.67% deeply negative while ret_13w_vs_spy 57.82% shows extreme volatility (240+ point swing over 13 weeks). streak_weeks=0 confirms broken momentum. ret_5d_vs_spy -0.06% and ret_10d_vs_spy -11.47% show sharp recent rollover; momentum_accel=false. dems=3 weakest in set. dist_52w_high -19.62% second-widest pullback. Spike_flag=false but underlying weakness obvious. Canadian_oil subtheme concentration within saturated oil theme. IGNORAR signal + streak=0 + negative ret_4w disqualifies despite historical 57% 13w strength.",
+          "reason": "PCS 72.8 with signal=IGNORAR flag explicitly instructs rejection. ret_4w_vs_spy negative at −8.98% while ret_13w_vs_spy 33.9% shows backloaded gains not sustaining recently. streak_weeks 0 confirms momentum broken. dems 3 (lowest tier) and ret_10d_vs_spy −11.47% show recent severe rollover. Theme concentration risk high (Canadian oil) and signal deterioration confirms outperformance was backloaded not current. Better alternatives (CVE, SU, WCP.TO) in same subtheme with active streaks.",
           "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "FRU.TO",
-          "reason": "PCS 64.2 (below MACRO_THEMATIC 62 entry threshold; below EARLY_ROTATION 68); SIGNAL IGNORAR and EVENT shows pcs_crossed_down 73→64.2 representing -8.8 point deterioration. Oil_gas theme concentration already at critical 87.5% (7 open) with new candidates adding saturated exposure. No candidate data on dems, ret_4w_vs_spy, streak_weeks, or other momentum metrics to justify entry below threshold. IGNORAR signal confirms model downgrade. Macro delta +15.42% 1w and +25.42% 1m support theme generally but FRU.TO specific weakness indicated by PCS deterioration and signal downgrade.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "CORZ",
-          "reason": "PCS 66.2 (below EARLY_ROTATION 68 entry); already open at HIGH_CONVICTION since 2026-05-08 size 15%. EVENT shows pcs_crossed_down 70.2→66.2 below EARLY_ROTATION threshold, signaling momentum loss. Crypto theme orthogonal to oil_gas but deteriorating conviction trend within open position argues against new allocation. Insufficient candidate data on detailed momentum (dems unavailable, ret_4w_vs_spy unavailable, streak_weeks unavailable) prevents robust assessment. Do not add to underwater position; hold existing and monitor for pcs rebound >70.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "YPF",
-          "reason": "PCS 66.0 (below MACRO_THEMATIC 62 entry threshold; well below EARLY_ROTATION 68); EVENT shows pcs_crossed_down 70→66.0 below entry. Argentina theme macro exposure highly concentrated in single country idiosyncratic risk (Milei policy, peso FX, inflation). No candidate data on dems, ret_4w_vs_spy, streak_weeks prevents momentum assessment. macro_context shows strong macro score 91.67 but argentina-specific delta unavailable. Insufficient conviction + theme concentration risk + data gaps disqualify entry.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "KIST.L",
+          "reason": "PCS 72.8 falls below CONFIRMED_FLOW_LEADERS threshold 75 by 2.2 points. rot_score 6.0 trails peers (CVE 9, SU 9, OSCR 10, CORZ 9). ret_13w_vs_spy 18.6% and streak_weeks 5 qualify structurally but PCS below threshold disqualifies entry. Oil_gas theme concentration already high (57.5% open weight, 9 new candidates today). Better alternatives (CVE rot_score 9, SU rot_score 9) selected; KIST.L represents lower conviction within saturated theme.",
+          "rejection_category": "weak_flow"
         },
         {
           "ticker": "TSLA",
-          "reason": "PCS 65.5 (below MACRO_THEMATIC 62 entry threshold); already open at EARLY_ROTATION since 2026-05-09 size 8% and entry_pcs 75.0. Events show pcs_crossed_up 63.5→65.5 and signal_upgraded IGNORAR→EN_RADAR, but PCS remains well below EARLY_ROTATION entry 68 and MACRO_THEMATIC entry 62. No candidate data on dems, ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks prevents momentum assessment. Do not add new allocation to deteriorating position; hold existing 8% and watch for pcs reacceleration >68 before considering new sizing.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "GRSL.V",
-          "reason": "PCS 48.5 (well below all portfolio thresholds: 65 MACRO_THEMATIC minimum); SIGNAL VIGILAR (watch only). Events show signal_upgraded IGNORAR→VIGILAR and rot_score_jumped 2→6, indicating early-stage awakening but conviction remains marginal. Silver_gold_miners theme orthogonal to Bull Maduro macro (energy/tech driven) with macro score 91.67 not specific to precious metals. Insufficient data on dems, ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks prevents assessment. PCS 48.5 requires +16.5 point rally to reach MACRO_THEMATIC minimum; reject until pcs reaches ≥62.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "PCS 61.5 falls 0.5 points below MACRO_THEMATIC threshold 62. Active pick from 2026-05-09 at PCS 75.0 in EARLY_ROTATION portfolio showing decay (−13.5 points). ret_4w_vs_spy and ret_13w_vs_spy not provided but dems not visible. pcs_crossed_down event confirms momentum deterioration. Do not re-SELECT existing open position; maintain in active portfolio but do not add to selected.",
+          "rejection_category": "weak_flow"
         },
         {
           "ticker": "VNOM",
-          "reason": "PCS 66.5 (below EARLY_ROTATION 68 entry); SIGNAL IGNORAR confirms model downgrade. Events show pcs_crossed_down 79→66.5 (12.5 point deterioration in single week) and pcs_crossed_down 79→66.5 (duplicate event across CONFIRMED_FLOW and EARLY_ROTATION thresholds). Oil_gas theme already saturated at 87.5% portfolio weight. Deteriorating PCS + IGNORAR signal + -12.5 threshold breach + no available momentum data disqualifies entry. Reject pending pcs rebound >70 and signal upgrade to EN_RADAR.",
-          "rejection_category": "weak_relative_strength"
+          "reason": "PCS 57.5 falls 7.5 points below MACRO_THEMATIC threshold 65. Signal=IGNORAR flag explicitly instructs rejection. pcs_crossed_down from 66.5→57.5 confirms momentum deterioration in oil_gas theme. Theme concentration already high (57.5% open weight). No supporting data fields provided. Rejection appropriate.",
+          "rejection_category": "weak_flow"
+        },
+        {
+          "ticker": "SSV.V",
+          "reason": "PCS 45.0 falls 20+ points below all portfolio thresholds. Signal upgraded IGNORAR→EN_RADAR but PCS remains critically low (45 vs. macro_thematic minimum 62). type=signal_upgraded indicates recent momentum shift but insufficient PCS elevation to qualify. Silver/gold miners theme concentration risk unknown but speculative micro-cap exposure without PCS support unjustified.",
+          "rejection_category": "insufficient_conviction"
         }
       ]
     }
