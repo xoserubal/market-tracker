@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-05-23_0949",
+  "run_id": "2026-05-23_2044",
   "model": "x-ai/grok-4.3",
   "date": "2026-05-23",
   "summary": {
     "date": "2026-05-23",
-    "run_id": "2026-05-23_0949",
+    "run_id": "2026-05-23_2044",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 17,
     "candidate_count": 15,
-    "input_tokens": 13725,
-    "output_tokens": 2327,
-    "cost_usd": 0.022974,
-    "latency_ms": 17941.0,
+    "input_tokens": 14550,
+    "output_tokens": 1101,
+    "cost_usd": 0.02094,
+    "latency_ms": 8935.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 99,
-    "selected_count": 2,
-    "watch_count": 3,
-    "rejected_count": 12,
+    "quality_score": 89,
+    "selected_count": 0,
+    "watch_count": 2,
+    "rejected_count": 1,
     "fallback_used": false,
     "error": null
   },
@@ -29,135 +29,36 @@
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 99,
+  "quality_score": 89,
   "response": {
     "date": "2026-05-23",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-05-23_0949",
+    "run_id": "2026-05-23_2044",
     "decision_summary": {
-      "market_read": "Bull Maduro regime improving but majority of candidates crossed below entry thresholds with heavy oil concentration already at 57.5%.",
+      "market_read": "Bull Maduro regime improving with macro score 81.25 but most candidates showing pcs crossed down and high oil concentration.",
       "risk_posture": "cautious",
-      "should_select_picks": true
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "ASTS",
-        "portfolio": "EARLY_ROTATION",
-        "signal_type": "early_rotation",
-        "confidence": "medium",
-        "reason_short": "DEMS 18 with 9-day outperformance streak and no spike.",
-        "reason_full": "ASTS shows DEMS of 18, outperform_d10 of 9, ret_5d_vs_spy 25.65 and momentum_accel true while PCS remains above 68 threshold; daily momentum confirms multi-day continuation in defense_space despite high extension_risk.",
-        "comparative_edge": "Selected over MLX.AX because streak_days reaches 8 versus MLX.AX streak_days 5 and ret_5d_vs_spy 25.65 exceeds MLX.AX 13.74 with stronger immediate continuation signal.",
-        "key_supporting_factors": [
-          "DEMS 18 exceeds every peer including MLX.AX and drives selection.",
-          "outperform_d10 of 9 and streak_days 8 confirm sustained daily strength.",
-          "ret_10d_vs_spy 39.97 shows durable move beyond single-day spike."
-        ],
-        "key_risks_or_contradictions": [
-          "Extension_risk high with 5 points including dist_sma20_atr_extreme.",
-          "ret_13w_vs_spy only 16.6 trails several energy peers.",
-          "Theme avg_poor flag limits macro tailwind reliability."
-        ]
-      },
-      {
-        "ticker": "MLX.AX",
-        "portfolio": "EARLY_ROTATION",
-        "signal_type": "early_rotation",
-        "confidence": "medium",
-        "reason_short": "DEMS 18, outperform_d10 8 and 5-day streak without spike.",
-        "reason_full": "MLX.AX records DEMS 18, outperform_d10 8, ret_5d_vs_spy 13.74 with momentum_accel true and ret_4w_vs_spy 19.93; multi-day rotation holds while PCS clears 68 entry for commodities_metals exposure.",
-        "comparative_edge": "Selected over TOU.TO because DEMS 18 exceeds TOU.TO DEMS 5 and ret_4w_vs_spy 19.93 beats TOU.TO 7.08 while avoiding spike_flag present in TOU.TO.",
-        "key_supporting_factors": [
-          "DEMS 18 and streak_days 5 validate early daily momentum.",
-          "ret_13w_vs_spy 28.32 supports rotation without 52-week extremes.",
-          "Low theme_concentration_risk contrasts saturated oil_gas holdings."
-        ],
-        "key_risks_or_contradictions": [
-          "ret_13w_vs_spy still lags NBIS 103.9 and OSCR 72.3 among candidates.",
-          "Medium extension_risk with dist_sma20_atr_high present.",
-          "Theme avg_poor reduces regime alignment versus us_tech_ai."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
         "ticker": "OSCR",
-        "reason": "PCS 77.8 sits just below 78 threshold and crossed down from 80.8 with high extension risk.",
-        "watch_trigger": "PCS reclaim above 78 with rot_score remaining at 9 and ret_4w_vs_spy above 30."
-      },
-      {
-        "ticker": "UCO",
-        "reason": "PCS 77.5 below 78 entry and already high oil_gas concentration of 57.5%.",
-        "watch_trigger": "PCS move above 78 with concurrent improvement in rot_score above 8."
+        "reason": "PCS 77.8 just below 78 threshold after crossing down from 80.8 with strong 32.5% 4w RS but high extension risk.",
+        "watch_trigger": "PCS recovers above 78 with dems above 8 and no momentum decay"
       },
       {
         "ticker": "TOU.TO",
-        "reason": "PCS 69.5 below 70 threshold, spike_flag true and weak ret_13w_vs_spy of -2.09.",
-        "watch_trigger": "PCS above 70 plus streak_weeks reaching 5 without spike_flag."
+        "reason": "PCS 69.5 below 70 threshold after crossing down with only 7 rot_score and spike_flag present.",
+        "watch_trigger": "PCS rises above 70 with streak_weeks reaching 5 and outperform_d10 above 6"
       }
     ],
     "rejected": [
       {
-        "ticker": "NBIS",
-        "reason": "Already open in HIGH_CONVICTION at 15% size since 2026-05-08.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CVE",
-        "reason": "Already open in HIGH_CONVICTION at 15% size since 2026-05-15.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SU",
-        "reason": "Already open in CONFIRMED_FLOW_LEADERS at 10% size since 2026-05-16.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "Already open in CONFIRMED_FLOW_LEADERS at 10% size since 2026-05-15.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CORZ",
-        "reason": "Already open in HIGH_CONVICTION at 15% size since 2026-05-08.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "OXY",
-        "reason": "Already open in HIGH_CONVICTION at 15% size since 2026-05-19.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "QQQ",
-        "reason": "Already open in HIGH_CONVICTION at 15% size since 2026-05-19.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "VAL",
-        "reason": "Already open in HIGH_CONVICTION at 15% size since 2026-05-20.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "NVDA",
-        "reason": "Already open in CONFIRMED_FLOW_LEADERS at 10% size since 2026-05-08.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "Already open in CONFIRMED_FLOW_LEADERS at 7.5% size since 2026-05-15.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "TSLA",
-        "reason": "Already open in EARLY_ROTATION at 8% size since 2026-05-09.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "PNPN.V",
-        "reason": "PCS only 65.5 with weak rot_score and commodities_metals theme lacking sustained streak.",
+        "ticker": "TDOC",
+        "reason": "PCS 73.0 too low for any portfolio with dems at 3, spike_flag, and negative 10d RS.",
         "rejection_category": "insufficient_conviction"
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-05-23\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-23_0949\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime improving but majority of candidates crossed below entry thresholds with heavy oil concentration already at 57.5%.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"ASTS\",\n      \"portfolio\": \"EARLY_ROTATION\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"DEMS 18 with 9-day outperformance streak and no spike.\",\n      \"reason_full\": \"ASTS shows DEMS of 18, outperform_d10 of 9, ret_5d_vs_spy 25.65 and momentum_accel true while PCS remains above 68 threshold; daily momentum confirms multi-day continuation in defense_space despite high extension_risk.\",\n      \"comparative_edge\": \"Selected over MLX.AX because streak_days reaches 8 versus MLX.AX streak_days 5 and ret_5d_vs_spy 25.65 exceeds MLX.AX 13.74 with stronger immediate continuation signal.\",\n      \"key_supporting_factors\": [\n        \"DEMS 18 exceeds every peer including MLX.AX and drives selection.\",\n        \"outperform_d10 of 9 and streak_days 8 confirm sustained daily strength.\",\n        \"ret_10d_vs_spy 39.97 shows durable move beyond single-day spike.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Extension_risk high with 5 points including dist_sma20_atr_extreme.\",\n        \"ret_13w_vs_spy only 16.6 trails several energy peers.\",\n        \"Theme avg_poor flag limits macro tailwind reliability.\"\n      ]\n    },\n    {\n      \"ticker\": \"MLX.AX\",\n      \"portfolio\": \"EARLY_ROTATION\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"DEMS 18, outperform_d10 8 and 5-day streak without spike.\",\n      \"reason_full\": \"MLX.AX records DEMS 18, outperform_d10 8, ret_5d_vs_spy 13.74 with momentum_accel true and ret_4w_vs_spy 19.93; multi-day rotation holds while PCS clears 68 entry for commodities_metals exposure.\",\n      \"comp"
+  "raw_response_head": "{\n  \"date\": \"2026-05-23\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-05-23_2044\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime improving with macro score 81.25 but most candidates showing pcs crossed down and high oil concentration.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"OSCR\",\n      \"reason\": \"PCS 77.8 just below 78 threshold after crossing down from 80.8 with strong 32.5% 4w RS but high extension risk.\",\n      \"watch_trigger\": \"PCS recovers above 78 with dems above 8 and no momentum decay\"\n    },\n    {\n      \"ticker\": \"TOU.TO\",\n      \"reason\": \"PCS 69.5 below 70 threshold after crossing down with only 7 rot_score and spike_flag present.\",\n      \"watch_trigger\": \"PCS rises above 70 with streak_weeks reaching 5 and outperform_d10 above 6\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"TDOC\",\n      \"reason\": \"PCS 73.0 too low for any portfolio with dems at 3, spike_flag, and negative 10d RS.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    }\n  ]\n}"
 }
