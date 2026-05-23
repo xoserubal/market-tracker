@@ -1,0 +1,1237 @@
+{
+  "date": "2026-05-23",
+  "system_context": {
+    "project": "AI Picks Lab",
+    "objective": "select high-conviction paper-trading picks from prefiltered quantitative events",
+    "hard_rules": [
+      "Only SELECT tickers present in the candidates list.",
+      "Only SELECT tickers with eligible=true.",
+      "Do not SELECT futures, commodities, or macro indices directly.",
+      "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
+      "Do not fill portfolios with mediocre picks — empty selected list is valid.",
+      "Return valid JSON only. No markdown, no explanation, no extra text.",
+      "Do not invent data not present in the payload. If prev_snapshot_available=false, do not speculate on PCS or score changes between weeks.",
+      "With strong contradictions, use WATCH or REJECT, not SELECT.",
+      "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
+      "Every rejected item must have: reason and a valid rejection_category.",
+      "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
+      "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
+      "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead."
+    ],
+    "prev_snapshot_available": false
+  },
+  "macro_context": {
+    "macro_score": 81.25,
+    "macro_regime": "Bull Maduro",
+    "macro_trend": "Improving",
+    "macro_delta_1w": 5.0,
+    "macro_delta_1m": 15.0,
+    "phase_quality": "Bull Maduro Improving"
+  },
+  "portfolio_mandates": {
+    "HIGH_CONVICTION": {
+      "description": "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
+      "pcs_threshold": 85.0,
+      "pcs_min_entry": 82.0,
+      "max_positions": 8,
+      "size_range": [
+        8,
+        15
+      ],
+      "target_ops_month": 1
+    },
+    "CONFIRMED_FLOW_LEADERS": {
+      "description": "Líderes con flujo confirmado en múltiples timeframes.",
+      "pcs_threshold": 78.0,
+      "pcs_min_entry": 75.0,
+      "max_positions": 12,
+      "size_range": [
+        5,
+        10
+      ],
+      "target_ops_month": 4
+    },
+    "EARLY_ROTATION": {
+      "description": "Captura rotaciones tempranas antes de que sean obvias.",
+      "pcs_threshold": 70.0,
+      "pcs_min_entry": 68.0,
+      "max_positions": 15,
+      "size_range": [
+        4,
+        8
+      ],
+      "target_ops_month": 8
+    },
+    "MACRO_THEMATIC_BENEFICIARIES": {
+      "description": "Beneficiarios del régimen macro actual.",
+      "pcs_threshold": 65.0,
+      "pcs_min_entry": 62.0,
+      "max_positions": 20,
+      "size_range": [
+        3,
+        6
+      ],
+      "target_ops_month": 10
+    }
+  },
+  "events": [
+    {
+      "date": "2026-05-23",
+      "ticker": "CVE",
+      "theme": "oil_gas",
+      "pcs": 82.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "HIGH_CONVICTION",
+      "threshold": 85.0,
+      "pcs_prev": 85.5
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "OSCR",
+      "theme": "healthcare_special",
+      "pcs": 77.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 80.8
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "SU",
+      "theme": "oil_gas",
+      "pcs": 77.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 81.5
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "KOS",
+      "theme": "oil_gas",
+      "pcs": 77.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 82.0
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "UCO",
+      "theme": "oil_gas",
+      "pcs": 77.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 82.0
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "CORZ",
+      "theme": "crypto",
+      "pcs": 69.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 78.2
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "CORZ",
+      "theme": "crypto",
+      "pcs": 69.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 78.2
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "TOU.TO",
+      "theme": "oil_gas",
+      "pcs": 69.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 73.5
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "NVDA",
+      "theme": "us_tech_ai",
+      "pcs": 68.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 73.5
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "OXY",
+      "theme": "oil_gas",
+      "pcs": 67.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 76.5
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "LCX.V",
+      "theme": "oil_gas",
+      "pcs": 66.8,
+      "signal": "IGNORAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 72.8
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "TSLA",
+      "theme": "us_tech_ai",
+      "pcs": 65.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 61.5
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "PNPN.V",
+      "theme": "commodities_metals",
+      "pcs": 65.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 58.0
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "KIST.L",
+      "theme": "oil_gas",
+      "pcs": 64.8,
+      "signal": "IGNORAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 72.8
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "KIST.L",
+      "theme": "oil_gas",
+      "pcs": 64.8,
+      "signal": "IGNORAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 72.8
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "BBAR",
+      "theme": "argentina",
+      "pcs": 45.5,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "VIGILAR"
+    },
+    {
+      "date": "2026-05-23",
+      "ticker": "EOSE",
+      "theme": "energy_storage",
+      "pcs": 45.0,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 81.25,
+        "regime": "Bull Maduro",
+        "trend": "Improving",
+        "phase_quality": "Bull Maduro Improving",
+        "delta_1w": 5.0,
+        "delta_1m": 15.0
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "VIGILAR"
+    }
+  ],
+  "candidates": [
+    {
+      "ticker": "NBIS",
+      "name": "Nebius Group (AI cloud)",
+      "theme": "us_tech_ai",
+      "subtheme": "ai_cloud",
+      "pcs": 84.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 31.477,
+      "ret_13w_vs_spy": 103.9005,
+      "streak_weeks": 8,
+      "dist_52w_high": -8.11,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 8,
+      "ret_5d_vs_spy": -3.23,
+      "ret_10d_vs_spy": 20.22,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.93,
+      "spike_flag": false,
+      "extension_risk": "high",
+      "extension_points": 4,
+      "extension_flags": [
+        "ret_4w_extended",
+        "momentum_decay"
+      ],
+      "theme_concentration_risk": "medium",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "CVE",
+      "name": "Cenovus Energy",
+      "theme": "oil_gas",
+      "subtheme": "canadian_oil",
+      "pcs": 82.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 8.3611,
+      "ret_13w_vs_spy": 24.5274,
+      "streak_weeks": 8,
+      "dist_52w_high": -6.3,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": -3.37,
+      "ret_10d_vs_spy": 4.72,
+      "outperform_d10": 6,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.0,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "WCP.TO",
+      "name": "Whitecap Resources",
+      "theme": "oil_gas",
+      "subtheme": "canadian_oil",
+      "pcs": 80.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 8.9387,
+      "ret_13w_vs_spy": 15.5012,
+      "streak_weeks": 8,
+      "dist_52w_high": -3.12,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 9,
+      "ret_5d_vs_spy": 4.04,
+      "ret_10d_vs_spy": 4.95,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": true,
+      "vol_5d_20d": 0.98,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "OSCR",
+      "name": "Oscar Health",
+      "theme": "healthcare_special",
+      "subtheme": "health_insurance",
+      "pcs": 77.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 9.0,
+      "ret_4w_vs_spy": 32.5472,
+      "ret_13w_vs_spy": 72.2801,
+      "streak_weeks": 5,
+      "dist_52w_high": -11.49,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_moderate",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 6,
+      "ret_5d_vs_spy": -3.79,
+      "ret_10d_vs_spy": 5.15,
+      "outperform_d10": 5,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.93,
+      "spike_flag": false,
+      "extension_risk": "high",
+      "extension_points": 4,
+      "extension_flags": [
+        "ret_4w_extended",
+        "momentum_decay"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "SU",
+      "name": "Suncor Energy",
+      "theme": "oil_gas",
+      "subtheme": "canadian_oil",
+      "pcs": 77.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": -0.9434,
+      "ret_13w_vs_spy": 11.0322,
+      "streak_weeks": 8,
+      "dist_52w_high": -4.2,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_outperform",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": -2.27,
+      "ret_10d_vs_spy": 4.12,
+      "outperform_d10": 6,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.94,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "KOS",
+      "name": "Kosmos Energy",
+      "theme": "oil_gas",
+      "subtheme": "africa_oil",
+      "pcs": 77.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 0.3254,
+      "ret_13w_vs_spy": 37.5201,
+      "streak_weeks": 8,
+      "dist_52w_high": -9.28,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": -7.07,
+      "ret_10d_vs_spy": 9.09,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.88,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "UCO",
+      "name": "ProShares Ultra Bloomberg Crude Oil",
+      "theme": "oil_gas",
+      "subtheme": "crude_oil_leveraged",
+      "pcs": 77.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 2.3587,
+      "ret_13w_vs_spy": 79.2417,
+      "streak_weeks": 8,
+      "dist_52w_high": -10.77,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 6,
+      "ret_5d_vs_spy": -6.77,
+      "ret_10d_vs_spy": 5.14,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.03,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "TDOC",
+      "name": "Teladoc Health",
+      "theme": "healthcare_special",
+      "subtheme": "telehealth",
+      "pcs": 73.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 10.0137,
+      "ret_13w_vs_spy": 34.5116,
+      "streak_weeks": 4,
+      "dist_52w_high": -32.75,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_moderate",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 3,
+      "ret_5d_vs_spy": 2.43,
+      "ret_10d_vs_spy": -10.47,
+      "outperform_d10": 2,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.6,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "theme": "global_etf",
+      "subtheme": "nasdaq100",
+      "pcs": 72.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 4.9006,
+      "ret_13w_vs_spy": 9.8928,
+      "streak_weeks": 5,
+      "dist_52w_high": -0.63,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 3,
+      "ret_5d_vs_spy": 0.34,
+      "ret_10d_vs_spy": -0.2,
+      "outperform_d10": 5,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.03,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "CORZ",
+      "name": "Core Scientific",
+      "theme": "crypto",
+      "subtheme": "bitcoin_mining",
+      "pcs": 69.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 9.0,
+      "ret_4w_vs_spy": 16.1345,
+      "ret_13w_vs_spy": 39.9887,
+      "streak_weeks": 8,
+      "dist_52w_high": -1.44,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_very_poor",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": 3.46,
+      "ret_10d_vs_spy": 9.12,
+      "outperform_d10": 5,
+      "streak_days": 3,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.7,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "ASTS",
+      "name": "AST SpaceMobile",
+      "theme": "defense_space",
+      "subtheme": "space_connectivity",
+      "pcs": 69.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 9.0,
+      "ret_4w_vs_spy": 29.1759,
+      "ret_13w_vs_spy": 16.6067,
+      "streak_weeks": 2,
+      "dist_52w_high": -18.5,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_poor",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 18,
+      "ret_5d_vs_spy": 25.65,
+      "ret_10d_vs_spy": 39.97,
+      "outperform_d10": 9,
+      "streak_days": 8,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.16,
+      "spike_flag": false,
+      "extension_risk": "high",
+      "extension_points": 5,
+      "extension_flags": [
+        "dist_sma20_atr_extreme",
+        "ret_4w_extended"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "TOU.TO",
+      "name": "Tourmaline Oil",
+      "theme": "oil_gas",
+      "subtheme": "natural_gas",
+      "pcs": 69.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 7.0813,
+      "ret_13w_vs_spy": -2.0859,
+      "streak_weeks": 3,
+      "dist_52w_high": -4.73,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_neutral",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 5,
+      "ret_5d_vs_spy": 1.66,
+      "ret_10d_vs_spy": 1.73,
+      "outperform_d10": 6,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.95,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "MLX.AX",
+      "name": "Metals X",
+      "theme": "commodities_metals",
+      "subtheme": "tin_nickel",
+      "pcs": 69.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 19.9278,
+      "ret_13w_vs_spy": 28.3233,
+      "streak_weeks": 3,
+      "dist_52w_high": -0.28,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_poor",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 18,
+      "ret_5d_vs_spy": 13.74,
+      "ret_10d_vs_spy": 9.92,
+      "outperform_d10": 8,
+      "streak_days": 5,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.31,
+      "spike_flag": false,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "dist_sma20_atr_high"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "VAL",
+      "name": "Vaalco Energy",
+      "theme": "oil_gas",
+      "subtheme": "africa_oil",
+      "pcs": 69.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 6.7509,
+      "ret_13w_vs_spy": -1.3641,
+      "streak_weeks": 4,
+      "dist_52w_high": -11.35,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_neutral",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": -4.92,
+      "ret_10d_vs_spy": 5.39,
+      "outperform_d10": 6,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.91,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "theme": "us_tech_ai",
+      "subtheme": "ai_chips",
+      "pcs": 68.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 2.6097,
+      "ret_13w_vs_spy": 2.8533,
+      "streak_weeks": 7,
+      "dist_52w_high": -8.97,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_outperform",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": -5.31,
+      "ret_10d_vs_spy": -1.03,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.04,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "medium",
+      "subtheme_concentration_risk": "medium"
+    }
+  ],
+  "active_picks_relevant": [
+    {
+      "ticker": "CORZ",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "Bitcoin mining leader with 81.8 PCS and exceptional relative strength",
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "NBIS",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "AI cloud infrastructure leader with 81.0 PCS and exceptional 129.5% 13w outperformance",
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "CVE",
+      "entry_date": "2026-05-15",
+      "entry_price": 30.15,
+      "entry_pcs": 85.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "PCS at 85 with 8-week RS streak and 32% 13w outperformance.",
+      "reason_full": "CVE crossed the 85 PCS threshold for high conviction with an 8-week streak, 11.6% 4w relative outperformance, and oil_gas theme aligned to the improving Bull Maduro macro delta of 3.75.",
+      "comparative_edge": "Selected over KOS (PCS=82) because CVE reached the 85 high-conviction threshold while KOS remains at 82 with weaker 5d RS of -0.88 versus CVE's +3.67.",
+      "key_supporting_factors": [
+        "8 consecutive weeks of outperformance with rot_score 8.0.",
+        "ret_13w_vs_spy at 32.1% exceeds most peers in energy.",
+        "dist_52w_high only -2.3% shows tight price action near highs.",
+        "macro delta improving 3.75 over both 1w and 1m supports theme."
+      ],
+      "key_risks": [
+        "spike_flag false but dems only 6 indicates muted daily momentum.",
+        "ret_10d_vs_spy negative at -1% shows recent short-term pause.",
+        "vol_5d_20d at 0.73 remains moderate for leveraged sector exposure."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "OXY",
+      "entry_date": "2026-05-19",
+      "entry_price": 59.7,
+      "entry_pcs": 89.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "89.5 PCS with clean 9 rot_score and low extension risk.",
+      "reason_full": "OXY delivers 89.5 PCS, rot_score 9.0, 22.1% ret_13w_vs_spy, two-week streak, dems 8, no spike_flag and low extension_risk in US oil subtheme aligned to improving macro of +19.46 one-month delta.",
+      "comparative_edge": "Selected over KOS (PCS=90, active) and UCO (PCS=90) because OXY shows no spike_flag or high extension versus KOS spike_flag true and UCO leveraged etf exposure with ret_10d_vs_spy -2.58.",
+      "key_supporting_factors": [
+        "Rot_score 9.0 exceeds GLNG peers in same theme.",
+        "ret_13w_vs_spy 22.1% with streak_weeks 2 and clean price action.",
+        "Low extension_points 0 and dems 8 support continuation.",
+        "Macro delta improving 9.46 supports oil theme without leverage."
+      ],
+      "key_risks": [
+        "Oil theme concentration risk already high at 42.5% portfolio weight.",
+        "ret_10d_vs_spy negative at -3.82 indicates short-term pause."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "QQQ",
+      "entry_date": "2026-05-19",
+      "entry_price": 705.88,
+      "entry_pcs": 85.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "85.5 PCS with broad tech exposure and low theme concentration.",
+      "reason_full": "QQQ posts 85.5 PCS, rot_score 8.0, 9.07% ret_13w_vs_spy, five-week streak, no spike_flag, medium extension_risk but theme_concentration_risk low at global_etf versus saturated oil theme.",
+      "comparative_edge": "Selected over VLE.TO (PCS=86) and GLNG (PCS=86) because QQQ offers low theme concentration risk while VLE.TO and GLNG add to already high 42.5% oil exposure with weaker 4w returns.",
+      "key_supporting_factors": [
+        "ret_13w_vs_spy 9.07% and outperform_d10 at 6 confirms steady rotation.",
+        "Theme concentration risk low unlike all oil candidates.",
+        "Five consecutive weeks of outperformance without spike_flag."
+      ],
+      "key_risks": [
+        "Dems at 6 is lowest among high-PCS candidates.",
+        "ret_5d_vs_spy negative at -0.95 shows recent lag."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "VAL",
+      "entry_date": "2026-05-20",
+      "entry_price": 111.05,
+      "entry_pcs": 89.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "89.5 PCS with dems 17, 18.28% 10d outperformance, rot_score 8.",
+      "reason_full": "VAL shows 89.5 PCS crossing threshold on strong daily momentum dems 17, ret_10d_vs_spy 18.28, outperform_d10 at 7 and no spike_flag while macro improves 17.08 over one month and theme supports energy names.",
+      "comparative_edge": "Selected over TOU.TO (PCS=86) because VAL dems reaches 17 versus TOU.TO dems 9 and ret_10d_vs_spy 18.28 beats TOU.TO 0.56 with stronger short-term continuation.",
+      "key_supporting_factors": [
+        "Dems 17 exceeds all peers including OXY 13 and WCP.TO 11.",
+        "ret_13w_vs_spy 14.83% with 4-week streak confirms sustained RS.",
+        "Momentum_accel true and extension_risk medium but justified by 18% 10d outperformance.",
+        "Macro delta +17.08 1m aligns directly with oil_gas theme."
+      ],
+      "key_risks": [
+        "Oil_gas theme concentration already 57.5% with five open positions.",
+        "dist_52w_high -2.69% and medium extension points 2 indicate some late entry pressure.",
+        "ret_4w_vs_spy 23% trails UCO 28.55% but UCO is leveraged commodity."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "VLE.TO",
+      "entry_date": "2026-05-20",
+      "entry_price": null,
+      "entry_pcs": 86.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "86 PCS, rot_score 9, 8-week streak, low extension risk.",
+      "reason_full": "VLE.TO delivers 86 PCS with rot_score 9.0, ret_13w_vs_spy 15.57%, eight consecutive weeks of outperformance, momentum_accel false but clean price action at dist_52w_high -15.32% and low extension_points 0, aligning with Bull Maduro improving macro delta of +17.08.",
+      "comparative_edge": "Selected over TOU.TO (PCS 86) due to rot_score 9 versus TOU.TO rot_score 8, stronger ret_13w_vs_spy 15.57% versus 5.48%, and absence of spike_flag.",
+      "key_supporting_factors": [
+        "Eight-week streak with rot_score 9 tops most oil peers.",
+        "ret_4w_vs_spy 9.18% and ret_10d_vs_spy -6.71% show sustained rather than spike-driven move.",
+        "Low extension_risk and subtheme_concentration_risk low within saturated oil theme."
+      ],
+      "key_risks": [
+        "Oil_gas theme already at 72.5% portfolio weight with high concentration risk.",
+        "ret_5d_vs_spy negative at -4.43% indicates recent short-term lag.",
+        "dems at 3 is among the weakest daily readings in candidate set."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "NVDA",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "AI chip leader NVDA with 81.5 PCS, macro improving, sustained flow confirmation",
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "MSTR",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "Bitcoin treasury proxy with 79.0 PCS, strong 4w/13w outperformance despite brief streak",
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "COIN",
+      "entry_date": "2026-05-09",
+      "entry_pcs": 83.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "PCS 83.5 crossed above 78 threshold with improving macro.",
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "KOS",
+      "entry_date": "2026-05-15",
+      "entry_price": 2.93,
+      "entry_pcs": 82.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "70.7% 13w vs SPY and 8-week outperformance streak",
+      "reason_full": "KOS posts 82 PCS with 70.7444% 13-week outperformance versus SPY, 6.6753% 4-week outperformance, rot_score of 8.0 and eight consecutive weeks of relative gains aligned to the Bull Maduro improving macro.",
+      "comparative_edge": "Selected over UCO (PCS=82) because KOS delivers higher 13w RS of 70.7 versus UCO's leveraged commodity exposure and lower streak stability.",
+      "key_supporting_factors": [
+        "ret_13w_vs_spy reaches 70.74% topping most peers in candidate set.",
+        "Eight-week streak with rot_score 8.0 confirms sustained flow.",
+        "ret_4w_vs_spy at 6.68% exceeds WCP.TO's 5.35% while remaining eligible."
+      ],
+      "key_risks": [
+        "dems at 9 shows moderate daily momentum versus VAL's 13.",
+        "ret_10d_vs_spy negative at -1.63% indicates short-term consolidation."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "WCP.TO",
+      "entry_date": "2026-05-15",
+      "entry_price": null,
+      "entry_pcs": 80.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "8-week streak and rot_score 8.0 with tight 52w high distance",
+      "reason_full": "WCP.TO reaches 80.5 PCS with eight consecutive weeks of outperformance, rot_score 8.0, ret_4w_vs_spy 5.35% and dist_52w_high only -1.46% while macro delta improves 3.75 supporting oil theme.",
+      "comparative_edge": "Selected over GLNG (PCS=76.5) because WCP.TO maintains streak_weeks 8 versus GLNG's spike_flag true and weaker rot_score of 7.0.",
+      "key_supporting_factors": [
+        "rot_score 8.0 matches KOS while remaining non-leveraged equity.",
+        "ret_13w_vs_spy 16.15% with eight-week consistency.",
+        "dist_52w_high -1.46% shows price hugging highs better than peers."
+      ],
+      "key_risks": [
+        "ret_4w_vs_spy 5.35% trails UCO and KOS relative moves.",
+        "dems 9 lower than VAL and CVE daily readings."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "SU",
+      "entry_date": "2026-05-16",
+      "entry_price": 68.29,
+      "entry_pcs": 80.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "Rot score 9.0 and 8-week streak confirm sustained leadership in energy.",
+      "reason_full": "SU delivers rot_score 9.0 with ret_4w_vs_spy of 1.66 percent and ret_13w_vs_spy of 14.19 percent while maintaining exactly eight consecutive weeks of outperformance at pcs 80.5 aligned to stable macro regime.",
+      "comparative_edge": "Selected over GLNG because SU rot_score holds at 9 with no spike_flag versus GLNG rot_score 9 accompanied by ret_5d_vs_spy of only 2.2 percent and spike_flag true that weakens continuation signal.",
+      "key_supporting_factors": [
+        "Rot_score reaches 9.0 exceeding most peers including VLE.TO at 8.0.",
+        "Eight-week streak remains intact with rot_high flag confirmed.",
+        "ret_13w_vs_spy of 14.19 percent supports steady energy leadership under Bull Maduro stable conditions."
+      ],
+      "key_risks": [
+        "ret_10d_vs_spy negative at -1.47 percent shows brief consolidation.",
+        "dems at 8 remains below 10 indicating muted daily momentum.",
+        "Dist_52w_high at -2.85 percent is wider than several higher-ranked energy names."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "TSLA",
+      "entry_date": "2026-05-09",
+      "entry_pcs": 75.0,
+      "entry_signal": "early_rotation",
+      "size_pct": 8.0,
+      "conviction": "high",
+      "rationale": "DEMS 15 with spike_flag=false and strong multi-day RS",
+      "portfolio": "EARLY_ROTATION"
+    }
+  ],
+  "recent_rejected_relevant": [],
+  "theme_exposure": {
+    "crypto": {
+      "open_positions": 1,
+      "open_tickers": [
+        "CORZ"
+      ],
+      "open_weight_pct": 15.0,
+      "new_candidates_today": 1,
+      "risk": "low"
+    },
+    "us_tech_ai": {
+      "open_positions": 2,
+      "open_tickers": [
+        "NBIS",
+        "NVDA"
+      ],
+      "open_weight_pct": 25.0,
+      "new_candidates_today": 2,
+      "risk": "medium"
+    },
+    "oil_gas": {
+      "open_positions": 5,
+      "open_tickers": [
+        "CVE",
+        "VAL",
+        "KOS",
+        "WCP.TO",
+        "SU"
+      ],
+      "open_weight_pct": 57.5,
+      "new_candidates_today": 7,
+      "risk": "high"
+    },
+    "global_etf": {
+      "open_positions": 1,
+      "open_tickers": [
+        "QQQ"
+      ],
+      "open_weight_pct": 15.0,
+      "new_candidates_today": 1,
+      "risk": "low"
+    }
+  }
+}
