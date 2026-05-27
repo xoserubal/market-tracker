@@ -87,6 +87,10 @@ jobs:
         run: python scripts/paper_trading.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 10b update performance tracking
+        run: python scripts/update_performance.py
+        working-directory: ${{ github.workspace }}
+
       - name: Run pipeline - Step 11 Telegram notifications
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

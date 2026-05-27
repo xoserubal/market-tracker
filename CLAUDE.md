@@ -18,6 +18,7 @@ backtest/src/main_stocks.py     → stock scanner
 scripts/export_to_json.py     → parquets → docs/data/*.json
 scripts/pcs_calculator.py     → Pick Conviction Score (91 tickers)
 scripts/event_detector.py     → detecta eventos de señal
+scripts/update_performance.py → rellena ret_* en shadow_picks.jsonl (yfinance)
 scripts/paper_trading.py      → llama a los modelos IA → picks
 scripts/notify_telegram.py         → notificaciones de picks + recordatorios
 scripts/telegram_portfolio_bot.py  → comandos Telegram para Portfolio Tracker
@@ -277,9 +278,46 @@ theme_exposure = {
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
-- `scripts/update_performance.py`: rellena ret_1d/3d/1w/2w/1m/3m en shadow_picks.jsonl con precios reales de yfinance
-- Comparativa picks seleccionados vs baselines.jsonl por run_id
-- Análisis spike_flag: ¿evita trampas o saca de los mejores movimientos?
+- ✅ `scripts/update_performance.py`: implementado (2026-05-27). Rellena ret_1d/3d/1w/2w/1m/3m + vs_spy_1m + max_gain_1m + max_drawdown_1m en shadow_picks.jsonl. Se ejecuta automáticamente en cada run del pipeline (Step 10b). Ver detalles abajo.
+- Comparativa picks seleccionados vs baselines.jsonl por run_id  ← pendiente (bloqueada hasta tener ret_1m en picks con ≥21 trading days de historial, ~2026-06-09)
+- Análisis spike_flag: ¿evita trampas o saca de los mejores movimientos?  ← pendiente mismo bloqueante
+
+### Performance tracking — update_performance.py (implementado 2026-05-27)
+
+Rellena campos de rendimiento en `shadow_picks.jsonl` usando precios reales de yfinance.
+Se ejecuta en el pipeline como **Step 10b** (tras paper_trading.py, antes de Telegram).
+
+**Campos calculados:**
+
+| Campo | Descripción |
+|-------|-------------|
+| `ret_1d/3d/1w/2w/1m/3m` | Retorno absoluto del ticker (%) a N días hábiles desde la entrada |
+| `vs_spy_1m` | Alpha vs SPY al mes = ret_1m − spy_ret_1m |
+| `max_gain_1m` | Máximo intradiario alto vs precio entrada en ventana 1 mes (%) |
+| `max_drawdown_1m` | Mínimo intradiario bajo vs precio entrada en ventana 1 mes (%) |
+
+**Precio base:** `entry_price` si está disponible (pick real de paper trading), sino close de yfinance en fecha de entrada.
+
+**Disponibilidad de datos:**
+- ret_1m / vs_spy_1m: disponibles a partir de ≈21 días hábiles tras la entrada (~2026-06-09 para los primeros picks)
+- ret_3m: disponibles a partir de ≈63 días hábiles (~2026-08-05 para los primeros picks)
+
+**Uso manual:**
+```bash
+py -3 scripts/update_performance.py               # rellena todos los nulls
+py -3 scripts/update_performance.py --dry-run     # muestra cambios sin escribir
+py -3 scripts/update_performance.py --force       # recomputa filas ya rellenas
+py -3 scripts/update_performance.py --report      # imprime resumen de rendimiento
+py -3 scripts/update_performance.py --ticker CVE  # actualiza solo un ticker
+```
+
+**Resumen de datos actuales (2026-05-27):**
+- 61 picks actualizados con ret_1d/ret_1w/ret_2w (horizonte máximo disponible: ~13 días hábiles)
+- vs_spy_1m: aún null (necesita 21 días hábiles)
+- Picks más destacados a 2 semanas: NBIS +21.3%, CORZ +10.2%
+- Picks con mayor drawdown: MSTR -14.8%, COIN -16.9%
+
+---
 
 ### Semana 7 (≈2026-07-01)
 - `scripts/review_open_picks.py`: Open Pick Review Engine separado del New Pick Engine. Evalúa posiciones abiertas → HOLD/ADD/REDUCE/EXIT. Guarda en `ai_picks_review.jsonl`
