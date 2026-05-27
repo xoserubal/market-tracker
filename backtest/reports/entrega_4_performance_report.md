@@ -5,7 +5,7 @@
 **Veredicto:** NO CONFIRMADO: alpha positivo pero t-stat < 1.5 (muestra pequena)
 
 - Señales COMPRA — alpha medio 13w (Modo A): +2.4%  | hit rate: +49.4%  | t-stat: 0.45
-- ROT. TEMPRANA: 42% convergen a COMPRA/ACUMULAR  | lead time mediano: 21w
+- ROT. TEMPRANA: 48% convergen a COMPRA/ACUMULAR  | lead time mediano: 20w
 - Recession basket: alpha medio 13w en transiciones = -1.2%
 
 ---
@@ -108,10 +108,10 @@
 
 Total ROT. TEMPRANA emitidas: **184** (ambos modos)
 
-- Convergieron a COMPRA/ACUMULAR: **78** (42%)
-- Lead time (semanas): media=20.2  mediana=21  IQR=[10, 33]
+- Convergieron a COMPRA/ACUMULAR: **89** (48%)
+- Lead time (semanas): media=19.6  mediana=20  IQR=[10, 24]
 - Convergencia por señal:
-  - ACUMULAR: 42
+  - ACUMULAR: 53
   - COMPRA: 36
 
 **Alpha 13w desde ROT. TEMPRANA:** +3.6%  | n=124
@@ -149,9 +149,9 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 
 ## Sección 6 — Modo A vs Modo B (2023-04-18 en adelante)
 
-- COMPRA: Modo A α13w=-0.1%  Modo B α13w=-3.3%  nA=199  nB=141
-- ACUMULAR: Modo A α13w=-1.9%  Modo B α13w=-1.4%  nA=312  nB=273
-- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.5%  nA=2218  nB=2306
+- COMPRA: Modo A α13w=-0.1%  Modo B α13w=-3.3%  nA=200  nB=141
+- ACUMULAR: Modo A α13w=-1.9%  Modo B α13w=-1.4%  nA=315  nB=276
+- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.5%  nA=2233  nB=2322
 
 ---
 
@@ -170,7 +170,7 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 
 **¿Las señales COMPRA dan alpha?**  Alpha medio 13w = +2.4%, hit rate = +49.4%, t-stat = 0.45. NO CONFIRMADO: alpha positivo pero t-stat < 1.5 (muestra pequena).
 
-**¿ROT. TEMPRANA adelanta?**  DEBIL — solo 42% convergen.
+**¿ROT. TEMPRANA adelanta?**  DEBIL — solo 48% convergen.
 
 **¿El framework detecta crisis?**  NO — alpha medio negativo (-1.2% a 13w en transiciones).
 
