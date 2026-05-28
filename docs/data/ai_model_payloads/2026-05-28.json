@@ -1,0 +1,1446 @@
+{
+  "date": "2026-05-28",
+  "system_context": {
+    "project": "AI Picks Lab",
+    "objective": "select high-conviction paper-trading picks from prefiltered quantitative events",
+    "hard_rules": [
+      "Only SELECT tickers present in the candidates list.",
+      "Only SELECT tickers with eligible=true.",
+      "Do not SELECT futures, commodities, or macro indices directly.",
+      "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
+      "Do not fill portfolios with mediocre picks — empty selected list is valid.",
+      "Return valid JSON only. No markdown, no explanation, no extra text.",
+      "Do not invent data not present in the payload. If prev_snapshot_available=false, do not speculate on PCS or score changes between weeks.",
+      "With strong contradictions, use WATCH or REJECT, not SELECT.",
+      "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
+      "Every rejected item must have: reason and a valid rejection_category.",
+      "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
+      "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
+      "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead."
+    ],
+    "prev_snapshot_available": false
+  },
+  "macro_context": {
+    "macro_score": 91.6667,
+    "macro_regime": "Bull Pleno",
+    "macro_trend": "Improving",
+    "macro_delta_1w": 6.67,
+    "macro_delta_1m": 16.67,
+    "phase_quality": "Bull Pleno Improving"
+  },
+  "portfolio_mandates": {
+    "HIGH_CONVICTION": {
+      "description": "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
+      "pcs_threshold": 85.0,
+      "pcs_min_entry": 82.0,
+      "max_positions": 8,
+      "size_range": [
+        8,
+        15
+      ],
+      "target_ops_month": 1
+    },
+    "CONFIRMED_FLOW_LEADERS": {
+      "description": "Líderes con flujo confirmado en múltiples timeframes.",
+      "pcs_threshold": 78.0,
+      "pcs_min_entry": 75.0,
+      "max_positions": 12,
+      "size_range": [
+        5,
+        10
+      ],
+      "target_ops_month": 4
+    },
+    "EARLY_ROTATION": {
+      "description": "Captura rotaciones tempranas antes de que sean obvias.",
+      "pcs_threshold": 70.0,
+      "pcs_min_entry": 68.0,
+      "max_positions": 15,
+      "size_range": [
+        4,
+        8
+      ],
+      "target_ops_month": 8
+    },
+    "MACRO_THEMATIC_BENEFICIARIES": {
+      "description": "Beneficiarios del régimen macro actual.",
+      "pcs_threshold": 65.0,
+      "pcs_min_entry": 62.0,
+      "max_positions": 20,
+      "size_range": [
+        3,
+        6
+      ],
+      "target_ops_month": 10
+    }
+  },
+  "events": [
+    {
+      "date": "2026-05-28",
+      "ticker": "OSCR",
+      "theme": "healthcare_special",
+      "pcs": 81.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 77.8
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "ASTS",
+      "theme": "defense_space",
+      "pcs": 81.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 71.8
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "TSLA",
+      "theme": "us_tech_ai",
+      "pcs": 78.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 71.5
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "HIMS",
+      "theme": "healthcare_special",
+      "pcs": 72.2,
+      "signal": "IGNORAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 68.2
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "ASPI",
+      "theme": "uranium_nuclear",
+      "pcs": 70.5,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 78.5
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "LLY",
+      "theme": "healthcare_largecap",
+      "pcs": 69.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_up",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 64.8
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "SASK.V",
+      "theme": "uranium_nuclear",
+      "pcs": 65.0,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 73.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "UCO",
+      "theme": "oil_gas",
+      "pcs": 64.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 72.5
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "UCO",
+      "theme": "oil_gas",
+      "pcs": 64.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 72.5
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "CVE",
+      "theme": "oil_gas",
+      "pcs": 61.0,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 69.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "LOMA",
+      "theme": "argentina",
+      "pcs": 60.5,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "VIGILAR"
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "NVDA",
+      "theme": "us_tech_ai",
+      "pcs": 58.2,
+      "signal": "IGNORAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 66.8
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "GGAL",
+      "theme": "argentina",
+      "pcs": 57.0,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "VIGILAR"
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "WCP.TO",
+      "theme": "oil_gas",
+      "pcs": 56.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 73.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "WCP.TO",
+      "theme": "oil_gas",
+      "pcs": 56.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 73.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "KOS",
+      "theme": "oil_gas",
+      "pcs": 56.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 68.5
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "OXY",
+      "theme": "oil_gas",
+      "pcs": 55.2,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "EN_RADAR"
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "OXY",
+      "theme": "oil_gas",
+      "pcs": 55.2,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "rot_score_jumped",
+      "rot_prev": 4.0,
+      "rot_now": 6.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "PNPN.V",
+      "theme": "commodities_metals",
+      "pcs": 55.0,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 66.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "MLX.AX",
+      "theme": "commodities_metals",
+      "pcs": 53.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 66.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "SU",
+      "theme": "oil_gas",
+      "pcs": 53.0,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 65.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "PAM",
+      "theme": "argentina",
+      "pcs": 53.0,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "VIGILAR"
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "PAM",
+      "theme": "argentina",
+      "pcs": 53.0,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "rot_score_jumped",
+      "rot_prev": 4.0,
+      "rot_now": 6.0
+    },
+    {
+      "date": "2026-05-28",
+      "ticker": "TGS",
+      "theme": "argentina",
+      "pcs": 53.0,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 91.6667,
+        "regime": "Bull Pleno",
+        "trend": "Improving",
+        "phase_quality": "Bull Pleno Improving",
+        "delta_1w": 6.67,
+        "delta_1m": 16.67
+      },
+      "type": "signal_upgraded",
+      "signal_prev": "IGNORAR",
+      "signal_now": "VIGILAR"
+    }
+  ],
+  "candidates": [
+    {
+      "ticker": "NBIS",
+      "name": "Nebius Group (AI cloud)",
+      "theme": "us_tech_ai",
+      "subtheme": "ai_cloud",
+      "pcs": 87.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 38.8086,
+      "ret_13w_vs_spy": 87.7894,
+      "streak_weeks": 8,
+      "dist_52w_high": -10.85,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_strong",
+        "proxy_compra",
+        "rs_strong_leader",
+        "rot_high"
+      ],
+      "dems": 8,
+      "ret_5d_vs_spy": 3.1,
+      "ret_10d_vs_spy": 14.67,
+      "outperform_d10": 5,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.79,
+      "spike_flag": true,
+      "extension_risk": "high",
+      "extension_points": 4,
+      "extension_flags": [
+        "ret_4w_extended",
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "medium",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "OSCR",
+      "name": "Oscar Health",
+      "theme": "healthcare_special",
+      "subtheme": "health_insurance",
+      "pcs": 81.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 9.0,
+      "ret_4w_vs_spy": 23.0632,
+      "ret_13w_vs_spy": 61.2432,
+      "streak_weeks": 6,
+      "dist_52w_high": -14.03,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": -12.6,
+      "ret_10d_vs_spy": -9.0,
+      "outperform_d10": 4,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.74,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "ASTS",
+      "name": "AST SpaceMobile",
+      "theme": "defense_space",
+      "subtheme": "space_connectivity",
+      "pcs": 81.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 62.9412,
+      "ret_13w_vs_spy": 48.7942,
+      "streak_weeks": 3,
+      "dist_52w_high": -1.22,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_strong",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 19,
+      "ret_5d_vs_spy": 44.83,
+      "ret_10d_vs_spy": 75.97,
+      "outperform_d10": 10,
+      "streak_days": 10,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.34,
+      "spike_flag": false,
+      "extension_risk": "extreme",
+      "extension_points": 7,
+      "extension_flags": [
+        "dist_sma20_atr_extreme",
+        "ret_4w_extreme",
+        "rsi_high"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "theme": "us_tech_ai",
+      "subtheme": "ev_tech",
+      "pcs": 78.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 11.3567,
+      "ret_13w_vs_spy": -3.063,
+      "streak_weeks": 4,
+      "dist_52w_high": -11.72,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_strong",
+        "proxy_compra",
+        "rs_outperform",
+        "rot_good"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": 6.69,
+      "ret_10d_vs_spy": -0.07,
+      "outperform_d10": 5,
+      "streak_days": 3,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.84,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "medium",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "TDOC",
+      "name": "Teladoc Health",
+      "theme": "healthcare_special",
+      "subtheme": "telehealth",
+      "pcs": 76.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 7.7151,
+      "ret_13w_vs_spy": 33.1567,
+      "streak_weeks": 5,
+      "dist_52w_high": -32.55,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 3,
+      "ret_5d_vs_spy": -2.58,
+      "ret_10d_vs_spy": -4.32,
+      "outperform_d10": 3,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.61,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "theme": "global_etf",
+      "subtheme": "nasdaq100",
+      "pcs": 73.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 4.8844,
+      "ret_13w_vs_spy": 9.8721,
+      "streak_weeks": 6,
+      "dist_52w_high": -0.53,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 6,
+      "ret_5d_vs_spy": 1.7,
+      "ret_10d_vs_spy": 1.48,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.89,
+      "spike_flag": false,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "dist_sma20_atr_high"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "HIMS",
+      "name": "Hims & Hers Health",
+      "theme": "healthcare_special",
+      "subtheme": "telehealth",
+      "pcs": 72.2,
+      "eligible": true,
+      "signal": "IGNORAR",
+      "rot_score": 4.0,
+      "ret_4w_vs_spy": -19.191,
+      "ret_13w_vs_spy": 50.7283,
+      "streak_weeks": 0,
+      "dist_52w_high": -64.22,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_strong_leader",
+        "rot_moderate",
+        "partial_momentum"
+      ],
+      "dems": 11,
+      "ret_5d_vs_spy": 10.02,
+      "ret_10d_vs_spy": -0.98,
+      "outperform_d10": 5,
+      "streak_days": 1,
+      "momentum_accel": true,
+      "vol_5d_20d": 0.73,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "ASPI",
+      "name": "ASP Isotopes",
+      "theme": "uranium_nuclear",
+      "subtheme": "nuclear_isotopes",
+      "pcs": 70.5,
+      "eligible": true,
+      "signal": "VIGILAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 13.1186,
+      "ret_13w_vs_spy": 7.6384,
+      "streak_weeks": 1,
+      "dist_52w_high": -53.97,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_good",
+        "rs_leader",
+        "rot_good",
+        "macd_rsi_positive"
+      ],
+      "dems": 17,
+      "ret_5d_vs_spy": 35.53,
+      "ret_10d_vs_spy": 10.06,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.47,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "LLY",
+      "name": "Eli Lilly",
+      "theme": "healthcare_largecap",
+      "subtheme": "pharma_biotech_quality",
+      "pcs": 69.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 20.0018,
+      "ret_13w_vs_spy": -3.1251,
+      "streak_weeks": 3,
+      "dist_52w_high": -4.5,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_good",
+        "rs_outperform",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 10,
+      "ret_5d_vs_spy": 3.74,
+      "ret_10d_vs_spy": 7.92,
+      "outperform_d10": 6,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.85,
+      "spike_flag": false,
+      "extension_risk": "medium",
+      "extension_points": 3,
+      "extension_flags": [
+        "dist_sma20_atr_extreme"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "YPF",
+      "name": "YPF",
+      "theme": "argentina",
+      "subtheme": "argentina_oil",
+      "pcs": 67.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 15.0422,
+      "ret_13w_vs_spy": 29.7102,
+      "streak_weeks": 8,
+      "dist_52w_high": -0.83,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_weak",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 10,
+      "ret_5d_vs_spy": 5.29,
+      "ret_10d_vs_spy": 13.11,
+      "outperform_d10": 7,
+      "streak_days": 2,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.14,
+      "spike_flag": true,
+      "extension_risk": "high",
+      "extension_points": 5,
+      "extension_flags": [
+        "dist_sma20_atr_extreme",
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "CORZ",
+      "name": "Core Scientific",
+      "theme": "crypto",
+      "subtheme": "bitcoin_mining",
+      "pcs": 66.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 23.9755,
+      "ret_13w_vs_spy": 41.8788,
+      "streak_weeks": 8,
+      "dist_52w_high": -1.81,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_very_poor",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 17,
+      "ret_5d_vs_spy": 16.39,
+      "ret_10d_vs_spy": 17.69,
+      "outperform_d10": 7,
+      "streak_days": 5,
+      "momentum_accel": true,
+      "vol_5d_20d": 0.85,
+      "spike_flag": false,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "dist_sma20_atr_high"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "VIST",
+      "name": "Vista Energy",
+      "theme": "argentina",
+      "subtheme": "argentina_oil",
+      "pcs": 65.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": -2.6555,
+      "ret_13w_vs_spy": 20.9909,
+      "streak_weeks": 3,
+      "dist_52w_high": -9.63,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_weak",
+        "rs_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 6,
+      "ret_5d_vs_spy": -9.41,
+      "ret_10d_vs_spy": 4.57,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.74,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "SASK.V",
+      "name": "Atha Energy",
+      "theme": "uranium_nuclear",
+      "subtheme": "uranium_exploration",
+      "pcs": 65.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": -3.973,
+      "ret_13w_vs_spy": 9.4138,
+      "streak_weeks": 8,
+      "dist_52w_high": -15.32,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_avg_good",
+        "rs_outperform",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 9,
+      "ret_5d_vs_spy": 10.62,
+      "ret_10d_vs_spy": -6.91,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": true,
+      "vol_5d_20d": 0.61,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "UCO",
+      "name": "ProShares Ultra Bloomberg Crude Oil",
+      "theme": "oil_gas",
+      "subtheme": "crude_oil_leveraged",
+      "pcs": 64.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": -6.0247,
+      "ret_13w_vs_spy": 68.8293,
+      "streak_weeks": 8,
+      "dist_52w_high": -17.74,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_poor",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 3,
+      "ret_5d_vs_spy": -18.47,
+      "ret_10d_vs_spy": -14.41,
+      "outperform_d10": 3,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.84,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "CVE",
+      "name": "Cenovus Energy",
+      "theme": "oil_gas",
+      "subtheme": "canadian_oil",
+      "pcs": 61.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 0.3306,
+      "ret_13w_vs_spy": 20.6695,
+      "streak_weeks": 8,
+      "dist_52w_high": -12.1,
+      "is_early": false,
+      "flags": [
+        "macro_improving",
+        "theme_poor",
+        "rs_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": -13.63,
+      "ret_10d_vs_spy": -7.73,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.96,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    }
+  ],
+  "active_picks_relevant": [
+    {
+      "ticker": "CORZ",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "Bitcoin mining leader with 81.8 PCS and exceptional relative strength",
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "NBIS",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "AI cloud infrastructure leader with 81.0 PCS and exceptional 129.5% 13w outperformance",
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "CVE",
+      "entry_date": "2026-05-15",
+      "entry_price": 30.15,
+      "entry_pcs": 85.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "PCS at 85 with 8-week RS streak and 32% 13w outperformance.",
+      "reason_full": "CVE crossed the 85 PCS threshold for high conviction with an 8-week streak, 11.6% 4w relative outperformance, and oil_gas theme aligned to the improving Bull Maduro macro delta of 3.75.",
+      "comparative_edge": "Selected over KOS (PCS=82) because CVE reached the 85 high-conviction threshold while KOS remains at 82 with weaker 5d RS of -0.88 versus CVE's +3.67.",
+      "key_supporting_factors": [
+        "8 consecutive weeks of outperformance with rot_score 8.0.",
+        "ret_13w_vs_spy at 32.1% exceeds most peers in energy.",
+        "dist_52w_high only -2.3% shows tight price action near highs.",
+        "macro delta improving 3.75 over both 1w and 1m supports theme."
+      ],
+      "key_risks": [
+        "spike_flag false but dems only 6 indicates muted daily momentum.",
+        "ret_10d_vs_spy negative at -1% shows recent short-term pause.",
+        "vol_5d_20d at 0.73 remains moderate for leveraged sector exposure."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "OXY",
+      "entry_date": "2026-05-19",
+      "entry_price": 59.7,
+      "entry_pcs": 89.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "89.5 PCS with clean 9 rot_score and low extension risk.",
+      "reason_full": "OXY delivers 89.5 PCS, rot_score 9.0, 22.1% ret_13w_vs_spy, two-week streak, dems 8, no spike_flag and low extension_risk in US oil subtheme aligned to improving macro of +19.46 one-month delta.",
+      "comparative_edge": "Selected over KOS (PCS=90, active) and UCO (PCS=90) because OXY shows no spike_flag or high extension versus KOS spike_flag true and UCO leveraged etf exposure with ret_10d_vs_spy -2.58.",
+      "key_supporting_factors": [
+        "Rot_score 9.0 exceeds GLNG peers in same theme.",
+        "ret_13w_vs_spy 22.1% with streak_weeks 2 and clean price action.",
+        "Low extension_points 0 and dems 8 support continuation.",
+        "Macro delta improving 9.46 supports oil theme without leverage."
+      ],
+      "key_risks": [
+        "Oil theme concentration risk already high at 42.5% portfolio weight.",
+        "ret_10d_vs_spy negative at -3.82 indicates short-term pause."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "QQQ",
+      "entry_date": "2026-05-19",
+      "entry_price": 705.88,
+      "entry_pcs": 85.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "85.5 PCS with broad tech exposure and low theme concentration.",
+      "reason_full": "QQQ posts 85.5 PCS, rot_score 8.0, 9.07% ret_13w_vs_spy, five-week streak, no spike_flag, medium extension_risk but theme_concentration_risk low at global_etf versus saturated oil theme.",
+      "comparative_edge": "Selected over VLE.TO (PCS=86) and GLNG (PCS=86) because QQQ offers low theme concentration risk while VLE.TO and GLNG add to already high 42.5% oil exposure with weaker 4w returns.",
+      "key_supporting_factors": [
+        "ret_13w_vs_spy 9.07% and outperform_d10 at 6 confirms steady rotation.",
+        "Theme concentration risk low unlike all oil candidates.",
+        "Five consecutive weeks of outperformance without spike_flag."
+      ],
+      "key_risks": [
+        "Dems at 6 is lowest among high-PCS candidates.",
+        "ret_5d_vs_spy negative at -0.95 shows recent lag."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "VAL",
+      "entry_date": "2026-05-20",
+      "entry_price": 111.05,
+      "entry_pcs": 89.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "89.5 PCS with dems 17, 18.28% 10d outperformance, rot_score 8.",
+      "reason_full": "VAL shows 89.5 PCS crossing threshold on strong daily momentum dems 17, ret_10d_vs_spy 18.28, outperform_d10 at 7 and no spike_flag while macro improves 17.08 over one month and theme supports energy names.",
+      "comparative_edge": "Selected over TOU.TO (PCS=86) because VAL dems reaches 17 versus TOU.TO dems 9 and ret_10d_vs_spy 18.28 beats TOU.TO 0.56 with stronger short-term continuation.",
+      "key_supporting_factors": [
+        "Dems 17 exceeds all peers including OXY 13 and WCP.TO 11.",
+        "ret_13w_vs_spy 14.83% with 4-week streak confirms sustained RS.",
+        "Momentum_accel true and extension_risk medium but justified by 18% 10d outperformance.",
+        "Macro delta +17.08 1m aligns directly with oil_gas theme."
+      ],
+      "key_risks": [
+        "Oil_gas theme concentration already 57.5% with five open positions.",
+        "dist_52w_high -2.69% and medium extension points 2 indicate some late entry pressure.",
+        "ret_4w_vs_spy 23% trails UCO 28.55% but UCO is leveraged commodity."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "VLE.TO",
+      "entry_date": "2026-05-20",
+      "entry_price": null,
+      "entry_pcs": 86.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "86 PCS, rot_score 9, 8-week streak, low extension risk.",
+      "reason_full": "VLE.TO delivers 86 PCS with rot_score 9.0, ret_13w_vs_spy 15.57%, eight consecutive weeks of outperformance, momentum_accel false but clean price action at dist_52w_high -15.32% and low extension_points 0, aligning with Bull Maduro improving macro delta of +17.08.",
+      "comparative_edge": "Selected over TOU.TO (PCS 86) due to rot_score 9 versus TOU.TO rot_score 8, stronger ret_13w_vs_spy 15.57% versus 5.48%, and absence of spike_flag.",
+      "key_supporting_factors": [
+        "Eight-week streak with rot_score 9 tops most oil peers.",
+        "ret_4w_vs_spy 9.18% and ret_10d_vs_spy -6.71% show sustained rather than spike-driven move.",
+        "Low extension_risk and subtheme_concentration_risk low within saturated oil theme."
+      ],
+      "key_risks": [
+        "Oil_gas theme already at 72.5% portfolio weight with high concentration risk.",
+        "ret_5d_vs_spy negative at -4.43% indicates recent short-term lag.",
+        "dems at 3 is among the weakest daily readings in candidate set."
+      ],
+      "portfolio": "HIGH_CONVICTION"
+    },
+    {
+      "ticker": "NVDA",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "AI chip leader NVDA with 81.5 PCS, macro improving, sustained flow confirmation",
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "MSTR",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "Bitcoin treasury proxy with 79.0 PCS, strong 4w/13w outperformance despite brief streak",
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "COIN",
+      "entry_date": "2026-05-09",
+      "entry_pcs": 83.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "PCS 83.5 crossed above 78 threshold with improving macro.",
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "KOS",
+      "entry_date": "2026-05-15",
+      "entry_price": 2.93,
+      "entry_pcs": 82.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "70.7% 13w vs SPY and 8-week outperformance streak",
+      "reason_full": "KOS posts 82 PCS with 70.7444% 13-week outperformance versus SPY, 6.6753% 4-week outperformance, rot_score of 8.0 and eight consecutive weeks of relative gains aligned to the Bull Maduro improving macro.",
+      "comparative_edge": "Selected over UCO (PCS=82) because KOS delivers higher 13w RS of 70.7 versus UCO's leveraged commodity exposure and lower streak stability.",
+      "key_supporting_factors": [
+        "ret_13w_vs_spy reaches 70.74% topping most peers in candidate set.",
+        "Eight-week streak with rot_score 8.0 confirms sustained flow.",
+        "ret_4w_vs_spy at 6.68% exceeds WCP.TO's 5.35% while remaining eligible."
+      ],
+      "key_risks": [
+        "dems at 9 shows moderate daily momentum versus VAL's 13.",
+        "ret_10d_vs_spy negative at -1.63% indicates short-term consolidation."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "WCP.TO",
+      "entry_date": "2026-05-15",
+      "entry_price": null,
+      "entry_pcs": 80.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "8-week streak and rot_score 8.0 with tight 52w high distance",
+      "reason_full": "WCP.TO reaches 80.5 PCS with eight consecutive weeks of outperformance, rot_score 8.0, ret_4w_vs_spy 5.35% and dist_52w_high only -1.46% while macro delta improves 3.75 supporting oil theme.",
+      "comparative_edge": "Selected over GLNG (PCS=76.5) because WCP.TO maintains streak_weeks 8 versus GLNG's spike_flag true and weaker rot_score of 7.0.",
+      "key_supporting_factors": [
+        "rot_score 8.0 matches KOS while remaining non-leveraged equity.",
+        "ret_13w_vs_spy 16.15% with eight-week consistency.",
+        "dist_52w_high -1.46% shows price hugging highs better than peers."
+      ],
+      "key_risks": [
+        "ret_4w_vs_spy 5.35% trails UCO and KOS relative moves.",
+        "dems 9 lower than VAL and CVE daily readings."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "SU",
+      "entry_date": "2026-05-16",
+      "entry_price": 68.29,
+      "entry_pcs": 80.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "Rot score 9.0 and 8-week streak confirm sustained leadership in energy.",
+      "reason_full": "SU delivers rot_score 9.0 with ret_4w_vs_spy of 1.66 percent and ret_13w_vs_spy of 14.19 percent while maintaining exactly eight consecutive weeks of outperformance at pcs 80.5 aligned to stable macro regime.",
+      "comparative_edge": "Selected over GLNG because SU rot_score holds at 9 with no spike_flag versus GLNG rot_score 9 accompanied by ret_5d_vs_spy of only 2.2 percent and spike_flag true that weakens continuation signal.",
+      "key_supporting_factors": [
+        "Rot_score reaches 9.0 exceeding most peers including VLE.TO at 8.0.",
+        "Eight-week streak remains intact with rot_high flag confirmed.",
+        "ret_13w_vs_spy of 14.19 percent supports steady energy leadership under Bull Maduro stable conditions."
+      ],
+      "key_risks": [
+        "ret_10d_vs_spy negative at -1.47 percent shows brief consolidation.",
+        "dems at 8 remains below 10 indicating muted daily momentum.",
+        "Dist_52w_high at -2.85 percent is wider than several higher-ranked energy names."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "ASPI",
+      "entry_date": "2026-05-27",
+      "entry_price": 6.93,
+      "entry_pcs": 78.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "78.5 PCS crossed 78 threshold with rot_score jump to 7 and dems 17",
+      "reason_full": "ASPI posts 78.5 PCS with rot_score rising from 3 to 7, ret_4w_vs_spy 24.4 percent, dems 17 and no spike_flag while macro improves; this meets CONFIRMED_FLOW_LEADERS entry at 78 threshold with weekly and daily momentum alignment.",
+      "comparative_edge": "Selected over OSCR (PCS 77.8) because ASPI dems reaches 17 versus OSCR dems 4 and shows rot_score jump absent in OSCR.",
+      "key_supporting_factors": [
+        "rot_score jumped 4 points in one session confirming flow upgrade.",
+        "dems 17 exceeds all other CONFIRMED_FLOW_LEADERS candidates.",
+        "ret_4w_vs_spy 24.4 percent leads peers with low extension_risk.",
+        "theme_concentration_risk low unlike us_tech_ai at 33 percent."
+      ],
+      "key_risks": [
+        "streak_weeks only 1 limits confirmation versus eight-week names.",
+        "dist_52w_high -52 percent shows deep pullback before recovery.",
+        "ret_13w_vs_spy 18.4 percent trails OSCR 68.5 percent."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS"
+    },
+    {
+      "ticker": "TSLA",
+      "entry_date": "2026-05-09",
+      "entry_pcs": 75.0,
+      "entry_signal": "early_rotation",
+      "size_pct": 8.0,
+      "conviction": "high",
+      "rationale": "DEMS 15 with spike_flag=false and strong multi-day RS",
+      "portfolio": "EARLY_ROTATION"
+    },
+    {
+      "ticker": "ASTS",
+      "entry_date": "2026-05-23",
+      "entry_price": 105.86,
+      "entry_pcs": 69.8,
+      "entry_signal": "early_rotation",
+      "size_pct": 6.0,
+      "conviction": "medium",
+      "rationale": "DEMS 18 with 9-day outperformance streak and no spike.",
+      "reason_full": "ASTS shows DEMS of 18, outperform_d10 of 9, ret_5d_vs_spy 25.65 and momentum_accel true while PCS remains above 68 threshold; daily momentum confirms multi-day continuation in defense_space despite high extension_risk.",
+      "comparative_edge": "Selected over MLX.AX because streak_days reaches 8 versus MLX.AX streak_days 5 and ret_5d_vs_spy 25.65 exceeds MLX.AX 13.74 with stronger immediate continuation signal.",
+      "key_supporting_factors": [
+        "DEMS 18 exceeds every peer including MLX.AX and drives selection.",
+        "outperform_d10 of 9 and streak_days 8 confirm sustained daily strength.",
+        "ret_10d_vs_spy 39.97 shows durable move beyond single-day spike."
+      ],
+      "key_risks": [
+        "Extension_risk high with 5 points including dist_sma20_atr_extreme.",
+        "ret_13w_vs_spy only 16.6 trails several energy peers.",
+        "Theme avg_poor flag limits macro tailwind reliability."
+      ],
+      "portfolio": "EARLY_ROTATION"
+    },
+    {
+      "ticker": "MLX.AX",
+      "entry_date": "2026-05-23",
+      "entry_price": null,
+      "entry_pcs": 69.5,
+      "entry_signal": "early_rotation",
+      "size_pct": 6.0,
+      "conviction": "medium",
+      "rationale": "DEMS 18, outperform_d10 8 and 5-day streak without spike.",
+      "reason_full": "MLX.AX records DEMS 18, outperform_d10 8, ret_5d_vs_spy 13.74 with momentum_accel true and ret_4w_vs_spy 19.93; multi-day rotation holds while PCS clears 68 entry for commodities_metals exposure.",
+      "comparative_edge": "Selected over TOU.TO because DEMS 18 exceeds TOU.TO DEMS 5 and ret_4w_vs_spy 19.93 beats TOU.TO 7.08 while avoiding spike_flag present in TOU.TO.",
+      "key_supporting_factors": [
+        "DEMS 18 and streak_days 5 validate early daily momentum.",
+        "ret_13w_vs_spy 28.32 supports rotation without 52-week extremes.",
+        "Low theme_concentration_risk contrasts saturated oil_gas holdings."
+      ],
+      "key_risks": [
+        "ret_13w_vs_spy still lags NBIS 103.9 and OSCR 72.3 among candidates.",
+        "Medium extension_risk with dist_sma20_atr_high present.",
+        "Theme avg_poor reduces regime alignment versus us_tech_ai."
+      ],
+      "portfolio": "EARLY_ROTATION"
+    }
+  ],
+  "recent_rejected_relevant": [],
+  "theme_exposure": {
+    "crypto": {
+      "open_positions": 1,
+      "open_tickers": [
+        "CORZ"
+      ],
+      "open_weight_pct": 15.0,
+      "new_candidates_today": 1,
+      "risk": "low"
+    },
+    "us_tech_ai": {
+      "open_positions": 2,
+      "open_tickers": [
+        "NBIS",
+        "TSLA"
+      ],
+      "open_weight_pct": 23.0,
+      "new_candidates_today": 2,
+      "risk": "medium"
+    },
+    "oil_gas": {
+      "open_positions": 1,
+      "open_tickers": [
+        "CVE"
+      ],
+      "open_weight_pct": 15.0,
+      "new_candidates_today": 2,
+      "risk": "low"
+    },
+    "global_etf": {
+      "open_positions": 1,
+      "open_tickers": [
+        "QQQ"
+      ],
+      "open_weight_pct": 15.0,
+      "new_candidates_today": 1,
+      "risk": "low"
+    },
+    "uranium_nuclear": {
+      "open_positions": 1,
+      "open_tickers": [
+        "ASPI"
+      ],
+      "open_weight_pct": 10.0,
+      "new_candidates_today": 2,
+      "risk": "low"
+    },
+    "defense_space": {
+      "open_positions": 1,
+      "open_tickers": [
+        "ASTS"
+      ],
+      "open_weight_pct": 6.0,
+      "new_candidates_today": 1,
+      "risk": "low"
+    }
+  }
+}

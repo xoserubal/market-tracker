@@ -108,10 +108,10 @@
 
 Total ROT. TEMPRANA emitidas: **184** (ambos modos)
 
-- Convergieron a COMPRA/ACUMULAR: **89** (48%)
-- Lead time (semanas): media=19.6  mediana=20  IQR=[10, 24]
+- Convergieron a COMPRA/ACUMULAR: **88** (48%)
+- Lead time (semanas): media=19.7  mediana=20  IQR=[10, 26]
 - Convergencia por señal:
-  - ACUMULAR: 53
+  - ACUMULAR: 52
   - COMPRA: 36
 
 **Alpha 13w desde ROT. TEMPRANA:** +3.6%  | n=124
@@ -150,8 +150,8 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 ## Sección 6 — Modo A vs Modo B (2023-04-18 en adelante)
 
 - COMPRA: Modo A α13w=-0.1%  Modo B α13w=-3.3%  nA=200  nB=141
-- ACUMULAR: Modo A α13w=-1.9%  Modo B α13w=-1.4%  nA=315  nB=276
-- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.5%  nA=2233  nB=2322
+- ACUMULAR: Modo A α13w=-1.9%  Modo B α13w=-1.4%  nA=317  nB=273
+- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.5%  nA=2230  nB=2324
 
 ---
 
