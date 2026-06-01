@@ -7,6 +7,55 @@ const fs      = require("fs");
 const { exec } = require("child_process");
 
 const app = express();
+
+// ── FRED cache + rate-limit guard ────────────────────────────────────────
+// Cache: 10 min TTL (data has 1-day lag anyway).
+// Queue: max 1 outgoing FRED call at a time + 200 ms gap to stay under 120 req/min.
+const FRED_CACHE = new Map();
+const FRED_CACHE_TTL = 10 * 60 * 1000;
+function fredCacheGet(key) {
+  const entry = FRED_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > FRED_CACHE_TTL) { FRED_CACHE.delete(key); return null; }
+  return entry.data;
+}
+function fredCacheSet(key, data) { FRED_CACHE.set(key, { data, ts: Date.now() }); }
+
+// Pending map: deduplicates concurrent calls for the same key.
+const FRED_PENDING = new Map();
+let fredQueueRunning = false;
+const fredQueue = [];
+function enqueueFreddFetch(fn) {
+  return new Promise((resolve, reject) => {
+    fredQueue.push({ fn, resolve, reject });
+    if (!fredQueueRunning) drainFredQueue();
+  });
+}
+async function drainFredQueue() {
+  fredQueueRunning = true;
+  while (fredQueue.length > 0) {
+    const { fn, resolve, reject } = fredQueue.shift();
+    try { resolve(await fn()); } catch (e) { reject(e); }
+    if (fredQueue.length > 0) await new Promise(r => setTimeout(r, 200));
+  }
+  fredQueueRunning = false;
+}
+function fredFetchWithCache(cacheKey, fetchFn) {
+  const cached = fredCacheGet(cacheKey);
+  if (cached) return Promise.resolve(cached);
+  if (FRED_PENDING.has(cacheKey)) return FRED_PENDING.get(cacheKey);
+  const promise = enqueueFreddFetch(async () => {
+    try {
+      const result = await fetchFn();
+      fredCacheSet(cacheKey, result);
+      return result;
+    } finally {
+      FRED_PENDING.delete(cacheKey);
+    }
+  });
+  FRED_PENDING.set(cacheKey, promise);
+  return promise;
+}
 app.use(cors());
 app.use(express.static(__dirname));
 
@@ -267,28 +316,32 @@ app.get("/api/fred/:series", async (req, res) => {
   if (!key) return res.status(400).json({ error: "FRED_API_KEY no configurada en .env" });
 
   const isMonthly = req.query.monthly === "1";
-  const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${req.params.series}&api_key=${key}&sort_order=desc&limit=300&file_type=json`;
+  const cacheKey = `${req.params.series}:${isMonthly}`;
+  const seriesId = req.params.series;
 
   try {
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
-    const data = await r.json();
-    if (data.error_message) return res.status(400).json({ error: data.error_message });
-    const obs = (data.observations || []).filter(o => o.value !== ".");
-    if (!obs.length) return res.status(404).json({ error: "No data" });
-
-    const val = i => obs[i] ? parseFloat(obs[i].value) : null;
-
-    res.json({
-      series:  req.params.series,
-      current: val(0),
-      date:    obs[0]?.date,
-      v1w: isMonthly ? null    : val(5),
-      v1m: isMonthly ? val(1)  : val(21),
-      v3m: isMonthly ? val(3)  : val(65),
-      v1y: isMonthly ? val(12) : val(252),
+    const result = await fredFetchWithCache(cacheKey, async () => {
+      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${key}&sort_order=desc&limit=300&file_type=json`;
+      const r = await fetch(url, { headers: { Accept: "application/json" } });
+      const data = await r.json();
+      if (data.error_message) throw Object.assign(new Error(data.error_message), { fredError: true });
+      const obs = (data.observations || []).filter(o => o.value !== ".");
+      if (!obs.length) throw Object.assign(new Error("No data"), { notFound: true });
+      const val = i => obs[i] ? parseFloat(obs[i].value) : null;
+      return {
+        series:  seriesId,
+        current: val(0),
+        date:    obs[0]?.date,
+        v1w: isMonthly ? null    : val(5),
+        v1m: isMonthly ? val(1)  : val(21),
+        v3m: isMonthly ? val(3)  : val(65),
+        v1y: isMonthly ? val(12) : val(252),
+      };
     });
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const status = err.notFound ? 404 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 
@@ -301,13 +354,24 @@ app.get("/api/fred3", async (req, res) => {
   const seriesIds = (req.query.s || "").split(",").filter(Boolean);
   if (seriesIds.length < 1) return res.status(400).json({ error: "No series" });
 
+  const cacheKey = `fred3:${seriesIds.join(",")}`;
+
   try {
-    const results = await Promise.all(seriesIds.map(async sid => {
-      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${sid}&api_key=${key}&sort_order=asc&limit=500&file_type=json`;
-      const r = await fetch(url, { headers: { Accept: "application/json" } });
-      const data = await r.json();
-      return (data.observations || []).filter(o => o.value !== ".").map(o => ({ date: o.date, v: parseFloat(o.value) }));
-    }));
+    const cachedResult = fredCacheGet(cacheKey);
+    if (cachedResult) return res.json(cachedResult);
+
+    // Fetch each sub-series sequentially through the shared queue
+    const results = [];
+    for (const sid of seriesIds) {
+      const subKey = `${sid}:asc500`;
+      const rows = await fredFetchWithCache(subKey, async () => {
+        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${sid}&api_key=${key}&sort_order=asc&limit=500&file_type=json`;
+        const r = await fetch(url, { headers: { Accept: "application/json" } });
+        const data = await r.json();
+        return (data.observations || []).filter(o => o.value !== ".").map(o => ({ date: o.date, v: parseFloat(o.value) }));
+      });
+      results.push(rows);
+    }
 
     // Build sorted date→value maps for each series (ascending order for binary search)
     const makeSortedMap = arr => arr.sort((a, b) => a.date.localeCompare(b.date));
@@ -340,7 +404,7 @@ app.get("/api/fred3", async (req, res) => {
     if (!combined.length) return res.status(404).json({ error: "No data aligned" });
 
     const val = i => combined[i]?.v ?? null;
-    res.json({
+    const result = {
       series:  "NET_LIQ",
       current: val(0),
       date:    combined[0].date,
@@ -348,7 +412,9 @@ app.get("/api/fred3", async (req, res) => {
       v1m:  val(4),
       v13w: val(13),
       v1y:  val(52),
-    });
+    };
+    fredCacheSet(cacheKey, result);  // cache the combined result too
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
