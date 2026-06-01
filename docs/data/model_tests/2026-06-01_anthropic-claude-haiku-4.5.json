@@ -1,0 +1,137 @@
+{
+  "run_id": "2026-06-01_2235",
+  "model": "anthropic/claude-haiku-4.5",
+  "date": "2026-06-01",
+  "summary": {
+    "date": "2026-06-01",
+    "run_id": "2026-06-01_2235",
+    "model": "anthropic/claude-haiku-4.5",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 5,
+    "candidate_count": 15,
+    "input_tokens": 17441,
+    "output_tokens": 3904,
+    "cost_usd": 0.036961,
+    "latency_ms": 32362.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 2,
+    "quality_score": 83,
+    "selected_count": 0,
+    "watch_count": 15,
+    "rejected_count": 2,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [
+      "Duplicate ticker: NVDA",
+      "Duplicate ticker: EOSE"
+    ],
+    "soft_warnings": []
+  },
+  "quality_score": 83,
+  "response": {
+    "date": "2026-06-01",
+    "model": "anthropic/claude-haiku-4.5",
+    "run_id": "2026-06-01_2235",
+    "decision_summary": {
+      "market_read": "Bull Pleno deteriorating macro (delta -10 one-week, -6.25 one-month) constrains new entries; existing HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS positions remain defended, but daily signals are mixed.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "NBIS",
+        "reason": "Already open position in HIGH_CONVICTION (entry 2026-05-08, 15% size). Current PCS 88.0 with ret_13w_vs_spy +142.84% and rot_score 8.0 remain strong, but extension_risk flagged high with dist_sma20_atr_high and ret_4w_extreme. Dems 13 and ret_5d_vs_spy +21.43 confirm daily momentum, but macro deteriorating -10 one-week pressures new AI cloud entries. Monitor for consolidation before considering size increase; do not re-add.",
+        "watch_trigger": "If PCS sustains above 88 for two consecutive reads and macro_delta returns to improving trend, consider incremental add only if extension_risk downgrades to medium and outperform_d10 stabilizes above 6."
+      },
+      {
+        "ticker": "ASTS",
+        "reason": "PCS 82.8 exceeds CONFIRMED_FLOW_LEADERS threshold of 75, rot_score 9.0, ret_10d_vs_spy +23.65 and outperform_d10 8 support flow signal. However, spike_flag false masks momentum_accel false contradiction—ret_5d_vs_spy -1.93 versus ret_10d_vs_spy +23.65 indicates most gains came outside the 5-day window. Dems 11 falls below EARLY_ROTATION dems ≥14 guidance. Extension_risk high with momentum_decay flag weakens conviction. Already an active pick (2026-05-23, 6% size in EARLY_ROTATION); do not duplicate.",
+        "watch_trigger": "If dems rises above 14 with spike_flag remaining false and outperform_d10 sustains ≥6 for three consecutive days, consider rotation from EARLY_ROTATION to CONFIRMED_FLOW_LEADERS on next multi-day confirmation."
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS 81.5 clears CONFIRMED_FLOW_LEADERS minimum (75), rot_score 8.0, ret_13w_vs_spy +21.24%, streak_weeks 8, dems 17, momentum_accel true, extension_risk low and no spike_flag—text-book confirmed leader signal. Already held (entry 2026-05-30, 10% size). Macro deteriorating -10 one-week does NOT override weekly metrics per hard rules. Do not re-select existing position.",
+        "watch_trigger": "Position monitored in active_picks_relevant. If PCS drops below 75 and macro_delta deteriorates further beyond -15 one-week, prepare exit protocol."
+      },
+      {
+        "ticker": "RCAT",
+        "reason": "PCS 83.0, dems 20, ret_5d_vs_spy +55.97%, outperform_d10 8, streak_days 8, momentum_accel true confirm robust daily-to-weekly flow. Already held (entry 2026-05-30, 10% size). Extension_risk medium with vol_5d_20d 2.02 signals high volatility. Macro deteriorating -10 one-week does not invalidate weekly rot_score 8 and streak_weeks 1, but new entry into defense_space at high theme concentration would be redundant.",
+        "watch_trigger": "Existing position remains monitored. If extension_risk downgrades to low and dems sustains ≥18, hold. If extension_points exceed 6 and macro_delta deteriorates past -15 one-week, prepare tactical exit."
+      },
+      {
+        "ticker": "EOSE",
+        "reason": "PCS 81.0, ret_4w_vs_spy +26.66%, rot_score 8.0, but spike_flag true with dems only 10 and outperform_d10 5 indicate most 4-week move concentrated in few days. Ret_5d_vs_spy +9.56 versus ret_10d_vs_spy +11.43 shows minimal daily follow-through. Extension_risk high with ret_4w_extended flag. Already held (entry 2026-05-29, 10% size). Do not re-add.",
+        "watch_trigger": "If spike_flag downgrades to false over next two opens and dems rises to ≥12 with outperform_d10 ≥6, extension risk becomes acceptable for hold. If both fail and macro deteriorates further, consider position exit."
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "PCS 80.5, dems 18, ret_5d_vs_spy +42.59%, ret_10d_vs_spy +35.48% show strong daily confirmation. Rot_score 8.0, outperform_d10 5, streak_weeks 1 represent fresh confirmation signal. However, extension_risk high with dist_sma20_atr_high and ret_4w_extreme flags. Already held (entry 2026-05-27, 10% size in CONFIRMED_FLOW_LEADERS). Do not re-add.",
+        "watch_trigger": "Monitor for extension_risk downgrade. If dems sustains ≥17 and outperform_d10 reaches 6+ with macro_delta improving past -5 one-week, hold position. If extension flags proliferate and rot_score drops below 7, prepare exit."
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "PCS 75.8, rot_score 9.0, ret_13w_vs_spy +52.40%, streak_weeks 6, extension_risk low (zero points) represent confirmed leader foundation. Already held (entry 2026-05-28, 10% size). Dems only 4 and ret_5d_vs_spy -0.27 show muted daily momentum, but weekly metrics dominate for CONFIRMED_FLOW_LEADERS per hard rules. Do not re-select.",
+        "watch_trigger": "Existing position defended. If rot_score declines to 7 or below and streak_weeks breaks to 0, consider tactical trim. If macro improves and dems rises above 10, maintain full position."
+      },
+      {
+        "ticker": "TSLA",
+        "reason": "PCS 76.5 (crossed down from 78.5) falls below CONFIRMED_FLOW_LEADERS minimum 75 by payload event signal. Rot_score 7.0, ret_4w_vs_spy +10.59%, ret_13w_vs_spy -2.31% and streak_weeks 4 show weakening relative strength despite 4-week outperformance. Dems 4 and ret_5d_vs_spy -4.11% confirm poor daily momentum. Already held (entry 2026-05-09, 8% size in EARLY_ROTATION). Macro deteriorating -10 one-week supports position review.",
+        "watch_trigger": "If PCS rebounds above 77 with dems rising to ≥12 and ret_13w_vs_spy turns positive, reconsider hold. If PCS drops to 74 or dems falls to 0-2, prepare exit."
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 78.5, rot_score 7.0, ret_13w_vs_spy +11.15%, streak_weeks 6 meet CONFIRMED_FLOW_LEADERS threshold (75). Already held (entry 2026-05-19, 15% size). Extension_risk medium, dems 7 and ret_5d_vs_spy +1.78 show modest daily confirmation. Macro deteriorating -10 one-week does not override weekly streak of 6 per hard rules. Do not re-add.",
+        "watch_trigger": "Existing broad-market proxy remains defensible. If streak_weeks breaks to 0 or macro_delta deteriorates past -15 one-week, consider exit. If dems rises above 12 and macro stabilizes, maintain position."
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "PCS 73.5, rot_score 7.0, ret_13w_vs_spy +69.52% (strongest healthcare candidate) and dems 16, momentum_accel true show compelling multi-timeframe flow. Streak_weeks only 1 and dist_52w_high -62.87% (deep pullback recovery) present execution risk. Macro deteriorating -10 one-week does not meet hard-rule exception for weekly metrics (streak too short). Extension_risk low.",
+        "watch_trigger": "If PCS reaches 75+ with streak_weeks extending to 2-3 and dems sustains ≥14, becomes eligible for CONFIRMED_FLOW_LEADERS entry. If extension_risk remains low and macro stabilizes, favorable entry for EARLY_ROTATION if PCS crosses 70 cleanly."
+      },
+      {
+        "ticker": "GGAL",
+        "reason": "PCS 70.8 in EARLY_ROTATION threshold (68). Rot_score 9.0 (top-tier), dems 20, ret_5d_vs_spy +15.74%, ret_10d_vs_spy +22.80%, outperform_d10 8, streak_days 5, momentum_accel true show strong daily rotation signal. Streak_weeks only 1 and dist_52w_high -18.92% limit weekly confirmation. Argentina theme carries macro deteriorating -10 one-week headwind. Extension_risk medium.",
+        "watch_trigger": "If streak_weeks extends to 2+ while dems sustains ≥18 and macro_delta reverses to improving, eligible for EARLY_ROTATION entry. Monitor Argentina theme correlation to macro deterioration; if one-week delta improves past -5, entry confidence rises."
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "PCS 70.5 just above EARLY_ROTATION minimum (68). Rot_score 7.0, ret_13w_vs_spy +34.10%, streak_weeks 5, dems 17, ret_5d_vs_spy +18.67%, ret_10d_vs_spy +21.75%, outperform_d10 6, momentum_accel true show sustained multi-day flow. Extension_risk medium with dist_sma20_atr_high. Macro deteriorating -10 one-week does not override dems ≥14 guidance for EARLY_ROTATION.",
+        "watch_trigger": "Strong candidate for EARLY_ROTATION if macro stabilizes or PCS crosses 72. If dems remains ≥17 and extension_risk downgrades to low, becomes priority pick for next allocation window."
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "PCS 68.2 (crossed down from 70.2) equals EARLY_ROTATION minimum. Payload signals IGNORAR, suggesting deliberate rejection. Rot_score 5.0 (weak), ret_4w_vs_spy -5.41%, ret_13w_vs_spy +8.59%, streak_weeks 0, dems 3, ret_5d_vs_spy +2.46%, spike_flag true all indicate deteriorating signal. Already held (entry 2026-05-08, 10% size in CONFIRMED_FLOW_LEADERS). High theme_concentration_risk (us_tech_ai at 33%).",
+        "watch_trigger": "If PCS rebounds above 72 with rot_score rising to 7+ and dems reaching 10+, reconsider. If PCS drops to 66 or rot_score falls to 3, prepare tactical exit from CONFIRMED_FLOW_LEADERS."
+      },
+      {
+        "ticker": "YPF",
+        "reason": "PCS 68.0 (crossed down from 70.0) meets EARLY_ROTATION minimum. Rot_score 7.0, ret_13w_vs_spy +39.21%, streak_weeks 8, dems 19, ret_5d_vs_spy +12.34%, ret_10d_vs_spy +22.76%, outperform_d10 8, momentum_accel true show strong sustained flow. Extension_risk high with dist_sma20_atr_extreme and rsi_high flags. Macro deteriorating -10 one-week pressures Argentina theme, but weekly metrics merit watch status.",
+        "watch_trigger": "If extension_risk downgrades to medium and dems sustains ≥17, eligible for EARLY_ROTATION entry despite Argentina theme headwind. If PCS rebounds to 70+ and macro_delta stabilizes above -8 one-week, becomes priority for sector rotation."
+      },
+      {
+        "ticker": "BBAR",
+        "reason": "PCS 74.0 exceeds EARLY_ROTATION minimum (68) and approaches CONFIRMED_FLOW_LEADERS entry (75). Rot_score 8.0, dems 20, ret_5d_vs_spy +21.37%, ret_10d_vs_spy +29.29%, outperform_d10 8, streak_days 5, momentum_accel true show excellent daily-to-weekly alignment. Macro deteriorating -10 one-week pressures Argentina theme, but dems ≥14 supports EARLY_ROTATION entry per guidance.",
+        "watch_trigger": "If PCS crosses 75 with streak_weeks extending to 2+ and macro_delta improves past -5 one-week, rotates to CONFIRMED_FLOW_LEADERS priority. If dems remains 18+ and extension_risk stays medium, eligible for EARLY_ROTATION immediately on next macro stabilization."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "NVDA",
+        "reason": "Payload explicitly signals IGNORAR. PCS 68.2 at EARLY_ROTATION minimum but rot_score 5.0 (weakest in candidate set), ret_4w_vs_spy -5.41% (negative), ret_13w_vs_spy only +8.59%, streak_weeks 0 (no streak), dems 3 (insufficient for EARLY_ROTATION ≥14 guidance), spike_flag true with outperform_d10 only 3 indicate deteriorating multi-timeframe signal. Ret_5d_vs_spy +2.46 insufficient to validate spike. Already held 10% in CONFIRMED_FLOW_LEADERS—do not add. High theme_concentration_risk in us_tech_ai (33%) makes new entry redundant.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "EOSE",
+        "reason": "PCS 81.0 exceeds thresholds but spike_flag true with ret_5d_vs_spy +9.56 versus ret_10d_vs_spy +11.43 shows most gains concentrated outside 5-day window. Dems 10 falls below dems ≥14 requirement for EARLY_ROTATION and below dems ≥12 preference for CONFIRMED_FLOW_LEADERS. Extension_risk high with ret_4w_extreme and spike_flag flags. Already held (entry 2026-05-29, 10% size)—do not re-add.",
+        "rejection_category": "technical_overextension"
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-06-01\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-06-01_2235\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Pleno deteriorating macro (delta -10 one-week, -6.25 one-month) constrains new entries; existing HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS positions remain defended, but daily signals are mixed.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Already open position in HIGH_CONVICTION (entry 2026-05-08, 15% size). Current PCS 88.0 with ret_13w_vs_spy +142.84% and rot_score 8.0 remain strong, but extension_risk flagged high with dist_sma20_atr_high and ret_4w_extreme. Dems 13 and ret_5d_vs_spy +21.43 confirm daily momentum, but macro deteriorating -10 one-week pressures new AI cloud entries. Monitor for consolidation before considering size increase; do not re-add.\",\n      \"watch_trigger\": \"If PCS sustains above 88 for two consecutive reads and macro_delta returns to improving trend, consider incremental add only if extension_risk downgrades to medium and outperform_d10 stabilizes above 6.\"\n    },\n    {\n      \"ticker\": \"ASTS\",\n      \"reason\": \"PCS 82.8 exceeds CONFIRMED_FLOW_LEADERS threshold of 75, rot_score 9.0, ret_10d_vs_spy +23.65 and outperform_d10 8 support flow signal. However, spike_flag false masks momentum_accel false contradiction—ret_5d_vs_spy -1.93 versus ret_10d_vs_spy +23.65 indicates most gains came outside the 5-day window. Dems 11 falls below EARLY_ROTATION dems ≥14 guidance. Extension_risk high with momentum_decay flag weakens conviction. Already an active pick (2026-05-23, 6% size in EARLY_ROTATION); do not duplicate.\",\n      \"watch_trigger\": \"If dems rises above 14 with spike_flag remaining false and outperform_d10 sustains ≥6 for three consecutive days, consider rotation from EARLY_ROTATION to CONFIRMED_FLOW_LEADERS on next multi-day confirmation.\"\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      "
+}
