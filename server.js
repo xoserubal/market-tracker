@@ -36,7 +36,7 @@ async function drainFredQueue() {
   while (fredQueue.length > 0) {
     const { fn, resolve, reject } = fredQueue.shift();
     try { resolve(await fn()); } catch (e) { reject(e); }
-    if (fredQueue.length > 0) await new Promise(r => setTimeout(r, 200));
+    if (fredQueue.length > 0) await new Promise(r => setTimeout(r, 600));
   }
   fredQueueRunning = false;
 }
@@ -363,12 +363,13 @@ app.get("/api/fred3", async (req, res) => {
     // Fetch each sub-series sequentially through the shared queue
     const results = [];
     for (const sid of seriesIds) {
-      const subKey = `${sid}:asc500`;
+      const subKey = `${sid}:desc100`;
       const rows = await fredFetchWithCache(subKey, async () => {
-        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${sid}&api_key=${key}&sort_order=asc&limit=500&file_type=json`;
+        // desc+limit=100 gets the most recent ~2 years of weekly data; sort asc afterwards for nearestPrior lookup
+        const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${sid}&api_key=${key}&sort_order=desc&limit=100&file_type=json`;
         const r = await fetch(url, { headers: { Accept: "application/json" } });
         const data = await r.json();
-        return (data.observations || []).filter(o => o.value !== ".").map(o => ({ date: o.date, v: parseFloat(o.value) }));
+        return (data.observations || []).filter(o => o.value !== ".").map(o => ({ date: o.date, v: parseFloat(o.value) })).reverse();
       });
       results.push(rows);
     }
