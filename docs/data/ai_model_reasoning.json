@@ -1,110 +1,305 @@
 {
-  "date": "2026-06-02",
-  "run_id": "2026-06-02_2224",
+  "date": "2026-06-03",
+  "run_id": "2026-06-03_1242",
   "candidates": [
-    "EOSE",
-    "ASPI",
+    "SASK.V",
     "NBIS",
-    "BBAR",
+    "ASPI",
     "QQQ",
+    "BBAR",
+    "EOSE",
     "NVDA",
     "ASTS",
     "VIST",
+    "SUPV",
     "GGAL",
-    "SASK.V",
-    "LOMA",
     "YPF",
+    "LOMA",
     "OSCR",
-    "MSOS",
-    "RCAT"
+    "SE"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 93,
+      "quality_score": 100,
       "decision_summary": {
-        "market_read": "Bull Pleno Stable regime with macro_score 85.4 but many high-PCS names already held at elevated concentrations.",
-        "risk_posture": "cautious",
-        "should_select_picks": false
+        "market_read": "Bull Pleno Stable regime with macro_score 85.4 supports selective flow leaders.",
+        "risk_posture": "normal",
+        "should_select_picks": true
       },
-      "selected": [],
-      "watch": [
-        {
-          "ticker": "EOSE",
-          "reason": "Already held in CONFIRMED_FLOW_LEADERS; strong weekly RS but no new entry allowed.",
-          "watch_trigger": "Price consolidation with dems rise above 14 and no spike."
-        },
-        {
-          "ticker": "ASPI",
-          "reason": "Already held in CONFIRMED_FLOW_LEADERS; extreme extension limits new sizing.",
-          "watch_trigger": "Retreat of 8-10% with dems >=14 continuation."
-        },
-        {
-          "ticker": "NBIS",
-          "reason": "Already held in HIGH_CONVICTION; high extension risk and theme concentration.",
-          "watch_trigger": "Momentum_accel sustained above 20d average with rot_score >=8."
-        },
+      "selected": [
         {
           "ticker": "BBAR",
-          "reason": "PCS 79.8 and rot_score 9.0 with outperform_d10=8 but argentina theme new exposure needs monitoring.",
-          "watch_trigger": "ret_4w_vs_spy >25% or streak_weeks >=4 while macro remains Stable."
-        },
+          "portfolio": "CONFIRMED_FLOW_LEADERS",
+          "signal_type": "confirmed_leader",
+          "confidence": "high",
+          "reason_short": "79 PCS, rot_score 8, 3-week streak, strong 33.8% 4w RS.",
+          "reason_full": "BBAR reaches CONFIRMED_FLOW_LEADERS threshold at 79 PCS with rot_score 8.0, ret_4w_vs_spy 33.76%, ret_13w_vs_spy 24.01%, streak_weeks 3 and dems 16 without spike_flag, delivering clean multi-week leadership in argentina_financials.",
+          "comparative_edge": "Selected over VIST (PCS 75.5) because BBAR ret_4w_vs_spy 33.76 exceeds VIST 1.69 and dems 16 beats VIST 4 while streak stability supports flow confirmation.",
+          "key_supporting_factors": [
+            "ret_4w_vs_spy 33.76% leads argentina candidates.",
+            "rot_score 8.0 with macd_rsi_positive flags.",
+            "dems 16 and outperform_d10 8 confirm daily-to-weekly alignment.",
+            "dist_52w_high -11.74% leaves continuation room."
+          ],
+          "key_risks_or_contradictions": [
+            "extension_risk high with 4 points from ret_4w_extended.",
+            "Argentina theme adds 3 new candidates today.",
+            "streak_weeks 3 trails 8-week peers like YPF."
+          ]
+        }
+      ],
+      "watch": [
         {
-          "ticker": "QQQ",
-          "reason": "Already held in HIGH_CONVICTION; low dems limits incremental add.",
-          "watch_trigger": "dems >=12 with ret_5d_vs_spy positive close."
-        },
-        {
-          "ticker": "NVDA",
-          "reason": "Already held; spike_flag and weak dems=3 reduce near-term edge.",
-          "watch_trigger": "ret_10d_vs_spy turns positive and rot_score >=8."
-        },
-        {
-          "ticker": "ASTS",
-          "reason": "Already held; extreme extension with momentum_decay flag present.",
-          "watch_trigger": "Pullback below -25% from 52w high with streak_days >=5."
-        },
-        {
-          "ticker": "VIST",
-          "reason": "PCS 75.5 but spike_flag and dems=4 insufficient for selection.",
-          "watch_trigger": "dems >=14 and ret_5d_vs_spy >5% without spike."
+          "ticker": "SUPV",
+          "reason": "74.8 PCS, rot_score jump to 9 but only 2-week streak and already elevated dems.",
+          "watch_trigger": "Sustained 4-week streak or dems above 18 with no extension increase."
         },
         {
           "ticker": "GGAL",
-          "reason": "PCS 74.8 with rot_score 9 but streak_weeks only 2 and extension risk medium.",
-          "watch_trigger": "streak_weeks reaches 4 or ret_13w_vs_spy exceeds 20%."
+          "reason": "74.8 PCS with strong rot 9 but short 2-week streak limits confirmation.",
+          "watch_trigger": "Streak_weeks reaching 4+ with continued ret_4w_vs_spy above 15."
         },
         {
-          "ticker": "SASK.V",
-          "reason": "Already held in CONFIRMED_FLOW_LEADERS; medium theme concentration.",
-          "watch_trigger": "ret_4w_vs_spy stabilizes above 10% with no spike."
-        },
-        {
-          "ticker": "LOMA",
-          "reason": "PCS 74.2 and low extension but dems=8 and ret_5d_vs_spy negative.",
-          "watch_trigger": "dems crosses 14 with positive ret_10d_vs_spy."
+          "ticker": "VIST",
+          "reason": "75.5 PCS and rot 9 but weak ret_5d_vs_spy 2.05 and spike_flag true.",
+          "watch_trigger": "Outperform_d10 rising above 7 and spike_flag resolution."
         },
         {
           "ticker": "YPF",
-          "reason": "PCS 72.0 with high extension and ret_4w_vs_spy negative.",
-          "watch_trigger": "outperform_d10 >=7 and extension_risk drops to low."
+          "reason": "72 PCS with 8-week streak yet high extension_risk and dems 19 paired with spike_flag false.",
+          "watch_trigger": "dist_52w_high tightening below 3% without further extension."
+        },
+        {
+          "ticker": "LOMA",
+          "reason": "70 PCS with rot 9 but ret_4w_vs_spy only 3.27 and dems 8 insufficient.",
+          "watch_trigger": "ret_4w_vs_spy exceeding 10 and dems above 12."
+        },
+        {
+          "ticker": "SE",
+          "reason": "68 PCS with weak ret_13w_vs_spy -5.89 and dems 8.",
+          "watch_trigger": "ret_13w_vs_spy turning positive above 5."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "SASK.V",
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "NBIS",
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "ASPI",
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "QQQ",
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "EOSE",
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "NVDA",
+          "reason": "Already open position in active_picks_relevant and signal VIGILAR.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "ASTS",
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "OSCR",
-          "reason": "Already held; dems=4 weak relative to peers.",
-          "watch_trigger": "dems recovery above 12 with streak_days >=4."
+          "reason": "Already open position in active_picks_relevant.",
+          "rejection_category": "better_alternative_available"
+        }
+      ]
+    },
+    "anthropic/claude-haiku-4.5": {
+      "quality_score": 78,
+      "decision_summary": {
+        "market_read": "Bull Pleno stable regime with macro score 85.4 supports risk-on positioning; no new HIGH_CONVICTION candidates meet 82+ PCS threshold today.",
+        "risk_posture": "normal",
+        "should_select_picks": true
+      },
+      "selected": [
+        {
+          "ticker": "SASK.V",
+          "portfolio": "CONFIRMED_FLOW_LEADERS",
+          "signal_type": "confirmed_leader",
+          "confidence": "high",
+          "reason_short": "PCS 82.5 crosses CONFIRMED_FLOW_LEADERS 78 threshold; 8-week streak with rot 8.0",
+          "reason_full": "SASK.V delivers 82.5 PCS crossing the 78 CONFIRMED_FLOW_LEADERS threshold on pcs_crossed_up event today. The 8-week outperformance streak with rot_score 8.0 confirms sustained leadership in uranium_nuclear theme. Returns show ret_13w_vs_spy +24.41% and ret_4w_vs_spy +13.41% with dems 14 and no spike_flag, validating multi-timeframe flow. Macro delta improving 0.42 to 4.17 supports nuclear theme without negative contradictions.",
+          "comparative_edge": "Selected over ASPI (PCS 80.2) because streak_weeks reaches 8 versus ASPI 2, rot_score ties at 8.0 but SASK.V shows momentum_accel true versus ASPI false, and extension_risk medium versus ASPI extreme. ASPI spike_flag true and dist_52w_high -42.51 versus SASK.V -3.23 indicates SASK.V cleaner setup.",
+          "key_supporting_factors": [
+            "8-week outperformance streak with rot_score 8.0 confirms sustained flow in uranium theme.",
+            "dems 14 plus outperform_d10 7 and no spike_flag validate multi-day momentum without single-day chasing.",
+            "ret_13w_vs_spy +24.41% and ret_4w_vs_spy +13.41% exceed energy peers currently held like EOSE.",
+            "Extension_risk medium with only 2 points; dist_52w_high -3.23 shows healthy pullback from extremes."
+          ],
+          "key_risks_or_contradictions": [
+            "Theme already holds ASPI (2 uranium_nuclear positions = 20% concentration); adding SASK.V increases cluster risk.",
+            "ret_5d_vs_spy 9.91 with spike_flag true indicates recent sharp move may slow continuation.",
+            "Streak_weeks 8 is strong but dems 14 is moderate versus higher dems in SUPV (19) or RCAT (19)."
+          ]
+        },
+        {
+          "ticker": "SUPV",
+          "portfolio": "EARLY_ROTATION",
+          "signal_type": "early_rotation",
+          "confidence": "high",
+          "reason_short": "PCS 74.8 clears EARLY_ROTATION 68 threshold; dems 19 with strong daily momentum; rot jumped 7→9",
+          "reason_full": "SUPV crosses EARLY_ROTATION threshold at 74.8 PCS on pcs_crossed_up event with rot_score_jumped from 7.0 to 9.0 same day. Dems reaches 19 (highest in candidate set) with ret_5d_vs_spy +18.12, ret_10d_vs_spy +25.61, outperform_d10 8 and momentum_accel true. Signal upgraded IGNORAR → EN_RADAR and spike_flag false confirms multi-day continuation without single-day spike. Argentina theme benefits from Bull Pleno stable macro at 85.4 score.",
+          "comparative_edge": "Selected over GGAL (PCS 74.8, identical) because SUPV dems 19 exceeds GGAL dems 15, rot_now 9.0 matches GGAL but SUPV shows momentum_accel true versus GGAL false, and ret_10d_vs_spy +25.61 beats GGAL +16.15. Both have identical PCS but SUPV's daily momentum spike (dems +5 vs typical 8-12) and acceleration flag provide superior entry setup.",
+          "key_supporting_factors": [
+            "dems 19 is the highest daily early-momentum score in entire candidate set; ret_5d_vs_spy +18.12 and ret_10d_vs_spy +25.61 validate sustained daily rotation.",
+            "rot_score jumped 9 to 9.0 same day with signal upgraded from IGNORAR to EN_RADAR showing multi-timeframe confirmation.",
+            "momentum_accel true differentiates SUPV from stalling peers; streak_weeks 2 is brief but recent acceleration matters for EARLY_ROTATION.",
+            "No spike_flag and outperform_d10 8 confirm this is multi-day setup, not one-day spike likely to fade."
+          ],
+          "key_risks_or_contradictions": [
+            "Argentina theme concentration already present with 5+ active positions (VIST, BBAR, YPF, GGAL, LOMA); adding SUPV clusters risk to single country macro.",
+            "streak_weeks only 2 is shortest among selected; if momentum fades quickly, early exit may be forced.",
+            "ret_13w_vs_spy only +5.83% trails most peers; Argentina financials underperforming on longer timeframe despite daily pop."
+          ]
+        },
+        {
+          "ticker": "PAM",
+          "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+          "signal_type": "macro_thematic",
+          "confidence": "medium",
+          "reason_short": "PCS 66.0 clears MACRO_THEMATIC 62 floor; signal upgraded IGNORAR→EN_RADAR; rot jumped 5→7",
+          "reason_full": "PAM reaches 66.0 PCS crossing MACRO_THEMATIC_BENEFICIARIES 62 minimum entry threshold on pcs_crossed_up from 57.5. Signal upgraded IGNORAR to EN_RADAR same day with rot_score_jumped 5.0 to 7.0, confirming theme acceleration. Argentina materials theme aligns with Bull Pleno stable macro supporting emerging-market value plays. PCS +8.5 from entry and dual upgrade signals (signal + rot) justify entry into MACRO_THEMATIC portfolio despite lower absolute returns versus higher-conviction picks.",
+          "comparative_edge": "Selected over TDOC (PCS 65.8) because PAM shows dual signal upgrades (signal IGNORAR→EN_RADAR + rot 5→7) versus TDOC single pcs_crossed_up event, and rot_now 7 exceeds TDOC rot 6. Both clear 62 threshold but PAM momentum acceleration (rot +2) versus TDOC stagnant (rot 6 stable) favors PAM for macro rotation thesis despite 0.2 PCS deficit.",
+          "key_supporting_factors": [
+            "Signal upgraded from IGNORAR to EN_RADAR same day plus rot jumped +2 points signals multi-indicator theme acceleration not just PCS bleed.",
+            "Argentina materials theme fits macro beneficiary profile with low theme_concentration_risk and underweight vs. oil_gas cluster.",
+            "PCS gain of +8.5 from 57.5 entry supports momentum, though absolute PCS 66 remains below higher-conviction peers."
+          ],
+          "key_risks_or_contradictions": [
+            "No daily momentum data (dems field absent); cannot confirm daily flow supporting macro thesis, only weekly rot upgrade.",
+            "Argentina country exposure clusters with SUPV, GGAL, VIST, BBAR already open; PAM compounds single-country concentration risk.",
+            "ret_4w_vs_spy and ret_13w_vs_spy absent from data; cannot benchmark performance versus SPY to validate setup strength."
+          ]
+        }
+      ],
+      "watch": [
+        {
+          "ticker": "NBIS",
+          "reason": "PCS 82.0 exceeds CONFIRMED_FLOW_LEADERS 78 threshold and qualifies for selection, but NBIS already open in HIGH_CONVICTION portfolio (entry 2026-05-08). Hard rule prohibits re-selecting active positions. However, ret_13w_vs_spy 188.25% shows extreme outperformance; monitor for size increase if dems sustain above 14.",
+          "watch_trigger": "If NBIS dems sustains ≥14 AND ret_10d_vs_spy remains positive (currently +27.55%), flag for potential additional allocation to HIGH_CONVICTION; extension_risk high (5 pts) requires continued monitoring for late-entry spike weakness."
+        },
+        {
+          "ticker": "ASPI",
+          "reason": "PCS 80.2 qualifies for CONFIRMED_FLOW_LEADERS (78+ threshold) with rot_score 8.0 and ret_4w_vs_spy 56.35%, but extension_risk extreme (8 pts) with spike_flag true, dist_52w_high -42.51%, and streak_weeks only 2 undermine setup quality. Spike likely represents mean-reversion bounce rather than sustained flow. Watch for outperform_d10 to stabilize ≥5 without additional spike for 3+ consecutive days.",
+          "watch_trigger": "If outperform_d10 maintains ≥5 for 3 consecutive days AND dems drops below 15 (stabilizing momentum), re-evaluate for CONFIRMED_FLOW_LEADERS entry; currently too spike-driven despite high PCS."
+        },
+        {
+          "ticker": "GGAL",
+          "reason": "PCS 74.8 (tied with SUPV) qualifies for EARLY_ROTATION 68+ but not selected due to lower daily momentum: dems 15 vs SUPV 19, and rot_score_jumped absent (stable at 9 vs SUPV upgraded). Both argentina_financials in concentrated theme. Watch for GGAL dems to exceed 17 and signal to upgrade to EN_RADAR (currently EN_RADAR but less dynamic).",
+          "watch_trigger": "If GGAL dems reaches 18+ on next signal day, consider EARLY_ROTATION entry as peer to SUPV with identical rot_score 9.0 and better streak_weeks 2 matching; would provide argentina_financials pair without redundancy."
+        },
+        {
+          "ticker": "YPF",
+          "reason": "PCS 72.0 is below EARLY_ROTATION 68+ threshold but close. ret_13w_vs_spy 47.58% and streak_weeks 8 are strong; dems 19 (tied highest) and momentum_accel true suggest entry pending small PCS bump. Already open in CONFIRMED_FLOW_LEADERS portfolio (entry 2026-05-15) at size 10%; cannot re-select.",
+          "watch_trigger": "Monitor for PCS to cross 70 (currently 72, so minor dip risk); if PCS holds ≥70 and dems sustains ≥17, YPF merits size increase allocation to EARLY_ROTATION; currently sufficient via existing CONFIRMED_FLOW_LEADERS position."
+        },
+        {
+          "ticker": "LOMA",
+          "reason": "PCS 70.0 exactly at EARLY_ROTATION 68 entry floor with rot_score 9.0 and ret_4w_vs_spy 3.27%. Qualifies on PCS and rot but dems 8 is weak (vs dems 14+ best practices), outperform_d10 only 6, and ret_13w_vs_spy merely 4.51%. Theme avg_good but subdued momentum profile suggests better setups available. Watch for dems to spike to 12+ without spike_flag.",
+          "watch_trigger": "If dems climbs to 12+ with spike_flag remaining false and outperform_d10 reaches 7, then EARLY_ROTATION becomes viable; currently insufficient daily confirmation despite rot_score 9."
+        },
+        {
+          "ticker": "OSCR",
+          "reason": "PCS 68.2 qualifies for EARLY_ROTATION (68+ threshold) but OSCR already open in CONFIRMED_FLOW_LEADERS portfolio (entry 2026-05-28) at size 10%. Cannot re-select per hard rules. However, note that ret_10d_vs_spy -19.27 and ret_5d_vs_spy -4.62 show recent short-term weakness despite rot_score 8 and 7-week streak.",
+          "watch_trigger": "Monitor OSCR for ret_10d_vs_spy stabilization; if returns positive AND dems returns to 8+ (currently 4), no action needed; if dems collapses below 4 AND ret_10d remains negative, consider exit from CONFIRMED_FLOW_LEADERS."
+        },
+        {
+          "ticker": "SE",
+          "reason": "PCS 68.0 at EARLY_ROTATION entry threshold (68+ min) with signal EN_RADAR and rot_score 6.0. However, ret_13w_vs_spy is -5.89% (underperforming SPY), streak_weeks only 2, and spike_flag true with dems 8. China_em theme shows rs_underperform flag, contradicting macro bullish setup. Watches for momentum stabilization before entry.",
+          "watch_trigger": "If ret_13w_vs_spy turns positive AND dems sustains 10+ for 3+ days WITHOUT new spike_flag, consider EARLY_ROTATION; currently theme weakness (rs_underperform, negative 13w) conflicts with Bull Pleno macro context — likely chasing late-stage China EM bounce."
+        },
+        {
+          "ticker": "TGS",
+          "reason": "PCS 66.8 clears MACRO_THEMATIC_BENEFICIARIES 62 floor on pcs_crossed_up from 58.8. Argentina theme fits macro beneficiary thesis. However, no daily momentum metrics (dems, ret_5d_vs_spy) provided; cannot confirm daily flow. Watch for next daily update.",
+          "watch_trigger": "If next signal shows dems ≥10 with positive ret_5d_vs_spy and no spike_flag, upgrade to MACRO_THEMATIC_BENEFICIARIES selection; currently insufficient daily data for conviction."
+        },
+        {
+          "ticker": "TDOC",
+          "reason": "PCS 65.8 barely clears MACRO_THEMATIC_BENEFICIARIES 62 floor on pcs_crossed_up from 63.5. Healthcare_special theme aligns with macro; however, only +2.3 PCS gain from entry and no additional upgrade signals (vs PAM dual upgrades). Watch for further PCS acceleration.",
+          "watch_trigger": "If PCS reaches 68+ (EARLY_ROTATION level) OR rot_score jumps 2+ points, escalate to EARLY_ROTATION or MACRO_THEMATIC entry; currently marginal PCS gain limits conviction vs PAM."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "RCAT",
+          "reason": "PCS 61.8 crossed DOWN from 67.0 (pcs_crossed_down event). Downward PCS crossing contradicts buy signal despite defense_space theme alignment. Already open in CONFIRMED_FLOW_LEADERS (entry 2026-05-30) at size 10%; additional selection would violate hard rule against re-selecting active positions.",
+          "rejection_category": "not_tradable"
         },
         {
           "ticker": "MSOS",
-          "reason": "PCS 68.5, spike_flag true, macro trend deteriorating.",
-          "watch_trigger": "rot_score holds >=8 and macro_delta_1w turns positive."
+          "reason": "PCS 59.8 crossed DOWN from 68.5 (pcs_crossed_down event). Downward momentum and sub-62 PCS disqualify from all thematic portfolios. Cannabis theme shows weak macro alignment in Bull Pleno stable regime. Downtrend contradicts EN_RADAR signal.",
+          "rejection_category": "technical_overextension"
         },
         {
-          "ticker": "RCAT",
-          "reason": "Already held; extension_risk medium despite strong dems.",
-          "watch_trigger": "ret_13w_vs_spy improves above 15% with low extension."
+          "ticker": "TSLA",
+          "reason": "Signal explicitly marked IGNORAR; PCS 66.0 barely above MACRO_THEMATIC 62 floor on pcs_crossed_up from 62.0. Despite signal_ignored flag, US tech AI theme already concentrated (25% portfolio weight, 2 open positions NBIS + NVDA). Dems data absent. No upgrade signal like PAM or SUPV to override IGNORAR directive.",
+          "rejection_category": "macro_conflict"
+        },
+        {
+          "ticker": "MLX.AX",
+          "reason": "PCS 50.0 with signal VIGILAR (not EN_RADAR). Falls well below all portfolio thematic minimums (62 MACRO_THEMATIC, 68 EARLY_ROTATION, 70+ CONFIRMED). Already open in EARLY_ROTATION portfolio (entry 2026-05-23) at size 6%; cannot re-select. Commodities_metals theme shows theme_avg_poor with insufficient macro tailwind.",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "KOS",
+          "reason": "PCS 47.2 with signal EN_RADAR but crossed UP to EN_RADAR from IGNORAR. Well below 62 MACRO_THEMATIC minimum and all thematic thresholds. Already open in CONFIRMED_FLOW_LEADERS (entry 2026-05-15) at size 10%; hard rule prohibits re-selection. Oil_gas theme already saturated (multiple open positions).",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "MAPS",
+          "reason": "PCS 44.0 with signal VIGILAR (not EN_RADAR or higher). Falls far below 62 MACRO_THEMATIC floor. Cannabis theme shows weak macro support in Bull Pleno regime. Signal upgraded IGNORAR → VIGILAR but PCS remains insufficient. Dems and return metrics absent.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "QQQ",
+          "reason": "PCS 79.5 qualifies for CONFIRMED_FLOW_LEADERS (78+ threshold) and is EN_RADAR with rot_score 7.0, ret_13w_vs_spy +12.24%, and 7-week streak. However, QQQ already open in HIGH_CONVICTION portfolio (entry 2026-05-19) at size 15%. Hard rule prohibits re-selecting active positions. Macro and technicals support holding current position rather than adding.",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "BBAR",
+          "reason": "PCS 79.0 qualifies for CONFIRMED_FLOW_LEADERS (78+ threshold) with rot_score 8.0, ret_13w_vs_spy +24.01%, dems 16, and momentum_accel true. However, already open in active_picks_relevant context via argentina_financials cluster (GGAL, SUPV, VIST). Adding BBAR creates redundant 3-deep argentina cluster within single portfolio. Select highest-conviction argentina candidate (SUPV dems 19) instead.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "EOSE",
+          "reason": "PCS 78.5 qualifies for CONFIRMED_FLOW_LEADERS (78+ threshold) with rot_score 7.0, ret_13w_vs_spy +43.49%, and strong energy_storage theme macro tailwind. However, EOSE already open in CONFIRMED_FLOW_LEADERS portfolio (entry 2026-05-29) at size 10%. Hard rule prohibits re-selection of active positions.",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "NVDA",
+          "reason": "PCS 77.0 with signal VIGILAR (not EN_RADAR) and rot_score 6.0 — below peer standards. ret_4w_vs_spy +6.88%, ret_13w_vs_spy +11.81%, and streak_weeks only 1 underperform alternative candidates. Dems 3 is among lowest in set. Spike_flag true with ret_5d_vs_spy +2.51 and ret_10d_vs_spy -2.61 indicates stalling momentum. Already open in CONFIRMED_FLOW_LEADERS (entry 2026-05-08) at size 10%; cannot re-select. Macro signals prefer SUPV, PAM over stagnant mega-cap chip leader.",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "ASTS",
+          "reason": "PCS 76.8 qualifies for CONFIRMED_FLOW_LEADERS (78+ threshold) but falls short at 76.8 < 78.0 requirement. Already open in EARLY_ROTATION portfolio (entry 2026-05-23) at size 6%. Cannot re-select per hard rules. Extension_risk extreme (7 pts) with dist_sma20_atr_high, ret_4w_extreme, and momentum_decay flags contradict late entry despite dems 10 and positive outperform_d10.",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "VIST",
+          "reason": "PCS 75.5 below CONFIRMED_FLOW_LEADERS 78 threshold. Rot_score 9.0 and streak_weeks 4 qualify for EARLY_ROTATION (68+), but already open in active portfolio (entry date not specified, but listed as argentina theme). Cannot re-select. Argentina theme already heavily represented; SUPV dems 19 provides superior daily momentum.",
+          "rejection_category": "not_tradable"
         }
-      ],
-      "rejected": []
+      ]
     }
   }
 }
