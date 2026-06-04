@@ -1,118 +1,157 @@
 {
-  "run_id": "2026-06-04_1101",
+  "run_id": "2026-06-04_2130",
   "model": "x-ai/grok-4.3",
   "date": "2026-06-04",
   "summary": {
     "date": "2026-06-04",
-    "run_id": "2026-06-04_1101",
+    "run_id": "2026-06-04_2130",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 23,
     "candidate_count": 15,
-    "input_tokens": 18130,
-    "output_tokens": 1436,
-    "cost_usd": 0.026253,
-    "latency_ms": 17215.0,
+    "input_tokens": 18150,
+    "output_tokens": 2120,
+    "cost_usd": 0.027987,
+    "latency_ms": 9414.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 0,
-    "quality_score": 92,
-    "selected_count": 0,
-    "watch_count": 14,
-    "rejected_count": 0,
+    "hard_rule_violations": 2,
+    "quality_score": 90,
+    "selected_count": 2,
+    "watch_count": 0,
+    "rejected_count": 13,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [],
+    "violations": [
+      "SELECT EOSE: already an open position (use HOLD, not SELECT)",
+      "SELECT SASK.V: already an open position (use HOLD, not SELECT)"
+    ],
     "soft_warnings": []
   },
-  "quality_score": 92,
+  "quality_score": 90,
   "response": {
     "date": "2026-06-04",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-06-04_1101",
+    "run_id": "2026-06-04_2130",
     "decision_summary": {
-      "market_read": "Bull Pleno stable with macro_score 85.4 and positive delta_1m 4.17 supports quality leaders",
-      "risk_posture": "cautious",
-      "should_select_picks": false
+      "market_read": "Bull Pleno regime remains stable with macro_score at 85.4 supporting selective equity leadership.",
+      "risk_posture": "normal",
+      "should_select_picks": true
     },
-    "selected": [],
-    "watch": [
+    "selected": [
       {
         "ticker": "EOSE",
-        "reason": "PCS 83 exceeds 78 but dems 9 and momentum_decay flag limit conviction for new entry",
-        "watch_trigger": "dems rises above 14 with ret_5d_vs_spy positive and no momentum_decay"
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "83 PCS with 8 rot_score, 3-week streak and clean extension profile.",
+        "reason_full": "EOSE crosses 78 CONFIRMED threshold at 83 PCS backed by rot_score 8, ret_13w_vs_spy of 11.09 percent and ret_4w_vs_spy of 23.48 percent with dems 8 and no spike_flag. Theme concentration low at 10 percent in energy_storage under Bull Pleno stable conditions.",
+        "comparative_edge": "Selected over SASK.V because EOSE shows ret_4w_vs_spy of 23.48 percent versus 9.52 percent and zero extension_points versus SASK.V medium risk from spike_flag.",
+        "key_supporting_factors": [
+          "rot_score 8 and streak_weeks 3 beat multiple peers in energy_storage.",
+          "ret_13w_vs_spy 11.09 percent with no spike_flag supports sustained flow.",
+          "dist_52w_high -58.71 percent leaves room for extension without late chase.",
+          "Macro delta stable at 4.17 over one month aligns with energy_storage."
+        ],
+        "key_risks_or_contradictions": [
+          "ret_5d_vs_spy negative at -10.45 percent indicates recent daily pullback.",
+          "dems 8 below 10 limits short-term continuation confirmation.",
+          "Momentum decay flag present requiring watch on volume."
+        ]
       },
       {
         "ticker": "SASK.V",
-        "reason": "PCS 82.5 with streak_weeks 8 yet spike_flag true and extension_risk medium on single-day move",
-        "watch_trigger": "outperform_d10 holds above 6 without spike_flag on next session"
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "82.5 PCS with 8 rot_score, 8-week streak and dems 13.",
+        "reason_full": "SASK.V meets 78 threshold at 82.5 PCS with rot_score 8, ret_13w_vs_spy 22.2 percent, streak_weeks 8 and dems 13 plus momentum_accel true. Low theme concentration supports uranium_nuclear exposure under stable macro regime.",
+        "comparative_edge": "Selected over EOSE because SASK.V streak_weeks reaches 8 versus EOSE 3 and ret_13w_vs_spy 22.2 percent exceeds 11.09 percent with stronger daily momentum.",
+        "key_supporting_factors": [
+          "streak_weeks 8 and rot_score 8 exceed EOSE and most uranium peers.",
+          "ret_13w_vs_spy 22.2 percent and outperform_d10 6 confirm multi-week RS.",
+          "dist_52w_high only -4.84 percent shows price action hugging highs.",
+          "Macro delta 4.17 one-month supports nuclear theme without saturation."
+        ],
+        "key_risks_or_contradictions": [
+          "spike_flag true raises extension risk to medium despite strong streak.",
+          "ret_5d_vs_spy only 4.39 percent limits immediate daily confirmation.",
+          "Uranium theme already holds two positions at 20 percent weight."
+        ]
+      }
+    ],
+    "watch": [],
+    "rejected": [
+      {
+        "ticker": "NBIS",
+        "reason": "Already held in HIGH_CONVICTION active picks at 15 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "ASPI",
-        "reason": "PCS 82.2 and rot_score 9 but high extension_risk 5 from ret_4w_extreme and spike_flag true",
-        "watch_trigger": "ret_5d_vs_spy confirms continuation above 10 and extension_points drop below 3"
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS active picks at 10 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "QQQ",
-        "reason": "PCS 79.5 already open position in HIGH_CONVICTION with 15 pct weight",
-        "watch_trigger": "new PCS cross above 85 while theme_concentration_risk stays low"
+        "reason": "Already held in HIGH_CONVICTION active picks at 15 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "BBAR",
-        "reason": "PCS 76 already open position in CONFIRMED_FLOW_LEADERS with 10 pct weight",
-        "watch_trigger": "PCS sustains above 80 with streak_weeks reaching 5"
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS active picks at 10 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "TDOC",
-        "reason": "PCS 74.2 with dems 11 yet spike_flag true and ret_10d_vs_spy only 4.47",
-        "watch_trigger": "dems above 14 without spike_flag and ret_5d_vs_spy exceeds 10"
+        "reason": "ret_4w_vs_spy only 1.89 percent and theme_weak flag limit conviction versus selected names.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "VIST",
-        "reason": "PCS 72.5 and dems only 6 with ret_10d_vs_spy negative at -6.19",
-        "watch_trigger": "dems rises to 14 plus ret_10d_vs_spy turns positive above 8"
+        "reason": "ret_4w_vs_spy negative at -0.57 percent with short streak of 4 weeks.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "OSCR",
-        "reason": "PCS 72.2 already open position in CONFIRMED_FLOW_LEADERS with 10 pct weight",
-        "watch_trigger": "new PCS cross above 78 with dems above 10"
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS active picks at 10 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "UCO",
-        "reason": "PCS 72 but leveraged commodity ETF and theme_concentration_risk already present in oil_gas",
-        "watch_trigger": "ret_4w_vs_spy turns positive while streak_weeks reaches 9 and dems above 12"
+        "reason": "Leveraged commodity ETF violates rule against selecting futures or commodities.",
+        "rejection_category": "not_tradable"
       },
       {
         "ticker": "HIMS",
-        "reason": "PCS 70.5 and dems 16 yet streak_weeks only 2 and dist_52w_high -60.94",
-        "watch_trigger": "streak_weeks reaches 4 with ret_13w_vs_spy above 60 and extension_risk low"
+        "reason": "ret_4w_vs_spy negative at -4.17 percent with only 2-week streak.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "ASTS",
-        "reason": "PCS 70.2 already open position in EARLY_ROTATION with 6 pct weight",
-        "watch_trigger": "new PCS cross above 72 with ret_5d_vs_spy positive and no spike_flag"
+        "reason": "Already held in EARLY_ROTATION active picks at 6 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "YPF",
-        "reason": "PCS 69 and high extension_risk 5 with rsi_extreme and dist_sma20_atr_extreme",
-        "watch_trigger": "extension_points fall below 3 and ret_5d_vs_spy turns positive above 8"
+        "reason": "ret_4w_vs_spy 18.52 percent trails selected names and extension_risk high at 5 points.",
+        "rejection_category": "technical_overextension"
       },
       {
         "ticker": "NVDA",
-        "reason": "PCS 68.5 already open position in CONFIRMED_FLOW_LEADERS with 10 pct weight",
-        "watch_trigger": "new PCS cross above 78 with streak_weeks above 3"
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS active picks at 10 percent size.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "WCP.TO",
-        "reason": "PCS 68 already open position in CONFIRMED_FLOW_LEADERS with 7.5 pct weight",
-        "watch_trigger": "new PCS cross above 78 with dems above 12"
+        "reason": "Already held in CONFIRMED_FLOW_LEADERS active picks at 7.5 percent size.",
+        "rejection_category": "better_alternative_available"
       }
-    ],
-    "rejected": []
+    ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-06-04\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-04_1101\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Pleno stable with macro_score 85.4 and positive delta_1m 4.17 supports quality leaders\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"EOSE\",\n      \"reason\": \"PCS 83 exceeds 78 but dems 9 and momentum_decay flag limit conviction for new entry\",\n      \"watch_trigger\": \"dems rises above 14 with ret_5d_vs_spy positive and no momentum_decay\"\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      \"reason\": \"PCS 82.5 with streak_weeks 8 yet spike_flag true and extension_risk medium on single-day move\",\n      \"watch_trigger\": \"outperform_d10 holds above 6 without spike_flag on next session\"\n    },\n    {\n      \"ticker\": \"ASPI\",\n      \"reason\": \"PCS 82.2 and rot_score 9 but high extension_risk 5 from ret_4w_extreme and spike_flag true\",\n      \"watch_trigger\": \"ret_5d_vs_spy confirms continuation above 10 and extension_points drop below 3\"\n    },\n    {\n      \"ticker\": \"QQQ\",\n      \"reason\": \"PCS 79.5 already open position in HIGH_CONVICTION with 15 pct weight\",\n      \"watch_trigger\": \"new PCS cross above 85 while theme_concentration_risk stays low\"\n    },\n    {\n      \"ticker\": \"BBAR\",\n      \"reason\": \"PCS 76 already open position in CONFIRMED_FLOW_LEADERS with 10 pct weight\",\n      \"watch_trigger\": \"PCS sustains above 80 with streak_weeks reaching 5\"\n    },\n    {\n      \"ticker\": \"TDOC\",\n      \"reason\": \"PCS 74.2 with dems 11 yet spike_flag true and ret_10d_vs_spy only 4.47\",\n      \"watch_trigger\": \"dems above 14 without spike_flag and ret_5d_vs_spy exceeds 10\"\n    },\n    {\n      \"ticker\": \"VIST\",\n      \"reason\": \"PCS 72.5 and dems only 6 with ret_10d_vs_spy negative at -6.19\",\n      \"watch_trigger\": \"dems rises to 14 plus ret_10d_vs_spy turns positive above 8\"\n    },\n    {\n      \"ticker\": \"OSCR\",\n      \"reason\": \"PCS 72.2 already open position in CONFIRMED_FLOW_LEADERS with 10 "
+  "raw_response_head": "{\n  \"date\": \"2026-06-04\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-04_2130\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Pleno regime remains stable with macro_score at 85.4 supporting selective equity leadership.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"EOSE\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"83 PCS with 8 rot_score, 3-week streak and clean extension profile.\",\n      \"reason_full\": \"EOSE crosses 78 CONFIRMED threshold at 83 PCS backed by rot_score 8, ret_13w_vs_spy of 11.09 percent and ret_4w_vs_spy of 23.48 percent with dems 8 and no spike_flag. Theme concentration low at 10 percent in energy_storage under Bull Pleno stable conditions.\",\n      \"comparative_edge\": \"Selected over SASK.V because EOSE shows ret_4w_vs_spy of 23.48 percent versus 9.52 percent and zero extension_points versus SASK.V medium risk from spike_flag.\",\n      \"key_supporting_factors\": [\n        \"rot_score 8 and streak_weeks 3 beat multiple peers in energy_storage.\",\n        \"ret_13w_vs_spy 11.09 percent with no spike_flag supports sustained flow.\",\n        \"dist_52w_high -58.71 percent leaves room for extension without late chase.\",\n        \"Macro delta stable at 4.17 over one month aligns with energy_storage.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"ret_5d_vs_spy negative at -10.45 percent indicates recent daily pullback.\",\n        \"dems 8 below 10 limits short-term continuation confirmation.\",\n        \"Momentum decay flag present requiring watch on volume.\"\n      ]\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"82.5 PCS with 8 rot_score, 8-week streak and dems 13.\",\n      \"reason_full\": \"SASK.V meets 78 threshold at 82.5 PCS with rot_score 8, ret_13w_vs_spy 22.2 percen"
 }
