@@ -342,7 +342,7 @@ def export_picks_prices():
     result: dict = {}
 
     for ticker in sorted(tickers):
-        ticker_safe = ticker.replace("^", "").replace("=", "")
+        ticker_safe = ticker.replace("^", "").replace("=", "").replace(".", "")
         path = RAW_DIR / f"yahoo_{ticker_safe}.parquet"
         if not path.exists():
             print(f"  ⚠ {ticker}: raw parquet no encontrado")

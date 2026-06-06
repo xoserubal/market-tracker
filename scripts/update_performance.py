@@ -1,12 +1,15 @@
 """
 update_performance.py — fills ret_* fields in shadow_picks.jsonl
+                         and backfills missing entry_price in ai_picks.json
 
 Reads:
   docs/data/shadow_picks.jsonl
-  docs/data/baselines.jsonl   (for --report comparison)
+  docs/data/ai_picks.json       (for entry_price backfill)
+  docs/data/baselines.jsonl     (for --report comparison)
 
 Writes:
   docs/data/shadow_picks.jsonl  (in-place update of performance fields)
+  docs/data/ai_picks.json       (entry_price backfill when null)
 
 Fields computed per pick:
   ret_1d, ret_3d, ret_1w, ret_2w, ret_1m, ret_3m
@@ -387,6 +390,123 @@ def _print_baseline_comparison(picks: list[dict], baselines: list[dict]) -> None
     print()
 
 
+# ── Entry-price backfill ───────────────────────────────────────────────────────
+
+def backfill_entry_prices(dry_run: bool = False) -> int:
+    """
+    Fill null entry_price fields in ai_picks.json using yfinance.
+    Uses the closing price on the entry_date (first trading day >= that date).
+    Also syncs the filled prices to matching rows in shadow_picks.jsonl.
+    Returns the number of positions filled.
+    """
+    import json as _json
+
+    ai_picks_path = DATA / "ai_picks.json"
+    if not ai_picks_path.exists():
+        return 0
+
+    with open(ai_picks_path, encoding="utf-8") as f:
+        picks_data = _json.load(f)
+
+    # Collect positions with null entry_price (positions + history sections)
+    to_fill: list[dict] = []
+    for ptf in (picks_data.get("portfolios") or {}).values():
+        for section in ("positions", "history"):
+            for pos in (ptf.get(section) or []):
+                if pos.get("entry_price") is None and pos.get("entry_date") and pos.get("ticker"):
+                    to_fill.append(pos)
+
+    if not to_fill:
+        return 0
+
+    tickers   = sorted({pos["ticker"] for pos in to_fill})
+    min_date  = min(pos["entry_date"] for pos in to_fill)
+    today_str = date.today().isoformat()
+
+    print(f"  Backfilling entry_price for {len(tickers)} tickers "
+          f"({len(to_fill)} entries)…")
+
+    try:
+        import yfinance as yf
+        import pandas as pd
+
+        raw = yf.download(
+            tickers, start=min_date, end=today_str,
+            auto_adjust=True, progress=False, threads=True,
+        )
+        if raw is None or raw.empty:
+            print("  WARNING: no data for entry_price backfill")
+            return 0
+
+        if isinstance(raw.columns, pd.MultiIndex):
+            close_df = raw["Close"].dropna(how="all")
+        else:
+            sym = tickers[0]
+            close_df = raw[["Close"]].rename(columns={"Close": sym})
+
+    except Exception as exc:
+        print(f"  WARNING: entry_price backfill download failed: {exc}")
+        return 0
+
+    # price_cache: (ticker, entry_date) → price
+    price_cache: dict[tuple, float] = {}
+
+    for pos in to_fill:
+        ticker     = pos["ticker"]
+        entry_date = pos["entry_date"]
+        cache_key  = (ticker, entry_date)
+
+        if cache_key in price_cache:
+            if not dry_run:
+                pos["entry_price"] = price_cache[cache_key]
+            continue
+
+        try:
+            import pandas as pd
+            if ticker not in close_df.columns:
+                continue
+            col = close_df[ticker].dropna()
+            if col.empty:
+                continue
+            mask = col.index >= pd.Timestamp(entry_date)
+            if not mask.any():
+                continue
+            price = round(float(col[mask].iloc[0]), 2)
+        except Exception:
+            continue
+
+        price_cache[cache_key] = price
+
+        if dry_run:
+            print(f"  DRY-RUN {ticker} ({entry_date}): entry_price = {price}")
+        else:
+            pos["entry_price"] = price
+
+    filled = len(price_cache)
+    if filled == 0:
+        return 0
+
+    if not dry_run:
+        with open(ai_picks_path, "w", encoding="utf-8") as f:
+            _json.dump(picks_data, f, ensure_ascii=False, indent=2)
+        print(f"  Backfilled {filled} entry prices in ai_picks.json")
+
+        # Sync to shadow_picks.jsonl
+        shadow = load_jsonl(SHADOW_PICKS)
+        shadow_updated = 0
+        for sp in shadow:
+            if sp.get("entry_price") is None:
+                key = (sp.get("ticker"), sp.get("date"))
+                if key in price_cache:
+                    sp["entry_price"] = price_cache[key]
+                    shadow_updated += 1
+        if shadow_updated > 0:
+            save_jsonl(SHADOW_PICKS, shadow)
+            print(f"  Synced {shadow_updated} entry prices to shadow_picks.jsonl")
+
+    return filled
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -402,6 +522,9 @@ def main() -> None:
     parser.add_argument("--ticker", metavar="TICKER",
                         help="Update only this ticker (e.g. CVE, MLX.AX)")
     args = parser.parse_args()
+
+    # ── Backfill missing entry prices in ai_picks.json ──
+    backfill_entry_prices(dry_run=args.dry_run)
 
     # ── Load picks ──
     picks = load_jsonl(SHADOW_PICKS)

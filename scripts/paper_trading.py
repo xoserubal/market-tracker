@@ -884,7 +884,7 @@ def _get_entry_price(ticker: str) -> float | None:
     """Lee el último cierre disponible del parquet raw del ticker."""
     try:
         import pandas as pd
-        ticker_safe = ticker.replace("^", "").replace("=", "")
+        ticker_safe = ticker.replace("^", "").replace("=", "").replace(".", "")
         path = ROOT / "backtest" / "data" / "raw" / f"yahoo_{ticker_safe}.parquet"
         if not path.exists():
             return None
