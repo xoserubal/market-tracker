@@ -1,10 +1,10 @@
 {
-  "run_id": "2026-06-06_1001",
+  "run_id": "2026-06-06_2100",
   "model": "x-ai/grok-4.3",
   "date": "2026-06-06",
   "summary": {
     "date": "2026-06-06",
-    "run_id": "2026-06-06_1001",
+    "run_id": "2026-06-06_2100",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
@@ -12,16 +12,16 @@
     "event_count": 23,
     "candidate_count": 15,
     "input_tokens": 18145,
-    "output_tokens": 1603,
-    "cost_usd": 0.026689,
-    "latency_ms": 17289.0,
+    "output_tokens": 1459,
+    "cost_usd": 0.026329,
+    "latency_ms": 7468.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 93,
+    "quality_score": 91,
     "selected_count": 0,
-    "watch_count": 9,
-    "rejected_count": 6,
+    "watch_count": 2,
+    "rejected_count": 7,
     "fallback_used": false,
     "error": null
   },
@@ -29,96 +29,66 @@
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 93,
+  "quality_score": 91,
   "response": {
     "date": "2026-06-06",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-06-06_1001",
+    "run_id": "2026-06-06_2100",
     "decision_summary": {
-      "market_read": "Bull Pleno regime deteriorating with macro_score 68.75 and 1w delta -16.25 limits new entries.",
+      "market_read": "Bull Pleno Deteriorating regime with macro_score 68.75 and -16.25 weekly delta signals broad caution.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
-        "ticker": "OSCR",
-        "reason": "Dems 15 high but spike_flag true and medium extension_risk amid macro deterioration",
-        "watch_trigger": "Dems sustained above 14 without spike and macro stabilizes"
-      },
-      {
         "ticker": "YPF",
-        "reason": "High extension_risk and deteriorating macro conflict with pcs 72",
-        "watch_trigger": "Macro delta turns positive and extension drops to low"
-      },
-      {
-        "ticker": "LLY",
-        "reason": "Streak only 4 weeks and high extension amid macro deterioration",
-        "watch_trigger": "Streak reaches 6 weeks with macro improvement"
-      },
-      {
-        "ticker": "HIMS",
-        "reason": "Dems 11 but spike_flag and ret_4w_vs_spy negative at -3.07",
-        "watch_trigger": "Ret_4w_vs_spy turns positive and dems above 14"
-      },
-      {
-        "ticker": "GGAL",
-        "reason": "Streak only 2 weeks and macro_deteriorating flag",
-        "watch_trigger": "Streak reaches 5 weeks and rot_score sustains 10"
-      },
-      {
-        "ticker": "TDOC",
-        "reason": "Dems 7 too low for EARLY_ROTATION entry despite pcs 67.2",
-        "watch_trigger": "Dems rises above 14 with outperform_d10 above 6"
-      },
-      {
-        "ticker": "VIST",
-        "reason": "Dems 4 weak and spike_flag true limits continuation",
-        "watch_trigger": "Dems above 12 without spike and streak_weeks reaches 6"
-      },
-      {
-        "ticker": "MSOS",
-        "reason": "Theme_avg_poor flag and dems 17 with medium extension",
-        "watch_trigger": "Macro delta positive and theme flag improves to strong"
+        "reason": "72.0 PCS and 8-week streak with ret_13w_vs_spy 35% but dems only 9 and high extension_risk keep it from EARLY_ROTATION entry.",
+        "watch_trigger": "dems rising above 12 with no spike_flag or clearer multi-week continuation"
       },
       {
         "ticker": "SUPV",
-        "reason": "Ret_13w_vs_spy only 4 percent despite rot_score 9",
-        "watch_trigger": "Ret_13w_vs_spy exceeds 15 percent with sustained streak"
+        "reason": "63.5 PCS with rot_score jump to 9.0 and outperform_d10 of 8 but below 70 threshold in argentina theme.",
+        "watch_trigger": "PCS crossing 70 with sustained rot_score above 9"
       }
     ],
     "rejected": [
       {
-        "ticker": "NBIS",
-        "reason": "Already held in active HIGH_CONVICTION position",
+        "ticker": "LLY",
+        "reason": "71.0 PCS but ret_13w_vs_spy only 4.45% and spike_flag true with dems 8 insufficient for any portfolio.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "70.5 PCS with ret_4w_vs_spy negative at -3.07% and spike_flag true despite dems 11.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "GGAL",
+        "reason": "68.2 PCS with only 2-week streak and ret_13w_vs_spy 7.19% too low for EARLY_ROTATION confirmation.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "67.2 PCS and 6-week streak but ret_5d_vs_spy negative and below EARLY_ROTATION 70 threshold.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "ASPI",
-        "reason": "Already held in active CONFIRMED_FLOW_LEADERS position",
-        "rejection_category": "insufficient_conviction"
+        "ticker": "VIST",
+        "reason": "65.5 PCS with streak_weeks only 4 and ret_10d_vs_spy negative at -0.79% after spike.",
+        "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "BBAR",
-        "reason": "Already held in active CONFIRMED_FLOW_LEADERS position",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "QQQ",
-        "reason": "Already held in active HIGH_CONVICTION position and macro index",
-        "rejection_category": "not_tradable"
-      },
-      {
-        "ticker": "NVDA",
-        "reason": "Already held in active CONFIRMED_FLOW_LEADERS position",
-        "rejection_category": "insufficient_conviction"
+        "ticker": "MSOS",
+        "reason": "64.0 PCS with cannabis theme_weak flag and ret_4w_vs_spy only 3.29% despite high dems.",
+        "rejection_category": "macro_conflict"
       },
       {
         "ticker": "UCO",
-        "reason": "Leveraged commodity ETF excluded per rules",
+        "reason": "63.5 PCS for leveraged oil commodity outside allowed selections and extension_risk medium.",
         "rejection_category": "not_tradable"
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-06-06\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-06_1001\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Pleno regime deteriorating with macro_score 68.75 and 1w delta -16.25 limits new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"OSCR\",\n      \"reason\": \"Dems 15 high but spike_flag true and medium extension_risk amid macro deterioration\",\n      \"watch_trigger\": \"Dems sustained above 14 without spike and macro stabilizes\"\n    },\n    {\n      \"ticker\": \"YPF\",\n      \"reason\": \"High extension_risk and deteriorating macro conflict with pcs 72\",\n      \"watch_trigger\": \"Macro delta turns positive and extension drops to low\"\n    },\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"Streak only 4 weeks and high extension amid macro deterioration\",\n      \"watch_trigger\": \"Streak reaches 6 weeks with macro improvement\"\n    },\n    {\n      \"ticker\": \"HIMS\",\n      \"reason\": \"Dems 11 but spike_flag and ret_4w_vs_spy negative at -3.07\",\n      \"watch_trigger\": \"Ret_4w_vs_spy turns positive and dems above 14\"\n    },\n    {\n      \"ticker\": \"GGAL\",\n      \"reason\": \"Streak only 2 weeks and macro_deteriorating flag\",\n      \"watch_trigger\": \"Streak reaches 5 weeks and rot_score sustains 10\"\n    },\n    {\n      \"ticker\": \"TDOC\",\n      \"reason\": \"Dems 7 too low for EARLY_ROTATION entry despite pcs 67.2\",\n      \"watch_trigger\": \"Dems rises above 14 with outperform_d10 above 6\"\n    },\n    {\n      \"ticker\": \"VIST\",\n      \"reason\": \"Dems 4 weak and spike_flag true limits continuation\",\n      \"watch_trigger\": \"Dems above 12 without spike and streak_weeks reaches 6\"\n    },\n    {\n      \"ticker\": \"MSOS\",\n      \"reason\": \"Theme_avg_poor flag and dems 17 with medium extension\",\n      \"watch_trigger\": \"Macro delta positive and theme flag improves to strong\"\n    },\n    {\n      \"ticker\": \"SUPV\",\n      \"reason\": \"Ret_13w_vs_spy only 4 percent despite rot_score 9\",\n      \"watch_trigger\": \"Ret_13w"
+  "raw_response_head": "{\n  \"date\": \"2026-06-06\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-06_2100\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Pleno Deteriorating regime with macro_score 68.75 and -16.25 weekly delta signals broad caution.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"YPF\",\n      \"reason\": \"72.0 PCS and 8-week streak with ret_13w_vs_spy 35% but dems only 9 and high extension_risk keep it from EARLY_ROTATION entry.\",\n      \"watch_trigger\": \"dems rising above 12 with no spike_flag or clearer multi-week continuation\"\n    },\n    {\n      \"ticker\": \"SUPV\",\n      \"reason\": \"63.5 PCS with rot_score jump to 9.0 and outperform_d10 of 8 but below 70 threshold in argentina theme.\",\n      \"watch_trigger\": \"PCS crossing 70 with sustained rot_score above 9\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"71.0 PCS but ret_13w_vs_spy only 4.45% and spike_flag true with dems 8 insufficient for any portfolio.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"HIMS\",\n      \"reason\": \"70.5 PCS with ret_4w_vs_spy negative at -3.07% and spike_flag true despite dems 11.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"GGAL\",\n      \"reason\": \"68.2 PCS with only 2-week streak and ret_13w_vs_spy 7.19% too low for EARLY_ROTATION confirmation.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"TDOC\",\n      \"reason\": \"67.2 PCS and 6-week streak but ret_5d_vs_spy negative and below EARLY_ROTATION 70 threshold.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"VIST\",\n      \"reason\": \"65.5 PCS with streak_weeks only 4 and ret_10d_vs_spy negative at -0.79% after spike.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"MSOS\",\n      \"reason\": \"64.0 PCS with cannabis theme_weak flag and ret_4w_vs_spy only 3.29% despite "
 }
