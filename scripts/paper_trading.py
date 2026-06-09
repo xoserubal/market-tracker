@@ -116,6 +116,7 @@ HARD_RULES = [
     "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
     "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
     "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead.",
+    "Review ALL tickers in active_picks_relevant and include each one in open_picks_review. Use action=EXIT if: (a) current_pcs < pcs_min_entry AND current_streak_weeks <= 1, OR (b) current_rot_score <= 2. Otherwise use HOLD. Do not omit any active position from open_picks_review.",
 ]
 
 NON_TRADABLE_SUBTHEMES = frozenset({
@@ -321,11 +322,22 @@ def build_payload(
     prev_date = prev_data.get("date") if prev_data else None
     prev_snapshot_available = bool(prev_date and prev_date != cands_data.get("date"))
 
-    active_positions = [
-        {**pos, "portfolio": pid}
-        for pid, ptf in picks.get("portfolios", {}).items()
-        for pos in ptf.get("positions", [])
-    ]
+    all_cands_map = {c["ticker"]: c for c in cands_data.get("candidates", [])}
+    active_positions = []
+    for pid, ptf in picks.get("portfolios", {}).items():
+        ptf_min = PORTFOLIOS.get(pid, {}).get("pcs_min_entry", 0)
+        for pos in ptf.get("positions", []):
+            tk = pos["ticker"]
+            current = all_cands_map.get(tk, {})
+            active_positions.append({
+                **pos,
+                "portfolio": pid,
+                "pcs_min_entry": ptf_min,
+                "current_pcs": current.get("pcs"),
+                "current_rot_score": current.get("rot_score"),
+                "current_streak_weeks": current.get("streak_weeks"),
+                "current_ret_4w_vs_spy": current.get("ret_4w_vs_spy"),
+            })
 
     mandates = {
         pid: {k: v for k, v in m.items() if k != "is_control"}
@@ -476,6 +488,14 @@ REQUIRED OUTPUT SCHEMA (fill in all fields):
       "rejection_category": \
 "insufficient_conviction|macro_conflict|weak_flow|weak_relative_strength|\
 technical_overextension|data_quality|not_tradable|better_alternative_available"
+    }
+  ],
+  "open_picks_review": [
+    {
+      "ticker": "<ticker from active_picks_relevant>",
+      "portfolio": "<portfolio_id>",
+      "action": "HOLD|EXIT",
+      "reason": "<1 brief sentence: why holding or why exiting>"
     }
   ]
 }"""
@@ -673,6 +693,12 @@ def validate_model_response(
             ]).lower()
             if "extension" not in text_fields and "extend" not in text_fields and "chase" not in text_fields:
                 r.warn(f"extension_risk_not_acknowledged: {t} has extension_risk={ext}")
+
+    # Soft warnings: active positions not covered in open_picks_review (no penalty, log only)
+    active_tickers = {p.get("ticker") for p in payload.get("active_picks_relevant", [])}
+    reviewed_tickers = {rv.get("ticker") for rv in data.get("open_picks_review", [])}
+    for t in active_tickers - reviewed_tickers:
+        r.warn(f"open_picks_review_missing: {t} not included in open_picks_review")
 
     return r
 
@@ -906,6 +932,29 @@ def _size_from_conviction(conviction: str, size_range: tuple) -> float:
 def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> dict:
     today      = str(date.today())
     portfolios = picks.setdefault("portfolios", {})
+
+    # Process EXIT decisions from open_picks_review
+    for review in data.get("open_picks_review", []):
+        if review.get("action") != "EXIT":
+            continue
+        tk  = review.get("ticker", "")
+        pid = review.get("portfolio", "")
+        ptf = portfolios.get(pid)
+        if ptf is None:
+            continue
+        positions = ptf.get("positions", [])
+        pos_to_exit = next((p for p in positions if p["ticker"] == tk), None)
+        if pos_to_exit is None:
+            continue
+        exit_price = _get_entry_price(tk)
+        ptf["positions"] = [p for p in positions if p["ticker"] != tk]
+        ptf.setdefault("history", []).append({
+            **pos_to_exit,
+            "event": "close",
+            "close_date": today,
+            "close_price": exit_price,
+            "close_reason": review.get("reason", ""),
+        })
 
     for s in data.get("selected", []):
         ptf_id = s.get("portfolio", "")

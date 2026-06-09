@@ -319,8 +319,28 @@ py -3 scripts/update_performance.py --ticker CVE  # actualiza solo un ticker
 
 ---
 
+### Cierre de posiciones — implementado 2026-06-09
+
+El sistema ahora puede cerrar posiciones mediante `open_picks_review` en la respuesta del modelo.
+
+**Cambios en `scripts/paper_trading.py`:**
+- `active_picks_relevant` en el payload ahora incluye `current_pcs`, `current_rot_score`, `current_streak_weeks`, `current_ret_4w_vs_spy` y `pcs_min_entry` por posición
+- Nueva HARD_RULE: el modelo debe revisar todas las posiciones activas e incluirlas en `open_picks_review` con `action=HOLD|EXIT`
+- Criterio de EXIT: `current_pcs < pcs_min_entry AND current_streak_weeks <= 1`, OR `current_rot_score <= 2`
+- `update_portfolio` procesa los EXIT: elimina la posición de `positions[]` y añade evento `close` en `history[]` con `close_date`, `close_price` (último cierre del parquet) y `close_reason`
+- `validate_model_response` genera `open_picks_review_missing` (soft warning) para posiciones no revisadas
+
+**Schema de respuesta** — nuevo campo:
+```json
+"open_picks_review": [
+  {"ticker": "VAL", "portfolio": "HIGH_CONVICTION", "action": "EXIT", "reason": "..."}
+]
+```
+
+**Nota:** REDUCE no implementado (reservado para semana 7). Por ahora solo HOLD|EXIT.
+
 ### Semana 7 (≈2026-07-01)
-- `scripts/review_open_picks.py`: Open Pick Review Engine separado del New Pick Engine. Evalúa posiciones abiertas → HOLD/ADD/REDUCE/EXIT. Guarda en `ai_picks_review.jsonl`
+- `scripts/review_open_picks.py`: Open Pick Review Engine separado del New Pick Engine. Evalúa posiciones abiertas → HOLD/ADD/REDUCE/EXIT con análisis más profundo. Guarda en `ai_picks_review.jsonl`
 - Validación numérica automática: cruzar números citados en reason_full contra el payload, detectar discrepancias >10%
 - Campo `rejection_primary_reason` en el schema de respuesta del modelo
 - Análisis de correlación entre componentes PCS (A-F) y rendimiento posterior (ret_1m)
