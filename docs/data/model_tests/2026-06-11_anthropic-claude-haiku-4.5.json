@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-06-11_1209",
+  "run_id": "2026-06-11_2159",
   "model": "anthropic/claude-haiku-4.5",
   "date": "2026-06-11",
   "summary": {
     "date": "2026-06-11",
-    "run_id": "2026-06-11_1209",
+    "run_id": "2026-06-11_2159",
     "model": "anthropic/claude-haiku-4.5",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
-    "event_count": 14,
+    "event_count": 25,
     "candidate_count": 15,
-    "input_tokens": 13679,
-    "output_tokens": 8192,
-    "cost_usd": 0.054639,
-    "latency_ms": 67976.0,
-    "json_valid": false,
-    "schema_valid": false,
+    "input_tokens": 15388,
+    "output_tokens": 4138,
+    "cost_usd": 0.036078,
+    "latency_ms": 36949.0,
+    "json_valid": true,
+    "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 0,
+    "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 0,
+    "watch_count": 12,
+    "rejected_count": 9,
     "fallback_used": false,
     "error": null
   },
@@ -29,7 +29,152 @@
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 0,
-  "response": null,
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-06-11\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-06-11_1209\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with improving macro delta (+6.25 1w) supports rotation into quality leaders with sustained multi-week streaks; daily volatility present but weekly metrics confirm flow.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"portfolio\": \"HIGH_CONVICTION\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS 80.2, ret_13w_vs_spy +81.5%, streak 8 weeks\",\n      \"reason_full\": \"NBIS delivers 80.2 PCS (within HIGH_CONVICTION range 82 min), ret_13w_vs_spy 81.5% (highest in candidate set), and 8-week consecutive outperformance with rot_score 6 and zero extension_risk. AI cloud theme aligns with Bull Maduro improving macro. Weekly metrics (ret_4w_vs_spy 15.6%, outperform_d10 5) confirm sustained leadership despite low dems (6). Entry justified by exceptional 13-week relative strength.\",\n      \"comparative_edge\": \"Selected over OSCR (PCS 77.2) because NBIS ret_13w_vs_spy 81.5% far exceeds OSCR 100.3% absolute but NBIS avoids healthcare concentration risk; both lead sectors but NBIS achieves higher quality on extension_risk (0 vs 4) and maintains theme_concentration_risk low across broader AI infrastructure versus healthcare_special saturation.\",\n      \"key_supporting_factors\": [\n        \"ret_13w_vs_spy 81.5% ranks highest among all candidates; 8-week streak with zero spike_flag.\",\n        \"Extension_risk 0 and vol_5d_20d 0.88 show controlled entry without late-chase premium.\",\n        \"AI cloud subtheme_concentration_risk medium but theme_concentration_risk low provides diversification benefit.\",\n        \"Macro_improving flag with rot_score 6 and outperform_d10 5 confirms multi-timeframe alignment.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"dems 6 is weak; ret_5d_vs_spy -12.07 shows rec"
+  "quality_score": 93,
+  "response": {
+    "date": "2026-06-11",
+    "model": "anthropic/claude-haiku-4.5",
+    "run_id": "2026-06-11_2159",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime deteriorating sharply (macro_score 65.0, delta -3.75 weekly) after brief improving phase; rotation pressure evident as high-conviction candidates fall below entry thresholds while Argentina and healthcare leaders maintain momentum despite macro headwinds.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "OSCR",
+        "reason": "High rotation score 8.0 and exceptional 13w outperformance (100.3% vs SPY) with streak_weeks 8 remain strong. Current PCS 72.2 dropped below CONFIRMED_FLOW_LEADERS threshold of 78.0 (from 81.2 entry), but weekly metrics do not warrant rejection given macro deterioration just began. Extension_risk high (4 points) and dems 18 with spike_flag false suggest momentum may pause before resuming. Monitor for stabilization above PCS 75 or rot_score drop below 7.",
+        "watch_trigger": "PCS recovery to 76+ with maintained rot_score 8+ and no 13w streak break, OR confirmation that spike is sustainable (ret_5d_vs_spy positive 3+ days straight)"
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "PCS 75.2 currently below HIGH_CONVICTION 82.0 minimum (dropped from 80.2). Exceptional 13w RS (81.5% vs SPY) and 8-week streak remain intact; rot_score 6.0 is adequate though dems only 5 lacks daily push. Macro deterioration (-3.75 weekly) pressures tech_ai theme. Extension_risk low and weekly conviction remains, but current macro phase and PCS decline warrant watch vs. hold in existing position.",
+        "watch_trigger": "PCS rebound to 80+ with dems climb to 10+ AND macro_score stabilizes above 68, OR rot_score climbs to 7+ while maintaining streak_weeks 8+"
+      },
+      {
+        "ticker": "GGAL",
+        "reason": "PCS 68.8 below EARLY_ROTATION threshold 70.0 (crossed down from 73.8). High rot_score 9.0 and strong 10d outperformance (15.71% vs SPY, outperform_d10=8) offset by spike_flag true and extreme extension_risk (5 points). Streak_weeks 3 is moderate; 13w RS weak at 4.2%. Argentina financials theme shows concentration with BBAR and SUPV candidates. Macro deterioration headwind makes entry risky despite daily strength.",
+        "watch_trigger": "Spike_flag clears (5d move flattens) AND PCS stabilizes above 70 with outperform_d10 sustained 6+, OR rot_score remains 8+ through 2 more days without pullback"
+      },
+      {
+        "ticker": "BBAR",
+        "reason": "Active position at 10% size, entry PCS 79.0, current PCS 68.5 now 10.5 points below EARLY_ROTATION entry minimum (threshold 70). Rot_score high at 9.0 and 4-week streak + dems 12 show continued leadership, but extension_risk high (4 points), spike_flag true, and macro deterioration create friction. Current_ret_4w_vs_spy 15.4% remains compelling. Streak_weeks 4 is below peers. Do not add; hold existing position pending stabilization.",
+        "watch_trigger": "PCS rebound to 70+ with spike_flag cleared and rot_score sustained 8+, OR streak_weeks climbs to 6+ with no rot_score decline"
+      },
+      {
+        "ticker": "LLY",
+        "reason": "PCS 66.2 below EARLY_ROTATION 70.0 threshold (dropped from 71.2). Rot_score 7.0 solid, 5-week streak and dems 10 show stability. Extension_risk medium (2 points), spike_flag false, 13w RS modest at 6.3%. Healthcare_largecap theme is lower-concentration risk than special. Macro deterioration and weak dems (below 11 threshold) limit conviction. Strong fundamentals but entry timing poor in deteriorating regime.",
+        "watch_trigger": "Dems climb to 13+ with maintained rot_score 7+ AND PCS recaptures 70 with outperform_d10 6+"
+      },
+      {
+        "ticker": "YPF",
+        "reason": "PCS 65.0 at EARLY_ROTATION minimum (dropped from 70.0 entry level). Exceptional 13w RS (30.6%) and rot_score 7.0 with 8-week streak attractive, but extension_risk extreme (5 points) with spike_flag true and rsi_high flag. Dems 9 below 10. Argentina oil subtheme has 4 new candidates today adding theme concentration risk. Macro deteriorating and crude positioning weakens as macro_score falls. High risk of reversal despite momentum.",
+        "watch_trigger": "Extension flags clear (spike_flag false + rsi_high resolved) AND PCS stabilizes 66+ with rot_score 7+ maintained 3+ consecutive days"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "Current PCS 63.2 (VIGILAR signal), down from 68.2 at morning session. Below MACRO_THEMATIC_BENEFICIARIES threshold 65.0. Rot_score 7.0 and exceptional 13w RS (40.7%) are strong, but streak_weeks 1 is fragile and ret_5d_vs_spy negative -1.75% indicates momentum pause. Oil theme deteriorating with macro_score slide. Positioned as partial rotation player but needs confirmation of 10d+ outperformance sustaining.",
+        "watch_trigger": "Dems climb to 10+ AND outperform_d10 sustained 7+ for 3 consecutive days, OR PCS recaptures 65+ with rot_score 7+ and ret_5d_vs_spy positive"
+      },
+      {
+        "ticker": "MSOS",
+        "reason": "PCS 65.5, below EARLY_ROTATION 70.0 but candidate for MACRO_THEMATIC at pcs_min 62.0. Rot_score 9.0 and 13w RS 31.7% excellent, but spike_flag true, extension_risk medium (2 points), dems 11 (marginal), and streak_days 0 with momentum_accel true signal potential exhaustion. Cannabis theme shows poor macro alignment (theme_avg_poor). Macro deterioration headwind strong.",
+        "watch_trigger": "Spike clears (3+ days without reversal) AND rot_score maintained 8+ with dems climbing to 13+, OR streak_weeks climbs to 4+ without pullback"
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "PCS 63.2 (down from 68.2), below both EARLY_ROTATION 70.0 and MACRO_THEMATIC 65.0 thresholds. Rot_score 7.0 solid, 7-week streak strong, but ret_5d_vs_spy modest 2.55% and dems 7 weak. Healthcare_special theme has concentration risk with OSCR open. Macro deterioration pressures healthcare momentum. Extension_risk low and spike_flag false are positives.",
+        "watch_trigger": "PCS rebound to 65+ with dems climb to 10+ AND ret_5d_vs_spy positive 5%+ for 2 consecutive days"
+      },
+      {
+        "ticker": "GTBIF",
+        "reason": "PCS 64.8, below MACRO_THEMATIC 65.0 threshold (crossed down from 69.8). Rot_score 8.0 and 13w RS 22.6% solid, but spike_flag true, extension_risk medium (2 points), dems 7 weak, and streak_days 0. Cannabis theme shows very_poor macro alignment and concentration risk. Three other cannabis/alternative names crowding today. Macro deterioration is headwind.",
+        "watch_trigger": "Spike clears AND dems climb to 10+ with PCS stabilizing 65+, OR rot_score remains 8+ for 4+ consecutive days without reversal"
+      },
+      {
+        "ticker": "SUPV",
+        "reason": "PCS 60.5 (down from 65.5), below MACRO_THEMATIC threshold 65.0 but still eligible at pcs_min 62.0. Rot_score 7.0 and ret_4w_vs_spy 20.0% strong, but extension_risk high (4 points), spike_flag true, and negative 13w RS (-3.1%). Argentina_financials theme shows concentration with BBAR and GGAL open. Macro deteriorating. Entry too risky despite short-term 5d strength.",
+        "watch_trigger": "Extension flags clear + PCS rebounds 63+ with rot_score sustained 7+, OR 13w RS turns positive with streak_weeks climbs to 6+"
+      },
+      {
+        "ticker": "CORZ",
+        "reason": "PCS 57.0, below MACRO_THEMATIC minimum 62.0. Rot_score 7.0 and exceptional 13w RS (47.8%) with 8-week streak attractive, but spike_flag false does not offset crypto theme showing very_poor macro alignment in deteriorating Bull Maduro regime. Dems 6 weak, outperform_d10 5 modest. Bitcoin mining subtheme concentrated risk. Macro headwind significant.",
+        "watch_trigger": "PCS climbs to 62+ with dems 10+ AND rot_score maintained 8+ for 5+ consecutive days, OR crypto macro score improves 5+ points while maintaining streak"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "UCO",
+        "reason": "PCS 59.5 below MACRO_THEMATIC minimum 62.0. Leveraged crude oil ETF violates hard rule: 'do not SELECT futures, commodities, or macro indices directly.' Dems 5 weak, ret_5d_vs_spy -1.47%, momentum absent. Macro deterioration kills energy theme momentum.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "Active position at 7.5% size with entry PCS 80.5, current PCS 59.2 collapsed 21.3 points below CONFIRMED_FLOW_LEADERS entry minimum (75.0). Current_rot_score 7.0 adequate but streak_weeks 8 does not justify hold as PCS < pcs_min_entry (59.2 < 75.0) and macro deterioration (score -3.75) eliminates oil theme support. Oil subtheme (canadian_oil) faces headwinds.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "ROOT",
+        "reason": "PCS 58.8, below all portfolio thresholds. IGNORAR signal, rot_score 4 mediocre, streak_weeks 0 (broken), negative 4w RS (-2.84%). High dems 13 misleading due to spike_flag false + no weekly confirmation. Insurtech subtheme niche and healthcare_special theme already concentrated.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 61.8, below all thresholds. Macro index ETF violates hard rule: 'do not SELECT futures, commodities, or macro indices directly.' IGNORAR signal, crossed down from 71.5. Broad market ETF not appropriate for conviction portfolio in deteriorating macro regime.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "VIST",
+        "reason": "PCS 60.5, below MACRO_THEMATIC minimum 62.0. IGNORAR signal, rot_score 4 weak, streak_weeks unknown (likely broken given 76+ to 60 drop). Argentina theme concentration risk high with 4 new candidates and 1 open position. Macro deterioration eliminates EM support.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "LOMA",
+        "reason": "PCS 58.0, below MACRO_THEMATIC threshold 65.0. EN_RADAR signal but rot_score not provided in candidate data, implying weak metrics. Argentina_financials subtheme concentration risk acute (3 open + 4 new today). Macro deterioration kills Argentina EM theme.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "TGS",
+        "reason": "PCS 56.0, below all portfolio minimums. Argentina theme concentration at extreme (4 candidates today + 1 open position = 5 of theme exposed). Signal upgraded to VIGILAR and rot_score jumped 5.0→7.0 show emerging strength but PCS < 62 threshold remains binding. Macro deterioration eliminates EM support.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "PCS 55.5, below all thresholds. IGNORAR signal, crossed down from 65.5. US_tech_ai theme already has NBIS open (15% size). Mega-cap tech momentum fading in deteriorating macro (score -3.75 weekly). Rotation away from AI leaders evident.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "PCS 59.5, below all thresholds. IGNORAR signal, collapsed 76.0→59.5. Telehealth and healthcare_special themes already concentrated with OSCR open (10% size). Rot_score and streak_weeks unknown from candidate data, implying median/weak readings. Macro deterioration pressures growth healthcare.",
+        "rejection_category": "data_quality"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "NBIS",
+        "portfolio": "HIGH_CONVICTION",
+        "action": "HOLD",
+        "reason": "Current PCS 75.2 below entry 82.0 and HIGH_CONVICTION threshold 85.0, but rot_score 6.0 adequate, streak_weeks 8 sustained, and exceptional 13w RS (81.5%) justify hold pending macro stabilization. Exit only if PCS falls below 72 or rot_score drops to 4 or lower."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "EXIT",
+        "reason": "Current PCS 59.2 has collapsed 21.3 points below entry threshold 75.0 and pcs_min_entry floor. Macro deterioration (-3.75 weekly) eliminates oil theme support, streak_weeks 8 does not offset structural PCS break, and exit rule triggered: current_pcs (59.2) < pcs_min_entry (75.0)."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "Current PCS 72.2 below entry 81.8 and threshold 78.0, but rot_score 8.0 remains excellent, streak_weeks 8 sustained, and 13w RS (100.3% vs SPY) exceptional. Extension_risk high acknowledged; hold for 3-5 days pending PCS stabilization or rot_score decline to 6. Monitor daily momentum (dems currently 18, watch for drop below 10)."
+      },
+      {
+        "ticker": "BBAR",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "Current PCS 68.5 below entry 79.0 and minimum 75.0, but rot_score 9.0 remains highest-in-set, 4-week streak and dems 12 show sustained flow. Extension_risk high and macro deteriorating, but exit rule not triggered (rot_score 9 >> 2 threshold). Hold pending PCS floor test or 3+ day momentum break. Review if rot_score falls to 6."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-06-11\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-06-11_2159\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime deteriorating sharply (macro_score 65.0, delta -3.75 weekly) after brief improving phase; rotation pressure evident as high-conviction candidates fall below entry thresholds while Argentina and healthcare leaders maintain momentum despite macro headwinds.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"OSCR\",\n      \"reason\": \"High rotation score 8.0 and exceptional 13w outperformance (100.3% vs SPY) with streak_weeks 8 remain strong. Current PCS 72.2 dropped below CONFIRMED_FLOW_LEADERS threshold of 78.0 (from 81.2 entry), but weekly metrics do not warrant rejection given macro deterioration just began. Extension_risk high (4 points) and dems 18 with spike_flag false suggest momentum may pause before resuming. Monitor for stabilization above PCS 75 or rot_score drop below 7.\",\n      \"watch_trigger\": \"PCS recovery to 76+ with maintained rot_score 8+ and no 13w streak break, OR confirmation that spike is sustainable (ret_5d_vs_spy positive 3+ days straight)\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"PCS 75.2 currently below HIGH_CONVICTION 82.0 minimum (dropped from 80.2). Exceptional 13w RS (81.5% vs SPY) and 8-week streak remain intact; rot_score 6.0 is adequate though dems only 5 lacks daily push. Macro deterioration (-3.75 weekly) pressures tech_ai theme. Extension_risk low and weekly conviction remains, but current macro phase and PCS decline warrant watch vs. hold in existing position.\",\n      \"watch_trigger\": \"PCS rebound to 80+ with dems climb to 10+ AND macro_score stabilizes above 68, OR rot_score climbs to 7+ while maintaining streak_weeks 8+\"\n    },\n    {\n      \"ticker\": \"GGAL\",\n      \"reason\": \"PCS 68.8 below EARLY_ROTATION threshold 70.0 (crossed down from 73.8). High rot_score 9.0 and strong 10d out"
 }
