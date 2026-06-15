@@ -1,0 +1,996 @@
+{
+  "date": "2026-06-15",
+  "system_context": {
+    "project": "AI Picks Lab",
+    "objective": "select high-conviction paper-trading picks from prefiltered quantitative events",
+    "hard_rules": [
+      "Only SELECT tickers present in the candidates list.",
+      "Only SELECT tickers with eligible=true.",
+      "Do not SELECT futures, commodities, or macro indices directly.",
+      "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
+      "Do not fill portfolios with mediocre picks — empty selected list is valid.",
+      "Return valid JSON only. No markdown, no explanation, no extra text.",
+      "Do not invent data not present in the payload. If prev_snapshot_available=false, do not speculate on PCS or score changes between weeks.",
+      "With strong contradictions, use WATCH or REJECT, not SELECT.",
+      "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
+      "Every rejected item must have: reason and a valid rejection_category.",
+      "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
+      "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
+      "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead.",
+      "Review ALL tickers in active_picks_relevant and include each one in open_picks_review. Use action=EXIT if: (a) current_pcs < pcs_min_entry AND current_streak_weeks <= 1, OR (b) current_rot_score <= 2. Otherwise use HOLD. Do not omit any active position from open_picks_review."
+    ],
+    "prev_snapshot_available": false
+  },
+  "macro_context": {
+    "macro_score": 75.0,
+    "macro_regime": "Bull Maduro",
+    "macro_trend": "Deteriorating",
+    "macro_delta_1w": 0.0,
+    "macro_delta_1m": -10.0,
+    "phase_quality": "Bull Maduro Deteriorating"
+  },
+  "portfolio_mandates": {
+    "HIGH_CONVICTION": {
+      "description": "Solo las oportunidades con más alta convicción. Calidad sobre cantidad.",
+      "pcs_threshold": 85.0,
+      "pcs_min_entry": 82.0,
+      "max_positions": 8,
+      "size_range": [
+        8,
+        15
+      ],
+      "target_ops_month": 1
+    },
+    "CONFIRMED_FLOW_LEADERS": {
+      "description": "Líderes con flujo confirmado en múltiples timeframes.",
+      "pcs_threshold": 78.0,
+      "pcs_min_entry": 75.0,
+      "max_positions": 12,
+      "size_range": [
+        5,
+        10
+      ],
+      "target_ops_month": 4
+    },
+    "EARLY_ROTATION": {
+      "description": "Captura rotaciones tempranas antes de que sean obvias.",
+      "pcs_threshold": 70.0,
+      "pcs_min_entry": 68.0,
+      "max_positions": 15,
+      "size_range": [
+        4,
+        8
+      ],
+      "target_ops_month": 8
+    },
+    "MACRO_THEMATIC_BENEFICIARIES": {
+      "description": "Beneficiarios del régimen macro actual.",
+      "pcs_threshold": 65.0,
+      "pcs_min_entry": 62.0,
+      "max_positions": 20,
+      "size_range": [
+        3,
+        6
+      ],
+      "target_ops_month": 10
+    }
+  },
+  "events": [
+    {
+      "date": "2026-06-15",
+      "type": "macro_trend_changed",
+      "tickers": [],
+      "detail": "Improving → Deteriorating",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      }
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "IRS",
+      "theme": "argentina",
+      "pcs": 76.5,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "threshold": 78.0,
+      "pcs_prev": 78.5
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "LLY",
+      "theme": "healthcare_largecap",
+      "pcs": 69.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 71.8
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "PAM",
+      "theme": "argentina",
+      "pcs": 69.0,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 71.0
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "TGS",
+      "theme": "argentina",
+      "pcs": 68.5,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 70.5
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "CRESY",
+      "theme": "argentina",
+      "pcs": 68.5,
+      "signal": "VIGILAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "EARLY_ROTATION",
+      "threshold": 70.0,
+      "pcs_prev": 70.5
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "CORZ",
+      "theme": "crypto",
+      "pcs": 64.5,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 66.5
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "GTBIF",
+      "theme": "cannabis",
+      "pcs": 63.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 65.8
+    },
+    {
+      "date": "2026-06-15",
+      "ticker": "MSOS",
+      "theme": "cannabis",
+      "pcs": 63.8,
+      "signal": "EN_RADAR",
+      "macro_context": {
+        "score": 75.0,
+        "regime": "Bull Maduro",
+        "trend": "Deteriorating",
+        "phase_quality": "Bull Maduro Deteriorating",
+        "delta_1w": 0.0,
+        "delta_1m": -10.0
+      },
+      "type": "pcs_crossed_down",
+      "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
+      "threshold": 65.0,
+      "pcs_prev": 65.8
+    }
+  ],
+  "candidates": [
+    {
+      "ticker": "SUPV",
+      "name": "Grupo Supervielle",
+      "theme": "argentina",
+      "subtheme": "argentina_financials",
+      "pcs": 82.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 9.0,
+      "ret_4w_vs_spy": 44.2432,
+      "ret_13w_vs_spy": 21.8427,
+      "streak_weeks": 3,
+      "dist_52w_high": -18.82,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 14,
+      "ret_5d_vs_spy": 19.16,
+      "ret_10d_vs_spy": 14.99,
+      "outperform_d10": 7,
+      "streak_days": 3,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.1,
+      "spike_flag": false,
+      "extension_risk": "extreme",
+      "extension_points": 7,
+      "extension_flags": [
+        "dist_sma20_atr_extreme",
+        "ret_4w_extreme",
+        "rsi_high"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "BBAR",
+      "name": "BBVA Argentina",
+      "theme": "argentina",
+      "subtheme": "argentina_financials",
+      "pcs": 82.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 9.0,
+      "ret_4w_vs_spy": 43.4342,
+      "ret_13w_vs_spy": 44.1394,
+      "streak_weeks": 4,
+      "dist_52w_high": -3.55,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 13,
+      "ret_5d_vs_spy": 18.37,
+      "ret_10d_vs_spy": 10.92,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.11,
+      "spike_flag": false,
+      "extension_risk": "extreme",
+      "extension_points": 6,
+      "extension_flags": [
+        "dist_sma20_atr_extreme",
+        "ret_4w_extreme"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "LOMA",
+      "name": "Loma Negra",
+      "theme": "argentina",
+      "subtheme": "argentina_materials",
+      "pcs": 81.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 19.8274,
+      "ret_13w_vs_spy": 13.1964,
+      "streak_weeks": 3,
+      "dist_52w_high": -4.92,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 10,
+      "ret_5d_vs_spy": 9.44,
+      "ret_10d_vs_spy": 0.49,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": true,
+      "vol_5d_20d": 0.87,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "GGAL",
+      "name": "Grupo Financiero Galicia",
+      "theme": "argentina",
+      "subtheme": "argentina_financials",
+      "pcs": 79.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 32.0687,
+      "ret_13w_vs_spy": 24.9348,
+      "streak_weeks": 3,
+      "dist_52w_high": -11.77,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 12,
+      "ret_5d_vs_spy": 14.37,
+      "ret_10d_vs_spy": 9.87,
+      "outperform_d10": 6,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.22,
+      "spike_flag": true,
+      "extension_risk": "extreme",
+      "extension_points": 7,
+      "extension_flags": [
+        "dist_sma20_atr_extreme",
+        "ret_4w_extended",
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "high"
+    },
+    {
+      "ticker": "NBIS",
+      "name": "Nebius Group (AI cloud)",
+      "theme": "us_tech_ai",
+      "subtheme": "ai_cloud",
+      "pcs": 78.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 12.1804,
+      "ret_13w_vs_spy": 93.4157,
+      "streak_weeks": 8,
+      "dist_52w_high": -16.67,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_strong",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 9,
+      "ret_5d_vs_spy": 17.19,
+      "ret_10d_vs_spy": -1.19,
+      "outperform_d10": 5,
+      "streak_days": 3,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.99,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "IRS",
+      "name": "IRSA",
+      "theme": "argentina",
+      "subtheme": "argentina_real_estate",
+      "pcs": 76.5,
+      "eligible": true,
+      "signal": "VIGILAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 23.7967,
+      "ret_13w_vs_spy": 2.6413,
+      "streak_weeks": 1,
+      "dist_52w_high": -12.8,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_leader",
+        "rot_high",
+        "macd_rsi_positive"
+      ],
+      "dems": 11,
+      "ret_5d_vs_spy": 10.02,
+      "ret_10d_vs_spy": 11.19,
+      "outperform_d10": 6,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 1.01,
+      "spike_flag": true,
+      "extension_risk": "high",
+      "extension_points": 4,
+      "extension_flags": [
+        "dist_sma20_atr_high",
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "YPF",
+      "name": "YPF",
+      "theme": "argentina",
+      "subtheme": "argentina_oil",
+      "pcs": 75.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 28.4697,
+      "ret_13w_vs_spy": 33.814,
+      "streak_weeks": 8,
+      "dist_52w_high": -2.78,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": -3.89,
+      "ret_10d_vs_spy": -3.44,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.78,
+      "spike_flag": false,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "ret_4w_extended"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "TDOC",
+      "name": "Teladoc Health",
+      "theme": "healthcare_special",
+      "subtheme": "telehealth",
+      "pcs": 75.0,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 8.1756,
+      "ret_13w_vs_spy": 24.3817,
+      "streak_weeks": 7,
+      "dist_52w_high": -24.87,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_moderate",
+        "rs_strong_leader",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": 3.26,
+      "ret_10d_vs_spy": -5.2,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.91,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "theme": "global_etf",
+      "subtheme": "nasdaq100",
+      "pcs": 72.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 1.0031,
+      "ret_13w_vs_spy": 9.3446,
+      "streak_weeks": 8,
+      "dist_52w_high": -3.65,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_strong",
+        "rs_outperform",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 9,
+      "ret_5d_vs_spy": 1.79,
+      "ret_10d_vs_spy": 0.66,
+      "outperform_d10": 6,
+      "streak_days": 3,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.36,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "OSCR",
+      "name": "Oscar Health",
+      "theme": "healthcare_special",
+      "subtheme": "health_insurance",
+      "pcs": 70.5,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 19.7198,
+      "ret_13w_vs_spy": 101.3018,
+      "streak_weeks": 8,
+      "dist_52w_high": -3.94,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_moderate",
+        "rs_strong_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 11,
+      "ret_5d_vs_spy": 4.28,
+      "ret_10d_vs_spy": 27.35,
+      "outperform_d10": 6,
+      "streak_days": 1,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.93,
+      "spike_flag": false,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "dist_sma20_atr_high"
+      ],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "medium"
+    },
+    {
+      "ticker": "LLY",
+      "name": "Eli Lilly",
+      "theme": "healthcare_largecap",
+      "subtheme": "pharma_biotech_quality",
+      "pcs": 69.8,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 8.0,
+      "ret_4w_vs_spy": 11.8106,
+      "ret_13w_vs_spy": 2.9104,
+      "streak_weeks": 5,
+      "dist_52w_high": -4.2,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_moderate",
+        "rs_outperform",
+        "rot_high",
+        "signal_en_radar"
+      ],
+      "dems": 7,
+      "ret_5d_vs_spy": -3.83,
+      "ret_10d_vs_spy": 4.85,
+      "outperform_d10": 6,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.91,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "PAM",
+      "name": "Pampa Energía",
+      "theme": "argentina",
+      "subtheme": "argentina_energy",
+      "pcs": 69.0,
+      "eligible": true,
+      "signal": "VIGILAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 10.7446,
+      "ret_13w_vs_spy": -3.1095,
+      "streak_weeks": 1,
+      "dist_52w_high": -6.37,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_outperform",
+        "rot_good",
+        "macd_rsi_positive"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": 3.38,
+      "ret_10d_vs_spy": -0.22,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.85,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "TGS",
+      "name": "Transportadora Gas del Sur",
+      "theme": "argentina",
+      "subtheme": "argentina_energy",
+      "pcs": 68.5,
+      "eligible": true,
+      "signal": "VIGILAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 12.6776,
+      "ret_13w_vs_spy": -4.8613,
+      "streak_weeks": 1,
+      "dist_52w_high": -9.05,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_outperform",
+        "rot_good",
+        "macd_rsi_positive"
+      ],
+      "dems": 10,
+      "ret_5d_vs_spy": 7.64,
+      "ret_10d_vs_spy": 3.02,
+      "outperform_d10": 4,
+      "streak_days": 0,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.07,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "CRESY",
+      "name": "Cresud",
+      "theme": "argentina",
+      "subtheme": "argentina_agro",
+      "pcs": 68.5,
+      "eligible": true,
+      "signal": "VIGILAR",
+      "rot_score": 6.0,
+      "ret_4w_vs_spy": 16.6792,
+      "ret_13w_vs_spy": -6.391,
+      "streak_weeks": 1,
+      "dist_52w_high": -13.02,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_strong",
+        "rs_outperform",
+        "rot_good",
+        "macd_rsi_positive"
+      ],
+      "dems": 12,
+      "ret_5d_vs_spy": 10.81,
+      "ret_10d_vs_spy": 3.52,
+      "outperform_d10": 6,
+      "streak_days": 1,
+      "momentum_accel": true,
+      "vol_5d_20d": 1.18,
+      "spike_flag": true,
+      "extension_risk": "medium",
+      "extension_points": 2,
+      "extension_flags": [
+        "spike_flag"
+      ],
+      "theme_concentration_risk": "high",
+      "subtheme_concentration_risk": "low"
+    },
+    {
+      "ticker": "ASPI",
+      "name": "ASP Isotopes",
+      "theme": "uranium_nuclear",
+      "subtheme": "nuclear_isotopes",
+      "pcs": 67.2,
+      "eligible": true,
+      "signal": "EN_RADAR",
+      "rot_score": 7.0,
+      "ret_4w_vs_spy": 3.7147,
+      "ret_13w_vs_spy": 11.7494,
+      "streak_weeks": 3,
+      "dist_52w_high": -54.8,
+      "is_early": false,
+      "flags": [
+        "macro_deteriorating",
+        "theme_avg_good",
+        "rs_leader",
+        "rot_good",
+        "signal_en_radar"
+      ],
+      "dems": 4,
+      "ret_5d_vs_spy": -4.89,
+      "ret_10d_vs_spy": -16.61,
+      "outperform_d10": 5,
+      "streak_days": 0,
+      "momentum_accel": false,
+      "vol_5d_20d": 0.77,
+      "spike_flag": false,
+      "extension_risk": "low",
+      "extension_points": 0,
+      "extension_flags": [],
+      "theme_concentration_risk": "low",
+      "subtheme_concentration_risk": "low"
+    }
+  ],
+  "active_picks_relevant": [
+    {
+      "ticker": "NBIS",
+      "entry_date": "2026-05-08",
+      "entry_pcs": null,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 15.0,
+      "conviction": "high",
+      "rationale": "AI cloud infrastructure leader with 81.0 PCS and exceptional 129.5% 13w outperformance",
+      "entry_price": 177.05,
+      "portfolio": "HIGH_CONVICTION",
+      "pcs_min_entry": 82.0,
+      "current_pcs": 78.8,
+      "current_rot_score": 7.0,
+      "current_streak_weeks": 8,
+      "current_ret_4w_vs_spy": 12.1804
+    },
+    {
+      "ticker": "WCP.TO",
+      "entry_date": "2026-05-15",
+      "entry_price": 16.68,
+      "entry_pcs": 80.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 7.5,
+      "conviction": "medium",
+      "rationale": "8-week streak and rot_score 8.0 with tight 52w high distance",
+      "reason_full": "WCP.TO reaches 80.5 PCS with eight consecutive weeks of outperformance, rot_score 8.0, ret_4w_vs_spy 5.35% and dist_52w_high only -1.46% while macro delta improves 3.75 supporting oil theme.",
+      "comparative_edge": "Selected over GLNG (PCS=76.5) because WCP.TO maintains streak_weeks 8 versus GLNG's spike_flag true and weaker rot_score of 7.0.",
+      "key_supporting_factors": [
+        "rot_score 8.0 matches KOS while remaining non-leveraged equity.",
+        "ret_13w_vs_spy 16.15% with eight-week consistency.",
+        "dist_52w_high -1.46% shows price hugging highs better than peers."
+      ],
+      "key_risks": [
+        "ret_4w_vs_spy 5.35% trails UCO and KOS relative moves.",
+        "dems 9 lower than VAL and CVE daily readings."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "pcs_min_entry": 75.0,
+      "current_pcs": 53.8,
+      "current_rot_score": 6.0,
+      "current_streak_weeks": 8,
+      "current_ret_4w_vs_spy": 1.7646
+    },
+    {
+      "ticker": "OSCR",
+      "entry_date": "2026-05-28",
+      "entry_price": 21.99,
+      "entry_pcs": 81.8,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "81.8 PCS, rot_score 9, 6-week streak, 61% 13w RS.",
+      "reason_full": "OSCR delivers 81.8 PCS above 78 threshold with rot_score 9.0, six consecutive weeks of outperformance, ret_13w_vs_spy at 61.24 percent and ret_4w_vs_spy at 23.06 percent in healthcare_special theme aligned to Bull Pleno improving macro; weekly metrics confirm sustained leadership while extension_risk remains low.",
+      "comparative_edge": "Selected over TDOC (PCS 76.5) because OSCR rot_score reaches 9 versus TDOC 6 and ret_13w_vs_spy 61.24 percent far exceeds TDOC 33.16 percent with cleaner streak stability.",
+      "key_supporting_factors": [
+        "Rot_score 9.0 and six-week streak exceed TDOC and LLY weekly momentum.",
+        "ret_13w_vs_spy 61.24 percent leads healthcare candidates with no spike_flag.",
+        "Extension_risk low at zero points supports clean entry near -14 percent from 52w high.",
+        "Macro delta +16.67 over one month aligns directly with healthcare_special."
+      ],
+      "key_risks": [
+        "Dems at 4 is weak and limits daily confirmation versus ASTS.",
+        "ret_5d_vs_spy negative at -12.6 percent shows recent short-term lag.",
+        "Theme concentration risk already present in active healthcare names."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "pcs_min_entry": 75.0,
+      "current_pcs": 70.5,
+      "current_rot_score": 7.0,
+      "current_streak_weeks": 8,
+      "current_ret_4w_vs_spy": 19.7198
+    },
+    {
+      "ticker": "BBAR",
+      "entry_date": "2026-06-03",
+      "entry_price": 18.87,
+      "entry_pcs": 79.0,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "79 PCS, rot_score 8, 3-week streak, strong 33.8% 4w RS.",
+      "reason_full": "BBAR reaches CONFIRMED_FLOW_LEADERS threshold at 79 PCS with rot_score 8.0, ret_4w_vs_spy 33.76%, ret_13w_vs_spy 24.01%, streak_weeks 3 and dems 16 without spike_flag, delivering clean multi-week leadership in argentina_financials.",
+      "comparative_edge": "Selected over VIST (PCS 75.5) because BBAR ret_4w_vs_spy 33.76 exceeds VIST 1.69 and dems 16 beats VIST 4 while streak stability supports flow confirmation.",
+      "key_supporting_factors": [
+        "ret_4w_vs_spy 33.76% leads argentina candidates.",
+        "rot_score 8.0 with macd_rsi_positive flags.",
+        "dems 16 and outperform_d10 8 confirm daily-to-weekly alignment.",
+        "dist_52w_high -11.74% leaves continuation room."
+      ],
+      "key_risks": [
+        "extension_risk high with 4 points from ret_4w_extended.",
+        "Argentina theme adds 3 new candidates today.",
+        "streak_weeks 3 trails 8-week peers like YPF."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "pcs_min_entry": 75.0,
+      "current_pcs": 82.8,
+      "current_rot_score": 9.0,
+      "current_streak_weeks": 4,
+      "current_ret_4w_vs_spy": 43.4342
+    },
+    {
+      "ticker": "LOMA",
+      "entry_date": "2026-06-13",
+      "entry_price": 12.55,
+      "entry_pcs": 83.5,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "83.5 PCS, rot 8, 3-week streak, 13% 13w RS lead.",
+      "reason_full": "LOMA posts 83.5 PCS with rot_score 8.0, streak_weeks 3, ret_13w_vs_spy 13.2% and outperform_d10 of 5 in Argentina materials while macro improves 6.25 points weekly; extension_risk medium but spike_flag offset by momentum_accel true and clean dist_52w_high -4.92%.",
+      "comparative_edge": "Selected over GGAL (PCS 81.8) due to lower extension_points 2 versus GGAL 8 and stronger ret_13w_vs_spy relative to subtheme peers despite similar rot scores.",
+      "key_supporting_factors": [
+        "ret_13w_vs_spy 13.2% tops argentina_materials candidates.",
+        "rot_score 8.0 and momentum_accel true confirm weekly strength.",
+        "dems 13 with outperform_d10 5 shows sustained rotation.",
+        "theme_concentration_risk low at 10% open weight allows addition."
+      ],
+      "key_risks": [
+        "spike_flag true raises late-entry concern versus non-spike YPF.",
+        "ret_5d_vs_spy 12.09% trails BBAR daily outperformance.",
+        "Only 3-week streak lags YPF 8-week consistency."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "pcs_min_entry": 75.0,
+      "current_pcs": 81.5,
+      "current_rot_score": 8.0,
+      "current_streak_weeks": 3,
+      "current_ret_4w_vs_spy": 19.8274
+    },
+    {
+      "ticker": "GGAL",
+      "entry_date": "2026-06-13",
+      "entry_price": 55.16,
+      "entry_pcs": 81.8,
+      "entry_signal": "confirmed_leader",
+      "size_pct": 10.0,
+      "conviction": "high",
+      "rationale": "81.8 PCS, rot_score 8, 3-week streak, 24.9% 13w RS lead.",
+      "reason_full": "GGAL posts 81.8 PCS above 78 threshold with rot_score 8.0, ret_4w_vs_spy 32.1%, ret_13w_vs_spy 24.9%, streak_weeks 3 and dems 13 in Argentina financials under Bull Maduro Improving macro; weekly strength and outperform_d10 of 7 confirm sustained leadership over peers.",
+      "comparative_edge": "Selected over IRS (PCS 78.5) because GGAL ret_4w_vs_spy 32.1 exceeds IRS 23.8 and ret_13w_vs_spy 24.9 far surpasses IRS 2.6 while rot_score holds identical at 8.0.",
+      "key_supporting_factors": [
+        "ret_4w_vs_spy 32.1% leads argentina_financials candidates.",
+        "rot_score 8.0 with macro_improving and rs_strong_leader flags.",
+        "outperform_d10 7 and streak_weeks 3 confirm multi-week flow.",
+        "dist_52w_high -11.77% offers continuation room versus tighter peers."
+      ],
+      "key_risks": [
+        "spike_flag true and extension_risk extreme with 8 points from ret_4w and rsi_high.",
+        "Argentina theme concentration already at 20% open weight with 9 new candidates.",
+        "streak_weeks 3 lags 8-week names like YPF in same theme."
+      ],
+      "portfolio": "CONFIRMED_FLOW_LEADERS",
+      "pcs_min_entry": 75.0,
+      "current_pcs": 79.8,
+      "current_rot_score": 8.0,
+      "current_streak_weeks": 3,
+      "current_ret_4w_vs_spy": 32.0687
+    }
+  ],
+  "recent_rejected_relevant": [],
+  "theme_exposure": {
+    "us_tech_ai": {
+      "open_positions": 1,
+      "open_tickers": [
+        "NBIS"
+      ],
+      "open_weight_pct": 15.0,
+      "new_candidates_today": 1,
+      "risk": "low"
+    },
+    "healthcare_special": {
+      "open_positions": 1,
+      "open_tickers": [
+        "OSCR"
+      ],
+      "open_weight_pct": 10.0,
+      "new_candidates_today": 2,
+      "risk": "low"
+    },
+    "argentina": {
+      "open_positions": 3,
+      "open_tickers": [
+        "BBAR",
+        "LOMA",
+        "GGAL"
+      ],
+      "open_weight_pct": 30.0,
+      "new_candidates_today": 9,
+      "risk": "high"
+    }
+  }
+}
