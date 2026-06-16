@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-06-16_1252",
+  "run_id": "2026-06-16_2211",
   "model": "anthropic/claude-haiku-4.5",
   "date": "2026-06-16",
   "summary": {
     "date": "2026-06-16",
-    "run_id": "2026-06-16_1252",
+    "run_id": "2026-06-16_2211",
     "model": "anthropic/claude-haiku-4.5",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
-    "event_count": 18,
+    "event_count": 30,
     "candidate_count": 15,
-    "input_tokens": 15221,
-    "output_tokens": 4498,
-    "cost_usd": 0.037711,
-    "latency_ms": 42365.0,
-    "json_valid": false,
-    "schema_valid": false,
+    "input_tokens": 17337,
+    "output_tokens": 4361,
+    "cost_usd": 0.039142,
+    "latency_ms": 36721.0,
+    "json_valid": true,
+    "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 0,
+    "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 0,
+    "watch_count": 16,
+    "rejected_count": 4,
     "fallback_used": false,
     "error": null
   },
@@ -29,7 +29,159 @@
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 0,
-  "response": null,
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-06-16\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-06-16_1252\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime deteriorating (macro_score 75, delta_1m -10); Argentina theme surging with 7 new candidates above PCS 65, while US tech and healthcare show mixed signals with extreme extension risks.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"QQQ\",\n      \"reason\": \"PCS 81.0 above CONFIRMED_FLOW_LEADERS threshold (78) with rot_score 8.0 and 8-week streak, but dems 5 and spike_flag true limit daily conviction. macro_deteriorating contradicts broad ETF leadership. outperform_d10 of 6 provides some multi-day confirmation, but extension_risk medium with ret_5d_vs_spy only 1.74% suggests momentum stalling.\",\n      \"watch_trigger\": \"dems >= 10 AND outperform_d10 >= 7 would confirm rotation continuation; alternatively, 3+ consecutive days of positive ret_5d_vs_spy without spike would validate entry.\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Currently held in HIGH_CONVICTION at 15% size since 2026-05-08 with entry_pcs 81.0; current_pcs dropped to 78.8 (below entry threshold 82), but streak_weeks 8 and ret_13w_vs_spy 93.4% remain exceptional. dems 4 and spike_flag true are concerning for fresh entry, yet weekly metrics justify retention over exit.\",\n      \"watch_trigger\": \"If current_pcs recovers above 80 AND spike_flag resets false with outperform_d10 >= 6, consider adding. If current_pcs drops below 76 and current_streak_weeks falls to <=1, trigger EXIT in open_picks_review.\"\n    },\n    {\n      \"ticker\": \"YPF\",\n      \"reason\": \"PCS 79.5 above CONFIRMED_FLOW_LEADERS threshold with rot_score 8.0, ret_13w_vs_spy 28.1%, and exceptional 8-week streak. However, dems 8 is borderline for daily confirmation, and spike_flag true with extension_risk medium raises late-chase concerns. ret_5d_vs_spy 3.9% shows slowing momentum. Argentina them"
+  "quality_score": 93,
+  "response": {
+    "date": "2026-06-16",
+    "model": "anthropic/claude-haiku-4.5",
+    "run_id": "2026-06-16_2211",
+    "decision_summary": {
+      "market_read": "Macro regime Bull Maduro shifted to Improving (delta +10.42 weekly), driving Argentina and healthcare themes upward; most high-PCS candidates show extreme extension risk with spike_flag dominance.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "TDOC",
+        "reason": "PCS 81.0 meets HIGH_CONVICTION threshold (82.0 min entry is marginal miss); streak_weeks 8 and ret_13w_vs_spy 25.3% are strong, but dems 8 is weak for daily confirmation. Low extension_risk (0 points) and clean spike_flag=false support weekly conviction. Current portfolio is only 10% healthcare, so no concentration blocker.",
+        "watch_trigger": "If PCS crosses 82.0 or dems rises to 12+ with maintained 8-week streak, escalate to SELECT for HIGH_CONVICTION."
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "Active position flagged for hold review below. Current PCS 80.8 (was 81.0) dips below HIGH_CONVICTION 82.0 min entry, but dems 14 with momentum_accel=true and streak_weeks 8 justify retention. Do not add; monitor for rebound to 82+.",
+        "watch_trigger": "Exit if PCS falls below 80.0 or streak_weeks drops to ≤2 while rot_score remains below 6."
+      },
+      {
+        "ticker": "SUPV",
+        "reason": "PCS 81.8 near HIGH_CONVICTION threshold (82.0); rot_score 8.0 and ret_4w_vs_spy 42.2% are exceptional. However, extension_risk is EXTREME (7 points) with spike_flag=true and ret_4w_extended. Volatility 1.07 and dist_52w_high -16.68% suggest late-entry risk despite strong weekly momentum. Argentina theme already at 30% open weight; 8 new Argentina candidates today create saturation.",
+        "watch_trigger": "If spike reverses with outperform_d10 < 4 and extension_risk drops to medium, reassess; otherwise skip to avoid late chase in concentrated theme."
+      },
+      {
+        "ticker": "GGAL",
+        "reason": "Active position: current PCS 81.8 (was 81.8 at entry) remains above CONFIRMED_FLOW_LEADERS 75.0 min entry; rot_score 8.0 stable; streak_weeks 4. However, extension_risk EXTREME (8 points) with spike_flag=true and ret_4w_extended. Argentina theme concentration now at 30% with 8 new candidates added today; risk of crowding intensifies. Recommend HOLD current position but do NOT add new exposure.",
+        "watch_trigger": "Exit if PCS falls below 76.0 or rot_score drops to ≤3, signaling flow deterioration."
+      },
+      {
+        "ticker": "IRS",
+        "reason": "PCS 78.5 comfortably above CONFIRMED_FLOW_LEADERS 75.0 threshold; rot_score 8.0 and outperform_d10 6 show flow strength. But extension_risk is HIGH (4 points) with spike_flag=true and ret_4w_extended. Only 2-week streak is weaker than 4+ week peers. Argentina theme already saturated. Recent price action shows momentum_accel=false, suggesting spike completion.",
+        "watch_trigger": "If spike_flag clears (5d move becomes multi-day) and outperform_d10 stays ≥6, can escalate despite theme crowding."
+      },
+      {
+        "ticker": "YPF",
+        "reason": "PCS 81.5 within HIGH_CONVICTION range; rot_score 8.0 and ret_13w_vs_spy 27.3% exceed most peers. Unique advantage: spike_flag=FALSE with momentum_accel=false, signaling clean multi-day uptrend, NOT late-day spike. Extension_risk LOW (0 points), dist_52w_high -8.52%. Dems only 4 limits daily confirmation, but 8-week streak and negative ret_5d_vs_spy (-6.22%) suggest healthy consolidation. Argentina theme concentration blocks new entry despite signal strength.",
+        "watch_trigger": "If Argentina theme weight falls below 25% via exit of other positions, YPF becomes HIGH_CONVICTION eligible due to clean technicals and long streak."
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "PCS 76.0 in EARLY_ROTATION range; ret_4w_vs_spy 23.6% and ret_13w_vs_spy 8.1% show solid momentum. Rot_score 7.0 and streak_weeks 4 confirm multi-week flow. But extension_risk HIGH (4 points) with spike_flag=true and dist_sma20_atr_high. Recent outperform_d10 7 is strongest on candidate list, however—conflict between spike extension and strong recent flow. Healthcare theme is low-concentration (10% open), so room exists.",
+        "watch_trigger": "If outperform_d10 remains ≥6 for 2+ more days and extension_points drop, escalate to EARLY_ROTATION SELECT."
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "Active position with current PCS 76.5 (down from entry 81.8); rot_score remains 7.0; streak_weeks 8 still strong. However, extension_risk HIGH (4 points) with spike_flag=true. Critically, current dems not provided in active_picks snapshot; if dems < 10, daily momentum has faded while weekly holds. Outperform_d10 6 suggests short-term continuation. Do NOT add; hold for now but monitor dems trend.",
+        "watch_trigger": "Exit if PCS drops below 75.0 (CONFIRMED_FLOW_LEADERS min entry) or rot_score falls to ≤4."
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "PCS 77.8 in upper EARLY_ROTATION range; rot_score 8.0 and streak_weeks 4 show stable weekly flow. However, ret_10d_vs_spy is NEGATIVE -21.47%, a severe warning that recent 5d move (+8.14% 4w) faces sharp pullback. Outperform_d10 only 4 (vs 6+ on leaders). Uranium theme is emerging with 3 new candidates today; low concentration but unproven. Clean spike_flag=false helps, but momentum decay evident.",
+        "watch_trigger": "If ret_10d_vs_spy recovers to positive and outperform_d10 rises to ≥6, revisit for EARLY_ROTATION. For now, momentum contradiction blocks entry."
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS 77.0; rot_score 8.0 and spike_flag=true with ret_5d_vs_spy 14.68% vs ret_10d_vs_spy -10.45%. Classic spike pattern: all gains in last 5 days, reversal in days 6-10. Outperform_d10 only 4. Streak_weeks 2 is weak. Uranium theme emerging but unproven long-term. Extension_risk MEDIUM with spike_flag dominance.",
+        "watch_trigger": "Skip until outperform_d10 ≥6 or spike_flag clears with daily confirmation."
+      },
+      {
+        "ticker": "TGS",
+        "reason": "PCS 71.8 meets EARLY_ROTATION 70.0 threshold after pcs_crossed_up from 69.8; rot_score 8.0 (jumped from 6.0) shows acceleration. However, ret_13w_vs_spy NEGATIVE -7.32% contradicts weekly strength—rotation score high but returns lag. Spike_flag=true and momentum_accel=true suggest intra-week spike without sustained outperformance. Argentina theme concentration risk high.",
+        "watch_trigger": "Clarify contradiction: if rot_score 8.0 reflects weekly strength, why is ret_13w_vs_spy negative? Await next week for confirmation of rot acceleration."
+      },
+      {
+        "ticker": "PAM",
+        "reason": "PCS 71.0 at EARLY_ROTATION boundary after pcs_crossed_up from 69.0; rot_score 7.0 and ret_4w_vs_spy 10.7% show outperformance. But ret_13w_vs_spy NEGATIVE -3.11% and streak_weeks only 1 indicate weak multi-week flow. Signal is EN_RADAR today but entry signal prior was VIGILAR—not an upgrade, just a threshold cross. Extension_risk MEDIUM with spike_flag=true.",
+        "watch_trigger": "If streak_weeks rises to 3+ and rot_score reaches 8.0, escalate. For now, single-week streak insufficient."
+      },
+      {
+        "ticker": "CRESY",
+        "reason": "PCS 70.5 just crossed EARLY_ROTATION 70.0 threshold from 68.5; rot_score 7.0. Limited signal data; no prior PCS snapshot available (prev_snapshot_available=false). Argentina theme already saturated. Insufficient history to differentiate from other marginal 70+ candidates.",
+        "watch_trigger": "Accumulate 2-3 weeks of data (streak_weeks, rot_score trend, ret_13w_vs_spy sign) before considering entry."
+      },
+      {
+        "ticker": "CORZ",
+        "reason": "PCS 66.5 crosses MACRO_THEMATIC_BENEFICIARIES 65.0 threshold from 64.5; crypto theme under Bull Maduro Improving macro context. However, insufficient granular data on ret_4w_vs_spy, ret_13w_vs_spy, dems, or spike_flag. Macro delta +10.42 supports crypto rotation, but execution risk high without daily confirmation metrics.",
+        "watch_trigger": "If dems ≥12 and ret_5d_vs_spy positive, escalate to MACRO_THEMATIC_BENEFICIARIES SELECT. Otherwise, await more data."
+      },
+      {
+        "ticker": "VGZ",
+        "reason": "PCS 65.2 crosses MACRO_THEMATIC_BENEFICIARIES 65.0 threshold; rot_score jumped 7→9 and signal upgraded VIGILAR→EN_RADAR. PCS climb from 49.8 is dramatic (+15.4 points). However, no granular flow metrics provided (dems, ret_5d_vs_spy, ret_10d_vs_spy). Silver/gold miners theme aligns with Bull Maduro improving macro, but data sparsity prevents conviction.",
+        "watch_trigger": "Provide dems, ret_5d_vs_spy, ret_10d_vs_spy; if dems ≥10 and ret_10d_vs_spy positive, VGZ eligible for MACRO_THEMATIC_BENEFICIARIES."
+      },
+      {
+        "ticker": "DMX.V",
+        "reason": "PCS 64.2 below MACRO_THEMATIC_BENEFICIARIES 62.0 min entry, borderline. Signal upgraded VIGILAR→EN_RADAR but no threshold cross noted. Silver/gold miners theme has emerging rotation but insufficient data on weekly metrics.",
+        "watch_trigger": "If PCS rises to 62.0 and dems ≥10, reassess for MACRO_THEMATIC_BENEFICIARIES."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "BBAR",
+        "reason": "Active position with current PCS 84.8 (above HIGH_CONVICTION 82.0) and rot_score 9.0 (highest on list). However, extension_risk EXTREME (6 points) with spike_flag=true, ret_4w_extended, and dist_sma20_atr_high. Recent ret_5d_vs_spy 12.09% vs ret_10d_vs_spy 10.71% shows consistency, but late-entry risk is acute. Argentina theme concentration at 30% with 8 new candidates blocks additional exposure. Retain current position; do not add.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "LOMA",
+        "reason": "Active position with current PCS 80.0 and rot_score 9.0 (tied for highest). But extension_risk MEDIUM (2 points) with spike_flag=true and ret_4w_extended. Argentina theme already at 30% concentration with 8 new candidates; additional LOMA weight violates diversification. Retain current position; do not increase.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 83.0 in HIGH_CONVICTION range with rot_score 8.0 and streak_weeks 8. But dems only 3 (very weak for early_rotation daily signal) and ret_5d_vs_spy 1.31% vs ret_10d_vs_spy -0.97% shows 5d spike reversed in 10d. Spike_flag=true with extension_risk MEDIUM. Most critically: QQQ is a macro index ETF, violating hard rule 'do not SELECT futures, commodities, or macro indices directly.' Ineligible.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "Active position with entry PCS 80.5 and entry_signal confirmed_leader. Current metrics severely deteriorated: PCS dropped to 40.8, rot_score collapsed 8.0→3.0, streak_weeks 8→0, ret_4w_vs_spy 5.35%→-0.57%. All EXIT criteria met: current_pcs (40.8) << pcs_min_entry (75.0) AND current_streak_weeks (0) ≤ 1, AND current_rot_score (3.0) ≤ 2. Position has broken down materially; exit immediately.",
+        "rejection_category": "weak_flow"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "NBIS",
+        "portfolio": "HIGH_CONVICTION",
+        "action": "HOLD",
+        "reason": "PCS 80.8 (vs min entry 82.0) marginally below threshold but dems 14, momentum_accel=true, and streak_weeks 8 justify retention. Rot_score 7.0 stable. Extension_risk low (0 points). No EXIT criteria met (PCS above 80, streak above 1, rot above 2). Monitor for PCS recovery or dems fade."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "EXIT",
+        "reason": "PCS 40.8 << min entry 75.0, streak_weeks 0 (was 8), rot_score 3.0 (was 8.0). ALL EXIT criteria triggered: current_pcs < pcs_min_entry AND streak_weeks ≤ 1 AND rot_score ≤ 2. Flow has broken decisively. Exit immediately to preserve capital."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "PCS 76.5 (above min entry 75.0), rot_score 7.0 stable, streak_weeks 8 strong. Extension_risk HIGH but outperform_d10 6 confirms recent flow. No EXIT criteria met. Hold current position; do not add due to theme concentration and spike_flag concern."
+      },
+      {
+        "ticker": "BBAR",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "PCS 84.8 (well above min 75.0), rot_score 9.0 (highest on list), streak_weeks 5. Extension_risk EXTREME but no EXIT criteria met (PCS >> threshold, rot >> 2, streak >> 1). Hold; do not add. Argentina theme concentration blocks new exposure."
+      },
+      {
+        "ticker": "LOMA",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "PCS 80.0 (above min 75.0), rot_score 9.0 (tied highest), streak_weeks 4. Extension_risk MEDIUM with spike_flag. No EXIT criteria met. Hold; do not add. Argentina theme saturation limits new weight."
+      },
+      {
+        "ticker": "GGAL",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "PCS 81.8 (above min 75.0), rot_score 8.0 stable, streak_weeks 4. Extension_risk EXTREME but no EXIT criteria met. Hold current position; Argentina theme concentration at 30% with 8 new candidates blocks additional exposure."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-06-16\",\n  \"model\": \"anthropic/claude-haiku-4.5\",\n  \"run_id\": \"2026-06-16_2211\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime Bull Maduro shifted to Improving (delta +10.42 weekly), driving Argentina and healthcare themes upward; most high-PCS candidates show extreme extension risk with spike_flag dominance.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"TDOC\",\n      \"reason\": \"PCS 81.0 meets HIGH_CONVICTION threshold (82.0 min entry is marginal miss); streak_weeks 8 and ret_13w_vs_spy 25.3% are strong, but dems 8 is weak for daily confirmation. Low extension_risk (0 points) and clean spike_flag=false support weekly conviction. Current portfolio is only 10% healthcare, so no concentration blocker.\",\n      \"watch_trigger\": \"If PCS crosses 82.0 or dems rises to 12+ with maintained 8-week streak, escalate to SELECT for HIGH_CONVICTION.\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Active position flagged for hold review below. Current PCS 80.8 (was 81.0) dips below HIGH_CONVICTION 82.0 min entry, but dems 14 with momentum_accel=true and streak_weeks 8 justify retention. Do not add; monitor for rebound to 82+.\",\n      \"watch_trigger\": \"Exit if PCS falls below 80.0 or streak_weeks drops to ≤2 while rot_score remains below 6.\"\n    },\n    {\n      \"ticker\": \"SUPV\",\n      \"reason\": \"PCS 81.8 near HIGH_CONVICTION threshold (82.0); rot_score 8.0 and ret_4w_vs_spy 42.2% are exceptional. However, extension_risk is EXTREME (7 points) with spike_flag=true and ret_4w_extended. Volatility 1.07 and dist_52w_high -16.68% suggest late-entry risk despite strong weekly momentum. Argentina theme already at 30% open weight; 8 new Argentina candidates today create saturation.\",\n      \"watch_trigger\": \"If spike reverses with outperform_d10 < 4 and extension_risk drops to medium, reassess; otherwise skip to avoid late chase in concentrated theme.\"\n    },\n    {\n      \"ti"
 }
