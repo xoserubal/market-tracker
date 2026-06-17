@@ -1,9 +1,12 @@
 """
-Telegram Notifier — AI Picks Lab
+Telegram Notifier — AI Picks Lab (fallback)
 
-Reads today's run results from ai_model_test_summary.jsonl and ai_picks.json.
-Sends a Telegram message when new picks are applied or positions are closed today.
-Silent if neither event occurred.
+Primary notifications are sent directly from paper_trading.py when positions change.
+This script acts as a fallback: it detects any positions not yet notified (using a
+persistent state file) and sends them, regardless of when they were opened/closed.
+
+State file: docs/data/notify_state.json
+  - tracks every ticker+portfolio+event already sent so there are no duplicates
 
 Env vars (GitHub Secrets):
   TELEGRAM_BOT_TOKEN   — bot token from @BotFather
@@ -23,7 +26,30 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
-DATA = ROOT / "docs" / "data"
+DATA       = ROOT / "docs" / "data"
+STATE_FILE = DATA / "notify_state.json"
+
+
+def _load_state() -> dict:
+    """Load the set of already-notified events from disk."""
+    if STATE_FILE.exists():
+        try:
+            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"opens": [], "closes": []}
+
+
+def _save_state(state: dict) -> None:
+    STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _open_key(ptf_id: str, ticker: str, entry_date: str) -> str:
+    return f"{ptf_id}:{ticker}:{entry_date}"
+
+
+def _close_key(ptf_id: str, ticker: str, close_date: str) -> str:
+    return f"{ptf_id}:{ticker}:close:{close_date}"
 
 PORTFOLIO_LABELS = {
     "HIGH_CONVICTION":              "Alta Conviccion",
@@ -69,14 +95,31 @@ def send_telegram(token: str, chat_id: str, text: str) -> bool:
         return False
 
 
-def _find_closed_today(picks: dict, today: str) -> list[dict]:
-    """Returns history events with event=close and close_date=today, with _ptf added."""
-    closed = []
+def _find_unnotified(picks: dict, state: dict) -> tuple[list[dict], list[dict]]:
+    """
+    Returns (new_opens, new_closes) that are NOT yet in the state file.
+    Checks all open positions and all history close events — not just today's.
+    """
+    notified_opens  = set(state.get("opens", []))
+    notified_closes = set(state.get("closes", []))
+
+    new_opens: list[dict]  = []
+    new_closes: list[dict] = []
+
     for ptf_id, ptf in picks.get("portfolios", {}).items():
+        for pos in ptf.get("positions", []):
+            key = _open_key(ptf_id, pos["ticker"], pos.get("entry_date", ""))
+            if key not in notified_opens:
+                new_opens.append({**pos, "_ptf": ptf_id, "_key": key})
+
         for ev in ptf.get("history", []):
-            if ev.get("event") == "close" and ev.get("close_date") == today:
-                closed.append({**ev, "_ptf": ptf_id})
-    return closed
+            if ev.get("event") != "close":
+                continue
+            key = _close_key(ptf_id, ev["ticker"], ev.get("close_date", ""))
+            if key not in notified_closes:
+                new_closes.append({**ev, "_ptf": ptf_id, "_key": key})
+
+    return new_opens, new_closes
 
 
 def _pnl_str(entry: float | None, close: float | None) -> str:
@@ -88,35 +131,32 @@ def _pnl_str(entry: float | None, close: float | None) -> str:
     return f"{sign}{pnl:.1f}%"
 
 
-def build_message(today: str, picks: dict, summary_rows: list[dict]) -> str | None:
+def build_message(
+    today: str,
+    new_opens: list[dict],
+    new_closes: list[dict],
+    summary_rows: list[dict],
+    picks: dict,
+) -> str | None:
     """
-    Returns a formatted HTML message if there are new picks or closures today, else None.
+    Returns a formatted HTML message for any un-notified opens/closes, else None.
+    Uses state-based detection instead of entry_date == today.
     """
-    portfolios = picks.get("portfolios", {})
-
-    # Collect all positions opened today
-    new_positions: list[dict] = []
-    for ptf_id, ptf in portfolios.items():
-        for pos in ptf.get("positions", []):
-            if pos.get("entry_date") == today:
-                new_positions.append({**pos, "_ptf": ptf_id})
-
-    closed_today = _find_closed_today(picks, today)
-
-    if not new_positions and not closed_today:
+    if not new_opens and not new_closes:
         return None
 
-    # Find today's active model run (first successful one)
-    today_rows = [r for r in summary_rows if r.get("date") == today and r.get("json_valid")]
-    active_row = next(
-        (r for r in today_rows if not r.get("forced_run")), None
-    ) or (today_rows[0] if today_rows else None)
+    # Find the most recent active model run for context
+    recent_rows = sorted(
+        [r for r in summary_rows if r.get("json_valid")],
+        key=lambda r: r.get("date", ""),
+        reverse=True,
+    )
+    active_row = next((r for r in recent_rows if not r.get("forced_run")), None) or (
+        recent_rows[0] if recent_rows else None
+    )
 
-    lines: list[str] = []
-    lines.append("<b>AI Picks Lab</b>")
-    lines.append("")
+    lines: list[str] = ["<b>AI Picks Lab</b> — aviso pendiente", ""]
 
-    # Model summary line
     if active_row:
         model = (active_row.get("model") or "").replace("anthropic/", "").replace("x-ai/", "")
         q     = active_row.get("quality_score", "—")
@@ -128,61 +168,55 @@ def build_message(today: str, picks: dict, summary_rows: list[dict]) -> str | No
         )
         lines.append("")
 
-    # Macro context from picks
     review = picks.get("last_ai_review", {})
     if review.get("market_read"):
         lines.append(f"<i>{review['market_read']}</i>")
         lines.append("")
 
-    # New positions grouped by portfolio
-    if new_positions:
+    if new_opens:
         lines.append("<b>Nuevas posiciones</b>")
         by_ptf: dict[str, list] = {}
-        for p in new_positions:
+        for p in new_opens:
             by_ptf.setdefault(p["_ptf"], []).append(p)
-
         for ptf_id, positions in by_ptf.items():
             label = PORTFOLIO_LABELS.get(ptf_id, ptf_id)
             lines.append(f"\n<b>{label}</b>")
             for p in positions:
                 emoji    = CONVICTION_EMOJI.get(p.get("conviction", ""), "⚪")
-                pcs      = p.get("entry_pcs")
-                pcs_str  = f"PCS {pcs}" if pcs else ""
-                size     = p.get("size_pct")
-                size_str = f"{size}%" if size else ""
+                pcs_str  = f"PCS {p['entry_pcs']}" if p.get("entry_pcs") else ""
+                size_str = f"{p['size_pct']}%" if p.get("size_pct") else ""
                 meta     = " | ".join(x for x in [pcs_str, size_str] if x)
                 line     = f"{emoji} <b>{p['ticker']}</b>"
                 if meta:
                     line += f"  {meta}"
+                if p.get("entry_date") and p["entry_date"] != today:
+                    line += f"  <i>(entrada {p['entry_date']})</i>"
                 lines.append(line)
                 if p.get("rationale"):
                     lines.append(f"  <i>{p['rationale']}</i>")
         lines.append("")
 
-    # Closed positions grouped by portfolio
-    if closed_today:
+    if new_closes:
         lines.append("<b>Posiciones cerradas</b>")
         by_ptf_closed: dict[str, list] = {}
-        for c in closed_today:
+        for c in new_closes:
             by_ptf_closed.setdefault(c["_ptf"], []).append(c)
-
         for ptf_id, positions in by_ptf_closed.items():
             label = PORTFOLIO_LABELS.get(ptf_id, ptf_id)
             lines.append(f"\n<b>{label}</b>")
             for p in positions:
-                pnl = _pnl_str(p.get("entry_price"), p.get("close_price"))
+                pnl  = _pnl_str(p.get("entry_price"), p.get("close_price"))
                 line = f"🔴 <b>{p['ticker']}</b>"
                 if pnl:
                     line += f"  {pnl}"
-                entry_date = p.get("entry_date", "")
-                if entry_date:
-                    line += f"  (desde {entry_date})"
+                if p.get("entry_date"):
+                    line += f"  (desde {p['entry_date']})"
                 lines.append(line)
                 if p.get("close_reason"):
                     lines.append(f"  <i>{p['close_reason']}</i>")
         lines.append("")
 
-    lines.append(f"<i>{today} — AI Picks Lab</i>")
+    lines.append(f"<i>{today} — AI Picks Lab (fallback notifier)</i>")
     return "\n".join(lines)
 
 
@@ -221,14 +255,28 @@ def run() -> None:
         print("ai_picks.json not found or invalid — skipping")
         return
 
-    msg = build_message(today, picks, summary_rows)
-    if msg is None:
-        print(f"No new picks today ({today}) — no notification sent")
+    state = _load_state()
+    new_opens, new_closes = _find_unnotified(picks, state)
+
+    if not new_opens and not new_closes:
+        print("No unnotified positions — no fallback notification needed")
         return
 
-    print("Sending Telegram notification...")
+    print(
+        f"Fallback: {len(new_opens)} open(s), {len(new_closes)} close(s) not yet notified"
+    )
+    msg = build_message(today, new_opens, new_closes, summary_rows, picks)
+    if msg is None:
+        return
+
     ok = send_telegram(token, chat_id, msg)
     print("OK" if ok else "FAILED")
+
+    if ok:
+        state.setdefault("opens", []).extend(p["_key"] for p in new_opens)
+        state.setdefault("closes", []).extend(c["_key"] for c in new_closes)
+        _save_state(state)
+        print(f"  notify_state.json updated ({len(state['opens'])} opens, {len(state['closes'])} closes tracked)")
 
 
 if __name__ == "__main__":

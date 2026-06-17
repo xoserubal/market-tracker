@@ -84,6 +84,8 @@ jobs:
           FALLBACK_MODEL: ${{ vars.FALLBACK_MODEL || 'anthropic/claude-haiku-4.5' }}
           ENABLE_SHADOW_MODELS: ${{ vars.ENABLE_SHADOW_MODELS || 'true' }}
           MAX_CANDIDATES_PER_CALL: ${{ vars.MAX_CANDIDATES_PER_CALL || '15' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python scripts/paper_trading.py
         working-directory: ${{ github.workspace }}
 

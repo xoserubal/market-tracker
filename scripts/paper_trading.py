@@ -35,6 +35,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+import requests
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).parent.parent
@@ -922,6 +923,90 @@ def _get_entry_price(ticker: str) -> float | None:
         return None
 
 
+_PORTFOLIO_LABELS = {
+    "HIGH_CONVICTION":              "Alta Conviccion",
+    "CONFIRMED_FLOW_LEADERS":       "Flujo Confirmado",
+    "EARLY_ROTATION":               "Rot. Temprana",
+    "MACRO_THEMATIC_BENEFICIARIES": "Macro Tematico",
+    "REJECTED_HIGH_SCORE":          "Rechazados (control)",
+}
+_CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
+
+
+def _notify_changes(changes: dict, today: str, model_used: str, quality: int | None) -> None:
+    """Send Telegram notification immediately when positions are opened or closed."""
+    token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not token or not chat_id:
+        print("  Telegram: TELEGRAM_BOT_TOKEN/CHAT_ID not set — skipping")
+        return
+    if not changes["opened"] and not changes["closed"]:
+        return
+
+    lines: list[str] = ["<b>AI Picks Lab</b>", ""]
+    m     = model_used.replace("anthropic/", "").replace("x-ai/", "")
+    q_str = f"  Q={quality}/100" if quality is not None else ""
+    lines.append(f"Modelo: <b>{m}</b>{q_str}")
+    lines.append("")
+
+    if changes["opened"]:
+        lines.append("<b>Nuevas posiciones</b>")
+        by_ptf: dict[str, list] = {}
+        for p in changes["opened"]:
+            by_ptf.setdefault(p["portfolio"], []).append(p)
+        for ptf_id, positions in by_ptf.items():
+            label = _PORTFOLIO_LABELS.get(ptf_id, ptf_id)
+            lines.append(f"\n<b>{label}</b>")
+            for p in positions:
+                emoji    = _CONVICTION_EMOJI.get(p.get("conviction", ""), "⚪")
+                pcs_str  = f"PCS {p['entry_pcs']}" if p.get("entry_pcs") else ""
+                size_str = f"{p['size_pct']}%" if p.get("size_pct") else ""
+                meta     = " | ".join(x for x in [pcs_str, size_str] if x)
+                line     = f"{emoji} <b>{p['ticker']}</b>"
+                if meta:
+                    line += f"  {meta}"
+                lines.append(line)
+                if p.get("rationale"):
+                    lines.append(f"  <i>{p['rationale']}</i>")
+        lines.append("")
+
+    if changes["closed"]:
+        lines.append("<b>Posiciones cerradas</b>")
+        by_ptf_closed: dict[str, list] = {}
+        for c in changes["closed"]:
+            by_ptf_closed.setdefault(c["portfolio"], []).append(c)
+        for ptf_id, positions in by_ptf_closed.items():
+            label = _PORTFOLIO_LABELS.get(ptf_id, ptf_id)
+            lines.append(f"\n<b>{label}</b>")
+            for p in positions:
+                entry = p.get("entry_price")
+                close = p.get("close_price")
+                pnl   = ""
+                if entry and close and entry != 0:
+                    pct  = (close - entry) / entry * 100
+                    sign = "+" if pct >= 0 else ""
+                    pnl  = f"  {sign}{pct:.1f}%"
+                line = f"🔴 <b>{p['ticker']}</b>{pnl}"
+                if p.get("entry_date"):
+                    line += f"  (desde {p['entry_date']})"
+                lines.append(line)
+                if p.get("close_reason"):
+                    lines.append(f"  <i>{p['close_reason']}</i>")
+        lines.append("")
+
+    lines.append(f"<i>{today} — AI Picks Lab</i>")
+    text = "\n".join(lines)
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            timeout=15,
+        )
+        print(f"  Telegram: {'OK' if r.ok else f'FAILED {r.status_code}: {r.text[:120]}'}")
+    except Exception as exc:
+        print(f"  Telegram: request failed: {exc}")
+
+
 def _size_from_conviction(conviction: str, size_range: tuple) -> float:
     lo, hi = size_range
     if conviction == "high": return float(hi)
@@ -929,9 +1014,10 @@ def _size_from_conviction(conviction: str, size_range: tuple) -> float:
     return round((lo + hi) / 2.0, 1)
 
 
-def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> dict:
+def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> tuple[dict, dict]:
     today      = str(date.today())
     portfolios = picks.setdefault("portfolios", {})
+    changes: dict[str, list] = {"opened": [], "closed": []}
 
     # Process EXIT decisions from open_picks_review
     for review in data.get("open_picks_review", []):
@@ -952,6 +1038,12 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> d
             **pos_to_exit,
             "event": "close",
             "close_date": today,
+            "close_price": exit_price,
+            "close_reason": review.get("reason", ""),
+        })
+        changes["closed"].append({
+            **pos_to_exit,
+            "portfolio":   pid,
             "close_price": exit_price,
             "close_reason": review.get("reason", ""),
         })
@@ -986,6 +1078,7 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> d
         }
         positions.append(new_pos)
         ptf.setdefault("history", []).append({**new_pos, "event": "open"})
+        changes["opened"].append({**new_pos, "portfolio": ptf_id})
 
     ds = data.get("decision_summary", {})
     picks["last_ai_review"] = {
@@ -997,7 +1090,7 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> d
         "rejected":      data.get("rejected", []),
     }
     picks["last_updated"] = today
-    return picks
+    return picks, changes
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -1124,10 +1217,11 @@ def run(force: bool = False, apply: bool = False) -> None:
             if force and not apply:
                 print(f"  [{model_used}] ACTIVE -> picks NOT applied (forced run without --apply)")
             else:
-                picks          = update_portfolio(picks, data, cand_pcs)
+                picks, changes = update_portfolio(picks, data, cand_pcs)
                 active_updated = True
                 n_sel = len(data.get("selected", []))
                 print(f"  [{model_used}] ACTIVE -> {n_sel} picks applied to portfolio")
+                _notify_changes(changes, today, model_used, quality)
         elif is_active:
             reasons = []
             if not json_valid:        reasons.append("json_invalid")
