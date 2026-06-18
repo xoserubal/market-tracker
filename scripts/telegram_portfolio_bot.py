@@ -575,17 +575,23 @@ def cmd_picks(token: str, chat_id: str) -> None:
     for port_name, ticker, pos in all_positions:
         quote = _get_quote(ticker)
         price_str = ""
+        acum_str  = ""
         if quote:
-            p    = quote["price"]
-            chg  = quote.get("change_pct")
-            sign = "+" if (chg or 0) >= 0 else ""
-            chg_s = f" ({sign}{chg}%)" if chg is not None else ""
-            price_str = f" → <b>{p}{chg_s}</b>"
+            p          = quote["price"]
+            chg        = quote.get("change_pct")
+            sign_d     = "+" if (chg or 0) >= 0 else ""
+            chg_s      = f"{sign_d}{chg}%" if chg is not None else "?"
+            entry_price = pos.get("entry_price")
+            if entry_price and entry_price > 0:
+                acum = round((p - entry_price) / entry_price * 100, 2)
+                sign_a = "+" if acum >= 0 else ""
+                acum_str = f"  acum <b>{sign_a}{acum}%</b>"
+            price_str = f" → <b>{p}</b>  hoy <b>{chg_s}</b>"
         conv  = pos.get("conviction", "")
         size  = pos.get("size_pct", "")
         entry = pos.get("entry_date", "")
         label = port_name.replace("_", " ").title()
-        lines.append(f"<b>{ticker}</b>{price_str}")
+        lines.append(f"<b>{ticker}</b>{price_str}{acum_str}")
         lines.append(f"  {label} · {size}% · {conv} · desde {entry}")
         lines.append("")
 
