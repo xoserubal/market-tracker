@@ -636,10 +636,15 @@ def run():
     }
 
     out_path = DATA / "ai_candidates.json"
-    out_path.write_text(
-        json.dumps(out, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
-    )
+    payload = json.dumps(out, ensure_ascii=False, separators=(",", ":"))
+    out_path.write_text(payload, encoding="utf-8")
+
+    snap_dir = DATA / "universe_snapshots"
+    snap_dir.mkdir(exist_ok=True)
+    run_date = str(date.today())
+    snap_path = snap_dir / f"{run_date}.json"
+    snap_path.write_text(payload, encoding="utf-8")
+    print(f"universe_snapshots/{run_date}.json — snapshot completo guardado")
 
     print(f"ai_candidates.json — {len(candidates)} tickers, {len(eligible)} elegibles")
     print(f"  PCS >= 85: {out['summary']['pcs_ge_85']}")
