@@ -1,0 +1,49 @@
+CONTEXTO TÉCNICO PREVIO — leer antes del meta-análisis
+
+Este documento acompaña al archivo metaanalysis_jun2026.md. Contiene información de contexto crítica para interpretar correctamente los datos.
+
+1. Naturaleza del sistema
+
+Es un sistema de paper trading (simulación, sin dinero real). El objetivo actual es validar si las señales tienen poder predictivo antes de convertirlas en reglas duras. Estamos en fase de observación deliberada: se permiten comportamientos que en un sistema en producción estarían limitados (como la concentración temática extrema del periodo energético).
+
+2. El evento del 10 junio — interpretación correcta
+
+El cierre simultáneo de 12 posiciones el 10 de junio no fue una salida automática del sistema funcionando correctamente. Fue la primera ejecución de una funcionalidad de revisión de posiciones (open_picks_review) que se implementó ese día al revisar el código.
+
+Lo que esto implica para el análisis:
+
+Los P&L de las posiciones cerradas reflejan el precio del 10 de junio, no el precio del momento en que las señales de salida deberían haberse disparado
+No existe registro de "cuándo debería haber salido el sistema" porque esa funcionalidad no existía antes de esa fecha
+Los retornos negativos de las posiciones cerradas (VAL -21%, EOSE -30%, MSTR -38%) son el resultado de haberlas mantenido más tiempo del óptimo, sin que haya una referencia exacta de cuándo hubiera sido el momento correcto de salida
+Antes del 10 de junio, el modelo sí se ejecutaba diariamente y sí seleccionaba nuevas posiciones, pero no tenía capacidad de revisar ni cerrar las posiciones abiertas.
+
+3. La concentración energética fue intencional
+
+El portfolio llegó al 72.5% en oil_gas (semana del 20 de mayo). Esto fue permitido deliberadamente para observar el comportamiento del sistema bajo concentración extrema. Los avisos de riesgo de concentración temática estaban activos en el sistema pero no eran bloqueantes. El sistema estaba en modo observación.
+
+4. Dos modelos operan en paralelo
+
+Grok-4.3 (modelo activo): es el que toma las decisiones reales que afectan al portfolio (active_model=true, shadow=false). Quality score 90-100, prácticamente sin violaciones de reglas.
+Claude Haiku-4.5 (modelo shadow): ejecuta en paralelo pero sus decisiones no modifican el portfolio (shadow=true o active_model=false). Quality score 60-80, historial de violaciones, frecuente desbordamiento de tokens (8192 límite) que causaba JSON inválido. Sus picks están en los datos pero marcados como valid_for_performance_tracking=false.
+Para análisis de rendimiento, usar solo registros con active_model=true y valid_for_performance_tracking=true.
+
+5. Disponibilidad de datos de rendimiento
+
+Métrica	Disponibilidad
+ret_1d / ret_3d / ret_1w	Disponible en casi todos los picks
+ret_2w	Disponible en picks hasta ~3 junio
+ret_1m / vs_spy_1m	Solo disponible en picks de mayo 8-10 (los primeros 21 días hábiles)
+ret_3m	No disponible aún (disponible ~agosto 2026)
+Los picks de junio 12 en adelante tienen como máximo ret_1d. El análisis estadístico sólido requiere esperar a agosto 2026 para tener ret_1m en una muestra representativa.
+
+6. Hallazgo analítico previo — hipótesis sobre DEMS
+
+Antes de enviarle este documento ya hemos identificado un patrón fuerte sobre la señal DEMS (Daily Early Momentum Score, escala 0-20):
+
+Todos los picks donde DEMS ≥15 fue el criterio primario de entrada Y el ticker tenía un streak semanal ≤ 3 semanas fallaron con retornos de -15% a -33% en 2 semanas. En cambio, picks donde DEMS ≥10 acompañaba a un streak semanal ≥ 4 semanas funcionaron correctamente.
+
+La hipótesis es que DEMS extremo sin base semanal no señala el inicio de una rotación sino el agotamiento del momentum (blow-off top). Le pedimos opinión sobre: (a) si este patrón con ~10 casos es suficiente para implementarlo como regla, (b) cómo diseñaría la variable EARLY_ROTATION si no puede depender de DEMS como señal primaria.
+
+7. La pregunta central que el sistema intenta responder
+
+¿Añade valor el filtro IA sobre una baseline mecánica simple como "comprar los 3 tickers con mayor PCS cada semana"? NBIS (el pick más rentable del periodo) aparecía en el top-3-PCS prácticamente todos los días. El modelo lo identificó correctamente pero varios otros picks del modelo no batieron esa baseline. Con los datos actuales no hay suficiente muestra para respuesta estadística, pero es la pregunta guía del diseño del sistema.

@@ -1,0 +1,144 @@
+Meta-análisis — Conclusiones principales
+Lo que el sistema ha hecho bien
+1. NBIS — El pick estrella
+Detectado el día 1 (8 mayo, PCS ~81, streak 8 semanas, ret_13w ~130%). Sigue abierto con +24% al mes y ahora +115% de outperformance 13 semanas. Este tipo de pick (streak largo + 13w RS extremo + no spike) es exactamente el patrón ganador que debes buscar.
+
+2. Disciplina de salida
+El 10 junio se cerraron 12 posiciones automáticamente cuando el PCS cayó. Las reglas funcionaron. El daño pudo haber sido mucho mayor sin la salida automática.
+
+3. Comportamiento del modelo Grok
+0 violaciones de hard rules en prácticamente todos sus runs. Quality score 90-100 consistente. Muy superior a Haiku.
+
+Los tres problemas críticos
+1. Concentración energética letal
+El sistema llegó al 72.5% oil_gas (20 mayo). Cuando el petróleo giró, toda esa concentración se convirtió en pérdidas simultáneas. Los avisos de theme_concentration_risk: high estaban en el payload pero el modelo los ignoró o el sistema los permitió. Esto es el mayor error del periodo.
+
+2. Los picks DEMS/Early Rotation son malos consistentemente
+TODOS los picks donde el criterio principal era DEMS alto + extension_risk high perdieron:
+
+ASTS: -16%, RCAT: -21%, EOSE: -30%, SASK.V: -22%, MLX.AX: -13%
+El patrón es muy claro: DEMS alto = estás comprando el pico de momentum. El EARLY_ROTATION portfolio necesita replantearse.
+
+3. El sistema no detecta giros de macro a tiempo
+El cierre masivo del 10 junio se debió a un giro de macro (caída del petróleo). Las señales semanales tardan ~3 semanas en reflejar el deterioro. Para cuando el PCS cae por debajo del umbral, ya has perdido el 10-20%.
+
+Oportunidades de mejora concretas
+Prioridad	Mejora	Impacto
+1	Límite duro de concentración temática: 25% max por tema	Evita la catástrofe de junio
+2	Eliminar o reformular EARLY_ROTATION: solo aceptar picks donde ret_13w_vs_spy ≥ 15% AND streak_weeks ≥ 4	Filtra los picos DEMS
+3	Añadir señal de salida anticipada: si macro_delta_1w deteriora X puntos Y semanas seguidas, reducir posiciones antes de que el PCS caiga	Salir antes del colapso
+4	La baseline mecánica top-3-PCS puede ser el benchmark: NBIS estuvo en top-3 todos los días. ¿Por qué el modelo no lo mantuvo en HIGH_CONVICTION? → Revisar las reglas de HOLD	
+5	Haiku como shadow: si su quality_score es 60-80 vs 100 de Grok, no aporta valor como "segundo comité". Considera eliminarlo o reemplazarlo con Grok en modo diferente	
+¿Por dónde quieres profundizar en el análisis? Puedo calcular métricas más específicas, comparar los picks del modelo vs la baseline mecánica, o analizar qué componentes del PCS correlacionan mejor con el rendimiento posterior.
+
+El lag estructural del PCS como problema de diseño
+Lo que vemos en el cierre del 10 junio revela un problema de arquitectura: el sistema tiene memoria semanal pero el mercado puede girar en días. Cuando el oil giró, el streak_weeks no cayó a 0 instantáneamente — tardó 1-2 semanas en reflejarse en los datos semanales. Mientras tanto, el PCS artificial inflado siguió dando permiso de mantener.
+
+La pregunta real no es "¿hubiéramos salido antes?" sino: ¿Hay señales diarias que preceden al colapso semanal del PCS? Candidatos a investigar:
+
+DEMS cayendo de 15+ a <8 en las posiciones abiertas (señal de que el momentum diario se está frenando)
+spike_flag activándose en posiciones que ya están abiertas (estás comprando el pico)
+dist_sma20_atr cruzando de positivo a negativo (el precio cruza su media)
+DEMS como detector de techos — hipótesis concreta
+El patrón de todos los picks DEMS-driven es idéntico:
+
+Ticker	DEMS entrada	Ret 1d	Ret 1w	Ret 2w
+ASTS	18	+8.3%	-1.3%	-25.9%
+RCAT	19	+0.7%	-16.0%	-19.3%
+EOSE	15	+6.4%	-16.0%	-28.1%
+SASK.V	17	+2.6%	-21.4%	-6.0%
+MLX.AX	18	-10.1%	-5.2%	-14.9%
+El día +1 hay un ligero rebote (o continúa ligeramente), pero en 1-2 semanas se da la vuelta completamente. Esto es el patrón clásico de blow-off top o exhaustión de momentum: el DEMS llega a su máximo porque es el último sprint de compradores; cuando se agota, cae con fuerza.
+
+La hipótesis reformulada para el EARLY_ROTATION no es "detectar rotaciones tempranas" sino "detectar la etapa final del movimiento" — que dependiendo del contexto puede usarse para:
+
+Evitar entrar (uso actual, pero la regla es demasiado laxa porque igual entramos)
+Señal de salida para posiciones existentes en ese ticker (uso nuevo)
+Señal contraria (short o avoid) si el sistema evoluciona en esa dirección
+
+
+El patrón DEMS — resultado definitivo con todos los datos
+Casos DEMS ≥14, sin soporte semanal (streak ≤ 3 semanas):
+
+Ticker	DEMS	Streak semanal	Ret 1w	Ret 2w
+ASTS	18-19	0 (días)	-1% a -19%	-26% a -33%
+RCAT	19	1 semana	-12% a -16%	-19% a -23%
+EOSE	15	3 semanas	-16%	-28%
+MLX.AX	18	0	-5%	-15%
+MSOS	18	0	-12%	—
+TSLA	15	sin dato	-8%	-3%
+Casos DEMS ≥14, CON soporte semanal (streak ≥ 4 semanas):
+
+Ticker	DEMS	Streak semanal	Ret 1w	Ret 2w
+HIMS	14-16	4+ semanas	+3% a +10%	+2% a +14%
+YPF	17	8 semanas	+6%	+8%
+OSCR	15	8 semanas	+5%	+20-29%
+NBIS	18	8 semanas	+10% a +24%	+16% a +30%
+CORZ	16	8 semanas	+10%	+2%
+SUPV	19	rot 7→9	+1.5%	—
+Conclusión
+El DEMS no es una señal de entrada. Es una señal de confirmación de momentum cuando hay un trend semanal establecido, y una señal de agotamiento cuando actúa solo.
+
+La regla que explica el 90%+ de los resultados:
+
+DEMS ≥15 + streak_weeks ≤ 3 → agotamiento. No entrar. (Los 5 peores picks del sistema)
+DEMS ≥10 + streak_weeks ≥ 4 + no spike_flag → continuación válida. (HIMS, OSCR, NBIS, YPF)
+El caso de EOSE es el más revelador: tenía rot_score 8 y streak 3 semanas, pero 3 semanas era insuficiente como base. El umbral parece ser 4 semanas mínimo.
+
+Propuesta concreta para EARLY_ROTATION: cambiar el criterio de entrada de DEMS ≥14 a DEMS ≥10 + streak_weeks ≥ 4 + rot_score ≥ 7 + spike_flag=false. Con esa regla, ASTS, RCAT, EOSE, MLX.AX nunca se habrían seleccionado. HIMS, OSCR y YPF sí.
+
+¿Quieres que implementemos este cambio en el sistema? O ¿prefieres seguir explorando otros aspectos del meta-análisis primero?
+
+c:\Users\Usuario\Dropbox\AI\market-tracker\.github\workflows\market-update.yml
+despues vemos que cambios implementamos, pero antes de nada, que instrucciones adicionales le tengo que pasar al asistente externo (a mayores del archivo metaanalysis_jun2026.md) para que sepa interpretar correctamente los datos que le estamos pasando (al igual que tu)? Pasame por aqui las instrucciones listas para cortar y pegar
+Aquí tienes el briefing de contexto para el asesor externo, listo para copiar y pegar antes de pasarle el documento:
+
+CONTEXTO TÉCNICO PREVIO — leer antes del meta-análisis
+
+Este documento acompaña al archivo metaanalysis_jun2026.md. Contiene información de contexto crítica para interpretar correctamente los datos.
+
+1. Naturaleza del sistema
+
+Es un sistema de paper trading (simulación, sin dinero real). El objetivo actual es validar si las señales tienen poder predictivo antes de convertirlas en reglas duras. Estamos en fase de observación deliberada: se permiten comportamientos que en un sistema en producción estarían limitados (como la concentración temática extrema del periodo energético).
+
+2. El evento del 10 junio — interpretación correcta
+
+El cierre simultáneo de 12 posiciones el 10 de junio no fue una salida automática del sistema funcionando correctamente. Fue la primera ejecución de una funcionalidad de revisión de posiciones (open_picks_review) que se implementó ese día al revisar el código.
+
+Lo que esto implica para el análisis:
+
+Los P&L de las posiciones cerradas reflejan el precio del 10 de junio, no el precio del momento en que las señales de salida deberían haberse disparado
+No existe registro de "cuándo debería haber salido el sistema" porque esa funcionalidad no existía antes de esa fecha
+Los retornos negativos de las posiciones cerradas (VAL -21%, EOSE -30%, MSTR -38%) son el resultado de haberlas mantenido más tiempo del óptimo, sin que haya una referencia exacta de cuándo hubiera sido el momento correcto de salida
+Antes del 10 de junio, el modelo sí se ejecutaba diariamente y sí seleccionaba nuevas posiciones, pero no tenía capacidad de revisar ni cerrar las posiciones abiertas.
+
+3. La concentración energética fue intencional
+
+El portfolio llegó al 72.5% en oil_gas (semana del 20 de mayo). Esto fue permitido deliberadamente para observar el comportamiento del sistema bajo concentración extrema. Los avisos de riesgo de concentración temática estaban activos en el sistema pero no eran bloqueantes. El sistema estaba en modo observación.
+
+4. Dos modelos operan en paralelo
+
+Grok-4.3 (modelo activo): es el que toma las decisiones reales que afectan al portfolio (active_model=true, shadow=false). Quality score 90-100, prácticamente sin violaciones de reglas.
+Claude Haiku-4.5 (modelo shadow): ejecuta en paralelo pero sus decisiones no modifican el portfolio (shadow=true o active_model=false). Quality score 60-80, historial de violaciones, frecuente desbordamiento de tokens (8192 límite) que causaba JSON inválido. Sus picks están en los datos pero marcados como valid_for_performance_tracking=false.
+Para análisis de rendimiento, usar solo registros con active_model=true y valid_for_performance_tracking=true.
+
+5. Disponibilidad de datos de rendimiento
+
+Métrica	Disponibilidad
+ret_1d / ret_3d / ret_1w	Disponible en casi todos los picks
+ret_2w	Disponible en picks hasta ~3 junio
+ret_1m / vs_spy_1m	Solo disponible en picks de mayo 8-10 (los primeros 21 días hábiles)
+ret_3m	No disponible aún (disponible ~agosto 2026)
+Los picks de junio 12 en adelante tienen como máximo ret_1d. El análisis estadístico sólido requiere esperar a agosto 2026 para tener ret_1m en una muestra representativa.
+
+6. Hallazgo analítico previo — hipótesis sobre DEMS
+
+Antes de enviarle este documento ya hemos identificado un patrón fuerte sobre la señal DEMS (Daily Early Momentum Score, escala 0-20):
+
+Todos los picks donde DEMS ≥15 fue el criterio primario de entrada Y el ticker tenía un streak semanal ≤ 3 semanas fallaron con retornos de -15% a -33% en 2 semanas. En cambio, picks donde DEMS ≥10 acompañaba a un streak semanal ≥ 4 semanas funcionaron correctamente.
+
+La hipótesis es que DEMS extremo sin base semanal no señala el inicio de una rotación sino el agotamiento del momentum (blow-off top). Le pedimos opinión sobre: (a) si este patrón con ~10 casos es suficiente para implementarlo como regla, (b) cómo diseñaría la variable EARLY_ROTATION si no puede depender de DEMS como señal primaria.
+
+7. La pregunta central que el sistema intenta responder
+
+¿Añade valor el filtro IA sobre una baseline mecánica simple como "comprar los 3 tickers con mayor PCS cada semana"? NBIS (el pick más rentable del periodo) aparecía en el top-3-PCS prácticamente todos los días. El modelo lo identificó correctamente pero varios otros picks del modelo no batieron esa baseline. Con los datos actuales no hay suficiente muestra para respuesta estadística, pero es la pregunta guía del diseño del sistema.
