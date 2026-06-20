@@ -322,7 +322,7 @@ def export_prices():
 def export_picks_prices():
     picks_path = OUT_DIR / "ai_picks.json"
     if not picks_path.exists():
-        print("  ⚠ ai_picks.json no encontrado, saltando picks prices")
+        print("  picks prices: ai_picks.json no encontrado, saltando")
         return
 
     with open(picks_path, "r", encoding="utf-8") as f:
@@ -335,33 +335,56 @@ def export_picks_prices():
                 tickers.add(pos["ticker"])
 
     if not tickers:
-        print("  ⚠ No hay posiciones abiertas, saltando picks prices")
+        print("  picks prices: sin posiciones abiertas, saltando")
         return
+
+    import yfinance as yf
 
     RAW_DIR = ROOT / "backtest" / "data" / "raw"
     result: dict = {}
+    stale_cutoff = pd.Timestamp.now() - pd.Timedelta(days=5)
 
     for ticker in sorted(tickers):
         ticker_safe = ticker.replace("^", "").replace("=", "").replace(".", "")
         path = RAW_DIR / f"yahoo_{ticker_safe}.parquet"
-        if not path.exists():
-            print(f"  ⚠ {ticker}: raw parquet no encontrado")
-            continue
-        try:
-            df = pd.read_parquet(path, columns=["Close"])
-            df.index = pd.to_datetime(df.index)
-            df = df.sort_index().dropna()
-            recent = df.tail(10)
-            result[ticker] = {
-                "dates":  [str(d.date()) for d in recent.index],
-                "closes": [round(float(v), 2) for v in recent["Close"]],
-            }
-        except Exception as e:
-            print(f"  ⚠ {ticker}: {e}")
+
+        # Usa parquet si existe y tiene datos recientes; si no, cae a yfinance
+        use_yf = True
+        if path.exists():
+            try:
+                df = pd.read_parquet(path, columns=["Close"])
+                df.index = pd.to_datetime(df.index)
+                df = df.sort_index().dropna()
+                if not df.empty and df.index[-1] >= stale_cutoff:
+                    recent = df.tail(10)
+                    result[ticker] = {
+                        "dates":  [str(d.date()) for d in recent.index],
+                        "closes": [round(float(v), 2) for v in recent["Close"]],
+                    }
+                    use_yf = False
+            except Exception:
+                pass
+
+        if use_yf:
+            try:
+                hist = yf.download(ticker, period="20d", interval="1d",
+                                   auto_adjust=True, progress=False)
+                if hist.empty:
+                    continue
+                close_col = "Close"
+                if hasattr(hist.columns, "get_level_values"):
+                    hist.columns = hist.columns.get_level_values(0)
+                hist = hist[[close_col]].dropna().tail(10)
+                result[ticker] = {
+                    "dates":  [str(d.date()) for d in hist.index],
+                    "closes": [round(float(v), 2) for v in hist[close_col]],
+                }
+            except Exception as e:
+                print(f"  picks prices {ticker}: {e}")
 
     out = {"updated": str(pd.Timestamp.now().date()), "tickers": result}
     write_json(out, "prices_picks.json")
-    print(f"  ✓ prices_picks.json  ({len(result)} tickers)")
+    print(f"  picks prices: {len(result)} tickers OK")
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
