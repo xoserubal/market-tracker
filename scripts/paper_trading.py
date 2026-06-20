@@ -1341,6 +1341,15 @@ def run(force: bool = False, apply: bool = False) -> None:
     today  = str(date.today())
     run_id = f"{today}_{datetime.now().strftime('%H%M')}"
 
+    # Sincronizar archivos cloud-managed antes de un run local
+    # (evita sobreescribir con datos locales obsoletos lo que CI mantiene actualizado)
+    if not os.getenv("GITHUB_ACTIONS"):
+        try:
+            from sync_from_cloud import sync as _sync_cloud
+            _sync_cloud(verbose=True)
+        except Exception:
+            pass  # no fatal: continúa con archivos locales
+
     events_raw = _load("ai_events.json")
     if isinstance(events_raw, dict):
         events_raw = []
