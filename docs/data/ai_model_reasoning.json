@@ -1,6 +1,6 @@
 {
   "date": "2026-06-20",
-  "run_id": "2026-06-20_1032",
+  "run_id": "2026-06-20_2113",
   "candidates": [
     "NBIS",
     "AMD",
@@ -31,9 +31,9 @@
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 92,
+      "quality_score": 88,
       "decision_summary": {
-        "market_read": "Bull Maduro regime deteriorating with macro delta -10 over one month and high concentration in argentina, healthcare_special, and uranium themes.",
+        "market_read": "Macro regime Bull Maduro Deteriorating with -10 delta over one month pressures new entries despite strong individual rotation signals.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
@@ -41,258 +41,162 @@
       "watch": [
         {
           "ticker": "AMD",
-          "reason": "PCS 83 and 148% 13w outperformance strongest new candidate but macro deterioration and existing heavy tech exposure warrant monitoring before new entry.",
-          "watch_trigger": "Macro delta turns positive or dems rises above 14 with momentum_accel true"
-        }
-      ],
-      "rejected": [
-        {
-          "ticker": "CAT",
-          "reason": "PCS 74.2 below CONFIRMED_FLOW_LEADERS 78 threshold with weakening macro trend.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "GS",
-          "reason": "PCS 74 below 78 threshold and macro_deteriorating flag with -10 delta_1m.",
-          "rejection_category": "macro_conflict"
-        },
-        {
-          "ticker": "URI",
-          "reason": "PCS 71 below CONFIRMED threshold and dems 5 too weak for EARLY_ROTATION.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "NUE",
-          "reason": "PCS 66.5 below thresholds with rot_score 7 and macro headwinds.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "VGZ",
-          "reason": "PCS 67 marginal for MACRO_THEMATIC with spike_flag and medium extension.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "AFM.V",
-          "reason": "PCS 66.8 and rot 10 undercut by spike_flag true and poor theme_quality.",
-          "rejection_category": "weak_flow"
-        },
-        {
-          "ticker": "DMX.V",
-          "reason": "PCS 66.2 below meaningful thresholds with spike_flag and macro deteriorating.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "IRS",
-          "reason": "PCS 66 and argentina theme already at 30% concentration risk.",
-          "rejection_category": "macro_conflict"
-        },
-        {
-          "ticker": "ASCU.TO",
-          "reason": "PCS 64 below all portfolio thresholds with spike_flag.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "HUM",
-          "reason": "PCS 64 below thresholds and healthcare_special already high concentration.",
-          "rejection_category": "macro_conflict"
-        },
-        {
-          "ticker": "CVS",
-          "reason": "PCS 64 and weak ret_4w_vs_spy of 2.36% with deteriorating macro.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "SE",
-          "reason": "PCS 63.5 with streak_weeks 0 and IGNORAR signal.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "PCS 83 with 148% 13w outperformance and 8-week streak is strong yet macro deterioration and medium tech concentration favor monitoring continuation.",
+          "watch_trigger": "Sustained dems above 14 with macro delta stabilizing or positive ret_5d_vs_spy above 5 for three sessions."
         },
         {
           "ticker": "SUPV",
-          "reason": "PCS 75.8 but extension_risk extreme and argentina concentration already 30%.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "BBAR",
-          "reason": "Already open position; current PCS 72.8 below entry min with high extension.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "LOMA",
-          "reason": "Already open; current PCS 71 below min entry for portfolio.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "GGAL",
-          "reason": "Already open position with extreme extension_risk.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "SAIA",
-          "reason": "PCS 69 with IGNORAR signal and negative ret_4w_vs_spy.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "TDOC",
-          "reason": "Already open with current PCS 66.5 below 75 min_entry.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "OSCR",
-          "reason": "Already open position below min PCS entry threshold.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "EOSE",
-          "reason": "PCS 74.2 with VIGILAR signal and rot_score only 6.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "PCS 75.8 and 9 rot_score but extreme extension risk 5 points and high Argentina concentration already at 30% weight.",
+          "watch_trigger": "Extension points drop below 3 while ret_10d_vs_spy exceeds 10 without spike_flag."
         }
-      ]
+      ],
+      "rejected": []
     },
     "xiaomi/mimo-v2.5-pro": {
       "quality_score": 99,
       "decision_summary": {
-        "market_read": "Bullish macro regime but deteriorating trend with -10 monthly delta, suggesting caution.",
+        "market_read": "Bull Maduro regime with deteriorating trend and negative macro delta, suggesting cautious positioning amid weakening momentum.",
         "risk_posture": "cautious",
         "should_select_picks": true
       },
       "selected": [
         {
-          "ticker": "CAT",
+          "ticker": "AMD",
           "portfolio": "MIMO_SHADOW",
-          "signal_type": "early_rotation",
+          "signal_type": "confirmed_leader",
           "confidence": "high",
-          "reason_short": "Dems 15 with acceleration and 8-day outperformance, 8-week streak.",
-          "reason_full": "CAT posts the highest daily momentum score of 15 with acceleration true and outperform_d10=8, confirming robust multi-day institutional flow. Combined with an 8-week streak and 29.6% 13-week outperformance vs SPY, it leads the candidate set in both daily and weekly metrics despite medium extension risk.",
-          "comparative_edge": "Selected over AMD (PCS=83) which has dems=11 and no momentum acceleration; CAT's dems=15 with acceleration demonstrates stronger near-term leadership and broader daily breadth.",
+          "reason_short": "Highest 13w outperformance at 148% vs SPY with 8-week streak and dems 11",
+          "reason_full": "AMD shows the strongest sustained leadership with 148% 13-week outperformance vs SPY, the highest in the candidate set, and an unbroken 8-week weekly streak. Daily momentum score of 11 without spike_flag confirms broad-based multi-day flow, and extension risk is medium but justified by persistent weekly strength despite macro deterioration.",
+          "comparative_edge": "Selected over ASPI (PCS=79.8) which has dems=9 and momentum_accel=false; AMD's 148% 13w outperformance and dems=11 with acceleration demonstrate superior sustained momentum and lower relative extension risk.",
           "key_supporting_factors": [
-            "Daily momentum score of 15 is the highest among all candidates with PCS above 68, indicating strong near-term flow.",
-            "Outperform_d10=8 confirms eight consecutive days of outperformance, the broadest daily breadth in the set.",
-            "8-week weekly streak with 29.6% 13-week outperformance vs SPY shows sustained leadership over peers.",
-            "Extension risk is medium but dems and breadth justify entry given the multi-day setup without spike_flag."
+            "13-week outperformance of +148% vs SPY is the highest among all candidates, indicating dominant leadership.",
+            "8-week weekly streak with no interruptions confirms consistent institutional accumulation over two months.",
+            "Daily momentum score of 11 without spike_flag ensures robust multi-day breadth rather than single-session spikes.",
+            "Theme concentration risk in us_tech_ai is medium at 23% portfolio weight, allowing for diversification."
           ],
           "key_risks_or_contradictions": [
-            "Extension risk is medium with dist_sma20_atr_high, suggesting a possible pullback after the extended run.",
-            "Macro regime is deteriorating with -10 delta monthly, which could pressure cyclical names like CAT if trend worsens.",
-            "Theme weakness in us_cyclical per flags adds some uncertainty despite strong relative strength."
+            "Extension risk is medium with ret_4w flagged extended, increasing the likelihood of a pullback after the strong run.",
+            "Macro regime is deteriorating with a -10 monthly delta, which could pressure tech leaders if the trend accelerates.",
+            "Subtheme concentration in AI could rise if additional AI peers are added, though currently manageable."
+          ]
+        },
+        {
+          "ticker": "GS",
+          "portfolio": "MIMO_SHADOW",
+          "signal_type": "confirmed_leader",
+          "confidence": "medium",
+          "reason_short": "Rotation score 9 with 6-week streak and low extension risk for cleaner entry",
+          "reason_full": "GS exhibits a strong rotation score of 9 with a 6-week weekly streak and 22% 13-week outperformance vs SPY. Extension risk is low with zero extension points, providing a less-chased entry compared to peers with higher risk. The signal from pcs_crossed_up and rot_score_jumped suggests early confirmation, though daily momentum is moderate.",
+          "comparative_edge": "Selected over URI (PCS=71.0) which has dems=5 and lower ret_13w_vs_spy of 36%; GS's rot_score of 9 and 6-week streak offer stronger weekly confirmation and lower extension risk.",
+          "key_supporting_factors": [
+            "Rotation score of 9 is among the highest in the candidate set, indicating strong relative strength improvement.",
+            "6-week weekly streak with 22% 13-week outperformance vs SPY shows sustained leadership over multiple weeks.",
+            "Extension risk is low with zero extension points, minimizing the risk of chasing an extended move.",
+            "Theme concentration risk in us_cyclical is low at 8% portfolio weight, aiding overall portfolio diversification."
+          ],
+          "key_risks_or_contradictions": [
+            "Daily momentum score of 7 is moderate, not indicating strong immediate flow compared to high-dems peers.",
+            "Macro deterioration with negative monthly delta could weigh on cyclical financial stocks if risk-off intensifies.",
+            "Signal originated from events like pcs_crossed_up, which may be early stages requiring further confirmation."
           ]
         }
       ],
       "watch": [
         {
-          "ticker": "AMD",
-          "reason": "High PCS 83 and 148% 13-week outperformance, but dems at 11 is lower than CAT's 15 and lacks momentum acceleration.",
-          "watch_trigger": "Dems increasing above 14 with momentum acceleration confirmed."
-        },
-        {
           "ticker": "QQQ",
-          "reason": "PCS 81 and 8-week streak, but spike_flag true and dems 8 indicate possible single-day spike rather than sustained flow.",
-          "watch_trigger": "Spike_flag turning false with dems rising above 14."
+          "reason": "Spike_flag true reduces confidence for entry despite strong 8-week weekly streak and PCS 81, as daily momentum is concentrated in single sessions.",
+          "watch_trigger": "If dems increases above 12 with no spike_flag and outperform_d10 remains above 6, consider for selection."
         },
         {
           "ticker": "ASPI",
-          "reason": "Rot_score 9 and 50.5% 13-week outperformance, but dems 9 and extension_risk medium suggest incomplete daily momentum.",
-          "watch_trigger": "Dems increasing above 14 or extension risk reducing to low."
-        },
-        {
-          "ticker": "LOMA",
-          "reason": "Rot_score 9 and low extension risk, but dems 7 and only 1-day streak limit near-term conviction.",
-          "watch_trigger": "Dems increasing above 14 with streak_days extending beyond 3."
-        },
-        {
-          "ticker": "GS",
-          "reason": "Rot_score 9 and 6-week streak, but dems 7 and recent momentum flat compared to CAT's acceleration.",
-          "watch_trigger": "Dems increasing above 14 with momentum_accel true."
-        },
-        {
-          "ticker": "URI",
-          "reason": "PCS 71 and 4-week streak, but dems 5 and no recent momentum acceleration indicate weak daily signal.",
-          "watch_trigger": "Dems increasing above 14 with outperform_d10 rising to 6 or higher."
+          "reason": "Daily momentum score of 9 without acceleration and high theme concentration risk in uranium_nuclear, with PCS 79.8 but moderate extension risk.",
+          "watch_trigger": "If momentum_accel turns true and extension risk remains medium or lower, reevaluate for selection."
         }
       ],
       "rejected": [
         {
           "ticker": "GGAL",
-          "reason": "Extension risk extreme with spike_flag true and dist_sma20_atr_high, suggesting overextended move likely to reverse.",
+          "reason": "Extension risk is extreme with spike_flag true and dist_sma20_atr_high, making entry too risky despite strong weekly metrics.",
           "rejection_category": "technical_overextension"
         },
         {
           "ticker": "BBAR",
-          "reason": "Extension risk extreme with dist_sma20_atr_extreme, indicating severe overextension and high risk of pullback.",
+          "reason": "Extension risk is extreme with dist_sma20_atr_extreme and ret_4w_extreme, indicating high probability of pullback.",
           "rejection_category": "technical_overextension"
         },
         {
           "ticker": "SUPV",
-          "reason": "Extension risk high with ret_4w_extreme, making entry risky despite high PCS and rotation score.",
+          "reason": "Extension risk is high with dist_sma20_atr_high and ret_4w_extreme, despite strong dems of 11 and rot_score 9.",
           "rejection_category": "technical_overextension"
         },
         {
+          "ticker": "LOMA",
+          "reason": "Daily momentum score of 7 is low for early rotation, and 13-week outperformance of 5.45% is weak relative to peers like AMD.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "TDOC",
+          "reason": "Theme concentration risk in healthcare_special is high with 30% portfolio weight, and extension risk medium, making it less attractive than selected tickers.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "OSCR",
+          "reason": "High theme concentration risk in healthcare_special and medium extension risk, with dems 9 but no momentum acceleration, reducing entry appeal.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
           "ticker": "EOSE",
-          "reason": "Signal VIGILAR with rot_score only 6 and dems 10, indicating weak conviction and partial momentum.",
+          "reason": "Signal is VIGILAR indicating weaker conviction, with rot_score 6 and streak_weeks 1, below the threshold for strong selection.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "URI",
+          "reason": "Daily momentum score of 5 is too low for confident entry, despite good 13-week outperformance of 36%.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "SAIA",
-          "reason": "Signal IGNORAR with rot_score 4 and negative ret_4w_vs_spy, confirming weak relative strength.",
+          "reason": "Signal is IGNORAR indicating insufficient strength, with rot_score 4 and negative 4-week outperformance.",
           "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "TDOC",
-          "reason": "PCS 66.5 below MIMO_SHADOW minimum entry of 68, insufficient for selection despite eligible status.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "OSCR",
-          "reason": "PCS 66.5 below MIMO_SHADOW minimum entry of 68, with dems 9 and momentum decay flag.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
           "ticker": "VGZ",
-          "reason": "PCS 67.0 below MIMO_SHADOW minimum entry of 68, and spike_flag true indicates possible single-day spike.",
+          "reason": "PCS of 67 is below the minimum entry threshold of 68 for MIMO_SHADOW, and spike_flag true reduces confidence.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "AFM.V",
-          "reason": "PCS 66.8 below MIMO_SHADOW minimum entry of 68, with spike_flag true reducing entry quality.",
+          "reason": "PCS of 66.8 is below the minimum entry threshold of 68, and spike_flag true despite high rot_score of 10.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "NUE",
-          "reason": "PCS 66.5 below MIMO_SHADOW minimum entry of 68, and recent negative ret_5d_vs_spy shows weakening momentum.",
+          "reason": "PCS of 66.5 is below the minimum entry threshold of 68, and daily momentum score of 5 is low.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "DMX.V",
-          "reason": "PCS 66.2 below MIMO_SHADOW minimum entry of 68, with spike_flag true indicating unstable move.",
+          "reason": "PCS of 66.2 is below the minimum entry threshold of 68, and spike_flag true with moderate extension risk.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "IRS",
-          "reason": "PCS 66.0 below MIMO_SHADOW minimum entry of 68, and negative ret_5d_vs_spy suggests recent underperformance.",
+          "reason": "PCS of 66 is below the minimum entry threshold of 68, and 13-week outperformance of 1.4% is very weak.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "ASCU.TO",
-          "reason": "PCS 64.0 below MIMO_SHADOW minimum entry of 68, with spike_flag true and dems only 4.",
+          "reason": "PCS of 64 is below the minimum entry threshold of 68, and dems 4 is very low despite 7-week streak.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "HUM",
-          "reason": "PCS 64.0 below MIMO_SHADOW minimum entry of 68, despite high ret_13w_vs_spy, limiting entry eligibility.",
+          "reason": "PCS of 64 is below the minimum entry threshold of 68, though 13-week outperformance is high at 104%.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "CVS",
-          "reason": "PCS 64.0 below MIMO_SHADOW minimum entry of 68, with dems 8 and no recent momentum acceleration.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "FCX",
-          "reason": "PCS 63.5 below MIMO_SHADOW minimum entry of 68, and dems not provided in candidates for full assessment.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "BNKR.L",
-          "reason": "PCS 62.0 below MIMO_SHADOW minimum entry of 68, with dems not available for strong signal evaluation.",
+          "reason": "PCS of 64 is below the minimum entry threshold of 68, and daily momentum score of 8 is moderate.",
           "rejection_category": "insufficient_conviction"
         }
       ]
