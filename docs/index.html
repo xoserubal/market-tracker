@@ -152,7 +152,10 @@
 
   <div class="grid-3">
     <div class="chart-box">
-      <div class="chart-title">MacroScore — Histórico 5 años</div>
+      <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>MacroScore — Histórico 5 años</span>
+        <button class="ptf-tab" style="padding:4px 10px;font-size:11px" onclick="showPage('macro');document.querySelectorAll('nav button').forEach((b,i)=>{b.classList.toggle('active',i===1)})">Ver detalle →</button>
+      </div>
       <div id="chart-macro-mini" class="plotly-chart"></div>
     </div>
     <div class="chart-box">
@@ -170,6 +173,14 @@
       <div class="chart-title">Portfolio — Mejor estrategia vs SPY</div>
       <div id="chart-portfolio-mini" class="plotly-chart"></div>
     </div>
+  </div>
+
+  <div class="chart-box" id="overview-aipicks-panel" style="display:none">
+    <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>AI Picks Lab — Estado actual</span>
+      <button class="ptf-tab" style="padding:4px 10px;font-size:11px" onclick="showPage('aipicks');document.querySelector('nav button:nth-child(6)').classList.add('active');document.querySelectorAll('nav button').forEach((b,i)=>i!==5&&b.classList.remove('active'))">Ver detalle →</button>
+    </div>
+    <div id="overview-aipicks-content"></div>
   </div>
 </div>
 
@@ -320,6 +331,10 @@ function updateMacroChart() {
   const allShapes = [..._macroBaseShapes];
   Object.values(_flagOverlayState).forEach(s => { if (s.active) allShapes.push(...s.shapes); });
   Plotly.relayout('chart-macro-full', { shapes: allShapes });
+  // También actualiza el mini chart del Resumen si existe
+  if (document.getElementById('chart-macro-mini')?._fullLayout) {
+    Plotly.relayout('chart-macro-mini', { shapes: allShapes });
+  }
 }
 
 function toggleFlagOverlay(flagKey) {
@@ -634,6 +649,61 @@ function renderPortfolioCards(metrics) {
   ]);
 }
 
+// ── Overview AI Picks mini-panel ──────────────────────────────────────────────
+function renderOverviewAIPicks(picks) {
+  const panel = document.getElementById('overview-aipicks-panel');
+  const el    = document.getElementById('overview-aipicks-content');
+  if (!panel || !el) return;
+
+  const portfolios = picks.portfolios || {};
+  const GROK_PTFS  = ['HIGH_CONVICTION','CONFIRMED_FLOW_LEADERS','EARLY_ROTATION','MACRO_THEMATIC_BENEFICIARIES'];
+  const MIMO_PTFS  = ['MIMO_SHADOW'];
+
+  // Count open positions per model
+  const grokOpen = GROK_PTFS.flatMap(id => (portfolios[id]?.positions || []));
+  const mimoOpen = MIMO_PTFS.flatMap(id => (portfolios[id]?.positions || []));
+
+  // Top tickers with PCS for quick view
+  const allOpen = grokOpen.map(p => ({...p, _src:'Grok'})).concat(mimoOpen.map(p => ({...p, _src:'Mimo'})));
+  allOpen.sort((a,b) => (b.entry_pcs||0) - (a.entry_pcs||0));
+
+  const pcsBar = pcs => {
+    const w = Math.round((pcs||0)/100*64);
+    const col = pcs>=80?'var(--green)':pcs>=70?'var(--blue)':'var(--yellow)';
+    return `<span style="display:inline-block;width:${w}px;height:6px;background:${col};border-radius:3px;vertical-align:middle;margin-right:4px"></span>`;
+  };
+
+  const rows = allOpen.slice(0, 12).map(p =>
+    `<tr>
+      <td><b>${p.ticker}</b></td>
+      <td style="color:var(--text2);font-size:11px">${PTF_LABELS[p._src === 'Mimo' ? 'MIMO_SHADOW' : 'HIGH_CONVICTION'] ? p._src : p._src}</td>
+      <td>${pcsBar(p.entry_pcs)}${p.entry_pcs ?? '—'}</td>
+      <td style="color:var(--text2);font-size:11px">${p.entry_date}</td>
+      <td style="color:var(--text2);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.rationale||''}">${p.rationale||''}</td>
+    </tr>`
+  ).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;gap:24px;margin-bottom:12px;flex-wrap:wrap">
+      <span><b style="color:var(--blue);font-size:20px">${grokOpen.length}</b> <span style="color:var(--text2);font-size:12px">posiciones Grok</span></span>
+      <span><b style="color:var(--purple);font-size:20px">${mimoOpen.length}</b> <span style="color:var(--text2);font-size:12px">posiciones Mimo Shadow</span></span>
+      ${picks.last_updated ? `<span style="color:var(--text2);font-size:12px;margin-left:auto">Último run: ${picks.last_updated}</span>` : ''}
+    </div>
+    ${allOpen.length > 0 ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.5px">
+        <th style="text-align:left;padding:4px 8px">Ticker</th>
+        <th style="text-align:left;padding:4px 8px">Modelo</th>
+        <th style="text-align:left;padding:4px 8px">PCS entrada</th>
+        <th style="text-align:left;padding:4px 8px">Entrada</th>
+        <th style="text-align:left;padding:4px 8px">Rationale</th>
+      </tr></thead>
+      <tbody style="color:var(--text)">${rows}</tbody>
+    </table>${allOpen.length > 12 ? `<div style="color:var(--text2);font-size:11px;margin-top:6px">+${allOpen.length-12} más — ver AI Picks Lab para detalle completo</div>` : ''}` : `<div style="color:var(--text2)">Sin posiciones abiertas</div>`}
+  `;
+
+  panel.style.display = '';
+}
+
 // ── AI Picks Lab ──────────────────────────────────────────────────────────────
 const PTF_LABELS = {
   HIGH_CONVICTION:              'Alta Convicción',
@@ -641,10 +711,12 @@ const PTF_LABELS = {
   EARLY_ROTATION:               'Rot. Temprana',
   MACRO_THEMATIC_BENEFICIARIES: 'Macro Temático',
   REJECTED_HIGH_SCORE:          'Rechazados (control)',
+  MIMO_SHADOW:                  'Mimo Shadow',
 };
 const PTF_THRESHOLDS = {
   HIGH_CONVICTION: 85, CONFIRMED_FLOW_LEADERS: 78,
   EARLY_ROTATION: 70, MACRO_THEMATIC_BENEFICIARIES: 65, REJECTED_HIGH_SCORE: 75,
+  MIMO_SHADOW: 70,
 };
 let _activePtfTab = 'HIGH_CONVICTION';
 let _aipicksData = null;
@@ -756,13 +828,20 @@ function renderPtfContent(ptfId) {
   if (positions.length === 0) {
     html += `<div class="no-positions">No hay posiciones abiertas en este portfolio</div>`;
   } else {
+    const candidatePCSMap = {};
+    (_aicandidatesData?.candidates || []).forEach(c => { candidatePCSMap[c.ticker] = c.pcs; });
+
     html += `<table class="picks-table">
       <thead><tr>
-        <th>Ticker</th><th>Entrada</th><th>Actual</th><th>P&amp;L</th><th>10d</th><th>PCS</th><th>Tamaño</th><th>Convicción</th><th>Desde</th><th>Señal</th><th>Rationale</th>
+        <th>Ticker</th><th>Entrada</th><th>Actual</th><th>P&amp;L</th><th>10d</th><th title="PCS al entrar → PCS actual si ha cambiado">PCS entrada</th><th>Tamaño</th><th>Convicción</th><th>Desde</th><th>Señal</th><th>Rationale</th>
       </tr></thead><tbody>`;
     positions.forEach(p => {
       const convCls = `conv-${(p.conviction || 'LOW').toUpperCase()}`;
       const barW = Math.round(((p.entry_pcs || 0) / 100) * 80);
+      const currentPcs = candidatePCSMap[p.ticker];
+      const pcsArrow = (currentPcs != null && currentPcs !== p.entry_pcs)
+        ? ` <span style="color:${currentPcs > (p.entry_pcs||0) ? 'var(--green)' : 'var(--red)'};font-size:11px">→ ${currentPcs}</span>`
+        : '';
       const priceData = ((_picksPricesData || {}).tickers || {})[p.ticker] || {};
       const closes = priceData.closes || [];
       const currentPrice = closes.length ? closes[closes.length - 1] : null;
@@ -792,7 +871,7 @@ function renderPtfContent(ptfId) {
         <td>${currentStr}</td>
         <td>${pnlStr}</td>
         <td>${sparklineSVG(closes, pnlSign)}</td>
-        <td><span class="pcs-bar" style="width:${barW}px"></span>${p.entry_pcs ?? '—'}</td>
+        <td><span class="pcs-bar" style="width:${barW}px"></span>${p.entry_pcs ?? '—'}${pcsArrow}</td>
         <td>${p.size_pct != null ? p.size_pct + '%' : '—'}</td>
         <td class="${convCls}">${p.conviction || '—'}</td>
         <td>${p.entry_date || '—'}</td>
@@ -1207,10 +1286,12 @@ async function init() {
     const compra = rotation.latest_signals.filter(s => s.signal==='COMPRA').length;
     const acum   = rotation.latest_signals.filter(s => s.signal==='ACUMULAR').length;
     const er     = rotation.latest_signals.filter(s => s.is_early_rotation).length;
+    const delta1w = latest?.macro_delta_1w;
+    const delta1m = latest?.macro_delta_1m;
+    const deltaFmt = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1);
 
     renderCards('overview-cards', [
-      { label:'MacroScore', value: score?.toFixed(0) ?? '—', sub: regime, cls },
-      { label:'Régimen', value: regime, cls },
+      { label:'MacroScore', value: score?.toFixed(0) ?? '—', sub: `${regime} · Δ1w ${deltaFmt(delta1w)}  Δ1m ${deltaFmt(delta1m)}`, cls },
       { label:'COMPRA', value: compra, cls: 'bull', sub: `${acum} ACUMULAR` },
       { label:'Rot. Temprana', value: er, cls: er > 0 ? 'info' : '', sub: 'señales activas' },
       { label:'Actualizado', value: rotation.updated, cls: 'info' },
@@ -1222,7 +1303,7 @@ async function init() {
       { label:'Term Premium Extreme', on: latest?.flag_term_premium_extreme },
       { label:'Emergency Mode',     on: latest?.flag_emergency_mode     },
     ];
-    renderFlags('overview-flags', flags);
+    renderFlagToggles('overview-flags', flags, macro.history);
 
     // Overview charts
     chartMacroMini(macro.history, 'chart-macro-mini');
@@ -1266,6 +1347,8 @@ async function init() {
       loadJSON('prices_picks.json').catch(() => ({ tickers: {} })),
     ]).then(([picks, candidates, picksPrices]) => {
       renderAIPicks(picks, candidates, picksPrices);
+      // Resumen mini-panel de AI Picks Lab
+      renderOverviewAIPicks(picks);
     }).catch(() => {});
 
     // AB Test data (JSONL, non-blocking)

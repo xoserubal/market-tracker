@@ -79,11 +79,11 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AI_MODEL_TEST_MODE: ${{ vars.AI_MODEL_TEST_MODE || 'true' }}
-          AI_MODELS_TO_TEST: ${{ vars.AI_MODELS_TO_TEST || '["x-ai/grok-4.3","anthropic/claude-haiku-4.5"]' }}
+          AI_MODELS_TO_TEST: ${{ vars.AI_MODELS_TO_TEST || '["x-ai/grok-4.3","xiaomi/mimo-v2.5-pro"]' }}
           ACTIVE_MODEL: ${{ vars.ACTIVE_MODEL || 'x-ai/grok-4.3' }}
-          FALLBACK_MODEL: ${{ vars.FALLBACK_MODEL || 'anthropic/claude-haiku-4.5' }}
+          FALLBACK_MODEL: ${{ vars.FALLBACK_MODEL || 'xiaomi/mimo-v2.5-pro' }}
           ENABLE_SHADOW_MODELS: ${{ vars.ENABLE_SHADOW_MODELS || 'true' }}
-          MAX_CANDIDATES_PER_CALL: ${{ vars.MAX_CANDIDATES_PER_CALL || '15' }}
+          MAX_CANDIDATES_PER_CALL: ${{ vars.MAX_CANDIDATES_PER_CALL || '25' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python scripts/paper_trading.py

@@ -17,11 +17,11 @@ Env vars (add to .env or GitHub Secrets):
   ANTHROPIC_API_KEY
   XAI_API_KEY
   AI_MODEL_TEST_MODE        true|false        (default: true)
-  AI_MODELS_TO_TEST         JSON list         (default: ["claude-haiku-4-5-20251001"])
-  ACTIVE_MODEL              model id          (default: claude-haiku-4-5-20251001)
-  FALLBACK_MODEL            model id          (default: claude-haiku-4-5-20251001)
+  AI_MODELS_TO_TEST         JSON list         (default: ["xiaomi/mimo-v2.5-pro"])
+  ACTIVE_MODEL              model id          (default: x-ai/grok-4.3)
+  FALLBACK_MODEL            model id          (default: xiaomi/mimo-v2.5-pro)
   ENABLE_SHADOW_MODELS      true|false        (default: true)
-  MAX_CANDIDATES_PER_CALL   int               (default: 15)
+  MAX_CANDIDATES_PER_CALL   int               (default: 25)
 """
 from __future__ import annotations
 
@@ -55,8 +55,9 @@ MODEL_PRICING: dict[str, tuple[float, float]] = {
     "anthropic/claude-haiku-4.5":  (1.00,  5.00),
     "anthropic/claude-sonnet-4.6": (3.00, 15.00),
     "anthropic/claude-opus-4.7":   (15.00, 75.00),
-    "x-ai/grok-4.3":                       (1.25,  2.50),
-    "x-ai/grok-4.2":                       (0.0,   0.0),  # TODO: fill from openrouter.ai/models
+    "x-ai/grok-4.3":               (1.25,  2.50),
+    "x-ai/grok-4.2":               (0.0,   0.0),
+    "xiaomi/mimo-v2.5-pro":        (0.435, 0.87),
 }
 
 PORTFOLIOS: dict[str, dict] = {
@@ -101,6 +102,20 @@ PORTFOLIOS: dict[str, dict] = {
         "target_ops_month": 5,
         "is_control":       True,
     },
+    "MIMO_SHADOW": {
+        "description":      "Cartera shadow gestionada por Mimo — benchmark independiente vs Grok.",
+        "pcs_threshold":    70.0,
+        "pcs_min_entry":    68.0,
+        "max_positions":    20,
+        "size_range":       (3, 8),
+        "target_ops_month": 8,
+        "is_shadow_model":  True,  # gestionada por shadow model, no por el activo
+    },
+}
+
+# Mapeo modelo shadow → su cartera exclusiva en ai_picks.json
+SHADOW_MODEL_PORTFOLIOS: dict[str, str] = {
+    "xiaomi/mimo-v2.5-pro": "MIMO_SHADOW",
 }
 
 HARD_RULES = [
@@ -124,7 +139,8 @@ NON_TRADABLE_SUBTHEMES = frozenset({
     "futures", "commodity", "macro_index", "crude_oil_leveraged",
 })
 
-VALID_PORTFOLIOS = frozenset(PORTFOLIOS) - {"REJECTED_HIGH_SCORE"}
+VALID_PORTFOLIOS = frozenset(PORTFOLIOS) - {"REJECTED_HIGH_SCORE", "MIMO_SHADOW"}
+VALID_SHADOW_PORTFOLIOS = frozenset({"MIMO_SHADOW"})
 
 VALID_REJECT_CATS = frozenset({
     "insufficient_conviction", "macro_conflict", "weak_flow",
@@ -140,16 +156,16 @@ REQUIRED_RESPONSE_KEYS = {"date", "decision_summary", "selected", "watch", "reje
 @dataclass
 class Config:
     test_mode:            bool      = True
-    models_to_test:       list[str] = field(default_factory=lambda: ["claude-haiku-4-5-20251001"])
-    active_model:         str       = "claude-haiku-4-5-20251001"
-    fallback_model:       str       = "claude-haiku-4-5-20251001"
+    models_to_test:       list[str] = field(default_factory=lambda: ["xiaomi/mimo-v2.5-pro"])
+    active_model:         str       = "x-ai/grok-4.3"
+    fallback_model:       str       = "xiaomi/mimo-v2.5-pro"
     enable_shadow_models: bool      = True
-    max_candidates:       int       = 15
+    max_candidates:       int       = 25
 
     @classmethod
     def from_env(cls) -> Config:
         test_mode = os.getenv("AI_MODEL_TEST_MODE", "true").lower() == "true"
-        default_model = "anthropic/claude-haiku-4.5"
+        default_model = "xiaomi/mimo-v2.5-pro"
         try:
             models = json.loads(os.getenv("AI_MODELS_TO_TEST", f'["{default_model}"]'))
         except json.JSONDecodeError:
@@ -160,7 +176,7 @@ class Config:
             active_model=os.getenv("ACTIVE_MODEL",   default_model),
             fallback_model=os.getenv("FALLBACK_MODEL", default_model),
             enable_shadow_models=os.getenv("ENABLE_SHADOW_MODELS", "true").lower() == "true",
-            max_candidates=int(os.getenv("MAX_CANDIDATES_PER_CALL", "15")),
+            max_candidates=int(os.getenv("MAX_CANDIDATES_PER_CALL", "25")),
         )
 
 
@@ -312,18 +328,35 @@ def build_payload(
     picks: dict,
     config: Config,
 ) -> dict:
-    macro    = cands_data.get("macro_context", {})
-    eligible = sorted(
+    macro         = cands_data.get("macro_context", {})
+    all_cands_map = {c["ticker"]: c for c in cands_data.get("candidates", [])}
+
+    # Tickers con posición abierta — siempre incluidos en candidates
+    open_tickers: set[str] = {
+        pos["ticker"]
+        for ptf in picks.get("portfolios", {}).values()
+        for pos in ptf.get("positions", [])
+    }
+
+    # Top-N elegibles por PCS
+    top_n = sorted(
         [c for c in cands_data.get("candidates", []) if c.get("eligible")],
         key=lambda x: x.get("pcs", 0),
         reverse=True,
     )[:config.max_candidates]
+    top_n_tickers = {c["ticker"] for c in top_n}
+
+    # Añadir posiciones abiertas que no entran en el top-N (con o sin eligible)
+    open_extras = [
+        all_cands_map[tk]
+        for tk in open_tickers
+        if tk not in top_n_tickers and tk in all_cands_map
+    ]
+    eligible = top_n + open_extras
 
     prev_data = _load("ai_candidates_prev.json")
     prev_date = prev_data.get("date") if prev_data else None
     prev_snapshot_available = bool(prev_date and prev_date != cands_data.get("date"))
-
-    all_cands_map = {c["ticker"]: c for c in cands_data.get("candidates", [])}
     active_positions = []
     for pid, ptf in picks.get("portfolios", {}).items():
         ptf_min = PORTFOLIOS.get(pid, {}).get("pcs_min_entry", 0)
@@ -539,6 +572,8 @@ def _model_max_tokens(model: str) -> int:
         return 8192   # Claude Haiku 4.5 native max
     if "sonnet" in model.lower():
         return 16000  # Claude Sonnet 4.x native max
+    if "mimo" in model.lower():
+        return 32000  # MiMo-V2.5-Pro: verbose reasoning model, needs headroom
     return 6144       # conservative default for grok / others
 
 
@@ -586,8 +621,10 @@ def compute_cost(model: str, in_tok: int, out_tok: int) -> float:
     return (in_tok * in_p + out_tok * out_p) / 1_000_000
 
 
-def parse_response(raw: str) -> tuple[dict | None, bool]:
+def parse_response(raw: str | None) -> tuple[dict | None, bool]:
     """Strip markdown fences and parse JSON. Returns (data, json_valid)."""
+    if not raw:
+        return None, False
     text = raw.strip()
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```\s*$", "", text)
@@ -653,7 +690,8 @@ def validate_model_response(
         if t in non_tradable:      r.add(f"SELECT {t}: non-tradable subtheme")
         if t in open_tickers:      r.add(f"SELECT {t}: already an open position (use HOLD, not SELECT)")
         ptf = s.get("portfolio", "")
-        if ptf not in VALID_PORTFOLIOS:
+        all_valid_ptfs = VALID_PORTFOLIOS | VALID_SHADOW_PORTFOLIOS
+        if ptf not in all_valid_ptfs:
             r.add(f"SELECT {t}: invalid portfolio '{ptf}'")
         if len(str(s.get("reason_short", ""))) < 10:
             r.add(f"SELECT {t}: reason_short too short")
@@ -664,7 +702,7 @@ def validate_model_response(
         if ptf_counts[ptf] > max_p:
             r.add(f"Portfolio {ptf}: exceeds max_positions ({max_p})")
         pcs_min = PORTFOLIOS.get(ptf, {}).get("pcs_min_entry", 0)
-        if ptf in VALID_PORTFOLIOS and pcs_min > 0:
+        if ptf in all_valid_ptfs and pcs_min > 0:
             ticker_pcs = cand_pcs_map.get(t, 0.0)
             if ticker_pcs < pcs_min:
                 r.add(f"SELECT {t}: PCS {ticker_pcs} below {ptf} minimum ({pcs_min})")
@@ -852,7 +890,7 @@ def _save_test_result(
         },
         "quality_score":    quality,
         "response":         data,
-        "raw_response_head": raw[:2000],
+        "raw_response_head": (raw or "")[:2000],
     })
 
 
@@ -1014,10 +1052,16 @@ def _size_from_conviction(conviction: str, size_range: tuple) -> float:
     return round((lo + hi) / 2.0, 1)
 
 
-def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> tuple[dict, dict]:
+def update_portfolio(
+    picks: dict,
+    data: dict,
+    cand_pcs: dict | None = None,
+    allowed_portfolios: frozenset | None = None,
+) -> tuple[dict, dict]:
     today      = str(date.today())
     portfolios = picks.setdefault("portfolios", {})
     changes: dict[str, list] = {"opened": [], "closed": []}
+    _valid = allowed_portfolios if allowed_portfolios is not None else VALID_PORTFOLIOS
 
     # Process EXIT decisions from open_picks_review
     for review in data.get("open_picks_review", []):
@@ -1025,6 +1069,8 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> t
             continue
         tk  = review.get("ticker", "")
         pid = review.get("portfolio", "")
+        if pid not in _valid:
+            continue
         ptf = portfolios.get(pid)
         if ptf is None:
             continue
@@ -1050,7 +1096,7 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> t
 
     for s in data.get("selected", []):
         ptf_id = s.get("portfolio", "")
-        if ptf_id not in VALID_PORTFOLIOS:
+        if ptf_id not in _valid:
             continue
         ptf       = portfolios.setdefault(ptf_id, {"positions": [], "history": [], "last_review": None})
         positions = ptf.setdefault("positions", [])
@@ -1091,6 +1137,201 @@ def update_portfolio(picks: dict, data: dict, cand_pcs: dict | None = None) -> t
     }
     picks["last_updated"] = today
     return picks, changes
+
+
+# ── Shadow model payload builder ───────────────────────────────────────────────
+
+def _build_shadow_model_payload(
+    full_payload: dict,
+    picks: dict,
+    shadow_portfolio_id: str,
+    max_cands: int = 25,
+) -> dict:
+    """
+    Construye el payload para un shadow model con cartera propia.
+
+    Prioridad de candidatos (hasta max_cands):
+      1. Posiciones abiertas en su propia cartera shadow
+      2. Posiciones abiertas en las carteras de Grok
+      3. Top PCS del resto de candidatos elegibles
+
+    active_picks_relevant contiene solo sus propias posiciones
+    (para que sepa qué tiene que revisar con HOLD/EXIT).
+    Grok's positions aparecen en candidates como contexto, no en active_picks_relevant.
+    """
+    all_cands     = full_payload.get("candidates", [])
+    all_cands_map = {c["ticker"]: c for c in all_cands}
+
+    # 1. Posiciones propias del shadow model
+    shadow_ptf   = picks.get("portfolios", {}).get(shadow_portfolio_id, {})
+    shadow_pos   = shadow_ptf.get("positions", [])
+    shadow_tickers = {p["ticker"] for p in shadow_pos}
+
+    # active_picks_relevant — solo las suyas (con datos actuales del candidato)
+    all_cands_full_map = {
+        c["ticker"]: c
+        for c in full_payload.get("candidates", [])
+    }
+    ptf_min = PORTFOLIOS.get(shadow_portfolio_id, {}).get("pcs_min_entry", 0)
+    active_picks = []
+    for pos in shadow_pos:
+        tk      = pos["ticker"]
+        current = all_cands_full_map.get(tk, {})
+        active_picks.append({
+            **pos,
+            "portfolio":             shadow_portfolio_id,
+            "pcs_min_entry":         ptf_min,
+            "current_pcs":           current.get("pcs"),
+            "current_rot_score":     current.get("rot_score"),
+            "current_streak_weeks":  current.get("streak_weeks"),
+            "current_ret_4w_vs_spy": current.get("ret_4w_vs_spy"),
+        })
+
+    # 2. Posiciones de Grok (carteras activas, excluidas las ya en shadow)
+    grok_tickers: set[str] = set()
+    for pid, ptf in picks.get("portfolios", {}).items():
+        if pid == shadow_portfolio_id:
+            continue
+        if PORTFOLIOS.get(pid, {}).get("is_control"):
+            continue
+        if PORTFOLIOS.get(pid, {}).get("is_shadow_model"):
+            continue
+        for pos in ptf.get("positions", []):
+            tk = pos["ticker"]
+            if tk not in shadow_tickers:
+                grok_tickers.add(tk)
+
+    # 3. Construir lista de candidatos priorizada
+    shadow_in_cands = [{**c, "_own_open": True}   for c in all_cands if c.get("ticker") in shadow_tickers]
+    grok_in_cands   = [{**c, "_grok_open": True}  for c in all_cands if c.get("ticker") in grok_tickers]
+    rest_cands      = [c for c in all_cands
+                       if c.get("ticker") not in shadow_tickers
+                       and c.get("ticker") not in grok_tickers]
+
+    slots = max_cands
+    candidates: list[dict] = []
+    for pool in (shadow_in_cands, grok_in_cands, rest_cands):
+        take = pool[:max(0, slots - len(candidates))]
+        candidates.extend(take)
+        if len(candidates) >= slots:
+            break
+
+    # Mandato simplificado: solo su cartera
+    shadow_mandate = {
+        shadow_portfolio_id: {
+            k: v for k, v in PORTFOLIOS[shadow_portfolio_id].items()
+            if k not in ("is_control", "is_shadow_model")
+        }
+    }
+
+    # Reglas específicas del shadow model: el nombre de cartera es OBLIGATORIO
+    shadow_hard_rules = list(HARD_RULES) + [
+        f"CRITICAL: You manage ONLY the '{shadow_portfolio_id}' portfolio. "
+        f"Every item in 'selected' MUST have portfolio='{shadow_portfolio_id}'. "
+        "Do NOT use any other portfolio name (no HIGH_CONVICTION, no CONFIRMED_FLOW_LEADERS, etc.).",
+        f"Tickers marked as [Grok open] in candidates are currently held by the active model. "
+        "You may SELECT them independently if the signal justifies it for your portfolio.",
+    ]
+
+    return {
+        **full_payload,
+        "candidates":            candidates,
+        "active_picks_relevant": active_picks,
+        "portfolio_mandates":    shadow_mandate,
+        "system_context": {
+            **full_payload.get("system_context", {}),
+            "hard_rules": shadow_hard_rules,
+        },
+        "_shadow_context": {
+            "note": f"You manage only the {shadow_portfolio_id} portfolio. "
+                    "Tickers from Grok portfolios are included as candidates for your consideration.",
+            "grok_open_tickers": sorted(grok_tickers),
+        },
+    }
+
+
+# ── Batched model call ─────────────────────────────────────────────────────────
+
+BATCH_SIZE        = 25   # candidatos por llamada al hacer batching
+SHADOW_MAX_CANDS  = 25   # los shadow models nunca ven más de 25 candidatos
+
+def _trim_payload_candidates(payload: dict, limit: int) -> dict:
+    """Devuelve una copia del payload con como máximo `limit` candidatos,
+    garantizando que las posiciones abiertas siempre están incluidas."""
+    cands = payload.get("candidates", [])
+    if len(cands) <= limit:
+        return payload
+    open_tickers = {p.get("ticker") for p in payload.get("active_picks_relevant", [])}
+    open_in_cands  = [c for c in cands if c.get("ticker") in open_tickers]
+    rest           = [c for c in cands if c.get("ticker") not in open_tickers]
+    slots_left     = max(0, limit - len(open_in_cands))
+    trimmed        = open_in_cands + rest[:slots_left]
+    return {**payload, "candidates": trimmed}
+
+
+def _call_model_batched(
+    payload: dict,
+    model: str,
+    run_id: str,
+) -> tuple[str, dict | None, int, int, float]:
+    """
+    Si los candidatos superan BATCH_SIZE, divide en lotes de BATCH_SIZE y
+    fusiona los resultados. Devuelve (raw_head, merged_data, in_tok, out_tok, latency_ms).
+    """
+    cands = payload.get("candidates", [])
+    if len(cands) <= BATCH_SIZE:
+        user_msg = build_user_message(payload, model, run_id)
+        raw, in_tok, out_tok, lat = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=_model_max_tokens(model))
+        data, _ = parse_response(raw)
+        return raw or "", data, in_tok, out_tok, lat
+
+    # Dividir en lotes
+    batches = [cands[i:i + BATCH_SIZE] for i in range(0, len(cands), BATCH_SIZE)]
+    n = len(batches)
+    all_raw, all_data = [], []
+    total_in, total_out, total_lat = 0, 0, 0.0
+
+    for idx, batch_cands in enumerate(batches, 1):
+        batch_payload = dict(payload)
+        batch_payload["candidates"] = batch_cands
+        batch_payload["_batch"] = f"{idx}/{n}"
+        user_msg = build_user_message(batch_payload, model, run_id)
+        raw, in_tok, out_tok, lat = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=_model_max_tokens(model))
+        data, ok = parse_response(raw)
+        all_raw.append(raw or "")
+        all_data.append(data if ok else None)
+        total_in  += in_tok
+        total_out += out_tok
+        total_lat += lat
+        print(f"[batch {idx}/{n}: {in_tok}+{out_tok}tok]", end=" ", flush=True)
+
+    # Fusionar resultados
+    valid = [d for d in all_data if d]
+    if not valid:
+        return all_raw[0], None, total_in, total_out, total_lat
+
+    merged: dict = {
+        "model":            valid[0].get("model"),
+        "run_id":           valid[0].get("run_id"),
+        "date":             valid[0].get("date"),
+        "decision_summary": valid[0].get("decision_summary", {}),
+        "selected":         [],
+        "watch":            [],
+        "rejected":         [],
+        "open_picks_review": [],
+    }
+    seen_open: set[str] = set()
+    for d in valid:
+        merged["selected"].extend(d.get("selected", []))
+        merged["watch"].extend(d.get("watch", []))
+        merged["rejected"].extend(d.get("rejected", []))
+        for rev in d.get("open_picks_review", []):
+            tk = rev.get("ticker")
+            if tk and tk not in seen_open:
+                seen_open.add(tk)
+                merged["open_picks_review"].append(rev)
+
+    return all_raw[0], merged, total_in, total_out, total_lat
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -1141,6 +1382,7 @@ def run(force: bool = False, apply: bool = False) -> None:
         models.insert(0, config.active_model)
 
     active_updated = False
+    shadow_updated = False
     reasoning_by_model: dict = {}  # accumulated for ai_model_reasoning.json
 
     for model in models:
@@ -1158,9 +1400,15 @@ def run(force: bool = False, apply: bool = False) -> None:
         model_used            = model
 
         try:
-            user_msg = build_user_message(payload, model, run_id)
-            raw, in_tok, out_tok, latency = call_model(model, SYSTEM_PROMPT, user_msg, max_tokens=_model_max_tokens(model))
-            data, json_valid = parse_response(raw)
+            shadow_ptf_id = SHADOW_MODEL_PORTFOLIOS.get(model) if not is_active else None
+            if shadow_ptf_id:
+                model_payload = _build_shadow_model_payload(payload, picks, shadow_ptf_id, SHADOW_MAX_CANDS)
+            elif is_active:
+                model_payload = payload
+            else:
+                model_payload = _trim_payload_candidates(payload, SHADOW_MAX_CANDS)
+            raw, data, in_tok, out_tok, latency = _call_model_batched(model_payload, model, run_id)
+            json_valid = data is not None
             cost = compute_cost(model, in_tok, out_tok)
             print(f"{latency:.0f}ms  ${cost:.5f}  {in_tok}+{out_tok}tok", end="  ")
 
@@ -1186,8 +1434,8 @@ def run(force: bool = False, apply: bool = False) -> None:
                 except Exception as exc2:
                     error = f"primary={exc}; fallback={exc2}"
 
-        v       = validate_model_response(data, payload, json_valid)
-        quality = compute_quality_score(data, v, payload)
+        v       = validate_model_response(data, model_payload, json_valid)
+        quality = compute_quality_score(data, v, model_payload)
         print(f"q={quality}/100  viol={v.hard_rule_violations}")
 
         is_valid_run = v.schema_valid and v.hard_rule_violations == 0
@@ -1228,6 +1476,22 @@ def run(force: bool = False, apply: bool = False) -> None:
             elif not v.schema_valid:  reasons.append("schema_invalid")
             else:                     reasons.append(f"{v.hard_rule_violations} violations")
             print(f"  [{model_used}] ACTIVE -> portfolio NOT updated ({', '.join(reasons)})")
+        elif shadow_ptf_id and data and is_valid_run:
+            if force and not apply:
+                n_sel = len(data.get("selected", []))
+                print(f"  [{model_used}] SHADOW {shadow_ptf_id} -> {n_sel} picks NOT applied (forced run without --apply)")
+            else:
+                picks, changes = update_portfolio(picks, data, cand_pcs,
+                                                  allowed_portfolios=VALID_SHADOW_PORTFOLIOS)
+                shadow_updated = True
+                n_sel = len(data.get("selected", []))
+                print(f"  [{model_used}] SHADOW {shadow_ptf_id} -> {n_sel} picks applied")
+        elif shadow_ptf_id:
+            reasons = []
+            if not json_valid:        reasons.append("json_invalid")
+            elif not v.schema_valid:  reasons.append("schema_invalid")
+            else:                     reasons.append(f"{v.hard_rule_violations} violations")
+            print(f"  [{model_used}] SHADOW {shadow_ptf_id} -> NOT updated ({', '.join(reasons)})")
 
     if reasoning_by_model:
         _write_json(DATA / "ai_model_reasoning.json", {
@@ -1238,7 +1502,7 @@ def run(force: bool = False, apply: bool = False) -> None:
         })
         print("  ai_model_reasoning.json saved")
 
-    if active_updated:
+    if active_updated or shadow_updated:
         _write_json(DATA / "ai_picks.json", picks)
         print("  ai_picks.json saved")
         # Regenerar prices_picks.json con los nuevos tickers (para sparklines inmediatos)

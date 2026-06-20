@@ -567,6 +567,13 @@ def compute_pcs(
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def run():
+    # Sincronizar universe.json con individual_stocks.yaml antes de calcular PCS
+    try:
+        from sync_universe import sync as _sync_universe
+        _sync_universe(verbose=True)
+    except Exception as _e:
+        print(f"  ⚠ sync_universe falló (continuando con universe.json actual): {_e}")
+
     universe  = _load("universe.json")
     macro_j   = _load("macro_history.json")
     rot_j     = _load("rotation_signals.json")

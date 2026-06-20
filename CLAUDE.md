@@ -352,7 +352,8 @@ El sistema ahora puede cerrar posiciones mediante `open_picks_review` en la resp
 | Modelo | Input $/M | Output $/M | Rol |
 |--------|-----------|------------|-----|
 | x-ai/grok-4.3 | 1.25 | 2.50 | Activo actual |
-| anthropic/claude-haiku-4.5 | 1.00 | 5.00 | Shadow / fallback |
+| xiaomi/mimo-v2.5-pro | 0.435 | 0.87 | Shadow / fallback (desde 2026-06-20) |
+| anthropic/claude-haiku-4.5 | 1.00 | 5.00 | Retirado como shadow |
 | anthropic/claude-sonnet-4.6 | 3.00 | 15.00 | Shadow ocasional |
 
 **ACTIVE_MODEL** se configura en GitHub Variables (`vars.ACTIVE_MODEL`). El fallback se aplica automáticamente si el modelo activo falla.
