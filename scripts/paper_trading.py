@@ -946,17 +946,30 @@ def _log_shadow_picks(
 # ── Portfolio updater (active model only) ──────────────────────────────────────
 
 def _get_entry_price(ticker: str) -> float | None:
-    """Lee el último cierre disponible del parquet raw del ticker."""
+    """Último cierre disponible: parquet si es reciente (<5d), yfinance si está obsoleto."""
     try:
         import pandas as pd
         ticker_safe = ticker.replace("^", "").replace("=", "").replace(".", "")
         path = ROOT / "backtest" / "data" / "raw" / f"yahoo_{ticker_safe}.parquet"
-        if not path.exists():
+        stale_cutoff = pd.Timestamp.now() - pd.Timedelta(days=5)
+        if path.exists():
+            df = pd.read_parquet(path, columns=["Close"]).dropna()
+            if not df.empty:
+                df.index = pd.to_datetime(df.index)
+                if df.index[-1] >= stale_cutoff:
+                    return round(float(df["Close"].iloc[-1]), 2)
+        # Parquet obsoleto o inexistente → yfinance
+        import yfinance as yf
+        hist = yf.download(ticker, period="5d", interval="1d",
+                           auto_adjust=True, progress=False)
+        if hist.empty:
             return None
-        df = pd.read_parquet(path, columns=["Close"]).dropna()
-        if df.empty:
+        if hasattr(hist.columns, "get_level_values"):
+            hist.columns = hist.columns.get_level_values(0)
+        closes = hist["Close"].dropna()
+        if closes.empty:
             return None
-        return round(float(df["Close"].iloc[-1]), 2)
+        return round(float(closes.iloc[-1]), 2)
     except Exception:
         return None
 
