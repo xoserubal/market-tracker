@@ -279,8 +279,30 @@ theme_exposure = {
 
 ### Semana 3 (≈2026-05-28)
 - ✅ `scripts/update_performance.py`: implementado (2026-05-27). Rellena ret_1d/3d/1w/2w/1m/3m + vs_spy_1m + max_gain_1m + max_drawdown_1m en shadow_picks.jsonl. Se ejecuta automáticamente en cada run del pipeline (Step 10b). Ver detalles abajo.
-- Comparativa picks seleccionados vs baselines.jsonl por run_id  ← pendiente (bloqueada hasta tener ret_1m en picks con ≥21 trading days de historial, ~2026-06-09)
-- Análisis spike_flag: ¿evita trampas o saca de los mejores movimientos?  ← pendiente mismo bloqueante
+- ✅ Comparativa picks vs baselines + análisis spike_flag + simulación EXIT: implementado (2026-06-22). Script: `scripts/compare_vs_baselines.py`. Resultados: `docs/data/baseline_comparison.json`. Ver hallazgos abajo.
+
+### Comparativa vs baselines — compare_vs_baselines.py (implementado 2026-06-22)
+
+Compara picks activos del modelo vs baselines mecánicas y simula señales de EXIT.
+
+**Uso:**
+```bash
+py -3 scripts/compare_vs_baselines.py              # descarga precios frescos + análisis completo
+py -3 scripts/compare_vs_baselines.py --no-fetch   # usa cache de precios (_baseline_price_cache.json)
+py -3 scripts/compare_vs_baselines.py --save-cache # guarda precios para --no-fetch futuro
+```
+
+**Hallazgos 2026-06-22** (13 picks activos con ret_1m, periodo 2026-05-08 al 2026-05-19):
+- AI avg ret_1m = -8.8% vs baseline top-PCS = -5.0% → AI underperformed en overall (-3.8%)
+- Win rate por run: 5/8 = 62% vs top-PCS (gana la mayoría de runs, pero las pérdidas son más grandes)
+- HIGH_CONVICTION: avg +7.2% (mejor portfolio), CONFIRMED_FLOW_LEADERS: avg -19.4%
+- **spike_flag**: 1 pick con spike=True → -28.9%; 12 sin spike → -4.9%. Evitar spikes habría mejorado +24.1%
+- **EXIT simulation**: 4/13 picks habrían tenido señal de EXIT. Exiting early habría mejorado avg +7.2% en esos picks
+- **Limitación**: EXIT simulation solo cubre tickers que reaparecieron en payloads posteriores (top-15 candidatos); tickers que salieron del universo no tienen historial PCS/rot_score
+
+**Salida:** `docs/data/baseline_comparison.json` (machine-readable con todos los datos)
+
+---
 
 ### Performance tracking — update_performance.py (implementado 2026-05-27)
 
