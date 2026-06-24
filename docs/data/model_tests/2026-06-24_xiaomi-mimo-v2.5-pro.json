@@ -1,0 +1,259 @@
+{
+  "run_id": "2026-06-24_1048",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-06-24",
+  "summary": {
+    "date": "2026-06-24",
+    "run_id": "2026-06-24_1048",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 27,
+    "input_tokens": 21871,
+    "output_tokens": 18631,
+    "cost_usd": 0.025723,
+    "latency_ms": 450077.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 3,
+    "quality_score": 70,
+    "selected_count": 1,
+    "watch_count": 10,
+    "rejected_count": 16,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [
+      "SELECT CLS: not in candidates",
+      "SELECT CLS: not eligible",
+      "SELECT CLS: PCS 0.0 below MIMO_SHADOW minimum (68.0)"
+    ],
+    "soft_warnings": []
+  },
+  "quality_score": 70,
+  "response": {
+    "date": "2026-06-24",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-06-24_1048",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with weekly macro delta improving (+2.08) though monthly trend still negative (-7.92), supporting selective entries in names with broad daily leadership and low extension risk.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "CLS",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "42% 13w outperformance with 8 consecutive daily leadership days and zero extension risk",
+        "reason_full": "CLS posts 42.2% 13w outperformance with 4-week streak, 8 consecutive SPY outperformance days — broadest daily leadership in set. momentum_accel=true with dems 13 and extension_risk low. Selected over CVE (PCS=81, rot=4, 1w streak, spike) whose weekly metrics are far weaker.",
+        "comparative_edge": "Selected over CVE (PCS=81, rot=4, streak=1w, spike=true) because CLS has rot 7 vs 4, a 4-week streak vs 1 week, and 8-day consecutive outperformance (outperform_d8=8) vs CVE's 3-day breadth — all without CVE's spike_flag risk.",
+        "key_supporting_factors": [
+          "8 consecutive days of SPY outperformance (outperform_d8=8) without spike_flag confirms robust institutional breadth unmatched in the candidate set.",
+          "42.2% 13-week outperformance with 4-week building streak demonstrates sustained accumulation exceeding one month.",
+          "momentum_accel=true with dems=13 confirms escalating daily inflow while extension_risk remains low with zero extension points."
+        ],
+        "key_risks_or_contradictions": [
+          "dems=13 sits in the 10-13 marginal WATCH zone; daily momentum alone would not justify selection without the weekly breadth support.",
+          "4-week streak is shorter than portfolio peers NBIS, SLS, CAT, and HUM all at 8 weeks, so weekly confirmation is less mature.",
+          "Semiconductor subsector theme carries moderate system-wide concentration risk across the broader portfolio."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "SLS",
+        "reason": "Already held as open MIMO_SHADOW position with PCS 81.8, rot 9, and 8-week streak; confirmed open in open_picks_review as HOLD.",
+        "watch_trigger": "Already open; see open_picks_review for position management."
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Already held as open MIMO_SHADOW position with PCS 81.0, rot 8, 8-week streak; confirmed open in open_picks_review as HOLD.",
+        "watch_trigger": "Already open; see open_picks_review for position management."
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "dems=18 is very high but rotation score only 3 with 1-week streak; weekly signal nearly broken despite daily surge.",
+        "watch_trigger": "rotation_score rising above 5 with at least 3 consecutive weekly streak"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS=81 and dems=15 are attractive but rot=4, 1-week streak, and spike_flag=true point to fragile leadership.",
+        "watch_trigger": "streak extending to 3+ weeks with spike_flag clearing and rotation rising above 6"
+      },
+      {
+        "ticker": "LQDA",
+        "reason": "6-week streak with rot=7 is solid but dems=10 with no acceleration and outperform_d5=3 shows narrow daily breadth.",
+        "watch_trigger": "dems rising above 12 with momentum_accel=true broadening daily outperformance"
+      },
+      {
+        "ticker": "ONTO",
+        "reason": "dems=15 with 4 consecutive outperformance days but streak_weeks=0 indicates recent weekly break; not yet investable.",
+        "watch_trigger": "weekly streak rebuilding above 2 weeks while dems stays above 13"
+      },
+      {
+        "ticker": "ULCXF.TO",
+        "reason": "5-week streak with rot=7 but in recent -2.2% pullback with deceleration_flag; needs stabilization.",
+        "watch_trigger": "pullback stabilizing with dems rising above 14 and acceleration clearing"
+      },
+      {
+        "ticker": "MARA",
+        "reason": "dems=14 with 7-day breadth but spike_flag=true and extension medium weaken the entry setup.",
+        "watch_trigger": "spike_flag clearing with multi-day outperformance confirming without single-session dominance"
+      },
+      {
+        "ticker": "CEIX",
+        "reason": "2-week streak with rot=6 and dems=14; leadership immaturity at only 2 weeks requires patience.",
+        "watch_trigger": "streak extending to 4+ weeks with breadth widening and rotation above 7"
+      },
+      {
+        "ticker": "CMRE",
+        "reason": "dems=16 is very high but weekly rotation collapsed from 8 to 4 indicating demotion; recent 1.98% pullback adds uncertainty.",
+        "watch_trigger": "rotation_score recovering above 6 with weekly streak rebuilding and pullback ending"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "ARRY",
+        "reason": "rot=5 with 1-week streak and spike_flag=true despite dems=14; insufficient weekly foundation.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "IGHG",
+        "reason": "streak_weeks=0 with rot=4 and dems=4; weekly leadership completely broken with no daily signal.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "UAA",
+        "reason": "dems=5 and recent -4.3% 5d pullback with rot=7 but momentum clearly fading.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "INFY",
+        "reason": "dems=4 and only 3.5% 13w outperformance despite 3-week streak; signal is marginal at best.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "extension_risk high with 4 points and recent -9.3% 5d pullback despite 5-week streak.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "TSLA",
+        "reason": "streak_weeks=0 with rot=4 and recent -4% 1d pullback; weekly signal just broke lower.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "PLTR",
+        "reason": "rotation_score=1 is the lowest possible despite dems=16; weekly signal completely absent.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "FLR",
+        "reason": "streak_weeks=0 with rot=5 and negative 3d, 5d, 10d returns; fresh weekly breakdown.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "NEM",
+        "reason": "ret_5d=-3.4% and ret_10d=-3.7% despite 1-week streak; active pullback undermines signal.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SRAD",
+        "reason": "PCS=67.5 below portfolio entry threshold of 68; not eligible for MIMO_SHADOW entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "SMR",
+        "reason": "PCS=66.5 below threshold and ret_10d=-12% with streak_weeks=0; zero support.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "FSM",
+        "reason": "PCS=64.0 below threshold with streak_weeks=0 and rot=4; momentum fully collapsed.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "RDNT",
+        "reason": "PCS=64.2 below threshold with streak_weeks=0 and rot=3; weekly signal absent.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "ANET",
+        "reason": "PCS=63.8 below threshold with rot=3 and ret_10d=-10%; both signals poor.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "SB",
+        "reason": "PCS=63.5 below threshold of 68 despite 28% 13w track record; not eligible for entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "REGN",
+        "reason": "PCS=62.0 below threshold with rot=5 and only 2-week streak; insufficient entry conviction.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "NBIS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 87.8, rot 8, 8-week streak with 26% 4w outperformance; dominant leader holding strong."
+      },
+      {
+        "ticker": "SASK.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 84, rot 9, streak improved from 2 to 3 weeks with 7.9% 4w outperformance building momentum."
+      },
+      {
+        "ticker": "CAT",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 81.2, rot 9, 8-week streak with dems=16 and momentum_accel=true; broadening daily outperformance."
+      },
+      {
+        "ticker": "AMD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85, rot 8, 8-week streak with 144% 13w outperformance; highest sustained weekly leader."
+      },
+      {
+        "ticker": "GS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 81, rot 9, streak extended from 6 to 7 weeks with 12.2% 4w outperformance building cleanly."
+      },
+      {
+        "ticker": "AFM.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 69.8, rot 10 (highest), streak improved from 2 to 3 weeks; silver miners diversification intact."
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 81, rot 8, 8-week streak with 19.2% 4w outperformance and 100% 13w outperformance; top healthcare leader."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 81.8, rot 9, 8-week streak with dems=17 and 21% 4w outperformance; acceleration intact."
+      },
+      {
+        "ticker": "NUE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 73.5 above 68 threshold, rot 7 above 2, and 8-week streak intact despite recent 5d underperformance."
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-06-24\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-06-24_1048\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with weekly macro delta improving (+2.08) though monthly trend still negative (-7.92), supporting selective entries in names with broad daily leadership and low extension risk.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"CLS\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"42% 13w outperformance with 8 consecutive daily leadership days and zero extension risk\",\n      \"reason_full\": \"CLS posts 42.2% 13w outperformance with 4-week streak, 8 consecutive SPY outperformance days — broadest daily leadership in set. momentum_accel=true with dems 13 and extension_risk low. Selected over CVE (PCS=81, rot=4, 1w streak, spike) whose weekly metrics are far weaker.\",\n      \"comparative_edge\": \"Selected over CVE (PCS=81, rot=4, streak=1w, spike=true) because CLS has rot 7 vs 4, a 4-week streak vs 1 week, and 8-day consecutive outperformance (outperform_d8=8) vs CVE's 3-day breadth — all without CVE's spike_flag risk.\",\n      \"key_supporting_factors\": [\n        \"8 consecutive days of SPY outperformance (outperform_d8=8) without spike_flag confirms robust institutional breadth unmatched in the candidate set.\",\n        \"42.2% 13-week outperformance with 4-week building streak demonstrates sustained accumulation exceeding one month.\",\n        \"momentum_accel=true with dems=13 confirms escalating daily inflow while extension_risk remains low with zero extension points.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"dems=13 sits in the 10-13 marginal WATCH zone; daily momentum alone would not justify selection without the weekly breadth support.\",\n        \"4-week streak is shorter than portfolio peers NBIS, SLS, CAT, and HUM all at 8 weeks, so weekly confirmation is less mature.\",\n "
+}
