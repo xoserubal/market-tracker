@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-06-24_1048",
+  "run_id": "2026-06-24_2122",
   "model": "x-ai/grok-4.3",
   "date": "2026-06-24",
   "summary": {
     "date": "2026-06-24",
-    "run_id": "2026-06-24_1048",
+    "run_id": "2026-06-24_2122",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 27,
-    "input_tokens": 42537,
-    "output_tokens": 4916,
-    "cost_usd": 0.065461,
-    "latency_ms": 39304.0,
+    "candidate_count": 26,
+    "input_tokens": 41342,
+    "output_tokens": 5395,
+    "cost_usd": 0.065165,
+    "latency_ms": 32544.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
     "quality_score": 90,
     "selected_count": 0,
-    "watch_count": 7,
-    "rejected_count": 5,
+    "watch_count": 10,
+    "rejected_count": 4,
     "fallback_used": false,
     "error": null
   },
@@ -32,10 +32,10 @@
   "quality_score": 90,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-06-24_1048",
+    "run_id": "2026-06-24_2122",
     "date": "2026-06-24",
     "decision_summary": {
-      "market_read": "Bull Maduro Improving regime with macro_score 77 but deteriorating 1m delta supports selective rotation only into non-concentrated names.",
+      "market_read": "Bull Maduro Improving macro with high concentration risk across us_tech_ai, healthcare_special, argentina and uranium_nuclear at 28-38% weights.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
@@ -43,65 +43,75 @@
     "watch": [
       {
         "ticker": "CVS",
-        "reason": "83.5 PCS and 8-week streak in low-concentration healthcare_largecap; dems 7 and high extension_risk require further confirmation.",
-        "watch_trigger": "dems rise above 10 with momentum_accel true and extension_points drop below 3"
+        "reason": "PCS 83.5 with 8-week streak but dems only 7 and spike_flag true creates entry timing uncertainty amid high healthcare concentration.",
+        "watch_trigger": "dems rising above 12 with momentum_accel confirmed and rot_score sustained at 8+"
+      },
+      {
+        "ticker": "URI",
+        "reason": "PCS 78.0 and 5-week streak but dems 3 too low for EARLY_ROTATION confirmation and us_cyclical already at 19% weight.",
+        "watch_trigger": "dems climbing above 10 with outperform_d10 >=6"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 76.2 with 8-week streak but dems 5 provides insufficient daily momentum versus higher-dems peers in healthcare_largecap.",
+        "watch_trigger": "dems advancing to 12+ with ret_5d_vs_spy turning positive"
       },
       {
         "ticker": "SE",
-        "reason": "73.5 PCS with rot_score jump to 6 and dems 13 but pcs below CONFIRMED threshold and streak_weeks only 1.",
-        "watch_trigger": "streak_weeks reaches 3 and ret_13w_vs_spy exceeds 15 percent"
+        "reason": "PCS 73.5 with dems 15 and outperform_d10=6 but only 1-week streak and china_em theme lacks established portfolio exposure.",
+        "watch_trigger": "streak_weeks reaching 3+ while maintaining dems >=14"
       },
       {
         "ticker": "LLY",
-        "reason": "72.2 PCS crossed threshold in low-concentration healthcare but streak_weeks 1 and dems 5 offer weak weekly support.",
-        "watch_trigger": "streak_weeks reaches 3 with ret_4w_vs_spy above 15 percent"
+        "reason": "PCS 72.2 with 1-week streak and dems 6 insufficient for selection despite healthcare_largecap low concentration.",
+        "watch_trigger": "streak_weeks to 3+ and rot_score to 8+"
       },
       {
         "ticker": "ABBV",
-        "reason": "74.5 PCS and dems 13 with momentum_accel but streak_weeks 1 and high extension_risk limit conviction.",
-        "watch_trigger": "streak_weeks reaches 3 and extension_points fall to 1 or less"
+        "reason": "PCS 74.5 but only 1-week streak and spike_flag true despite dems 12 and low healthcare_largecap concentration.",
+        "watch_trigger": "streak_weeks extending to 3+ without spike_flag"
+      },
+      {
+        "ticker": "SUPV",
+        "reason": "PCS 71.2 with 5-week streak and rot_score 10 but argentina theme already at 30% weight and extension_risk low yet concentration high.",
+        "watch_trigger": "argentina weight dropping below 20%"
+      },
+      {
+        "ticker": "SAIA",
+        "reason": "PCS 71.0 with negative ret_4w_vs_spy and 0-week streak signals insufficient relative strength for selection.",
+        "watch_trigger": "ret_4w_vs_spy turning positive with streak_weeks >=2"
       },
       {
         "ticker": "VRTX",
-        "reason": "67.0 PCS in healthcare_largecap with dems 13 but ret_13w_vs_spy negative and streak_weeks only 2.",
-        "watch_trigger": "ret_13w_vs_spy turns positive above 10 percent with streak_weeks reaching 4"
-      },
-      {
-        "ticker": "JNJ",
-        "reason": "62.2 PCS with rot_score jump to 6 yet rot_score remains below confirmed thresholds and ret_13w_vs_spy near zero.",
-        "watch_trigger": "rot_score exceeds 8 and ret_4w_vs_spy exceeds 12 percent"
+        "reason": "PCS 67.0 with dems 15 but only 2-week streak and ret_13w_vs_spy negative at -8.4% versus stronger healthcare peers.",
+        "watch_trigger": "ret_13w_vs_spy turning positive with streak_weeks >=3"
       },
       {
         "ticker": "LOMA",
-        "reason": "PCS 62.0 meets minimum but falls below EARLY_ROTATION 70 and CONFIRMED_FLOW_LEADERS 78 thresholds with only dems 10 and moderate ret_13w_vs_spy 0.95.",
-        "watch_trigger": "PCS crossing 70 with rot_score sustained above 7 and dems above 13 would support EARLY_ROTATION consideration."
+        "reason": "pcs 62.0 meets minimum PCS filter but already held in CONFIRMED_FLOW_LEADERS with current_pcs now below entry threshold; monitor for rotation score recovery above 8 or streak extension.",
+        "watch_trigger": "rot_score >=8 and current_pcs rebound above 68 with streak continuation >=6 weeks"
       }
     ],
     "rejected": [
       {
-        "ticker": "URI",
-        "reason": "78.0 PCS but dems 4 and ret_10d_vs_spy negative with only 5-week streak vs stronger peers.",
+        "ticker": "SMCI",
+        "reason": "PCS 76.5 but 0-week streak, ret_10d_vs_spy -19.89 and spike_flag true indicate broken momentum.",
         "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "SMCI",
-        "reason": "76.5 PCS with zero streak_weeks and ret_10d_vs_spy -23.75 percent shows broken momentum.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "UNH",
-        "reason": "76.2 PCS but dems 7 and ret_5d_vs_spy only 2.13 percent with no standout edge over HUM.",
+        "ticker": "HIMS",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; do not reselect.",
         "rejection_category": "better_alternative_available"
       },
       {
-        "ticker": "SUPV",
-        "reason": "71.2 PCS in high-concentration argentina theme with ret_5d_vs_spy -7.8 percent.",
-        "rejection_category": "macro_conflict"
+        "ticker": "GGAL",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; do not reselect.",
+        "rejection_category": "better_alternative_available"
       },
       {
-        "ticker": "SAIA",
-        "reason": "71.0 PCS with zero streak_weeks, negative ret_4w_vs_spy and rot_score only 4.",
-        "rejection_category": "insufficient_conviction"
+        "ticker": "BBAR",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; do not reselect.",
+        "rejection_category": "better_alternative_available"
       }
     ],
     "open_picks_review": [
@@ -109,105 +119,99 @@
         "ticker": "NBIS",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "current_pcs 87.8 exceeds 82 and streak_weeks 8 with rot 8"
+        "reason": "current_pcs 87.8 above min, streak_weeks 8 and rot_score 8 confirm sustained leadership"
       },
       {
         "ticker": "OSCR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 76.5 exceeds 75 and streak_weeks 8 with rot 7"
+        "reason": "current_pcs 76.5 above min, streak_weeks 8 and rot_score 7 confirm ongoing flow"
       },
       {
         "ticker": "BBAR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 75.2 meets 75 and streak_weeks 6 with rot 10"
+        "reason": "current_pcs 75.2 at min, streak_weeks 6 and rot_score 10 support continuation"
       },
       {
         "ticker": "LOMA",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 62.0 below 75 yet streak_weeks 5 exceeds 1 and rot 7"
+        "reason": "current_pcs 62.0 below min but streak_weeks 5 and rot_score 7 exceed exit thresholds"
       },
       {
         "ticker": "GGAL",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 71.2 below 75 yet streak_weeks 5 exceeds 1 and rot 10"
-      },
-      {
-        "ticker": "QQQ",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "EXIT",
-        "reason": "current_pcs 57 below 75 and streak_weeks 0 meets exit rule"
+        "reason": "current_pcs 71.2 below min but streak_weeks 5 and rot_score 10 exceed exit thresholds"
       },
       {
         "ticker": "TDOC",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 84 exceeds 75 and streak_weeks 8 with rot 9"
+        "reason": "current_pcs 84.0 above min, streak_weeks 8 and rot_score 9 confirm sustained leadership"
       },
       {
         "ticker": "HIMS",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 80 exceeds 75 and streak_weeks 5 with rot 7"
+        "reason": "current_pcs 80.0 above min, streak_weeks 5 and rot_score 7 confirm flow"
       },
       {
         "ticker": "SASK.V",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 84 exceeds 75 and streak_weeks 3 with rot 9"
+        "reason": "current_pcs 84.0 above min, streak_weeks 3 and rot_score 9 confirm rotation"
       },
       {
         "ticker": "ASPI",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 81.8 exceeds 75 and streak_weeks 5 with rot 9"
+        "reason": "current_pcs 81.8 above min, streak_weeks 5 and rot_score 9 confirm leadership"
       },
       {
         "ticker": "CAT",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 81.2 exceeds 68 and streak_weeks 8 with rot 9"
+        "reason": "current_pcs 81.2 above min, streak_weeks 8 and rot_score 9 confirm multi-day breadth"
       },
       {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 85 exceeds 68 and streak_weeks 8 with rot 8"
+        "reason": "current_pcs 85.0 above min, streak_weeks 8 and rot_score 8 confirm dominant 13w lead"
       },
       {
         "ticker": "GS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 81 exceeds 68 and streak_weeks 7 with rot 9"
+        "reason": "current_pcs 81.0 above min, streak_weeks 7 and rot_score 9 confirm low-extension entry"
       },
       {
         "ticker": "AFM.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 69.8 exceeds 68 and streak_weeks 3 with rot 10"
+        "reason": "current_pcs 69.8 above min, streak_weeks 3 and rot_score 10 confirm highest rotation score"
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 81 exceeds 68 and streak_weeks 8 with rot 8"
+        "reason": "current_pcs 81.0 above min, streak_weeks 8 and rot_score 8 confirm 98% 13w outperformance"
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 81.8 exceeds 68 and streak_weeks 8 with rot 9"
+        "reason": "current_pcs 81.8 above min, streak_weeks 8 and rot_score 9 confirm highest dems without spike"
       },
       {
         "ticker": "NUE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 73.5 exceeds 68 and streak_weeks 8 with rot 7"
+        "reason": "current_pcs 73.5 above min, streak_weeks 8 and rot_score 7 confirm 8-week consistency"
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-06-24\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-24_1048\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with macro_score 77 but deteriorating 1m delta supports selective rotation only into non-concentrated names.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CVS\",\n      \"reason\": \"83.5 PCS and 8-week streak in low-concentration healthcare_largecap; dems 7 and high extension_risk require further confirmation.\",\n      \"watch_trigger\": \"dems rise above 10 with momentum_accel true and extension_points drop below 3\"\n    },\n    {\n      \"ticker\": \"SE\",\n      \"reason\": \"73.5 PCS with rot_score jump to 6 and dems 13 but pcs below CONFIRMED threshold and streak_weeks only 1.\",\n      \"watch_trigger\": \"streak_weeks reaches 3 and ret_13w_vs_spy exceeds 15 percent\"\n    },\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"72.2 PCS crossed threshold in low-concentration healthcare but streak_weeks 1 and dems 5 offer weak weekly support.\",\n      \"watch_trigger\": \"streak_weeks reaches 3 with ret_4w_vs_spy above 15 percent\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"74.5 PCS and dems 13 with momentum_accel but streak_weeks 1 and high extension_risk limit conviction.\",\n      \"watch_trigger\": \"streak_weeks reaches 3 and extension_points fall to 1 or less\"\n    },\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"67.0 PCS in healthcare_largecap with dems 13 but ret_13w_vs_spy negative and streak_weeks only 2.\",\n      \"watch_trigger\": \"ret_13w_vs_spy turns positive above 10 percent with streak_weeks reaching 4\"\n    },\n    {\n      \"ticker\": \"JNJ\",\n      \"reason\": \"62.2 PCS with rot_score jump to 6 yet rot_score remains below confirmed thresholds and ret_13w_vs_spy near zero.\",\n      \"watch_trigger\": \"rot_score exceeds 8 and ret_4w_vs_spy exceeds 12 percent\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"78.0 PCS but dems 4 and re"
+  "raw_response_head": "{\n  \"date\": \"2026-06-24\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-24_2122\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving macro with high concentration risk across us_tech_ai, healthcare_special, argentina and uranium_nuclear at 28-38% weights.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CVS\",\n      \"reason\": \"PCS 83.5 with 8-week streak but dems only 7 and spike_flag true creates entry timing uncertainty amid high healthcare concentration.\",\n      \"watch_trigger\": \"dems rising above 12 with momentum_accel confirmed and rot_score sustained at 8+\"\n    },\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"PCS 78.0 and 5-week streak but dems 3 too low for EARLY_ROTATION confirmation and us_cyclical already at 19% weight.\",\n      \"watch_trigger\": \"dems climbing above 10 with outperform_d10 >=6\"\n    },\n    {\n      \"ticker\": \"UNH\",\n      \"reason\": \"PCS 76.2 with 8-week streak but dems 5 provides insufficient daily momentum versus higher-dems peers in healthcare_largecap.\",\n      \"watch_trigger\": \"dems advancing to 12+ with ret_5d_vs_spy turning positive\"\n    },\n    {\n      \"ticker\": \"SE\",\n      \"reason\": \"PCS 73.5 with dems 15 and outperform_d10=6 but only 1-week streak and china_em theme lacks established portfolio exposure.\",\n      \"watch_trigger\": \"streak_weeks reaching 3+ while maintaining dems >=14\"\n    },\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"PCS 72.2 with 1-week streak and dems 6 insufficient for selection despite healthcare_largecap low concentration.\",\n      \"watch_trigger\": \"streak_weeks to 3+ and rot_score to 8+\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"PCS 74.5 but only 1-week streak and spike_flag true despite dems 12 and low healthcare_largecap concentration.\",\n      \"watch_trigger\": \"streak_weeks extending to 3+ without spike_flag\"\n    },\n    {\n      \"ticker\": \"SUPV\",\n      \"reason\": \"PCS 71.2 with 5-week streak and rot_score 10 but"
 }
