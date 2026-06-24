@@ -52,9 +52,11 @@ const MACRO_ITEMS = [
     fmt: v=>v.toFixed(1),             dFmt: d=>(d>0?"+":"")+d.toFixed(1),          dSign:-1 },
   { id:"dxy",  name:"Dollar Index (DXY)",     src:"Yahoo", type:"dxy",       fetch:"yahoo", ticker:"DX-Y.NYB",
     fmt: v=>v.toFixed(1),             dFmt: d=>(d>0?"+":"")+d.toFixed(2),          dSign:0  },
-  { id:"tnx",  name:"10Y Treasury Yield",     src:"Yahoo", type:"yield",     fetch:"yahoo", ticker:"^TNX",
+  { id:"tnx",  name:"10Y Treasury Yield",     src:"Yahoo", type:"yield_10y",  fetch:"yahoo", ticker:"^TNX",
     fmt: v=>v.toFixed(2)+"%",         dFmt: d=>(d>0?"+":"")+d.toFixed(2)+"%",      dSign:0  },
-  { id:"irx",  name:"3M T-Bill Yield",        src:"Yahoo", type:"yield",     fetch:"yahoo", ticker:"^IRX",
+  { id:"dfii10",name:"10Y TIPS Real Yield",   src:"FRED",  type:"real_yield_10y", fetch:"fred", series:"DFII10",
+    fmt: v=>v.toFixed(2)+"%",         dFmt: d=>(d>0?"+":"")+d.toFixed(2)+"%",      dSign:0  },
+  { id:"irx",  name:"3M T-Bill Yield",        src:"Yahoo", type:"short_rate", fetch:"yahoo", ticker:"^IRX",
     fmt: v=>v.toFixed(2)+"%",         dFmt: d=>(d>0?"+":"")+d.toFixed(2)+"%",      dSign:0  },
   // FRED — 1-day lag
   { id:"c3m",  name:"Yield Curve (10Y–3M)",   src:"FRED",  type:"curve_pct", fetch:"fred",  series:"T10Y3M",
@@ -70,25 +72,51 @@ const MACRO_ITEMS = [
   { id:"pmi",  name:"Prod. Industrial (INDPRO)", src:"FRED",  type:"pmi",       fetch:"fred",  series:"INDPRO", monthly:true,
     fmt: v=>v.toFixed(1),             dFmt: d=>(d>0?"+":"")+d.toFixed(2),          dSign:1  },
   // Liquidez global
-  { id:"m2",   name:"US M2 Money Supply",     src:"FRED",  type:"m2",        fetch:"fred",  series:"WM2NS",
+  { id:"m2",   name:"US M2 Money Supply",     src:"FRED",  type:"m2",        fetch:"fred",  series:"WM2NS", weekly:true,
     fmt: v=>`${(v/1000).toFixed(1)}T`,  dFmt: d=>(d>0?"+":"")+`${(d/1000).toFixed(2)}T`,  dSign:1 },
-  { id:"walcl",name:"Fed Balance Sheet",      src:"FRED",  type:"fed_bs",    fetch:"fred",  series:"WALCL",
+  { id:"walcl",name:"Fed Balance Sheet",      src:"FRED",  type:"fed_bs",    fetch:"fred",  series:"WALCL",  weekly:true,
     fmt: v=>`${(v/1e6).toFixed(2)}T`,   dFmt: d=>(d>0?"+":"")+`${(d/1e6).toFixed(3)}T`,  dSign:1 },
   { id:"netliq",name:"Fed Net Liquidity*",    src:"FRED",  type:"net_liq",   fetch:"fred3", series:["WALCL","RRPONTSYD","WTREGEN"],
     fmt: v=>`${(v/1e6).toFixed(2)}T`,   dFmt: d=>(d>0?"+":"")+`${(d/1e6).toFixed(3)}T`,  dSign:1 },
 ];
 
 const STATUS = {
-  vix:       v => v<15?['Complacencia','#c8e6c9','#1b5e20']:v<20?['Calma','#dcedc8','#33691e']:v<25?['Cautela','#fff9c4','#e65100']:v<35?['Estrés','#ffe0b2','#bf360c']:['Pánico','#ffcdd2','#b71c1c'],
-  hy_spread: v => { const b=v*100; return b<300?['Spreads comprimidos','#c8e6c9','#1b5e20']:b<400?['Normal','#f0f0f0','#555']:b<600?['Spreads ampliándose','#ffe0b2','#bf360c']:['Crisis de crédito','#ffcdd2','#b71c1c']; },
-  ig_spread: v => { const b=v*100; return b<80?['Muy comprimido','#c8e6c9','#1b5e20']:b<130?['Normal','#f0f0f0','#555']:b<200?['Stress leve','#ffe0b2','#bf360c']:['Stress elevado','#ffcdd2','#b71c1c']; },
-  curve_pct: v => v>1?['Empinada – expansión','#c8e6c9','#1b5e20']:v>0?['Normal','#f0f0f0','#555']:v>-0.5?['Aplanada','#fff9c4','#e65100']:v>-1?['Invertida – ciclo tardío','#ffe0b2','#bf360c']:['Invertida – riesgo recesión','#ffcdd2','#b71c1c'],
-  pmi:       v => v>103?['Expansión fuerte','#c8e6c9','#1b5e20']:v>100?['Expansión','#dcedc8','#33691e']:v>=98?['Contracción leve','#fff9c4','#e65100']:['Contracción','#ffcdd2','#b71c1c'],
-  breakeven: v => v<2?['Riesgo deflación','#e3f2fd','#1565c0']:v<2.5?['Inflación controlada','#c8e6c9','#1b5e20']:v<3?['Inflación elevada','#ffe0b2','#bf360c']:['Riesgo stagflación','#ffcdd2','#b71c1c'],
-  net_liq:   v => v>7e6?['Liquidez abundante','#c8e6c9','#1b5e20']:v>5.5e6?['Liquidez normal','#f0f0f0','#555']:v>4e6?['Liquidez ajustada','#ffe0b2','#bf360c']:['Liquidez restringida','#ffcdd2','#b71c1c'],
-  m2:        v => null,
-  fed_bs:    v => null,
-  dxy:       () => null,
+  vix:        v => v<15?['Complacencia','#c8e6c9','#1b5e20']:v<20?['Calma','#dcedc8','#33691e']:v<25?['Cautela','#fff9c4','#e65100']:v<35?['Estrés','#ffe0b2','#bf360c']:['Pánico','#ffcdd2','#b71c1c'],
+  hy_spread:  v => { const b=v*100; return b<300?['Spreads comprimidos','#c8e6c9','#1b5e20']:b<400?['Normal','#f0f0f0','#555']:b<600?['Spreads ampliándose','#ffe0b2','#bf360c']:['Crisis de crédito','#ffcdd2','#b71c1c']; },
+  ig_spread:  v => { const b=v*100; return b<80?['Muy comprimido','#c8e6c9','#1b5e20']:b<130?['Normal','#f0f0f0','#555']:b<200?['Stress leve','#ffe0b2','#bf360c']:['Stress elevado','#ffcdd2','#b71c1c']; },
+  curve_pct:  v => v>1?['Empinada – expansión','#c8e6c9','#1b5e20']:v>0?['Normal','#f0f0f0','#555']:v>-0.5?['Aplanada','#fff9c4','#e65100']:v>-1?['Invertida – ciclo tardío','#ffe0b2','#bf360c']:['Invertida – riesgo recesión','#ffcdd2','#b71c1c'],
+  pmi:        v => v>103?['Expansión fuerte','#c8e6c9','#1b5e20']:v>100?['Expansión','#dcedc8','#33691e']:v>=98?['Contracción leve','#fff9c4','#e65100']:['Contracción','#ffcdd2','#b71c1c'],
+  breakeven:  v => v<2?['Riesgo deflación','#e3f2fd','#1565c0']:v<2.5?['Inflación controlada','#c8e6c9','#1b5e20']:v<3?['Inflación elevada','#ffe0b2','#bf360c']:['Riesgo stagflación','#ffcdd2','#b71c1c'],
+  net_liq:    v => v>7e6?['Liquidez abundante','#c8e6c9','#1b5e20']:v>5.5e6?['Liquidez normal','#f0f0f0','#555']:v>4e6?['Liquidez ajustada','#ffe0b2','#bf360c']:['Liquidez restringida','#ffcdd2','#b71c1c'],
+  yield_10y:      v => v<3.0?['Tipos largos bajos','#e3f2fd','#1565c0']:v<4.0?['Tipos largos normales','#f0f0f0','#555']:v<4.75?['Tipos largos restrictivos','#fff9c4','#e65100']:['Estrés por tipos largos','#ffe0b2','#bf360c'],
+  real_yield_10y: v => v<0?['Tipos reales acomodaticios','#c8e6c9','#1b5e20']:v<1.0?['Tipos reales neutros','#f0f0f0','#555']:v<2.0?['Tipos reales restrictivos','#fff9c4','#e65100']:['Tipos reales muy restrictivos','#ffe0b2','#bf360c'],
+  short_rate: v => v<2.5?['Política acomodaticia','#e3f2fd','#1565c0']:v<3.5?['Política neutral','#f0f0f0','#555']:v<4.75?['Política restrictiva','#fff9c4','#e65100']:['Política muy restrictiva','#ffe0b2','#bf360c'],
+  dxy: (v, dW, dM) => {
+    if (v == null) return null;
+    if (v >= 106) return dM > 0 ? ['Dólar muy fuerte y subiendo','#ffcdd2','#b71c1c'] : ['Dólar muy fuerte, moderando','#fff9c4','#e65100'];
+    if (v >= 100) return dM > 1 ? ['Dólar fuerte y subiendo','#fff9c4','#e65100']    : ['Dólar fuerte','#fff3e0','#e65100'];
+    if (v >=  95) return ['Dólar neutral','#f0f0f0','#555'];
+    return ['Dólar débil','#c8e6c9','#1b5e20'];
+  },
+  m2: (v, dW, dM, dY) => {
+    if (v == null || dY == null) return null;
+    const prev = v - dY; if (!prev) return null;
+    const yoy = (dY / prev) * 100;
+    return yoy > 6  ? ['Expansión M2 fuerte','#c8e6c9','#1b5e20']
+         : yoy > 2  ? ['Expansión M2 moderada','#dcedc8','#33691e']
+         : yoy > -2 ? ['M2 estable','#f0f0f0','#555']
+         : yoy > -6 ? ['Contracción M2','#fff9c4','#e65100']
+                    : ['Contracción M2 severa','#ffcdd2','#b71c1c'];
+  },
+  fed_bs: (v, dW, dM, dY) => {
+    if (v == null || dY == null) return null;
+    const prev = v - dY; if (!prev) return null;
+    const yoy = (dY / prev) * 100;
+    return yoy > 3  ? ['Balance Fed expandiéndose','#c8e6c9','#1b5e20']
+         : yoy > -3 ? ['Balance Fed estable','#f0f0f0','#555']
+         : yoy > -8 ? ['Balance Fed contrayéndose','#fff9c4','#e65100']
+                    : ['Contracción fuerte del balance','#ffe0b2','#bf360c'];
+  },
 };
 
 // ── Equity sections ──────────────────────────────────────────────────────
@@ -248,35 +276,37 @@ const buildMarkdown = (macroData, rows, manualPrices, autoPrices, prevSnapshot={
 
   // Macro section
   md += `## MACRO / INDICADORES DE CICLO\n`;
-  md += `| Indicador | Fuente | Valor | Δ 1S | Δ 1M | Δ 1A | Estado |\n`;
-  md += `|-----------|--------|------:|-----:|-----:|-----:|--------|\n`;
+  md += `| Indicador | Fuente | Valor | Δ 1S | Δ 1M | Δ 3M | Δ 6M | Δ 1A | Lectura macro |\n`;
+  md += `|-----------|--------|------:|-----:|-----:|-----:|-----:|-----:|--------------|\n`;
   MACRO_ITEMS.forEach(item => {
     const d  = macroData[item.id];
     const cur = d ? (item.fetch==='yahoo'?d.price:d.current) : null;
     const dW  = cur!=null&&d?.v1w!=null ? cur-d.v1w : null;
     const dM  = cur!=null&&d?.v1m!=null ? cur-d.v1m : null;
+    const dM3 = cur!=null&&d?.v3m!=null ? cur-d.v3m : null;
+    const dM6 = cur!=null&&d?.v6m!=null ? cur-d.v6m : null;
     const dY  = cur!=null&&d?.v1y!=null ? cur-d.v1y : null;
-    const st  = cur!=null&&STATUS[item.type] ? STATUS[item.type](cur) : null;
-    md += `| ${item.name} | ${item.src} | ${cur!=null?item.fmt(cur):'—'} | ${dW!=null?item.dFmt(dW):'—'} | ${dM!=null?item.dFmt(dM):'—'} | ${dY!=null?item.dFmt(dY):'—'} | ${st?st[0]:'—'} |\n`;
+    const st  = cur!=null&&STATUS[item.type] ? STATUS[item.type](cur, dW, dM, dY) : null;
+    md += `| ${item.name} | ${item.src} | ${cur!=null?item.fmt(cur):'—'} | ${dW!=null?item.dFmt(dW):'—'} | ${dM!=null?item.dFmt(dM):'—'} | ${dM3!=null?item.dFmt(dM3):'—'} | ${dM6!=null?item.dFmt(dM6):'—'} | ${dY!=null?item.dFmt(dY):'—'} | ${st?st[0]:'—'} |\n`;
   });
   md += '\n';
 
   // Equity sections
-  md += `## MERCADOS\n_Columnas: Precio | 52W Low% | 52W High% | 1D | 1W | 1M | YTD | 1Y | 3Y | RSI | MACD | ATR% | Konc | Flow | Clase | Early | EarlyClase_\n\n`;
+  md += `## MERCADOS\n_Columnas: Precio | 52W Low% | 52W High% | 1D | 1W | 1M | 3M | 6M | YTD | 1Y | 3Y | RSI | MACD | ATR% | Konc | Flow | Clase | Early | EarlyClase_\n\n`;
   SECTIONS.forEach(sec => {
     md += `### ${sec.id}\n`;
-    md += `| Nombre | Ticker | Precio | 52W Low | 52W High | 1D | 1W | 1M | YTD | 1Y | 3Y | RSI | MACD | ATR% | Konc | Flow | Clase | Early | EarlyClase |\n`;
-    md += `|--------|--------|-------:|--------:|---------:|---:|---:|---:|----:|---:|---:|----:|:----:|-----:|:----|-----:|:------|------:|:-----------|\n`;
+    md += `| Nombre | Ticker | Precio | 52W Low | 52W High | 1D | 1W | 1M | 3M | 6M | YTD | 1Y | 3Y | RSI | MACD | ATR% | Konc | Flow | Clase | Early | EarlyClase |\n`;
+    md += `|--------|--------|-------:|--------:|---------:|---:|---:|---:|---:|---:|----:|---:|---:|----:|:----:|-----:|:----|-----:|:------|------:|:-----------|\n`;
     sec.items.forEach(({name,ticker}) => {
       const d = rows[ticker];
-      if (!d) { md += `| ${name} | ${ticker} | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |\n`; return; }
+      if (!d) { md += `| ${name} | ${ticker} | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |\n`; return; }
       const macdStr = d.macdBull==null ? '—' : d.macdBull ? '▲' : '▼';
       const fs = computeFlowScore(d);
       const fc = classifyFlow(fs);
       const snap = prevSnapshot[ticker] ?? null;
       const es = computeEarlyFlowScore(d, snap);
       const ec = classifyEarlyFlow(es);
-      md += `| ${name} | ${ticker} | ${fmtPrc(d.price)} | ${fmtRet(d.fromLow)} | ${fmtRet(d.fromHigh)} | ${fmtRet(d.d1)} | ${fmtRet(d.w1)} | ${fmtRet(d.m1)} | ${fmtRet(d.ytd)} | ${fmtRet(d.y1)} | ${fmtRet(d.y3)} | ${d.rsi??'—'} | ${macdStr} | ${d.atrPct!=null?d.atrPct+'%':'—'} | ${d.konSignal??'—'} | ${fs!=null?fs:'—'} | ${fc??'—'} | ${es!=null?es:'—'} | ${ec??'—'} |\n`;
+      md += `| ${name} | ${ticker} | ${fmtPrc(d.price)} | ${fmtRet(d.fromLow)} | ${fmtRet(d.fromHigh)} | ${fmtRet(d.d1)} | ${fmtRet(d.w1)} | ${fmtRet(d.m1)} | ${fmtRet(d.m3)} | ${fmtRet(d.m6)} | ${fmtRet(d.ytd)} | ${fmtRet(d.y1)} | ${fmtRet(d.y3)} | ${d.rsi??'—'} | ${macdStr} | ${d.atrPct!=null?d.atrPct+'%':'—'} | ${d.konSignal??'—'} | ${fs!=null?fs:'—'} | ${fc??'—'} | ${es!=null?es:'—'} | ${ec??'—'} |\n`;
     });
     // Spread row
     if (sec.spreadRow) {
@@ -428,7 +458,7 @@ function MacroPulse({ macroData, macroLoading }) {
       <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
         <thead>
           <tr style={{background:'#2c3e50'}}>
-            <th colSpan={7} style={{padding:'5px 10px',color:'white',textAlign:'left',fontSize:11,letterSpacing:'0.5px'}}>
+            <th colSpan={9} style={{padding:'5px 10px',color:'white',textAlign:'left',fontSize:11,letterSpacing:'0.5px'}}>
               MACRO / CYCLE INDICATORS
               <span style={{marginLeft:10,fontSize:9,color:'#95a5a6',fontWeight:'normal'}}>
                 Yahoo Finance (real-time) · FRED (1-day lag, requiere API key gratuita)
@@ -436,13 +466,13 @@ function MacroPulse({ macroData, macroLoading }) {
             </th>
           </tr>
           <tr style={{background:'#34495e',borderBottom:'2px solid #2c3e50'}}>
-            {['Indicador','Fuente','Valor actual','Δ 1 semana','Δ 1 mes','Δ 1 año','Estado del ciclo'].map((h,i) => (
+            {['Indicador','Fuente','Valor actual','Δ 1 semana','Δ 1 mes','Δ 3 meses','Δ 6 meses','Δ 1 año','Lectura macro'].map((h,i) => (
               <th key={h} style={{
-                padding:'3px '+(i===0||i===6?'10px':'5px'),
+                padding:'3px '+(i===0||i===8?'10px':'5px'),
                 color:'white', fontWeight:400, fontSize:10,
-                textAlign: i===0?'left':i===2||i===6?'center':'center',
+                textAlign: i===0?'left':'center',
                 borderRight: i===2?'1px solid rgba(255,255,255,0.15)':'none',
-                width: i===0?'190px':i===1?'55px':i===2?'95px':i===6?'auto':'75px',
+                width: i===0?'190px':i===1?'55px':i===2?'95px':i===8?'auto':'75px',
               }}>{h}</th>
             ))}
           </tr>
@@ -454,8 +484,10 @@ function MacroPulse({ macroData, macroLoading }) {
             const cur    = d ? (item.fetch==='yahoo'?d.price:d.current) : null;
             const dW     = cur!=null&&d?.v1w!=null ? cur-d.v1w : null;
             const dM     = cur!=null&&d?.v1m!=null ? cur-d.v1m : null;
+            const dM3    = cur!=null&&d?.v3m!=null ? cur-d.v3m : null;
+            const dM6    = cur!=null&&d?.v6m!=null ? cur-d.v6m : null;
             const dY     = cur!=null&&d?.v1y!=null ? cur-d.v1y : null;
-            const st     = cur!=null&&STATUS[item.type] ? STATUS[item.type](cur) : null;
+            const st     = cur!=null&&STATUS[item.type] ? STATUS[item.type](cur, dW, dM, dY) : null;
             const rowBg  = i%2===0?'white':'#f9f9f9';
 
             const DC = ({delta, sign, monthly}) => {
@@ -479,8 +511,10 @@ function MacroPulse({ macroData, macroLoading }) {
                   {isLoad ? dot : cur!=null ? item.fmt(cur) : <span style={{color:'#e74c3c',fontSize:9}}>sin clave FRED</span>}
                 </td>
                 <DC delta={item.monthly?null:dW} sign={item.dSign} />
-                <DC delta={dM} sign={item.dSign} monthly={false} />
-                <DC delta={dY} sign={item.dSign} monthly={false} />
+                <DC delta={dM}  sign={item.dSign} />
+                <DC delta={dM3} sign={item.dSign} />
+                <DC delta={dM6} sign={item.dSign} />
+                <DC delta={dY}  sign={item.dSign} />
                 <td style={{
                   padding:'3px 10px',textAlign:'center',borderBottom:'1px solid #eee',
                   background:st?st[1]:'transparent', color:st?st[2]:'#aaa',
@@ -550,7 +584,7 @@ function MarketTracker() {
           ? `/api/quote/${encodeURIComponent(item.ticker)}`
           : item.fetch==='fred3'
           ? `/api/fred3?s=${item.series.join(',')}`
-          : `/api/fred/${item.series}${item.monthly?'?monthly=1':''}`;
+          : `/api/fred/${item.series}${item.monthly?'?monthly=1':item.weekly?'?weekly=1':''}`;
         const r = await fetch(url);
         const d = await r.json();
         if (d.error) throw new Error(d.error);
@@ -705,7 +739,7 @@ function MarketTracker() {
           <tr style={{background:'#4a6fa5'}}>
             <th colSpan={3} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Overview</th>
             <th colSpan={2} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>52W Low / High</th>
-            <th colSpan={6} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Returns</th>
+            <th colSpan={8} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Returns</th>
             <th colSpan={4} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,borderRight:'1px solid rgba(255,255,255,0.25)'}}>Momentum</th>
             <th colSpan={2} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,background:'#2e4a30',borderRight:'1px solid rgba(255,255,255,0.15)'}}>Flow Score</th>
             <th colSpan={1} style={{padding:'4px 6px',color:'white',textAlign:'center',fontSize:10,background:'#1a2e6e'}}>Early</th>
@@ -720,6 +754,8 @@ function MarketTracker() {
               { label:'1D',            tip: "Retorno del último día de trading." },
               { label:'1W',            tip: "Retorno de los últimos 5 días de trading." },
               { label:'1M',            tip: "Retorno de los últimos 21 días de trading." },
+              { label:'3M',            tip: "Retorno de los últimos 63 días de trading." },
+              { label:'6M',            tip: "Retorno de los últimos 126 días de trading." },
               { label:'YTD',           tip: "Retorno desde el 1 de enero del año en curso." },
               { label:'1Y',            tip: "Retorno de los últimos 252 días de trading." },
               { label:'3Y',            tip: "Retorno de los últimos 756 días de trading." },
@@ -733,8 +769,8 @@ function MarketTracker() {
             ].map(({label, tip}, i) => (
               <th key={label} data-tip={tip ?? undefined} style={{padding:'3px 5px',color:'white',fontWeight:400,fontSize:10,
                 textAlign:i<2?'left':'center',
-                borderRight:[2,4,10,14].includes(i)?'1px solid rgba(255,255,255,0.2)':'none',
-                background:i>=17?'#1a2e6e':i>=15?'#2e4a30':'inherit'}}>{label}</th>
+                borderRight:[2,4,12,16].includes(i)?'1px solid rgba(255,255,255,0.2)':'none',
+                background:i>=19?'#1a2e6e':i>=17?'#2e4a30':'inherit'}}>{label}</th>
             ))}
           </tr>
         </thead>
@@ -742,7 +778,7 @@ function MarketTracker() {
           {SECTIONS.map(sec=>(
             <React.Fragment key={sec.id}>
               <tr>
-                <td colSpan={18} style={{padding:'3px 8px',fontWeight:'bold',fontSize:'9.5px',
+                <td colSpan={20} style={{padding:'3px 8px',fontWeight:'bold',fontSize:'9.5px',
                   letterSpacing:'0.8px',
                   color: sec.energySection ? '#1a5276' : '#c0392b',
                   background: sec.energySection ? '#eaf4fb' : '#f0f0f0',
@@ -766,6 +802,8 @@ function MarketTracker() {
                     <C v={d?.d1}  isLoad={isLoad}/>
                     <C v={d?.w1}  isLoad={isLoad}/>
                     <C v={d?.m1}  isLoad={isLoad}/>
+                    <C v={d?.m3}  isLoad={isLoad}/>
+                    <C v={d?.m6}  isLoad={isLoad}/>
                     <C v={d?.ytd} isLoad={isLoad}/>
                     <C v={d?.y1}  isLoad={isLoad}/>
                     <C v={d?.y3}  isLoad={isLoad}/>
@@ -848,7 +886,7 @@ function MarketTracker() {
                     <td colSpan={2} style={{padding:'3px 8px',fontWeight:700,fontSize:10,color:'#6c3483',borderBottom:'1px solid #e0d0f0'}}>
                       uranium_regime_score
                     </td>
-                    <td colSpan={16} style={{padding:'3px 8px',borderBottom:'1px solid #e0d0f0',background: u?u.bg:'#f5f5f5', color: u?u.fg:'#999', fontWeight:700, fontSize:11}}>
+                    <td colSpan={18} style={{padding:'3px 8px',borderBottom:'1px solid #e0d0f0',background: u?u.bg:'#f5f5f5', color: u?u.fg:'#999', fontWeight:700, fontSize:11}}>
                       {!allLoaded
                         ? <span style={{color:'#ccc',fontSize:10}}>···</span>
                         : `${u.score}/5 — ${u.label}` + (u.pts.length ? `  ·  ${u.pts.join(' · ')}` : '')}
@@ -868,7 +906,7 @@ function MarketTracker() {
                     <td colSpan={2} style={{padding:'3px 8px',fontWeight:700,fontSize:10,color:'#1a5276',borderBottom:'1px solid #d0e8f0'}}>
                       {sec.spreadRow.label}
                     </td>
-                    <td colSpan={16} style={{padding:'3px 8px',borderBottom:'1px solid #d0e8f0',fontWeight:700,fontSize:11,
+                    <td colSpan={18} style={{padding:'3px 8px',borderBottom:'1px solid #d0e8f0',fontWeight:700,fontSize:11,
                       color: spread==null ? '#999' : spread > 0 ? '#1a5276' : '#7b241c'}}>
                       {bothLoad ? <span style={{color:'#ccc',fontSize:10}}>···</span> : spreadFmt ?? '—'}
                     </td>
@@ -941,6 +979,8 @@ function MarketTracker() {
                     {blankCell(false)}{/* 1D */}
                     <C v={dW} isLoad={isAutoLoad && !hasManual} />{/* 1W */}
                     <C v={dM} isLoad={isAutoLoad && !hasManual} />{/* 1M */}
+                    {blankCell(false)}{/* 3M */}
+                    {blankCell(false)}{/* 6M */}
                     {blankCell(false)}{/* YTD */}
                     {blankCell(false)}{/* 1Y */}
                     {blankCell(false)}{/* 3Y */}

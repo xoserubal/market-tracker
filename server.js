@@ -239,11 +239,11 @@ app.get("/api/quote/:symbol", async (req, res) => {
       fromLow:  pct(price, w52Low),
       fromHigh: pct(price, w52High),
       d1: ret(1), d2: ret(2), d3: ret(3),
-      w1: ret(5), m1: ret(21), m3: ret(63),
+      w1: ret(5), m1: ret(21), m3: ret(63), m6: ret(126),
       ytd: ytdIdx >= 0 ? pct(price, closes[ytdIdx]) : null,
       y1: ret(252), y3: ret(756),
       // Valores absolutos históricos (para deltas macro)
-      v1w: absAt(5), v1m: absAt(21), v1y: absAt(252),
+      v1w: absAt(5), v1m: absAt(21), v3m: absAt(63), v6m: absAt(126), v1y: absAt(252),
       // Volumen vs media 3 meses
       vol1d: volPct(0), vol2d: volPct(1), vol3d: volPct(2),
       // RSI, MACD, ATR, Koncorde
@@ -316,7 +316,8 @@ app.get("/api/fred/:series", async (req, res) => {
   if (!key) return res.status(400).json({ error: "FRED_API_KEY no configurada en .env" });
 
   const isMonthly = req.query.monthly === "1";
-  const cacheKey = `${req.params.series}:${isMonthly}`;
+  const isWeekly  = req.query.weekly  === "1";
+  const cacheKey = `${req.params.series}:${isMonthly}:${isWeekly}`;
   const seriesId = req.params.series;
 
   try {
@@ -332,10 +333,11 @@ app.get("/api/fred/:series", async (req, res) => {
         series:  seriesId,
         current: val(0),
         date:    obs[0]?.date,
-        v1w: isMonthly ? null    : val(5),
-        v1m: isMonthly ? val(1)  : val(21),
-        v3m: isMonthly ? val(3)  : val(65),
-        v1y: isMonthly ? val(12) : val(252),
+        v1w: isWeekly ? val(1)  : isMonthly ? null    : val(5),
+        v1m: isWeekly ? val(4)  : isMonthly ? val(1)  : val(21),
+        v3m: isWeekly ? val(13) : isMonthly ? val(3)  : val(65),
+        v6m: isWeekly ? val(26) : isMonthly ? val(6)  : val(130),
+        v1y: isWeekly ? val(52) : isMonthly ? val(12) : val(252),
       };
     });
     res.json(result);
@@ -411,7 +413,8 @@ app.get("/api/fred3", async (req, res) => {
       date:    combined[0].date,
       v1w:  val(1),
       v1m:  val(4),
-      v13w: val(13),
+      v3m:  val(13),
+      v6m:  val(26),
       v1y:  val(52),
     };
     fredCacheSet(cacheKey, result);  // cache the combined result too
