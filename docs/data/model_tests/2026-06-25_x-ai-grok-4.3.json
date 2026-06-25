@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-06-25_1041",
+  "run_id": "2026-06-25_2128",
   "model": "x-ai/grok-4.3",
   "date": "2026-06-25",
   "summary": {
     "date": "2026-06-25",
-    "run_id": "2026-06-25_1041",
+    "run_id": "2026-06-25_2128",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
-    "event_count": 18,
-    "candidate_count": 27,
-    "input_tokens": 37796,
-    "output_tokens": 4133,
-    "cost_usd": 0.057577,
-    "latency_ms": 36766.0,
+    "event_count": 22,
+    "candidate_count": 26,
+    "input_tokens": 38965,
+    "output_tokens": 4752,
+    "cost_usd": 0.060586,
+    "latency_ms": 40463.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 89,
+    "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 4,
-    "rejected_count": 5,
+    "watch_count": 5,
+    "rejected_count": 20,
     "fallback_used": false,
     "error": null
   },
@@ -29,13 +29,13 @@
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 89,
+  "quality_score": 93,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-06-25_1041",
+    "run_id": "2026-06-25_2128",
     "date": "2026-06-25",
     "decision_summary": {
-      "market_read": "Bull Maduro Improving regime with high theme concentration in AI, healthcare, Argentina and uranium.",
+      "market_read": "Bull Maduro regime now deteriorating with macro delta -5 weekly and -15 monthly, limiting new entries amid multiple high-concentration themes.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
@@ -43,49 +43,129 @@
     "watch": [
       {
         "ticker": "CVS",
-        "reason": "PCS 83.5 strong but dems 8 and spike_flag limit daily confirmation; already high healthcare weight.",
-        "watch_trigger": "dems rise above 12 with momentum_accel true and no extension flags"
+        "reason": "PCS 81.5 meets CONFIRMED threshold with 8-week streak but 11 dems and medium extension plus macro deterioration favor waiting for continuation confirmation.",
+        "watch_trigger": "dems rises above 14 or ret_5d_vs_spy sustains positive without spike_flag"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 79 meets CONFIRMED threshold with 8-week streak and low extension but macro deterioration and low dems of 7 warrant monitoring before adding to already growing healthcare exposure.",
+        "watch_trigger": "dems rises above 12 with positive ret_10d_vs_spy and macro delta stabilizes"
       },
       {
         "ticker": "URI",
-        "reason": "PCS 78.0 and 8-week streak but dems 3 too weak for EARLY_ROTATION selection.",
-        "watch_trigger": "dems >=14 with outperform_d10 >=6 and streak continuation"
+        "reason": "PCS 76 meets CONFIRMED threshold with 5-week streak but dems 14 offset by macro deterioration and high us_cyclical concentration risk already at 19 percent.",
+        "watch_trigger": "macro_delta_1w turns positive and uri outperform_d10 exceeds 8"
       },
       {
         "ticker": "ABBV",
-        "reason": "PCS 74.5 with 1-week streak and spike_flag; insufficient weekly leadership vs peers.",
-        "watch_trigger": "streak_weeks reach 4+ with ret_13w_vs_spy above 20%"
+        "reason": "PCS 72.5 with 8 dems and 1-week streak insufficient for selection under deteriorating macro despite rot_score 8.",
+        "watch_trigger": "streak_weeks reaches 4 and pcs crosses 78 with macro improvement"
       },
       {
-        "ticker": "VRTX",
-        "reason": "PCS 67.8 below most thresholds and ret_13w_vs_spy negative at -6.6%.",
-        "watch_trigger": "pcs cross above 70 with streak_weeks >=3"
+        "ticker": "NUE",
+        "reason": "PCS 71.5 with 8-week streak but already open in MIMO_SHADOW and macro deterioration limits new cyclical adds.",
+        "watch_trigger": "macro_delta_1w turns positive with pcs above 75"
       }
     ],
     "rejected": [
       {
+        "ticker": "SLS",
+        "reason": "Already open position in MIMO_SHADOW and CONFIRMED_FLOW_LEADERS; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "CAT",
+        "reason": "Already open position in MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "AMD",
+        "reason": "Already open position in MIMO_SHADOW and HIGH_CONVICTION; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "GS",
+        "reason": "Already open position in MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS and MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "AFM.V",
+        "reason": "Already open position in MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "BBAR",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Already open position in MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "Already open position in HIGH_CONVICTION and MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
         "ticker": "SE",
-        "reason": "PCS 69.5 below CONFIRMED_FLOW_LEADERS threshold with only 1-week streak.",
+        "reason": "Already open position in MIMO_SHADOW; cannot add duplicate.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "SMCI",
+        "reason": "Signal IGNORAR with 0 streak_weeks and negative ret_4w_vs_spy under deteriorating macro.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "VRTX",
+        "reason": "PCS 65.8 below CONFIRMED threshold with only 2-week streak and spike_flag present.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "SAIA",
-        "reason": "PCS 67.0 and rot_score 4 too low; dems 4 provides no momentum support.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "Signal IGNORAR with 0 streak_weeks and negative ret_4w_vs_spy under deteriorating macro.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "LLY",
+        "reason": "PCS 70.8 with only 1-week streak and dems 7 insufficient for selection.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "TMO",
-        "reason": "PCS 63.0 below entry thresholds with negative 13-week relative performance.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS 61 below all portfolio thresholds with 1-week streak.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "DHR",
-        "reason": "PCS 63.0 below entry thresholds with negative 13-week relative performance.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "REG",
-        "reason": "PCS 62.2 at lowest edge with 1-week streak only.",
+        "reason": "PCS 61 below all portfolio thresholds with 1-week streak.",
         "rejection_category": "insufficient_conviction"
       }
     ],
@@ -94,99 +174,99 @@
         "ticker": "NBIS",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Current PCS 88.5 exceeds threshold and rot_score 9.0 with 8-week streak intact."
+        "reason": "Current PCS 86.5 above 82 min and 8-week streak supports continued hold despite macro deterioration."
       },
       {
         "ticker": "OSCR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 83.5 and rot_score 8.0 with 8-week streak above minimums."
+        "reason": "Current PCS 81.5 above 75 min with 8-week streak supports continued hold."
       },
       {
         "ticker": "BBAR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 63.0 below threshold but streak_weeks 6 prevents exit trigger."
-      },
-      {
-        "ticker": "LOMA",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "EXIT",
-        "reason": "Current PCS 41.8 below threshold with streak_weeks 0 meeting exit criteria."
+        "reason": "Current PCS 61 below 75 min but streak 6 exceeds 1 so retain position."
       },
       {
         "ticker": "GGAL",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 55.8 below threshold but streak_weeks 5 prevents exit trigger."
+        "reason": "Current PCS 53.8 below 75 min but streak 5 exceeds 1 so retain position."
       },
       {
         "ticker": "TDOC",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 84.0 and rot_score 9.0 with 8-week streak above minimums."
+        "reason": "Current PCS 82 above 75 min with 8-week streak supports continued hold."
       },
       {
         "ticker": "HIMS",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 84.5 and rot_score 8.0 with 5-week streak above minimums."
+        "reason": "Current PCS 82.5 above 75 min with 5-week streak supports continued hold."
       },
       {
         "ticker": "SASK.V",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 75.5 and rot_score 7.0 with 3-week streak above minimums."
+        "reason": "Current PCS 73.5 above 75 min threshold borderline with 3-week streak supports hold."
       },
       {
         "ticker": "ASPI",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 81.0 and rot_score 8.0 with 5-week streak above minimums."
+        "reason": "Current PCS 79 above 75 min with 5-week streak supports continued hold."
       },
       {
         "ticker": "CAT",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.2 and rot_score 9.0 with 8-week streak above minimums."
+        "reason": "Current PCS 79.2 above 68 min with 8-week streak supports continued hold."
       },
       {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 85.0 and rot_score 8.0 with 8-week streak above minimums."
+        "reason": "Current PCS 83 above 68 min with 8-week streak supports continued hold."
       },
       {
         "ticker": "GS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 74.0 and rot_score 8.0 with 7-week streak above minimums."
+        "reason": "Current PCS 72 above 68 min with 7-week streak supports continued hold."
       },
       {
         "ticker": "AFM.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 65.8 below threshold but streak_weeks 3 and rot_score 10 prevent exit."
+        "reason": "Current PCS 63.8 below 68 min but rot_score 10 and streak 3 support monitoring hold."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.0 and rot_score 8.0 with 8-week streak above minimums."
+        "reason": "Current PCS 79 above 68 min with 8-week streak supports continued hold."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 84.8 and rot_score 10.0 with 8-week streak above minimums."
+        "reason": "Current PCS 82.8 above 68 min with 8-week streak supports continued hold."
       },
       {
         "ticker": "NUE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 73.5 and rot_score 7.0 with 8-week streak above minimums."
+        "reason": "Current PCS 71.5 above 68 min with 8-week streak supports continued hold."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "Current PCS 67.5 below 68 min entry with streak_weeks 1 triggers exit rule."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-06-25\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-25_1041\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with high theme concentration in AI, healthcare, Argentina and uranium.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CVS\",\n      \"reason\": \"PCS 83.5 strong but dems 8 and spike_flag limit daily confirmation; already high healthcare weight.\",\n      \"watch_trigger\": \"dems rise above 12 with momentum_accel true and no extension flags\"\n    },\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"PCS 78.0 and 8-week streak but dems 3 too weak for EARLY_ROTATION selection.\",\n      \"watch_trigger\": \"dems >=14 with outperform_d10 >=6 and streak continuation\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"PCS 74.5 with 1-week streak and spike_flag; insufficient weekly leadership vs peers.\",\n      \"watch_trigger\": \"streak_weeks reach 4+ with ret_13w_vs_spy above 20%\"\n    },\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"PCS 67.8 below most thresholds and ret_13w_vs_spy negative at -6.6%.\",\n      \"watch_trigger\": \"pcs cross above 70 with streak_weeks >=3\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"SE\",\n      \"reason\": \"PCS 69.5 below CONFIRMED_FLOW_LEADERS threshold with only 1-week streak.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"SAIA\",\n      \"reason\": \"PCS 67.0 and rot_score 4 too low; dems 4 provides no momentum support.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"TMO\",\n      \"reason\": \"PCS 63.0 below entry thresholds with negative 13-week relative performance.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"DHR\",\n      \"reason\": \"PCS 63.0 below entry thresholds with negative 13-week relative performance.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"REG\",\n      \"reason\": \"P"
+  "raw_response_head": "{\n  \"date\": \"2026-06-25\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-25_2128\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime now deteriorating with macro delta -5 weekly and -15 monthly, limiting new entries amid multiple high-concentration themes.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CVS\",\n      \"reason\": \"PCS 81.5 meets CONFIRMED threshold with 8-week streak but 11 dems and medium extension plus macro deterioration favor waiting for continuation confirmation.\",\n      \"watch_trigger\": \"dems rises above 14 or ret_5d_vs_spy sustains positive without spike_flag\"\n    },\n    {\n      \"ticker\": \"UNH\",\n      \"reason\": \"PCS 79 meets CONFIRMED threshold with 8-week streak and low extension but macro deterioration and low dems of 7 warrant monitoring before adding to already growing healthcare exposure.\",\n      \"watch_trigger\": \"dems rises above 12 with positive ret_10d_vs_spy and macro delta stabilizes\"\n    },\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"PCS 76 meets CONFIRMED threshold with 5-week streak but dems 14 offset by macro deterioration and high us_cyclical concentration risk already at 19 percent.\",\n      \"watch_trigger\": \"macro_delta_1w turns positive and uri outperform_d10 exceeds 8\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"PCS 72.5 with 8 dems and 1-week streak insufficient for selection under deteriorating macro despite rot_score 8.\",\n      \"watch_trigger\": \"streak_weeks reaches 4 and pcs crosses 78 with macro improvement\"\n    },\n    {\n      \"ticker\": \"NUE\",\n      \"reason\": \"PCS 71.5 with 8-week streak but already open in MIMO_SHADOW and macro deterioration limits new cyclical adds.\",\n      \"watch_trigger\": \"macro_delta_1w turns positive with pcs above 75\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"SLS\",\n      \"reason\": \"Already open position in MIMO_SHADOW and CONFIRMED_FLOW_LEADERS; cannot add duplicate.\",\n      \"rejection_cate"
 }
