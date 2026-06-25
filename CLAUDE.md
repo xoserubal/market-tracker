@@ -20,6 +20,7 @@ scripts/pcs_calculator.py     → Pick Conviction Score (91 tickers)
 scripts/event_detector.py     → detecta eventos de señal
 scripts/update_performance.py → rellena ret_* en shadow_picks.jsonl (yfinance)
 scripts/paper_trading.py      → llama a los modelos IA → picks
+scripts/force_analyze.py      → análisis forzado de cualquier ticker por los modelos (manual)
 scripts/notify_telegram.py         → notificaciones de picks + recordatorios
 scripts/telegram_portfolio_bot.py  → comandos Telegram para Portfolio Tracker
 scripts/build_eval_bundle.py       → bundle para evaluador externo
@@ -117,6 +118,56 @@ Macro = permiso de riesgo             → todas las carteras
 | `docs/data/ai_model_payloads/` | Payload exacto enviado al modelo por fecha |
 | `docs/data/reminders.json` | Recordatorios programados → Telegram |
 | `docs/data/eval_bundle_latest.json` | Bundle para evaluador externo (generado con build_eval_bundle.py) |
+
+---
+
+## Force Analyze — análisis ad-hoc de cualquier ticker (implementado 2026-06-25)
+
+Script: `scripts/force_analyze.py`. Documentación completa: `wiki/FORCE_ANALYZE_AUDIT.md`.
+
+Dos modos principales:
+
+### Modo análisis (force_analyze normal)
+
+Pide a uno o varios modelos que analicen un ticker con los datos actuales de `ai_candidates.json`.
+
+```bash
+py -3 scripts/force_analyze.py NVDA                                    # modelo activo
+py -3 scripts/force_analyze.py SMCI --compare-portfolio all            # contrasta vs cartera
+py -3 scripts/force_analyze.py CORZ --compare-portfolio HIGH_CONVICTION
+py -3 scripts/force_analyze.py MSTR --all-models --save
+py -3 scripts/force_analyze.py TSLA --models grok mimo
+```
+
+Aliases de modelo: `grok`, `mimo`, `haiku`, `sonnet` (o IDs completos de OpenRouter).
+Portfolios: `HIGH_CONVICTION`, `CONFIRMED_FLOW_LEADERS`, `EARLY_ROTATION`, `MACRO_THEMATIC_BENEFICIARIES`, `MIMO_SHADOW`, `all`.
+
+### Modo auditoría (--audit)
+
+Cuando grok y mimo discrepan sobre un ticker, genera un prompt árbitro con los datos exactos del pipeline (lo que ambos modelos vieron) para obtener una tercera opinión.
+
+**Exportar para copiar-pegar** (sin coste de API — pegar en Claude.ai, ChatGPT, etc.):
+```bash
+py -3 scripts/force_analyze.py SE --audit                  # run de hoy
+py -3 scripts/force_analyze.py SE --audit --date 2026-06-25 --save  # guarda .txt
+```
+
+**Llamar a un árbitro por API** (gasta créditos):
+```bash
+py -3 scripts/force_analyze.py SE --audit --models sonnet --save
+py -3 scripts/force_analyze.py SE --audit --models haiku
+```
+
+**Fuentes de datos del modo auditoría:**
+- `docs/data/ai_model_payloads/YYYY-MM-DD.json` — payload exacto enviado a los modelos
+- `docs/data/model_tests/YYYY-MM-DD_*.json` — respuestas completas de cada modelo
+
+**Salidas con `--save`:**
+- Sin `--models`: `docs/data/force_analysis/TICKER_YYYYMMDD_HHMM_audit_prompt.txt`
+- Con `--models`: `docs/data/force_analysis/TICKER_YYYYMMDD_HHMM.json`
+- Siempre actualiza: `docs/data/force_analyses.json` (log del visor del dashboard)
+
+**Dashboard:** AI Picks Lab → pestaña "Force Analysis". Las auditorías se muestran con badge morado "AUDITORÍA" y las decisiones originales de cada modelo antes del veredicto del árbitro.
 
 ---
 

@@ -1,0 +1,88 @@
+======================================================================
+  MODEL ARBITRATION — SE  (pipeline date: 2026-06-25)
+======================================================================
+
+You are an independent investment analyst acting as an ARBITRATOR.
+Two AI models analyzed the same ticker with EXACTLY the same data
+and reached OPPOSITE conclusions. Your task:
+  1. Assess the ticker using the data below (same data both models received)
+  2. Give your own verdict: SELECT, WATCH, or REJECT
+  3. Evaluate each model's reasoning critically, citing specific numbers
+  4. State which model you agree with and why
+
+──────────────────────────────────────────────────────────────────────
+MACRO CONTEXT
+──────────────────────────────────────────────────────────────────────
+Regime:      Bull Maduro (Bull Maduro Improving)
+MacroScore:  77.1  (delta_1w: +2.08%  delta_1m: -7.92%)
+Trend:       Improving
+
+──────────────────────────────────────────────────────────────────────
+TICKER DATA: SE  —  Sea Limited
+──────────────────────────────────────────────────────────────────────
+Theme:          china_em / se_asia_tech
+PCS:            69.5  (eligible: True)
+rot_score:      6.0
+streak_weeks:   1
+ret_4w_vs_spy:  +7.69%
+ret_13w_vs_spy: +5.89%
+dist_52w_high:  -53.46%
+
+DEMS (daily early momentum, 0-20): 15
+spike_flag:     False
+ret_5d_vs_spy:  +8.87%
+ret_10d_vs_spy: +9.55%
+outperform_d10: 6/10 days
+momentum_accel: True
+
+extension_risk:   low  (0 pts)
+theme_concentration_risk:    low
+subtheme_concentration_risk: low
+flags:  theme_good, rs_outperform, rot_good, macd_rsi_positive
+
+──────────────────────────────────────────────────────────────────────
+PORTFOLIO MANDATES
+──────────────────────────────────────────────────────────────────────
+HIGH_CONVICTION:              PCS >= 82, size 8-15%
+CONFIRMED_FLOW_LEADERS:       PCS >= 75, size 5-10%
+EARLY_ROTATION:               PCS >= 68, DEMS >= 14 can compensate
+                              short streak_weeks, size 4-8%
+MACRO_THEMATIC_BENEFICIARIES: PCS >= 62, size 3-6%
+MIMO_SHADOW:                  same as EARLY_ROTATION (PCS >= 68, size 3-8%)
+
+──────────────────────────────────────────────────────────────────────
+MODEL DECISIONS
+──────────────────────────────────────────────────────────────────────
+
+>>> GROK (x-ai/grok-4.3)  Q=89
+    Decision: REJECT
+    Category: insufficient_conviction
+    Reason:   PCS 69.5 below CONFIRMED_FLOW_LEADERS threshold with only 1-week streak.
+
+>>> MIMO (xiaomi/mimo-v2.5-pro)  Q=98
+    Decision: SELECT
+    Portfolio:  MIMO_SHADOW
+    Confidence: medium
+    Signal:     early_rotation
+    Short:  Daily momentum score 15 with no spike and low extension risk in low-concentration theme
+    Full:   Sea Limited exhibits a daily early momentum score of 15 with no spike flag and low extension risk, indicating clean multi-day institutional flow. Its china_em theme has low portfolio concentration risk at 8% weight, offering diversification from high-risk themes already at 30-38% weights. The 7.69% 4-week outperformance and 5.89% 13-week lead confirm emerging strength without overextension.
+    Peers:  Selected over CVS (PCS=83.5, streak_weeks=8) which has higher weekly streak but dems=8 with spike_flag=true and extension_risk=medium, while SE's dems=15 and zero spike provide superior near-term momentum and cleaner entry.
+    Supporting factors:
+      + Daily momentum score of 15 is among the highest in the candidate set with no spike confirmation.
+      + Extension risk is low with zero extension points, minimizing chase risk.
+      + Theme concentration in china_em is low at 8% portfolio weight, aiding diversification.
+      + Outperform_d10=6 confirms multi-day breadth without single-session anomalies.
+    Key risks:
+      - Weekly streak is only 1 week, shorter than CVS's 8 weeks, making the signal less mature.
+      - Ret_13w_vs_spy of 5.89% is modest compared to leaders like NBIS at 113%, indicating relative strength is emerging but not dominant.
+      - Macro regime could shift if monthly deterioration accelerates, impacting emerging market stocks.
+
+──────────────────────────────────────────────────────────────────────
+YOUR ARBITRATION
+──────────────────────────────────────────────────────────────────────
+Please respond with:
+  VERDICT:    SELECT / WATCH / REJECT
+  PORTFOLIO:  (if SELECT) which portfolio and why that tier
+  AGREES WITH: which model's reasoning is more sound
+  MODEL CRITIQUES: what each model got right and wrong (cite numbers)
+  DECISIVE FACTORS: 3-5 key factors that drove your verdict

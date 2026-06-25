@@ -248,6 +248,7 @@
     <button class="ptf-tab active" onclick="switchAISection('portfolio')">Portfolio</button>
     <button class="ptf-tab" onclick="switchAISection('abtest')">AB Test — Modelos</button>
     <button class="ptf-tab" onclick="switchAISection('reasoning')">Razonamiento</button>
+    <button class="ptf-tab" onclick="switchAISection('forceanalysis')">Force Analysis</button>
   </div>
 
   <div id="aipicks-portfolio-view">
@@ -262,6 +263,10 @@
 
   <div id="aipicks-reasoning-view" style="display:none">
     <div id="aipicks-reasoning-content"><!-- filled by renderReasoning() --></div>
+  </div>
+
+  <div id="aipicks-forceanalysis-view" style="display:none">
+    <div id="aipicks-forceanalysis-content"><!-- filled by renderForceAnalysis() --></div>
   </div>
 </div>
 
@@ -1013,14 +1018,16 @@ function modelShort(slug) {
 
 function switchAISection(id) {
   _aiSection = id;
-  document.getElementById('aipicks-portfolio-view').style.display  = id === 'portfolio'  ? '' : 'none';
-  document.getElementById('aipicks-abtest-view').style.display     = id === 'abtest'     ? '' : 'none';
-  document.getElementById('aipicks-reasoning-view').style.display  = id === 'reasoning'  ? '' : 'none';
-  const labels = { portfolio: 'Portfolio', abtest: 'AB Test — Modelos', reasoning: 'Razonamiento' };
+  document.getElementById('aipicks-portfolio-view').style.display      = id === 'portfolio'     ? '' : 'none';
+  document.getElementById('aipicks-abtest-view').style.display         = id === 'abtest'        ? '' : 'none';
+  document.getElementById('aipicks-reasoning-view').style.display      = id === 'reasoning'     ? '' : 'none';
+  document.getElementById('aipicks-forceanalysis-view').style.display  = id === 'forceanalysis' ? '' : 'none';
+  const labels = { portfolio: 'Portfolio', abtest: 'AB Test — Modelos', reasoning: 'Razonamiento', forceanalysis: 'Force Analysis' };
   document.querySelectorAll('#aipicks-section-tabs .ptf-tab').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === labels[id]);
   });
   if (id === 'abtest' && _abTestRows) renderABTest(_abTestRows);
+  if (id === 'forceanalysis' && _forceAnalysisData) renderForceAnalysis(_forceAnalysisData);
 }
 
 function renderABTest(rows) {
@@ -1263,6 +1270,178 @@ function renderReasoning(data) {
   el.innerHTML = html;
 }
 
+// ── Force Analysis viewer ─────────────────────────────────────────────────────
+let _forceAnalysisData = null;
+
+const FA_ACTION_COLOR  = { SELECT: 'var(--green)', WATCH: '#d4a520', REJECT: 'var(--red)' };
+const FA_VERDICT_COLOR = {
+  NEW_TICKER_STRONGER: 'var(--green)',
+  EXISTING_STRONGER:   'var(--red)',
+  COMPLEMENTARY:       'var(--blue)',
+  REDUNDANT:           'var(--text2)',
+};
+
+function renderForceAnalysis(analyses) {
+  _forceAnalysisData = analyses;
+  const el = document.getElementById('aipicks-forceanalysis-content');
+  if (!el) return;
+
+  if (!analyses || analyses.length === 0) {
+    el.innerHTML = `<div class="chart-box">
+      <div class="no-positions" style="padding:32px">
+        Sin análisis guardados aún.<br>
+        <span style="font-size:12px;margin-top:8px;display:block">
+          Ejecuta: <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">py -3 scripts/force_analyze.py TICKER --save</code>
+        </span>
+      </div>
+    </div>`;
+    return;
+  }
+
+  let html = `<div style="color:var(--text2);font-size:12px;margin-bottom:12px">
+    ${analyses.length} análisis guardados &nbsp;·&nbsp;
+    <code style="background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:11px">py -3 scripts/force_analyze.py TICKER [--compare-portfolio all] --save</code>
+  </div>`;
+
+  analyses.forEach(entry => {
+    const { ticker, timestamp, date, compare_portfolio, results = [], type: entryType, audit_date, model_decisions } = entry;
+    const successResults = results.filter(r => r.success);
+    const ts = (timestamp || date || '').replace('T', ' ');
+    const isAudit = entryType === 'audit';
+
+    const typeBadge = isAudit
+      ? `<span style="background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">AUDITORIA</span>`
+      : '';
+
+    html += `<div class="chart-box" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.3px">${ticker}</span>
+        ${typeBadge}
+        <span style="color:var(--text2);font-size:12px">${ts}</span>
+        ${isAudit && audit_date ? `<span style="color:var(--text2);font-size:11px">pipeline: ${audit_date}</span>` : ''}
+        ${(!isAudit && compare_portfolio)
+          ? `<span style="background:rgba(88,166,255,.12);color:var(--blue);border:1px solid rgba(88,166,255,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600">vs ${compare_portfolio}</span>`
+          : ''}
+        <span style="margin-left:auto;color:var(--text2);font-size:11px">${results.length} modelo${results.length !== 1 ? 's' : ''}</span>
+      </div>`;
+
+    // For audit entries: show what the original models decided before the arbiter's verdict
+    if (isAudit && model_decisions && model_decisions.length) {
+      const decisionColor = { SELECT: 'var(--green)', WATCH: '#d4a520', REJECT: 'var(--red)' };
+      html += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+        <span style="color:var(--text2);font-size:11px;align-self:center;text-transform:uppercase;letter-spacing:.4px">Decisiones originales:</span>
+        ${model_decisions.map(d => `
+          <span style="font-size:12px">
+            <span style="color:var(--text2)">${modelShort(d.model_id)}</span>
+            <span style="color:${decisionColor[d.decision]||'var(--text2)'};font-weight:700;margin-left:4px">${d.decision}</span>
+          </span>`).join('<span style="color:var(--border)"> · </span>')}
+      </div>`;
+    }
+
+    if (successResults.length === 0) {
+      html += `<div style="color:var(--red);font-size:12px">Todos los modelos fallaron en este análisis.</div>`;
+    } else {
+      html += `<div style="display:flex;gap:12px;flex-wrap:wrap">`;
+      successResults.forEach(r => {
+        const res = r.result || {};
+        const lat = r.latency_ms ? (r.latency_ms / 1000).toFixed(1) + 's' : '';
+
+        if (isAudit) {
+          // ── Audit result card ──────────────────────────────────────────────
+          const verdict  = res.verdict || '?';
+          const ptf      = res.recommended_portfolio;
+          const conf     = res.confidence || '?';
+          const agrees   = res.agrees_with || '?';
+          const color    = FA_ACTION_COLOR[verdict] || 'var(--text2)';
+          const summary  = res.arbitration_summary || '';
+          const assessments = res.model_assessments || [];
+          const factors  = res.decisive_factors || [];
+          const qColor   = { sound: 'var(--green)', partially_sound: 'var(--yellow)', flawed: 'var(--red)' };
+
+          html += `<div style="flex:1;min-width:280px;background:var(--bg3);border:1px solid rgba(188,140,255,.3);border-radius:6px;padding:12px 14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+              <span style="font-weight:700;font-size:12px;color:var(--purple)">ARBITRO: ${modelShort(r.model)}</span>
+              <span style="color:${color};font-weight:800;font-size:14px">${verdict}</span>
+              ${ptf ? `<span style="color:var(--text2);font-size:11px">${PTF_LABELS[ptf] || ptf}</span>` : ''}
+              <span style="margin-left:auto;color:var(--text2);font-size:10px">${conf}${lat ? ' · ' + lat : ''}</span>
+            </div>
+            ${agrees !== '?' ? `<div style="font-size:11px;color:var(--text2);margin-bottom:8px">Da la razón a: <span style="color:var(--text);font-weight:600">${modelShort(agrees)}</span></div>` : ''}
+            ${summary ? `<div style="font-size:12px;color:var(--text);line-height:1.55;margin-bottom:10px">${summary}</div>` : ''}
+            ${factors.length ? `<div style="margin-bottom:8px">${factors.map(f =>
+              `<div style="font-size:11px;color:var(--blue);line-height:1.5">* ${f}</div>`
+            ).join('')}</div>` : ''}
+            ${assessments.length ? `<details style="margin-top:4px">
+              <summary style="color:var(--text2);font-size:11px;cursor:pointer;user-select:none">Evaluación de modelos (${assessments.length})</summary>
+              <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+                ${assessments.map(a => {
+                  const qc = qColor[a.reasoning_quality] || 'var(--text2)';
+                  return `<div style="margin-bottom:8px">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="font-weight:700;font-size:12px">${modelShort(a.model_id || '')}</span>
+                      <span style="color:${FA_ACTION_COLOR[a.decision]||'var(--text2)'};font-size:11px;font-weight:700">${a.decision || ''}</span>
+                      <span style="color:${qc};font-size:11px;margin-left:auto">${(a.reasoning_quality || '').replace(/_/g,' ')}</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text2);line-height:1.5">${a.critique || ''}</div>
+                  </div>`;
+                }).join('')}
+              </div>
+            </details>` : ''}
+          </div>`;
+        } else {
+          // ── Regular force-analyze result card ──────────────────────────────
+          const action  = res.recommended_action || '?';
+          const ptf     = res.recommended_portfolio;
+          const conf    = res.confidence || '?';
+          const color   = FA_ACTION_COLOR[action] || 'var(--text2)';
+          const summary = res.signal_summary || '';
+          const factors = res.key_supporting_factors || [];
+          const risks   = res.key_risks || [];
+          const comps   = res.portfolio_comparisons || [];
+
+          html += `<div style="flex:1;min-width:280px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px 14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+              <span style="font-weight:700;font-size:12px;color:var(--text2)">${modelShort(r.model)}</span>
+              <span style="color:${color};font-weight:800;font-size:14px">${action}</span>
+              ${ptf ? `<span style="color:var(--text2);font-size:11px">${PTF_LABELS[ptf] || ptf}</span>` : ''}
+              <span style="margin-left:auto;color:var(--text2);font-size:10px">${conf}${lat ? ' · ' + lat : ''}</span>
+            </div>
+            ${summary ? `<div style="font-size:12px;color:var(--text);line-height:1.55;margin-bottom:10px">${summary}</div>` : ''}
+            ${factors.length ? `<div style="margin-bottom:6px">${factors.map(f =>
+              `<div style="font-size:11px;color:var(--green);line-height:1.5">+ ${f}</div>`
+            ).join('')}</div>` : ''}
+            ${risks.length ? `<div style="margin-bottom:6px">${risks.map(r =>
+              `<div style="font-size:11px;color:var(--yellow);line-height:1.5">- ${r}</div>`
+            ).join('')}</div>` : ''}
+            ${comps.length ? `<details style="margin-top:8px">
+              <summary style="color:var(--text2);font-size:11px;cursor:pointer;user-select:none">
+                Comparaciones vs cartera (${comps.length})
+              </summary>
+              <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+                ${comps.map(c => {
+                  const vc = FA_VERDICT_COLOR[c.verdict] || 'var(--text2)';
+                  return `<div style="margin-bottom:8px">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="font-weight:700;font-size:12px">${c.compared_ticker || '?'}</span>
+                      <span style="color:var(--text2);font-size:11px">${c.portfolio || ''}</span>
+                      <span style="color:${vc};font-size:11px;font-weight:600;margin-left:auto">${(c.verdict || '').replace(/_/g, ' ')}</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text2);line-height:1.5">${c.reasoning || ''}</div>
+                  </div>`;
+                }).join('')}
+              </div>
+            </details>` : ''}
+          </div>`;
+        }
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
+}
+
 // ── Main init ─────────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -1360,6 +1539,11 @@ async function init() {
     // Reasoning comparison (non-blocking)
     loadJSON('ai_model_reasoning.json').then(data => {
       renderReasoning(data);
+    }).catch(() => {});
+
+    // Force Analysis viewer (non-blocking)
+    loadJSON('force_analyses.json').then(data => {
+      renderForceAnalysis(data);
     }).catch(() => {});
 
   } catch (e) {
