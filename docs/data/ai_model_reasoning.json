@@ -1,39 +1,40 @@
 {
-  "date": "2026-06-24",
-  "run_id": "2026-06-24_2122",
+  "date": "2026-06-25",
+  "run_id": "2026-06-25_1041",
   "candidates": [
     "NBIS",
     "AMD",
-    "TDOC",
-    "SASK.V",
-    "CVS",
     "SLS",
-    "ASPI",
-    "CAT",
-    "GS",
-    "HUM",
     "HIMS",
+    "TDOC",
+    "OSCR",
+    "CVS",
+    "CAT",
+    "ASPI",
+    "UNH",
+    "HUM",
     "URI",
     "SMCI",
-    "OSCR",
-    "UNH",
-    "BBAR",
+    "SASK.V",
     "ABBV",
-    "SE",
+    "GS",
     "NUE",
     "LLY",
-    "GGAL",
-    "SUPV",
+    "SE",
+    "VRTX",
     "SAIA",
     "AFM.V",
-    "VRTX",
+    "BBAR",
+    "TMO",
+    "DHR",
+    "GGAL",
     "LOMA"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 90,
+      "quality_score": 89,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving macro with high concentration risk across us_tech_ai, healthcare_special, argentina and uranium_nuclear at 28-38% weights.",
+        "market_read": "Bull Maduro Improving regime with high theme concentration in AI, healthcare, Argentina and uranium.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
@@ -41,223 +42,154 @@
       "watch": [
         {
           "ticker": "CVS",
-          "reason": "PCS 83.5 with 8-week streak but dems only 7 and spike_flag true creates entry timing uncertainty amid high healthcare concentration.",
-          "watch_trigger": "dems rising above 12 with momentum_accel confirmed and rot_score sustained at 8+"
+          "reason": "PCS 83.5 strong but dems 8 and spike_flag limit daily confirmation; already high healthcare weight.",
+          "watch_trigger": "dems rise above 12 with momentum_accel true and no extension flags"
         },
         {
           "ticker": "URI",
-          "reason": "PCS 78.0 and 5-week streak but dems 3 too low for EARLY_ROTATION confirmation and us_cyclical already at 19% weight.",
-          "watch_trigger": "dems climbing above 10 with outperform_d10 >=6"
-        },
-        {
-          "ticker": "UNH",
-          "reason": "PCS 76.2 with 8-week streak but dems 5 provides insufficient daily momentum versus higher-dems peers in healthcare_largecap.",
-          "watch_trigger": "dems advancing to 12+ with ret_5d_vs_spy turning positive"
-        },
-        {
-          "ticker": "SE",
-          "reason": "PCS 73.5 with dems 15 and outperform_d10=6 but only 1-week streak and china_em theme lacks established portfolio exposure.",
-          "watch_trigger": "streak_weeks reaching 3+ while maintaining dems >=14"
-        },
-        {
-          "ticker": "LLY",
-          "reason": "PCS 72.2 with 1-week streak and dems 6 insufficient for selection despite healthcare_largecap low concentration.",
-          "watch_trigger": "streak_weeks to 3+ and rot_score to 8+"
+          "reason": "PCS 78.0 and 8-week streak but dems 3 too weak for EARLY_ROTATION selection.",
+          "watch_trigger": "dems >=14 with outperform_d10 >=6 and streak continuation"
         },
         {
           "ticker": "ABBV",
-          "reason": "PCS 74.5 but only 1-week streak and spike_flag true despite dems 12 and low healthcare_largecap concentration.",
-          "watch_trigger": "streak_weeks extending to 3+ without spike_flag"
-        },
-        {
-          "ticker": "SUPV",
-          "reason": "PCS 71.2 with 5-week streak and rot_score 10 but argentina theme already at 30% weight and extension_risk low yet concentration high.",
-          "watch_trigger": "argentina weight dropping below 20%"
-        },
-        {
-          "ticker": "SAIA",
-          "reason": "PCS 71.0 with negative ret_4w_vs_spy and 0-week streak signals insufficient relative strength for selection.",
-          "watch_trigger": "ret_4w_vs_spy turning positive with streak_weeks >=2"
+          "reason": "PCS 74.5 with 1-week streak and spike_flag; insufficient weekly leadership vs peers.",
+          "watch_trigger": "streak_weeks reach 4+ with ret_13w_vs_spy above 20%"
         },
         {
           "ticker": "VRTX",
-          "reason": "PCS 67.0 with dems 15 but only 2-week streak and ret_13w_vs_spy negative at -8.4% versus stronger healthcare peers.",
-          "watch_trigger": "ret_13w_vs_spy turning positive with streak_weeks >=3"
-        },
-        {
-          "ticker": "LOMA",
-          "reason": "pcs 62.0 meets minimum PCS filter but already held in CONFIRMED_FLOW_LEADERS with current_pcs now below entry threshold; monitor for rotation score recovery above 8 or streak extension.",
-          "watch_trigger": "rot_score >=8 and current_pcs rebound above 68 with streak continuation >=6 weeks"
+          "reason": "PCS 67.8 below most thresholds and ret_13w_vs_spy negative at -6.6%.",
+          "watch_trigger": "pcs cross above 70 with streak_weeks >=3"
         }
       ],
       "rejected": [
         {
-          "ticker": "SMCI",
-          "reason": "PCS 76.5 but 0-week streak, ret_10d_vs_spy -19.89 and spike_flag true indicate broken momentum.",
+          "ticker": "SE",
+          "reason": "PCS 69.5 below CONFIRMED_FLOW_LEADERS threshold with only 1-week streak.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "SAIA",
+          "reason": "PCS 67.0 and rot_score 4 too low; dems 4 provides no momentum support.",
           "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "HIMS",
-          "reason": "Already open position in CONFIRMED_FLOW_LEADERS; do not reselect.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "TMO",
+          "reason": "PCS 63.0 below entry thresholds with negative 13-week relative performance.",
+          "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "GGAL",
-          "reason": "Already open position in CONFIRMED_FLOW_LEADERS; do not reselect.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "DHR",
+          "reason": "PCS 63.0 below entry thresholds with negative 13-week relative performance.",
+          "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "BBAR",
-          "reason": "Already open position in CONFIRMED_FLOW_LEADERS; do not reselect.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "REG",
+          "reason": "PCS 62.2 at lowest edge with 1-week streak only.",
+          "rejection_category": "insufficient_conviction"
         }
       ]
     },
     "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 83,
+      "quality_score": 98,
       "decision_summary": {
-        "market_read": "Bull Maduro regime improving with +2.08 weekly delta supports sustained leadership positions despite monthly weakness of -7.92.",
+        "market_read": "Macro regime is Bull Maduro with improving trend, supporting selective equity entries amid high theme concentration risks.",
         "risk_posture": "normal",
-        "should_select_picks": false
+        "should_select_picks": true
       },
-      "selected": [],
+      "selected": [
+        {
+          "ticker": "SE",
+          "portfolio": "MIMO_SHADOW",
+          "signal_type": "early_rotation",
+          "confidence": "medium",
+          "reason_short": "Daily momentum score 15 with no spike and low extension risk in low-concentration theme",
+          "reason_full": "Sea Limited exhibits a daily early momentum score of 15 with no spike flag and low extension risk, indicating clean multi-day institutional flow. Its china_em theme has low portfolio concentration risk at 8% weight, offering diversification from high-risk themes already at 30-38% weights. The 7.69% 4-week outperformance and 5.89% 13-week lead confirm emerging strength without overextension.",
+          "comparative_edge": "Selected over CVS (PCS=83.5, streak_weeks=8) which has higher weekly streak but dems=8 with spike_flag=true and extension_risk=medium, while SE's dems=15 and zero spike provide superior near-term momentum and cleaner entry.",
+          "key_supporting_factors": [
+            "Daily momentum score of 15 is among the highest in the candidate set with no spike confirmation.",
+            "Extension risk is low with zero extension points, minimizing chase risk.",
+            "Theme concentration in china_em is low at 8% portfolio weight, aiding diversification.",
+            "Outperform_d10=6 confirms multi-day breadth without single-session anomalies."
+          ],
+          "key_risks_or_contradictions": [
+            "Weekly streak is only 1 week, shorter than CVS's 8 weeks, making the signal less mature.",
+            "Ret_13w_vs_spy of 5.89% is modest compared to leaders like NBIS at 113%, indicating relative strength is emerging but not dominant.",
+            "Macro regime could shift if monthly deterioration accelerates, impacting emerging market stocks."
+          ]
+        }
+      ],
       "watch": [
         {
-          "ticker": "NBIS",
-          "reason": "PCS 87.8 with 128.9% 13-week outperformance and 8-week streak is exceptional, but extension risk medium with ret_4w extended and theme concentration risk high at 31% portfolio weight.",
-          "watch_trigger": "Extension risk decreases to low or theme concentration drops below 25% weight."
-        },
-        {
-          "ticker": "AMD",
-          "reason": "PCS 85.0 with 144.3% 13-week outperformance is dominant, but spike_flag true with 4.48% 5-day move and dems only 11 suggest potential short-term exhaustion.",
-          "watch_trigger": "Dems exceed 14 with spike_flag false or 5-day consolidation reduces extension risk."
-        },
-        {
-          "ticker": "SASK.V",
-          "reason": "PCS 84.0 with rot_score 9 and low extension risk, but theme concentration risk high at 28% portfolio weight in uranium_nuclear.",
-          "watch_trigger": "Uranium theme concentration drops below 20% or 4-week outperformance exceeds 15%."
-        },
-        {
-          "ticker": "SLS",
-          "reason": "PCS 81.8 with dems 17 and 8-week streak is strong, but 4-week outperformance negative at -5.6% vs SPY shows recent weakness within uptrend.",
-          "watch_trigger": "4-week outperformance turns positive or dems remains above 15 for consecutive days."
-        },
-        {
-          "ticker": "CAT",
-          "reason": "PCS 81.2 with 8-week streak and dems 14, but spike_flag true with 7.21% 5-day move and theme concentration risk high in us_cyclical.",
-          "watch_trigger": "Spike_flag clears or 5-day outperformance continues without spike."
-        },
-        {
-          "ticker": "GS",
-          "reason": "PCS 81.0 with rot_score 9 and low extension risk, but dems only 8 and 12.2% 13-week outperformance is modest vs peers like AMD at 144.3%.",
-          "watch_trigger": "Dems exceeds 12 or 13-week outperformance exceeds 25%."
-        },
-        {
-          "ticker": "HUM",
-          "reason": "PCS 81.0 with 99.9% 13-week outperformance and low theme concentration risk, but dems only 5 and 5-day underperformance of -0.1% vs SPY.",
-          "watch_trigger": "Dems exceeds 10 or 5-day outperformance resumes positive."
-        },
-        {
-          "ticker": "TDOC",
-          "reason": "PCS 84.0 with 28.1% 13-week outperformance and 8-week streak, but extension risk medium with spike_flag true and theme concentration risk high in healthcare_special.",
-          "watch_trigger": "Extension risk decreases to low or healthcare_special theme concentration drops below 30%."
-        },
-        {
-          "ticker": "ASPI",
-          "reason": "PCS 81.8 with 34.4% 13-week outperformance, but extension risk high with ret_4w extended and spike_flag true, and theme concentration risk high in uranium_nuclear.",
-          "watch_trigger": "Extension risk decreases to medium or spike_flag clears with 5-day consolidation."
-        },
-        {
           "ticker": "CVS",
-          "reason": "PCS 83.5 with 31.5% 13-week outperformance and 8-week streak, but extension risk medium with spike_flag true and dist_52w_high only -1.5%.",
-          "watch_trigger": "Extension risk decreases to low or 5-day consolidation reduces spike risk."
-        },
-        {
-          "ticker": "HIMS",
-          "reason": "PCS 80.0 with 34.5% 13-week outperformance, but extension risk high with ret_4w extended and spike_flag true, and theme concentration risk high in healthcare_special.",
-          "watch_trigger": "Extension risk decreases to medium or healthcare_special concentration drops below 30%."
-        },
-        {
-          "ticker": "OSCR",
-          "reason": "PCS 76.5 with 132.9% 13-week outperformance is dominant, but extension risk high with 5 extension points including rsi_high, and theme concentration risk high.",
-          "watch_trigger": "Extension risk decreases to medium or 5-day consolidation reduces extension points."
-        },
-        {
-          "ticker": "BBAR",
-          "reason": "PCS 75.2 with 31.8% 13-week outperformance and rot_score 10, but theme concentration risk high in argentina at 30% portfolio weight.",
-          "watch_trigger": "Argentina theme concentration drops below 25% or 5-day outperformance resumes."
-        },
-        {
-          "ticker": "NUE",
-          "reason": "PCS 73.5 with 37.5% 13-week outperformance and 8-week streak, but recent weakness with -5.14% 5-day underperformance and dems only 6.",
-          "watch_trigger": "Dems exceeds 10 or 5-day outperformance turns positive."
-        },
-        {
-          "ticker": "GGAL",
-          "reason": "PCS 71.2 with rot_score 10, but 13-week outperformance only 3.4% and dems only 4, showing weak sustained leadership.",
-          "watch_trigger": "13-week outperformance exceeds 15% or dems exceeds 10."
+          "reason": "Strong weekly streak of 8 weeks and rotation score 8, but daily momentum dems=8 with spike_flag=true and extension_risk=medium, creating uncertainty for immediate entry.",
+          "watch_trigger": "Improvement in daily momentum with dems ≥12 and spike_flag false, or extension_risk dropping to low."
         },
         {
           "ticker": "UNH",
-          "reason": "PCS 76.2 with 40.5% 13-week outperformance and 8-week streak, but dems only 5 and 5-day underperformance of -0.92% vs SPY.",
-          "watch_trigger": "Dems exceeds 10 or 5-day outperformance resumes positive."
+          "reason": "Consistent 8-week streak and low extension risk, but daily momentum dems=5 is weak, lacking near-term flow confirmation.",
+          "watch_trigger": "Rise in dems to ≥10 or positive ret_5d_vs_spy indicating renewed daily strength."
         },
         {
-          "ticker": "URI",
-          "reason": "PCS 78.0 with 33.3% 13-week outperformance, but extension risk medium with spike_flag true and theme concentration risk high in us_cyclical.",
-          "watch_trigger": "Spike_flag clears or us_cyclical theme concentration drops below 20%."
-        },
-        {
-          "ticker": "SE",
-          "reason": "PCS 73.5 with dems 15 and 6-day outperformance, but streak_weeks only 1 and 13-week outperformance only 2.8% vs SPY shows early stage.",
-          "watch_trigger": "Streak_weeks exceeds 3 or 13-week outperformance exceeds 15%."
+          "ticker": "ABBV",
+          "reason": "High daily momentum dems=12, but spike_flag=true and streak_weeks=1, suggesting a potentially unsustainable single-session move.",
+          "watch_trigger": "Spike_flag turning false with sustained outperform_d10 ≥6 and extension risk remaining low."
         },
         {
           "ticker": "LLY",
-          "reason": "PCS 72.2 with dems 6 and low extension risk, but streak_weeks only 1 and 13-week outperformance 9.6% is modest.",
-          "watch_trigger": "Streak_weeks exceeds 3 or 13-week outperformance exceeds 20%."
+          "reason": "Moderate rotation score 7 and low extension risk, but weekly streak only 1 week and ret_13w_vs_spy=11.39% is below top peers.",
+          "watch_trigger": "Streak_weeks extending to ≥3 with ret_4w_vs_spy maintaining ≥10%."
         },
         {
-          "ticker": "AFM.V",
-          "reason": "PCS 69.8 with rot_score 10 and low extension risk, but theme_very_poor flag and 13-week outperformance 25.7% is modest vs peers like BBAR at 31.8%.",
-          "watch_trigger": "13-week outperformance exceeds 35% or theme_very_poor flag clears."
+          "ticker": "VRTX",
+          "reason": "Strong daily momentum dems=15 with no spike, but PCS=67.8 is below the MIMO_SHADOW min entry threshold of 68.0, and ret_13w_vs_spy is negative at -6.62%.",
+          "watch_trigger": "PCS crossing above 68.0 with sustained positive ret_13w_vs_spy."
         },
         {
-          "ticker": "LOMA",
-          "reason": "PCS 62.0 with 5-week streak, but 13-week outperformance only 1.0% and dems only 3 showing weak momentum.",
-          "watch_trigger": "13-week outperformance exceeds 15% or dems exceeds 10."
+          "ticker": "HIMS",
+          "reason": "High PCS=84.5 and rotation score 8, but healthcare_special theme has high concentration risk at 38% weight, and extension_risk is high with 4 points.",
+          "watch_trigger": "Theme concentration risk decreasing to medium or extension_risk dropping to medium with dems ≥12."
         },
         {
-          "ticker": "SUPV",
-          "reason": "PCS 71.2 with rot_score 10, but 13-week outperformance only 2.0% and dems only 5, and theme concentration risk high in argentina.",
-          "watch_trigger": "13-week outperformance exceeds 15% or dems exceeds 10."
+          "ticker": "TDOC",
+          "reason": "Strong 8-week streak and high PCS=84.0, but spike_flag=true and theme concentration in healthcare_special is high, increasing portfolio risk.",
+          "watch_trigger": "Spike_flag resolving to false or theme diversification improving with lower concentration weights."
         },
         {
-          "ticker": "SAIA",
-          "reason": "PCS 71.0 with 18.6% 13-week outperformance, but streak_weeks 0 and dems only 4, and signal is IGNORAR.",
-          "watch_trigger": "Streak_weeks exceeds 2 or dems exceeds 10 with signal upgrade."
+          "ticker": "OSCR",
+          "reason": "Impressive 13-week outperformance of 129.85% vs SPY, but extension_risk is high with 5 points and daily momentum dems=8 is moderate.",
+          "watch_trigger": "Extension_risk reducing to medium or dems rising above 12 without spike_flag."
         },
         {
-          "ticker": "IRS",
-          "reason": "PCS 62.0 with pcs_crossed_down event, showing weakening relative strength in argentina theme.",
-          "watch_trigger": "PCS rebounds above 68 or 13-week outperformance improves significantly."
+          "ticker": "ASPI",
+          "reason": "High PCS=81.0 and rotation score 8, but uranium_nuclear theme has high concentration risk at 28% weight, and dems=13 with spike_flag=true.",
+          "watch_trigger": "Theme concentration risk dropping to medium or dems ≥15 with spike_flag false."
         }
       ],
       "rejected": [
         {
+          "ticker": "URI",
+          "reason": "Daily momentum dems=3 is very low with spike_flag=true, indicating weak near-term flow and a potentially unsustainable move, while outperform_d10=3 is marginal.",
+          "rejection_category": "weak_flow"
+        },
+        {
           "ticker": "SMCI",
-          "reason": "PCS 76.5 but streak_weeks 0, ret_4w only 0.56% vs SPY, and signal is IGNORAR with partial_momentum flag.",
+          "reason": "Weekly streak is 0 weeks and ret_4w_vs_spy is negative at -7.39%, showing deteriorating relative strength despite high theme exposure in us_tech_ai.",
           "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "ABBV",
-          "reason": "PCS 74.5 but streak_weeks only 1, ret_13w only 3.3% vs SPY, and spike_flag true with 7.61% 5-day move.",
+          "ticker": "SAIA",
+          "reason": "PCS=67.0 is below the MIMO_SHADOW min entry threshold of 68.0, rotation score 4 is moderate, and ret_4w_vs_spy is negative at -4.68%, signaling insufficient conviction.",
           "rejection_category": "insufficient_conviction"
         },
         {
-          "ticker": "LOMA",
-          "reason": "PCS 62.0 with 13-week outperformance only 1.0% vs SPY, dems only 3, and theme concentration risk high in argentina.",
-          "rejection_category": "weak_relative_strength"
+          "ticker": "TMO",
+          "reason": "PCS=63.0 is below the MIMO_SHADOW min entry threshold of 68.0, rotation score 6 is decent but streak_weeks=1 and ret_13w_vs_spy is negative at -12.06%, weakening the signal.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "BBAR",
+          "reason": "PCS=63.0 is near threshold, but theme argentina has high concentration risk at 30% weight, daily momentum dems=6 is low, and ret_5d_vs_spy is negative at -5.89%, indicating weak flow.",
+          "rejection_category": "weak_flow"
         }
       ]
     }
