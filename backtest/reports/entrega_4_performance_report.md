@@ -5,7 +5,7 @@
 **Veredicto:** NO CONFIRMADO: alpha positivo pero t-stat < 1.5 (muestra pequena)
 
 - Señales COMPRA — alpha medio 13w (Modo A): +2.4%  | hit rate: +49.4%  | t-stat: 0.45
-- ROT. TEMPRANA: 52% convergen a COMPRA/ACUMULAR  | lead time mediano: 20w
+- ROT. TEMPRANA: 46% convergen a COMPRA/ACUMULAR  | lead time mediano: 20w
 - Recession basket: alpha medio 13w en transiciones = -1.2%
 
 ---
@@ -39,19 +39,19 @@
 
 | Señal | Hz | N obs | N ind. | Mean α | Median α | Std | t-stat | Hit% |
 |-------|-----|-------|--------|--------|----------|-----|--------|------|
-| COMPRA | 4w | 1201 | 18 | +1.0% | -0.2% | +10.2% | 0.43 | +48.0% |
-| COMPRA | 13w | 1166 | 18 | +2.2% | -0.1% | +22.5% | 0.42 | +49.2% |
+| COMPRA | 4w | 1185 | 18 | +0.8% | -0.2% | +9.6% | 0.34 | +47.4% |
+| COMPRA | 13w | 1158 | 18 | +2.2% | -0.1% | +22.6% | 0.41 | +49.0% |
 | COMPRA | 26w | 1152 | 18 | +4.0% | -0.9% | +40.7% | 0.42 | +45.9% |
-| ACUMULAR | 4w | 2011 | 18 | -0.1% | -0.2% | +5.2% | -0.05 | +47.7% |
-| ACUMULAR | 13w | 1998 | 18 | -0.0% | -0.7% | +10.9% | -0.01 | +44.7% |
+| ACUMULAR | 4w | 2010 | 18 | -0.0% | -0.2% | +5.1% | -0.02 | +47.8% |
+| ACUMULAR | 13w | 1998 | 18 | -0.1% | -0.7% | +10.8% | -0.02 | +44.7% |
 | ACUMULAR | 26w | 1984 | 18 | -0.4% | -1.2% | +13.6% | -0.14 | +45.8% |
-| ROT. TEMPRANA | 4w | 69 | 15 | +0.7% | +0.4% | +7.4% | 0.34 | +53.6% |
+| ROT. TEMPRANA | 4w | 81 | 16 | +2.2% | +0.4% | +11.6% | 0.75 | +53.1% |
 | ROT. TEMPRANA | 13w | 63 | 15 | +3.9% | +3.6% | +8.0% | 1.87 | +69.8% |
 | ROT. TEMPRANA | 26w | 58 | 15 | +4.0% | +2.9% | +9.2% | 1.66 | +63.8% |
-| VIGILAR | 4w | 9717 | 19 | +0.1% | -0.1% | +5.5% | 0.08 | +48.4% |
-| VIGILAR | 13w | 9631 | 19 | +0.4% | -0.4% | +12.8% | 0.13 | +47.5% |
+| VIGILAR | 4w | 9719 | 19 | +0.1% | -0.1% | +5.6% | 0.09 | +48.5% |
+| VIGILAR | 13w | 9639 | 19 | +0.4% | -0.4% | +12.8% | 0.14 | +47.5% |
 | VIGILAR | 26w | 9467 | 19 | +1.3% | -0.4% | +24.7% | 0.23 | +48.1% |
-| IGNORAR | 4w | 6005 | 19 | +0.1% | +0.0% | +6.2% | 0.04 | +50.1% |
+| IGNORAR | 4w | 6008 | 19 | +0.0% | +0.0% | +6.2% | 0.03 | +50.1% |
 | IGNORAR | 13w | 5974 | 19 | +0.5% | +0.1% | +11.7% | 0.17 | +50.6% |
 | IGNORAR | 26w | 5924 | 19 | +0.8% | -0.4% | +18.3% | 0.20 | +48.3% |
 | ACUMULAR* | 4w | 125 | 11 | -2.0% | -1.8% | +7.9% | -0.83 | +35.2% |
@@ -74,8 +74,8 @@
 | Regimen | N obs | Mean α 13w | Hit% | t-stat |
 |---------|-------|------------|------|--------|
 | Bull Pleno | 260 | +9.6% | +61.2% | 0.54 |
-| Bull Maduro | 701 | +0.8% | +47.6% | 0.21 |
-| Transición | 165 | -1.0% | +46.1% | -0.39 |
+| Bull Maduro | 691 | +0.7% | +47.2% | 0.19 |
+| Transición | 167 | -0.9% | +46.1% | -0.38 |
 | Risk-OFF | 40 | -7.3% | +12.5% | -2.60 |
 
 ---
@@ -96,26 +96,26 @@
 | Cluster | N obs | Mean α 13w | Hit% | t-stat |
 |---------|-------|------------|------|--------|
 | Growth | 189 | +13.2% | +64.0% | 0.58 |
-| Value/Cyclical | 447 | +1.0% | +50.1% | 0.29 |
-| Commodities | 291 | +0.3% | +43.0% | 0.03 |
+| Value/Cyclical | 441 | +0.9% | +49.4% | 0.26 |
+| Commodities | 288 | +0.3% | +43.1% | 0.04 |
 | Small/EM | 71 | +0.2% | +53.5% | 0.02 |
-| Defensive | 139 | -2.1% | +40.3% | -0.67 |
+| Defensive | 140 | -2.1% | +40.0% | -0.67 |
 | Duration | 29 | -4.3% | +34.5% | -0.43 |
 
 ---
 
 ## Sección 4 — ROT. TEMPRANA
 
-Total ROT. TEMPRANA emitidas: **184** (ambos modos)
+Total ROT. TEMPRANA emitidas: **196** (ambos modos)
 
-- Convergieron a COMPRA/ACUMULAR: **95** (52%)
-- Lead time (semanas): media=19.4  mediana=20  IQR=[10, 24]
+- Convergieron a COMPRA/ACUMULAR: **90** (46%)
+- Lead time (semanas): media=19.4  mediana=20  IQR=[9, 24]
 - Convergencia por señal:
-  - ACUMULAR: 59
-  - COMPRA: 36
+  - ACUMULAR: 58
+  - COMPRA: 32
 
 **Alpha 13w desde ROT. TEMPRANA:** +3.6%  | n=124
-**Alpha 13w desde señal convencional (convergencia):** +1.2%  | n=60
+**Alpha 13w desde señal convencional (convergencia):** +1.0%  | n=58
 
 ---
 
@@ -149,9 +149,9 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 
 ## Sección 6 — Modo A vs Modo B (2023-04-18 en adelante)
 
-- COMPRA: Modo A α13w=-0.1%  Modo B α13w=-3.3%  nA=203  nB=142
-- ACUMULAR: Modo A α13w=-1.9%  Modo B α13w=-1.4%  nA=328  nB=285
-- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.5%  nA=2280  nB=2375
+- COMPRA: Modo A α13w=-0.1%  Modo B α13w=-4.3%  nA=200  nB=117
+- ACUMULAR: Modo A α13w=-1.9%  Modo B α13w=-1.7%  nA=324  nB=282
+- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.6%  nA=2287  nB=2387
 
 ---
 
@@ -170,7 +170,7 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 
 **¿Las señales COMPRA dan alpha?**  Alpha medio 13w = +2.4%, hit rate = +49.4%, t-stat = 0.45. NO CONFIRMADO: alpha positivo pero t-stat < 1.5 (muestra pequena).
 
-**¿ROT. TEMPRANA adelanta?**  SI — convergen 52% con lead time mediano 20w.
+**¿ROT. TEMPRANA adelanta?**  DEBIL — solo 46% convergen.
 
 **¿El framework detecta crisis?**  NO — alpha medio negativo (-1.2% a 13w en transiciones).
 
