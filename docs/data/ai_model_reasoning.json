@@ -1,177 +1,202 @@
 {
-  "date": "2026-06-26",
-  "run_id": "2026-06-26_2117",
+  "date": "2026-06-27",
+  "run_id": "2026-06-27_1002",
   "candidates": [
     "AMD",
+    "CAT",
+    "URI",
     "HIMS",
     "TDOC",
-    "CAT",
     "SLS",
-    "OSCR",
+    "TTI",
     "NBIS",
+    "ABBV",
+    "OSCR",
     "UNH",
     "CVS",
+    "SASK.V",
     "HUM",
+    "AFM.V",
     "GS",
     "NUE",
-    "URI",
-    "LLY",
-    "ABBV",
-    "SASK.V",
-    "AFM.V",
     "SMCI",
-    "VRTX",
-    "MRK",
-    "ASCU.TO",
-    "TTI",
     "ASPI",
+    "MRK",
+    "ROOT",
+    "LLY",
+    "VRTX",
     "EQR",
-    "JNJ",
-    "BBAR"
+    "SAIA"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 78,
+      "quality_score": 93,
       "decision_summary": {
-        "market_read": "Macro score at 66.25 with Bull Maduro regime and -5 weekly delta shows deteriorating conditions with no new candidates above entry thresholds.",
-        "risk_posture": "defensive",
+        "market_read": "Macro score at 66.25 with -15 delta over 1m shows deteriorating Bull Maduro regime, pressuring new entries.",
+        "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
-      "watch": [],
-      "rejected": []
-    },
-    "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 100,
-      "decision_summary": {
-        "market_read": "Macro regime is Bull Maduro but deteriorating with negative weekly and monthly deltas, creating cautious market conditions.",
-        "risk_posture": "cautious",
-        "should_select_picks": true
-      },
-      "selected": [
-        {
-          "ticker": "CVS",
-          "portfolio": "MIMO_SHADOW",
-          "signal_type": "confirmed_leader",
-          "confidence": "medium",
-          "reason_short": "Dems 14 with acceleration and 8-week streak shows strong daily and weekly leadership.",
-          "reason_full": "CVS posts a daily momentum score of 14 with momentum acceleration true and outperform_d10 of 7, indicating robust multi-day institutional flow. The 8-week weekly streak and 13-week outperformance of 34.187% vs SPY demonstrate sustained leadership, with extension_risk medium, providing a balanced entry despite macro deterioration.",
-          "comparative_edge": "Selected over HIMS (PCS=79.5) because CVS has dems=14 vs HIMS's 8 and extension_risk medium vs high, with lower theme concentration risk in healthcare_largecap compared to healthcare_special.",
-          "key_supporting_factors": [
-            "Daily momentum score of 14 with momentum acceleration true confirms strong near-term institutional accumulation.",
-            "8-week unbroken weekly streak with 34.187% 13-week outperformance vs SPY shows sustained leadership over two months.",
-            "Outperform_d10 of 7 indicates multi-day outperformance without reliance on a single spike session.",
-            "Healthcare_largecap theme has medium concentration risk, offering diversification from highly concentrated themes."
-          ],
-          "key_risks_or_contradictions": [
-            "Extension risk is medium with dist_sma20_atr_high, suggesting a possible pullback after the extended run.",
-            "Macro regime deteriorating with -15 monthly delta could pressure healthcare stocks if risk-off sentiment intensifies.",
-            "Dems score of 14 is at the lower end of the strong momentum threshold, requiring further confirmation for conviction."
-          ]
-        }
-      ],
       "watch": [
         {
           "ticker": "URI",
-          "reason": "Dems 7 below 10 with medium extension risk, insufficient for strong momentum entry.",
-          "watch_trigger": "Wait for dems to increase above 14 with PCS above 70 for early rotation signal."
+          "reason": "PCS 75.5 and rot_score 8 support cyclical leadership, but dems 7 and spike_flag limit immediate conviction.",
+          "watch_trigger": "dems rise above 12 with macroc stabilization"
         },
         {
-          "ticker": "LLY",
-          "reason": "PCS 67.8 below MIMO_SHADOW entry threshold of 68, despite dems 13 showing daily momentum.",
-          "watch_trigger": "Monitor for PCS to cross above 68 with sustained outperformance."
+          "ticker": "TTI",
+          "reason": "PCS 71.8 with rot jumped to 10 and momentum_accel true shows early cyclical rotation, yet streak_weeks only 2.",
+          "watch_trigger": "streak_weeks reach 4 while maintaining rot_score >=9"
         },
         {
           "ticker": "ABBV",
-          "reason": "PCS 67.5 below entry threshold, but dems 20 indicates strong daily flow that may develop.",
-          "watch_trigger": "Watch for PCS to exceed 68 with confirmation of weekly streak establishment."
-        },
-        {
-          "ticker": "VRTX",
-          "reason": "PCS 62.8 below entry threshold, but dems 17 shows strong daily momentum potential.",
-          "watch_trigger": "If PCS improves above 68 with continued dems above 14 and weekly confirmation."
-        },
-        {
-          "ticker": "MRK",
-          "reason": "PCS 61.5 below entry threshold, but dems 16 and rot_score 6 indicate improving momentum.",
-          "watch_trigger": "Wait for PCS to cross 68 and weekly streak to strengthen for entry."
-        },
-        {
-          "ticker": "AMD",
-          "reason": "Already open position in MIMO_SHADOW with strong weekly metrics, monitoring for exit signals.",
-          "watch_trigger": "Current position held; watch for entry below pcs_min_entry or rot_score deterioration."
-        },
-        {
-          "ticker": "CAT",
-          "reason": "Already open position with high rotation score and weekly streak, maintaining hold.",
-          "watch_trigger": "Hold and monitor macro changes affecting us_cyclical theme performance."
-        },
-        {
-          "ticker": "SLS",
-          "reason": "Already open position with 8-week streak and high daily momentum, sustaining hold.",
-          "watch_trigger": "Maintain position and watch for extension risk increases or momentum fade."
-        },
-        {
-          "ticker": "NBIS",
-          "reason": "Already open position with significant 13-week outperformance and weekly leadership.",
-          "watch_trigger": "Hold and monitor theme concentration in us_tech_ai for potential adjustments."
-        },
-        {
-          "ticker": "UNH",
-          "reason": "Already open position with 8-week streak and consistent outperformance, holding steady.",
-          "watch_trigger": "Watch for healthcare sector momentum and macro impact on position."
-        },
-        {
-          "ticker": "HUM",
-          "reason": "Already open position with high 13-week outperformance but low daily momentum.",
-          "watch_trigger": "Maintain position and watch for daily momentum improvements or macro pressures."
-        },
-        {
-          "ticker": "GS",
-          "reason": "Already open position with strong rotation score and weekly streak, supporting hold.",
-          "watch_trigger": "Hold and monitor financial sector flows and macro deterioration effects."
-        },
-        {
-          "ticker": "NUE",
-          "reason": "Already open position with 8-week streak and low extension risk, holding position.",
-          "watch_trigger": "Watch for entry below pcs_min_entry or streak break for potential exit."
-        },
-        {
-          "ticker": "SASK.V",
-          "reason": "Already open position with current_pcs below entry threshold but positive weekly metrics.",
-          "watch_trigger": "Monitor for PCS to rise above 68 or streak to strengthen for position management."
-        },
-        {
-          "ticker": "AFM.V",
-          "reason": "Already open position with high rotation score but low current_pcs.",
-          "watch_trigger": "Hold and watch for PCS improvement or rot_score impact on position."
+          "reason": "PCS 68.2 with dems 20 and outperform_d10 8 offer strong daily breadth, but macro deterioration and high healthcare_largecap exposure warrant caution.",
+          "watch_trigger": "macro_delta_1w turns positive"
         }
       ],
       "rejected": [
         {
+          "ticker": "AMD",
+          "reason": "Already open position in MIMO_SHADOW and HIGH_CONVICTION; macro deterioration adds risk.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "CAT",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
           "ticker": "HIMS",
-          "reason": "High extension risk and high theme concentration in healthcare_special, making entry risky despite high PCS.",
-          "rejection_category": "technical_overextension"
+          "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "TDOC",
-          "reason": "Spike_flag true and dems 10 borderline, with high extension risk indicating potential for a pullback.",
-          "rejection_category": "technical_overextension"
+          "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "SLS",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "NBIS",
+          "reason": "Already open position in HIGH_CONVICTION and MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "OSCR",
-          "reason": "Dems 7 below 10 and extension_risk high, showing insufficient conviction for entry.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "UNH",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "CVS",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "SASK.V",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "HUM",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "AFM.V",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "GS",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "NUE",
+          "reason": "Already open position in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "SMCI",
-          "reason": "Weak daily momentum with dems 5 and streak_weeks 0, lacking sustained leadership.",
-          "rejection_category": "weak_flow"
+          "reason": "PCS 63.5 with ret_4w_vs_spy -17.88 and streak_weeks 0 signals weak relative strength amid macro deterioration.",
+          "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "ASCU.TO",
-          "reason": "Low daily momentum with dems 4 and pcs below entry threshold, indicating weak flow.",
-          "rejection_category": "weak_flow"
+          "ticker": "ASPI",
+          "reason": "PCS 63.5 with streak_weeks 0 and dems 4 indicate insufficient conviction.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "MRK",
+          "reason": "PCS 62.2 below thresholds for selection despite dems 16; macro conflict and high healthcare_largecap concentration.",
+          "rejection_category": "macro_conflict"
+        }
+      ]
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 90,
+      "decision_summary": {
+        "market_read": "Macro regime remains Bull Maduro but monthly delta has deteriorated to -15.0 with weekly delta at -5.0, signaling a weakening trend that warrants caution on new entries despite elevated PCS readings across the candidate set.",
+        "risk_posture": "cautious",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [
+        {
+          "ticker": "URI",
+          "reason": "Strong weekly profile with PCS 75.5, rotation score 8, 5-week streak, and 39.4% 13-week outperformance vs SPY, but spike_flag=true and dems=7 below the 10 threshold make the daily entry timing unreliable; us_cyclical theme is already at high concentration with 3 open positions (CAT, GS, NUE exiting).",
+          "watch_trigger": "Select if spike_flag clears on next signal cycle while streak extends to 6+ weeks and dems rises above 10 without a new spike."
+        },
+        {
+          "ticker": "HIMS",
+          "reason": "Solid weekly metrics with PCS 75.0, rotation score 8, 5-week streak, and 50.6% 13-week outperformance vs SPY, but extension_risk=high with 4 extension points including ret_4w_extended and momentum_decay flags, and healthcare_special theme already holds 38% portfolio weight across 4 positions.",
+          "watch_trigger": "Select if extension_points drop below 2 via a healthy pullback of 10-15% while streak_weeks remains at 4+ and rotation score holds above 7."
+        },
+        {
+          "ticker": "TTI",
+          "reason": "Rotation score jumped from 6 to 10 — the highest in the entire candidate set — with PCS crossing up to 71.8 and dems=12, but the weekly streak is only 2 weeks with spike_flag=true, providing insufficient confirmation for a confident new entry in a deteriorating macro environment.",
+          "watch_trigger": "Select if streak extends to 4+ weeks and spike_flag clears while rotation score remains at 9+."
+        },
+        {
+          "ticker": "ABBV",
+          "reason": "Extraordinary daily momentum with dems=20 (maximum score), momentum_accel=true, outperform_d10=8, and 5 consecutive streak days, but signal is VIGILAR not EN_RADAR, weekly streak is only 1 week, and 13-week outperformance of 8.9% vs SPY is modest compared to peers with 30-140%; healthcare_largecap already at high concentration with 3 positions.",
+          "watch_trigger": "Select if signal upgrades to EN_RADAR and streak extends to 3+ weeks while dems remains above 14 with acceleration confirmed."
+        },
+        {
+          "ticker": "OSCR",
+          "reason": "Impressive 13-week outperformance of 139.5% vs SPY with 8-week streak and rotation score 7, but PCS of 67.5 falls below the 68.0 minimum entry threshold, extension_risk=high with 4 extension points including spike_flag, and healthcare_special theme is already at 38% weight.",
+          "watch_trigger": "Select if PCS recovers above 68.0 while extension_points drop below 2 and healthcare_special theme concentration decreases below 30%."
+        },
+        {
+          "ticker": "MRK",
+          "reason": "Strong daily momentum with dems=16, momentum_accel=true, outperform_d10=7, and 5 consecutive streak days, but PCS is only 62.2 (well below the 70 threshold), weekly streak is just 1 week, 13-week outperformance is negative at -3.1% vs SPY, and signal remains VIGILAR.",
+          "watch_trigger": "Select if PCS crosses above 68.0 and signal upgrades to EN_RADAR while streak extends to 3+ weeks with positive 13-week outperformance."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "TDOC",
+          "reason": "Extension risk is extreme with 6 extension points including dist_sma20_atr_high, ret_4w_extended, and spike_flag; despite an 8-week streak and 39.9% 13-week outperformance, entering here would be chasing a move that has already extended well beyond normal bounds in a deteriorating macro environment.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "SMCI",
+          "reason": "Signal is IGNORAR with rotation score of only 5, zero weekly streak, negative 4-week outperformance of -17.9% vs SPY, and 10-day outperformance of only 2 days, indicating the prior leadership thesis has fully collapsed.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "ASPI",
+          "reason": "Signal is IGNORAR with rotation score of 5, zero weekly streak, negative 4-week outperformance of -5.6% vs SPY, and dems of only 4, indicating no meaningful momentum or leadership signal despite uranium theme relevance.",
+          "rejection_category": "insufficient_conviction"
         }
       ]
     }
