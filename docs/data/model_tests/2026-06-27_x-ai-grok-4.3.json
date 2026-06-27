@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-06-27_1002",
+  "run_id": "2026-06-27_2057",
   "model": "x-ai/grok-4.3",
   "date": "2026-06-27",
   "summary": {
     "date": "2026-06-27",
-    "run_id": "2026-06-27_1002",
+    "run_id": "2026-06-27_2057",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
-    "event_count": 18,
+    "event_count": 22,
     "candidate_count": 25,
-    "input_tokens": 21241,
-    "output_tokens": 2986,
-    "cost_usd": 0.034016,
-    "latency_ms": 20746.0,
+    "input_tokens": 21282,
+    "output_tokens": 2498,
+    "cost_usd": 0.032848,
+    "latency_ms": 22066.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
     "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 3,
-    "rejected_count": 17,
+    "watch_count": 5,
+    "rejected_count": 15,
     "fallback_used": false,
     "error": null
   },
@@ -33,55 +33,45 @@
   "response": {
     "date": "2026-06-27",
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-06-27_1002",
+    "run_id": "2026-06-27_2057",
     "decision_summary": {
-      "market_read": "Macro score at 66.25 with -15 delta over 1m shows deteriorating Bull Maduro regime, pressuring new entries.",
+      "market_read": "Macro regime Bull Maduro is deteriorating sharply with macro_score 66.25 and deltas of -5.0 weekly and -15.0 monthly.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
+        "ticker": "CAT",
+        "reason": "PCS 76 with rot_score 9 and 8-week streak but macro deterioration and medium extension risk argue for waiting.",
+        "watch_trigger": "Improvement in macro_delta_1w or rot_score sustained above 9 with extension_risk dropping to low."
+      },
+      {
         "ticker": "URI",
-        "reason": "PCS 75.5 and rot_score 8 support cyclical leadership, but dems 7 and spike_flag limit immediate conviction.",
-        "watch_trigger": "dems rise above 12 with macroc stabilization"
+        "reason": "PCS 75.5 with ret_4w_vs_spy 16.1 but macro deteriorating and spike_flag true limit conviction.",
+        "watch_trigger": "Macro trend stabilizing plus outperform_d10 rising above 6 without spike."
       },
       {
         "ticker": "TTI",
-        "reason": "PCS 71.8 with rot jumped to 10 and momentum_accel true shows early cyclical rotation, yet streak_weeks only 2.",
-        "watch_trigger": "streak_weeks reach 4 while maintaining rot_score >=9"
+        "reason": "PCS 71.8 with rot_score 10 and rot_score_jumped but only 2-week streak and macro headwinds.",
+        "watch_trigger": "Streak_weeks reaching 4 while macro_delta_1w turns positive."
+      },
+      {
+        "ticker": "EQR",
+        "reason": "PCS 70 with dems 14 and rot_score 9 but VIGILAR signal and only 1-week streak.",
+        "watch_trigger": "Streak_weeks advancing to 3 and signal upgrading to EN_RADAR."
       },
       {
         "ticker": "ABBV",
-        "reason": "PCS 68.2 with dems 20 and outperform_d10 8 offer strong daily breadth, but macro deterioration and high healthcare_largecap exposure warrant caution.",
-        "watch_trigger": "macro_delta_1w turns positive"
+        "reason": "PCS 68.2 with dems 20 but only 1-week streak and medium extension risk.",
+        "watch_trigger": "Streak_weeks reaching 3 alongside sustained dems above 14."
       }
     ],
     "rejected": [
       {
-        "ticker": "AMD",
-        "reason": "Already open position in MIMO_SHADOW and HIGH_CONVICTION; macro deterioration adds risk.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CAT",
-        "reason": "Already open position in MIMO_SHADOW.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "HIMS",
-        "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "TDOC",
-        "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
         "ticker": "SLS",
-        "reason": "Already open position in MIMO_SHADOW.",
-        "rejection_category": "better_alternative_available"
+        "reason": "PCS 72.2 but extreme extension_risk 7 points and ret_4w_vs_spy negative despite high dems.",
+        "rejection_category": "technical_overextension"
       },
       {
         "ticker": "NBIS",
@@ -89,6 +79,21 @@
         "rejection_category": "better_alternative_available"
       },
       {
+        "ticker": "AMD",
+        "reason": "Already open position in MIMO_SHADOW.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
         "ticker": "OSCR",
         "reason": "Already open position in CONFIRMED_FLOW_LEADERS.",
         "rejection_category": "better_alternative_available"
@@ -109,7 +114,7 @@
         "rejection_category": "better_alternative_available"
       },
       {
-        "ticker": "HUM",
+        "ticker": "GS",
         "reason": "Already open position in MIMO_SHADOW.",
         "rejection_category": "better_alternative_available"
       },
@@ -119,29 +124,24 @@
         "rejection_category": "better_alternative_available"
       },
       {
-        "ticker": "GS",
+        "ticker": "HUM",
         "reason": "Already open position in MIMO_SHADOW.",
         "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "NUE",
-        "reason": "Already open position in MIMO_SHADOW.",
-        "rejection_category": "better_alternative_available"
+        "reason": "PCS 63.8 with IGNORAR signal and rot_score only 5.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "SMCI",
-        "reason": "PCS 63.5 with ret_4w_vs_spy -17.88 and streak_weeks 0 signals weak relative strength amid macro deterioration.",
+        "reason": "PCS 63.5 with IGNORAR signal and negative ret_4w_vs_spy.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "ASPI",
-        "reason": "PCS 63.5 with streak_weeks 0 and dems 4 indicate insufficient conviction.",
+        "reason": "PCS 63.5 with IGNORAR signal and streak_weeks 0.",
         "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "MRK",
-        "reason": "PCS 62.2 below thresholds for selection despite dems 16; macro conflict and high healthcare_largecap concentration.",
-        "rejection_category": "macro_conflict"
       }
     ],
     "open_picks_review": [
@@ -149,93 +149,87 @@
         "ticker": "NBIS",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "current_pcs 71.2 below entry threshold but streak_weeks 8 exceeds 1."
+        "reason": "Current rot_score 6 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "OSCR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 67.5 below entry threshold but streak_weeks 8 exceeds 1."
+        "reason": "Current rot_score 7 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "TDOC",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 74.5 below entry threshold but streak_weeks 8 exceeds 1."
+        "reason": "Current rot_score 8 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "HIMS",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 75.0 meets entry threshold with streak_weeks 5."
+        "reason": "Current rot_score 8 and streak_weeks 5 exceed exit thresholds."
       },
       {
         "ticker": "NBIS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 71.2 exceeds pcs_min_entry 68 with streak_weeks 8."
+        "reason": "Current rot_score 6 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "SASK.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 67.5 below entry threshold but streak_weeks 3 exceeds 1."
+        "reason": "Current rot_score 6 and streak_weeks 3 exceed exit thresholds."
       },
       {
         "ticker": "CAT",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 76.0 exceeds pcs_min_entry 68 with streak_weeks 8."
+        "reason": "Current rot_score 9 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 76.0 exceeds pcs_min_entry 68 with streak_weeks 8."
+        "reason": "Current rot_score 8 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "GS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 64.5 below entry threshold but streak_weeks 7 exceeds 1."
+        "reason": "Current rot_score 7 and streak_weeks 7 exceed exit thresholds."
       },
       {
         "ticker": "AFM.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 64.8 below entry threshold but streak_weeks 3 exceeds 1."
+        "reason": "Current rot_score 10 and streak_weeks 3 exceed exit thresholds."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 65.5 below entry threshold but streak_weeks 8 exceeds 1."
+        "reason": "Current rot_score 6 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 72.2 exceeds pcs_min_entry 68 with streak_weeks 8."
-      },
-      {
-        "ticker": "NUE",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "current_pcs 63.8 below entry threshold and current_streak_weeks 0 <=1."
+        "reason": "Current rot_score 8 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "UNH",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 67.5 below entry threshold but streak_weeks 8 exceeds 1."
+        "reason": "Current rot_score 7 and streak_weeks 8 exceed exit thresholds."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 67.5 below entry threshold but streak_weeks 8 exceeds 1."
+        "reason": "Current rot_score 7 and streak_weeks 8 exceed exit thresholds."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-06-27\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-27_1002\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro score at 66.25 with -15 delta over 1m shows deteriorating Bull Maduro regime, pressuring new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"PCS 75.5 and rot_score 8 support cyclical leadership, but dems 7 and spike_flag limit immediate conviction.\",\n      \"watch_trigger\": \"dems rise above 12 with macroc stabilization\"\n    },\n    {\n      \"ticker\": \"TTI\",\n      \"reason\": \"PCS 71.8 with rot jumped to 10 and momentum_accel true shows early cyclical rotation, yet streak_weeks only 2.\",\n      \"watch_trigger\": \"streak_weeks reach 4 while maintaining rot_score >=9\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"PCS 68.2 with dems 20 and outperform_d10 8 offer strong daily breadth, but macro deterioration and high healthcare_largecap exposure warrant caution.\",\n      \"watch_trigger\": \"macro_delta_1w turns positive\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"AMD\",\n      \"reason\": \"Already open position in MIMO_SHADOW and HIGH_CONVICTION; macro deterioration adds risk.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"CAT\",\n      \"reason\": \"Already open position in MIMO_SHADOW.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"HIMS\",\n      \"reason\": \"Already open position in CONFIRMED_FLOW_LEADERS.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"TDOC\",\n      \"reason\": \"Already open position in CONFIRMED_FLOW_LEADERS.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"SLS\",\n      \"reason\": \"Already open position in MIMO_SHADOW.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Already open positio"
+  "raw_response_head": "{\n  \"date\": \"2026-06-27\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-06-27_2057\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime Bull Maduro is deteriorating sharply with macro_score 66.25 and deltas of -5.0 weekly and -15.0 monthly.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CAT\",\n      \"reason\": \"PCS 76 with rot_score 9 and 8-week streak but macro deterioration and medium extension risk argue for waiting.\",\n      \"watch_trigger\": \"Improvement in macro_delta_1w or rot_score sustained above 9 with extension_risk dropping to low.\"\n    },\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"PCS 75.5 with ret_4w_vs_spy 16.1 but macro deteriorating and spike_flag true limit conviction.\",\n      \"watch_trigger\": \"Macro trend stabilizing plus outperform_d10 rising above 6 without spike.\"\n    },\n    {\n      \"ticker\": \"TTI\",\n      \"reason\": \"PCS 71.8 with rot_score 10 and rot_score_jumped but only 2-week streak and macro headwinds.\",\n      \"watch_trigger\": \"Streak_weeks reaching 4 while macro_delta_1w turns positive.\"\n    },\n    {\n      \"ticker\": \"EQR\",\n      \"reason\": \"PCS 70 with dems 14 and rot_score 9 but VIGILAR signal and only 1-week streak.\",\n      \"watch_trigger\": \"Streak_weeks advancing to 3 and signal upgrading to EN_RADAR.\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"PCS 68.2 with dems 20 but only 1-week streak and medium extension risk.\",\n      \"watch_trigger\": \"Streak_weeks reaching 3 alongside sustained dems above 14.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"SLS\",\n      \"reason\": \"PCS 72.2 but extreme extension_risk 7 points and ret_4w_vs_spy negative despite high dems.\",\n      \"rejection_category\": \"technical_overextension\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"Already open position in HIGH_CONVICTION and MIMO_SHADOW.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"AMD\",\n      \"reason\": \"Already"
 }
