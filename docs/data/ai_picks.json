@@ -1984,36 +1984,51 @@
   },
   "last_ai_review": {
     "date": "2026-06-28",
-    "market_read": "Bull Maduro regime with macro score at 66.25 deteriorating sharply by 15 points over the past month.",
+    "market_read": "Market is in a deteriorating bull regime with macro score at 66.25 and a declining monthly delta of -15.0.",
     "risk_posture": "cautious",
     "should_select": false,
     "watch": [
       {
-        "ticker": "EQR",
-        "reason": "Dems 14 with outperform_d10=7 and low extension risk but streak_weeks only 1 and 13w RS near flat at 3%.",
-        "watch_trigger": "Streak_weeks reaching 3+ while maintaining rot_score above 8."
+        "ticker": "HIMS",
+        "reason": "Daily momentum score of 8 is below the 10 threshold for early rotation, and extension risk is high with ret_4w extended, making entry risky despite 13-week outperformance of 49.4% vs SPY.",
+        "watch_trigger": "Trigger selection if dems rises above 14 with spike_flag false and extension risk decreases to medium or low."
       },
       {
-        "ticker": "ABBV",
-        "reason": "Dems 20 highest in set but streak_weeks=1 and ret_13w_vs_spy only 7.7%.",
-        "watch_trigger": "Streak_weeks extending to 3+ with current_pcs staying above 68."
+        "ticker": "TDOC",
+        "reason": "Dems of 10 falls in the 10-13 prefer-watch range, and extension risk is extreme with outperform_d10=7, indicating some continuation but elevated chase risk and theme concentration in healthcare_special.",
+        "watch_trigger": "Watch for dems above 14 and extension risk moderating to medium or low, with outperform_d10 maintaining >=6."
+      },
+      {
+        "ticker": "URI",
+        "reason": "Dems of 7 is low, and spike_flag true suggests single-session strength, with outperform_d10=4 showing limited multi-day breadth despite high pcs of 75.5.",
+        "watch_trigger": "Trigger on dems rising above 14 without spike_flag and outperform_d10 >=6 to confirm multi-day momentum."
+      },
+      {
+        "ticker": "TTI",
+        "reason": "Dems of 12 is in the watch range, spike_flag true, and only 2-week weekly streak, making the signal immature relative to peers with longer streaks.",
+        "watch_trigger": "Watch for dems above 14, spike_flag false, and streak_weeks increasing to 3 or more for confirmation."
       }
     ],
     "rejected": [
       {
         "ticker": "NUE",
-        "reason": "Streak_weeks=0 and rot_score=5 with negative ret_4w_vs_spy.",
+        "reason": "Signal is IGNORAR with rot_score 5 and negative 4-week outperformance of -0.1% vs SPY, indicating weak relative strength and momentum decline.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "SMCI",
-        "reason": "Streak_weeks=0 and ret_4w_vs_spy sharply negative at -17.2%.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "Rot_score 5 and negative 4-week outperformance of -17.2% vs SPY show declining momentum despite a 13-week lead, with theme concentration risk high in us_tech_ai.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "ASPI",
-        "reason": "Streak_weeks=0 and dems=4 with large 52w drawdown.",
+        "reason": "Low rot_score of 5 and negative 4-week outperformance of -4.9% vs SPY in a volatile uranium theme, with dems of 4 indicating weak daily momentum.",
         "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "High extension risk with spike_flag true and dems only 7, not meeting momentum thresholds for entry, in a healthcare_special theme with high concentration risk.",
+        "rejection_category": "technical_overextension"
       }
     ]
   }
