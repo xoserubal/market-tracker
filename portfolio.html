@@ -102,7 +102,9 @@ function computeFlowScore(d) {
   const atr = d.atrPct ?? 0;
   const a = (atr >= 1 && atr <= 3) ? 1 : (atr > 3 && atr <= 6) ? 0.5 : atr > 6 ? -0.5 : 0;
   const kmap = { 'up': 2, 'accumulation': 1, 'distribution': -1, 'down': -2 };
-  const k = kmap[d.konc_d_state] ?? 0;
+  const kD = kmap[d.konc_d_state] ?? 0;
+  const kW = kmap[d.konc_w_state] ?? 0;
+  const k  = kD + (kW * 0.5);  // weekly confirma o amortigua el diario (hasta ±1)
   const fh = d.fromHigh ?? 0;
   const t = (fh >= -10 && fh <= 0) ? 1 : (fh >= -25 && fh < -10) ? 0 : -1;
   return Math.round(((m * 2) + r + a + k + t) * 100) / 100;
@@ -132,6 +134,22 @@ function computeEarlyFlowScore(d, prev) {
   } else if (d.konc_d_state === 'down' || d.konc_d_state === 'distribution') {
     score -= 1;
   }
+  // Alineación multi-TF: 3D y W confirman o amortiguan la señal diaria
+  const bullK = s => s === 'up' || s === 'accumulation';
+  const bearK = s => s === 'down' || s === 'distribution';
+  const ck   = d.konc_d_state;
+  const ck3d = d.konc_3d_state;
+  const ckw  = d.konc_w_state;
+  if (ck && bullK(ck)) {
+    if (ck3d && bullK(ck3d)) score += 1;   // 3D alineado: confirmación media
+    if (ckw  && bullK(ckw))  score += 1;   // W alineado: confirmación fuerte
+    if (ckw  && bearK(ckw))  score -= 1;   // W en contra: señal D menos fiable
+  } else if (ck && bearK(ck)) {
+    if (ck3d && bearK(ck3d)) score -= 1;   // 3D también débil
+    if (ckw  && bearK(ckw))  score -= 1;   // W también débil
+  }
+  // Giro en 3D (señal intermedia)
+  if (prev?.konc_3d_state && ck3d && prev.konc_3d_state === 'down' && ck3d === 'accumulation') score += 1;
   if (prev?.atrPct != null && d.atrPct != null && prev.atrPct > 0) {
     const r = d.atrPct / prev.atrPct;
     if (r < 0.9) score += 2;
@@ -362,7 +380,12 @@ function Portfolio() {
       const snapshot = {};
       Object.entries(prices).forEach(([ticker, d]) => {
         if (d.konc_d_state != null || d.atrPct != null)
-          snapshot[ticker] = { konc_d_state: d.konc_d_state ?? null, atrPct: d.atrPct ?? null };
+          snapshot[ticker] = {
+            konc_d_state:  d.konc_d_state  ?? null,
+            konc_3d_state: d.konc_3d_state ?? null,
+            konc_w_state:  d.konc_w_state  ?? null,
+            atrPct:        d.atrPct        ?? null,
+          };
       });
 
       // Persistir snapshot en portfolio.json (funciona entre máquinas)
@@ -391,9 +414,11 @@ function Portfolio() {
             price:     d.price     ?? null,
             flowScore,
             earlyFlow,
-            konc_d_state: d.konc_d_state ?? null,
-            konc_d_blue:  d.konc_d_blue  ?? null,
-            konc_d_green: d.konc_d_green ?? null,
+            konc_d_state:  d.konc_d_state  ?? null,
+            konc_3d_state: d.konc_3d_state ?? null,
+            konc_w_state:  d.konc_w_state  ?? null,
+            konc_d_blue:   d.konc_d_blue   ?? null,
+            konc_d_green:  d.konc_d_green  ?? null,
             rsi:       d.rsi       ?? null,
             w1:        d.w1        ?? null,
             m1:        d.m1        ?? null,
@@ -683,8 +708,8 @@ function Portfolio() {
               <thead className="rank-thead">
                 <tr style={{background:'#f0f4f8'}}>
                   <th style={{padding:'4px 10px',textAlign:'left',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Ticker</th>
-                  <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde + compresión ATR\n+ posición 52W + RSI en zona + momentum modesto.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
-                  <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ ajuste Koncorde + ajuste tendencia 52W.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
+                  <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde D + alineación 3D/W\n+ compresión ATR + posición 52W + RSI en zona + momentum modesto.\nBonus: 3D/W alcistas +1 c/u · W bajista contraría D -1\nGiro 3D (down→acum) +1 extra.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
+                  <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ Koncorde D + Koncorde W×0.5 + tendencia 52W.\nW alcista suma hasta +1 · W bajista resta hasta -1.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
                   <th data-tip={"Interpretación combinada Early Flow × Flow Score.\nEjemplos:\nEarly≥7 + Flow≥8 → Activación potente\nEarly≥7 + Flow<4 → Setup temprano\nEarly<4 + Flow≥8 → Tendencia madura (tarde)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Lectura</th>
                   <th data-tip={"Koncorde Plus D (OskarGallard):\nAlza: blue≥0, green≥0\nAcumul.: blue≥0, green<0 (institucional acumula)\nDistrib.: blue<0, green>0\nBaja: blue<0, green<0"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc D</th>
                   <th data-tip={"RSI(14) Wilder.\n>65: sobrecomprado · <35: sobrevendido\nZona ideal de entrada: 45–58\n(RSI en zona = +2 en Early Flow)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>RSI</th>
