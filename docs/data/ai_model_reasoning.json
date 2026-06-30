@@ -1,38 +1,38 @@
 {
-  "date": "2026-06-29",
-  "run_id": "2026-06-29_2123",
+  "date": "2026-06-30",
+  "run_id": "2026-06-30_1054",
   "candidates": [
-    "AMD",
     "CAT",
     "URI",
-    "HIMS",
-    "TDOC",
-    "SLS",
     "TTI",
-    "NBIS",
-    "EQR",
-    "ABBV",
-    "OSCR",
+    "AMD",
+    "HIMS",
     "UNH",
     "CVS",
-    "SASK.V",
-    "HUM",
-    "AFM.V",
-    "GS",
-    "NUE",
-    "SMCI",
-    "ASPI",
-    "REG",
+    "SLS",
+    "OSCR",
+    "NBIS",
     "ROOT",
+    "QQQ",
+    "GS",
+    "ABBV",
+    "TDOC",
+    "SASK.V",
     "LLY",
-    "VRTX",
-    "CORZ"
+    "HUM",
+    "EQR",
+    "AFM.V",
+    "ASPI",
+    "BBAR",
+    "NUE",
+    "REG",
+    "VRTX"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 90,
+      "quality_score": 92,
       "decision_summary": {
-        "market_read": "Bull Maduro improving macro with elevated concentrations in healthcare and tech themes.",
+        "market_read": "Bull Maduro improving macro supports cyclicals and healthcare but multiple themes already exceed 30 percent weight.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
@@ -40,169 +40,120 @@
       "watch": [
         {
           "ticker": "URI",
-          "reason": "80.5 PCS and 16.1% 4w outperformance vs SPY but medium cyclical concentration and spike flag limit conviction.",
-          "watch_trigger": "Sustained outperform_d10 above 6 without spike and lower theme concentration."
+          "reason": "84.5 PCS and 36 percent 13w outperformance but us_cyclical concentration already 19 percent.",
+          "watch_trigger": "rot_score rises above 9 while theme weight falls below 15 percent"
+        },
+        {
+          "ticker": "ROOT",
+          "reason": "75.0 PCS and dems 15 with acceleration but healthcare_special already 46 percent weight.",
+          "watch_trigger": "subtheme_concentration_risk drops to low and streak_weeks reaches 4"
+        },
+        {
+          "ticker": "QQQ",
+          "reason": "74.2 PCS and 6-week outperform_d10 but low rot_score of 6 limits conviction.",
+          "watch_trigger": "rot_score moves above 8 and streak_weeks reaches 3"
+        },
+        {
+          "ticker": "LLY",
+          "reason": "72.2 PCS with dems 17 but healthcare_largecap already 24.5 percent weight.",
+          "watch_trigger": "theme weight falls below 15 percent and streak_weeks exceeds 2"
+        },
+        {
+          "ticker": "REG",
+          "reason": "66.5 PCS and low dems 12 in reits with minimal current exposure.",
+          "watch_trigger": "pcs rises above 68 and rot_score reaches 7"
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "65.8 PCS but healthcare_largecap concentration already high and 13w lag at negative.",
+          "watch_trigger": "ret_13w_vs_spy turns positive with rot_score above 7"
+        },
+        {
+          "ticker": "BBAR",
+          "reason": "67.5 PCS yet argentina theme lacks breadth and dems low at 5.",
+          "watch_trigger": "dems exceeds 12 and streak_weeks reaches 8"
         },
         {
           "ticker": "SLS",
-          "reason": "77.2 PCS with 137% 13w outperformance but extreme extension risk and high healthcare_special concentration block entry.",
-          "watch_trigger": "Extension points drop below 4 and healthcare_special weight falls below 30%."
-        },
-        {
-          "ticker": "TTI",
-          "reason": "76.8 PCS and top 10 rot_score but only 2-week streak and medium extension limit new position.",
-          "watch_trigger": "Streak_weeks reaches 4 with continued outperform_d10 above 6."
-        },
-        {
-          "ticker": "REG",
-          "reason": "66.5 PCS with 9 rot_score but 1-week streak and reits theme already represented by EQR.",
-          "watch_trigger": "Streak_weeks at least 3 with rot_score remaining above 8."
-        },
-        {
-          "ticker": "ROOT",
-          "reason": "66.2 PCS and 15 dems but low ret_13w and high healthcare_special concentration already present.",
-          "watch_trigger": "ret_13w_vs_spy exceeds 10% with streak_weeks at 3 or more."
-        },
-        {
-          "ticker": "VRTX",
-          "reason": "65.8 PCS with strong dems 18 but 2-week streak and high healthcare_largecap concentration.",
-          "watch_trigger": "Streak_weeks reaches 4 while maintaining outperform_d10 of 8."
-        },
-        {
-          "ticker": "CORZ",
-          "reason": "64.2 PCS and 8-week streak but crypto theme lacks mandate fit and poor theme flags.",
-          "watch_trigger": "Theme flags improve and PCS rises above 70 with rot_score above 7."
+          "reason": "77.2 PCS but already open in MIMO_SHADOW with extreme extension_risk 8.",
+          "watch_trigger": "extension_points fall below 4 and ret_4w_vs_spy stabilizes"
         }
       ],
       "rejected": [
         {
-          "ticker": "NUE",
-          "reason": "68.8 PCS but 0 streak_weeks and negative ret_4w_vs_spy signal insufficient weekly confirmation.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "SMCI",
-          "reason": "68.5 PCS but negative ret_4w_vs_spy and 0 streak_weeks indicate fading momentum versus peers.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "ASPI",
-          "reason": "68.5 PCS but 0 streak_weeks and negative ret metrics show insufficient leadership strength.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "LLY",
-          "reason": "66.2 PCS but 0 streak_weeks and already high healthcare_largecap exposure.",
-          "rejection_category": "better_alternative_available"
-        }
-      ]
-    },
-    "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 97,
-      "decision_summary": {
-        "market_read": "Bull Maduro regime improving with macro delta +8.75 weekly and +10.0 monthly supports adding positions in strong momentum leaders.",
-        "risk_posture": "normal",
-        "should_select_picks": true
-      },
-      "selected": [
-        {
-          "ticker": "TDOC",
-          "portfolio": "MIMO_SHADOW",
-          "signal_type": "confirmed_leader",
-          "confidence": "high",
-          "reason_short": "dems 19 highest non-open candidate with 8-week streak and 8-day outperform breadth",
-          "reason_full": "TDOC posts the highest daily momentum score among all non-open candidates at 19 with momentum acceleration confirmed and 8 consecutive days of outperformance (outperform_d10=8). Combined with an 8-week weekly streak, rot_score 8, and 38.7% 13-week outperformance vs SPY, TDOC offers the strongest combined daily-and-weekly signal available. Extension risk is high at 4 points with dist_sma20_atr_high and ret_4w_extended, but the confirmed multi-day acceleration with 5-day daily streak and no spike_flag justifies entry despite the elevated extension. Healthcare_special exposure in MIMO_SHADOW would rise from 8% to approximately 16%, remaining manageable.",
-          "comparative_edge": "Selected over URI (PCS=80.5) which has spike_flag true and dems only 6; TDOC's dems of 19 vs URI's 6 and 8-day outperform_d10 vs URI's 4 demonstrate categorically stronger and broader daily institutional flow that is not driven by a single-session spike.",
-          "key_supporting_factors": [
-            "Daily momentum score of 19 is the highest among all non-open candidates, confirming intense institutional flow.",
-            "8-week unbroken weekly streak with 38.7% 13-week outperformance vs SPY shows sustained multi-month leadership.",
-            "Outperform_d10=8 with acceleration true and no spike_flag confirms broad-based multi-day accumulation.",
-            "5-day daily streak indicates the daily trend is accelerating within the established weekly uptrend."
-          ],
-          "key_risks_or_contradictions": [
-            "Extension risk is high at 4 points with dist_sma20_atr_high and ret_4w_extended, increasing near-term pullback probability.",
-            "Ret_5d_vs_spy of 15.1% is an aggressive short-term move that could mean-revert even within the uptrend.",
-            "Healthcare_special theme adds to system-wide concentration risk though MIMO_SHADOW allocation remains modest at ~16%."
-          ]
-        },
-        {
-          "ticker": "TTI",
-          "portfolio": "MIMO_SHADOW",
-          "signal_type": "early_rotation",
-          "confidence": "medium",
-          "reason_short": "rot_score 10 highest in entire candidate set with dems 16 acceleration and 6-day outperform",
-          "reason_full": "TTI holds the highest rotation score in the entire candidate set at 10, indicating the strongest relative strength improvement trajectory among all peers. Daily momentum score of 16 with momentum acceleration confirmed and outperform_d10=6 demonstrates robust multi-day institutional flow without a spike_flag. The 2-week weekly streak is less mature than TDOC's 8 weeks or URI's 5 weeks, but the combination of peak rot_score and third-highest dems creates a compelling early-stage leadership signal. Extension risk is medium with 2 points from dist_sma20_atr_high, acknowledged but manageable given the accelerating daily trend.",
-          "comparative_edge": "Selected over HIMS (PCS=80.0) which has dems only 9 without acceleration and sits 51.8% below its 52-week high; TTI's rot_score of 10 vs HIMS's 8 and dems of 16 vs 9 demonstrate stronger near-term momentum with cleaner technical positioning and no deep drawdown overhang.",
-          "key_supporting_factors": [
-            "Rotation score of 10 is the absolute highest in the candidate set, indicating peak relative strength improvement.",
-            "Daily momentum score of 16 with acceleration true and outperform_d10=6 confirms multi-day institutional accumulation.",
-            "Zero spike_flag with 3-day daily streak shows the move is sustained across multiple sessions not a single burst.",
-            "us_cyclical theme concentration in MIMO_SHADOW remains moderate at approximately 14% with this addition."
-          ],
-          "key_risks_or_contradictions": [
-            "Weekly streak of only 2 weeks is less mature than peers like TDOC (8 weeks) and CAT (8 weeks).",
-            "13-week outperformance of 16.1% vs SPY is modest compared to TDOC's 38.7% and URI's 38.1%.",
-            "Extension risk is medium with dist_sma20_atr_high suggesting some chasing risk at current levels."
-          ]
-        }
-      ],
-      "watch": [
-        {
-          "ticker": "URI",
-          "reason": "PCS 80.5 with rot_score 8 and 5-week streak is strong, but spike_flag true and dems only 6 indicate single-session-driven recent strength rather than broad multi-day flow.",
-          "watch_trigger": "dems rising above 12 with spike_flag clearing false and outperform_d10 >= 6 would confirm broader daily institutional participation."
-        },
-        {
           "ticker": "HIMS",
-          "reason": "PCS 80.0 with rot_score 8 and 49.4% 13w outperformance is notable, but dems 9 is below 10 and 51.8% distance from 52w high suggests deep drawdown recovery rather than fresh uptrend leadership.",
-          "watch_trigger": "dems rising above 14 with momentum_acceleration and dist_52w_high narrowing below -40% would signal fresh buying pressure."
+          "reason": "Already open in CONFIRMED_FLOW_LEADERS with current weight elevated.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "OSCR",
-          "reason": "PCS 72.5 with 138.3% 13w outperformance and 8-week streak is the strongest weekly profile, but dems 6, spike_flag true, and extension high at 4 points create conflicting risk signals that warrant further confirmation.",
-          "watch_trigger": "dems rising above 12 with spike_flag clearing and extension_points dropping below 3 would align daily and weekly signals."
+          "reason": "Already open in CONFIRMED_FLOW_LEADERS.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "ROOT",
-          "reason": "PCS 66.2 below min entry 68, but dems 15 with acceleration true and outperform_d10=6 show strong daily momentum that could push PCS above threshold in coming sessions.",
-          "watch_trigger": "PCS crossing above 68 with dems sustaining above 12 would trigger eligibility for MIMO_SHADOW entry."
+          "ticker": "AMD",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "VRTX",
-          "reason": "PCS 65.8 below min entry 68, but dems 18 with acceleration true and outperform_d10=8 with 6-day streak show exceptional daily momentum that could drive PCS higher despite negative 13w outperformance.",
-          "watch_trigger": "PCS crossing above 68 with the current dems and outperform_d10 profile sustained would trigger entry consideration."
-        }
-      ],
-      "rejected": [
-        {
-          "ticker": "NUE",
-          "reason": "IGNORAR signal with streak 0w, rot_score 5, and ret_4w essentially flat at -0.1% vs SPY indicates the PCS cross-up lacks sustained momentum support.",
-          "rejection_category": "weak_flow"
+          "ticker": "NBIS",
+          "reason": "Already open across multiple portfolios.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "SMCI",
-          "reason": "IGNORAR signal with streak 0w, ret_4w of -17.2% vs SPY, and rot_score 5 shows a bounce within a downtrend rather than fresh leadership.",
-          "rejection_category": "weak_relative_strength"
+          "ticker": "GS",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "ASPI",
-          "reason": "IGNORAR signal with streak 0w, ret_4w of -4.9% vs SPY, and rot_score 5 indicates insufficient momentum to justify entry below the weekly threshold.",
-          "rejection_category": "weak_flow"
+          "ticker": "AFM.V",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "LLY",
-          "reason": "IGNORAR signal with streak 0w and rot_score 5 despite dems 16; the complete lack of weekly streak contradicts the daily momentum and signals fragile strength.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "HUM",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "REG",
-          "reason": "PCS 66.5 below min entry 68 with streak only 1w and ret_13w of -2.3% vs SPY showing negative longer-term relative strength.",
-          "rejection_category": "weak_relative_strength"
+          "ticker": "SASK.V",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "CORZ",
-          "reason": "PCS 64.2 below min entry 68 with dems 5, ret_4w only 2.6%, and crypto theme rated poor in macro context, offering insufficient momentum for entry.",
-          "rejection_category": "weak_flow"
+          "ticker": "EQR",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "ABBV",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "TDOC",
+          "reason": "Already open across portfolios.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "TTI",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "CVS",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "UNH",
+          "reason": "Already open in MIMO_SHADOW.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "CAT",
+          "reason": "Already open in MIMO_SHADOW and HIGH_CONVICTION.",
+          "rejection_category": "better_alternative_available"
         }
       ]
     }
