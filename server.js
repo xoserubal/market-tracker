@@ -77,47 +77,28 @@ function calcRSI(closes, period = 14) {
   return Math.round(100 - 100 / (1 + avgGain / avgLoss));
 }
 
-// ── Koncorde (Blai5) ──────────────────────────────────────────────────────
-// Verde ≈ Estocástico %K(2) − 50        → dinero minorista (nerviosismo)
-// Azul  ≈ CMF(20) × 50                  → dinero institucional (flujo real)
-// Señal combinada: Acumulación / Alza / Distribución / Baja
-function calcKoncorde(closes, volumes, highs, lows) {
-  const stochPeriod = 2;
-  const cmfPeriod   = 20;
-  const n = closes.length;
-  if (n < cmfPeriod + 1) return { konVerde: null, konAzul: null, konSignal: null };
-
-  // Verde: Estocástico %K(2) − 50
-  const slH = highs.slice(-stochPeriod).filter(x => x != null);
-  const slL = lows.slice(-stochPeriod).filter(x => x != null);
-  const stH = slH.length ? Math.max(...slH) : null;
-  const stL = slL.length ? Math.min(...slL) : null;
-  const verde = (stH != null && stL != null && stH !== stL)
-    ? Math.round((closes[n - 1] - stL) / (stH - stL) * 100 - 50)
-    : 0;
-
-  // Azul: CMF(20) × 50
-  // CMF = Σ[ ((Close - Low) - (High - Close)) / (High - Low) × Volume ] / Σ Volume
-  let mfvSum = 0, volSum = 0;
-  for (let i = n - cmfPeriod; i < n; i++) {
-    const h = highs[i], l = lows[i], c = closes[i], v = volumes[i];
-    if (h == null || l == null || c == null || v == null || v === 0) continue;
-    const range = h - l;
-    const mfm = range !== 0 ? ((c - l) - (h - c)) / range : 0;
-    mfvSum += mfm * v;
-    volSum += v;
+// ── Koncorde Plus (OskarGallard, MPL 2.0) — pre-computed by Python ───────
+// Pre-computed by scripts/koncorde_calculator.py (Step 9b in the pipeline).
+// Cache refreshes every 10 minutes so the display stays current without
+// restarting the server between pipeline runs.
+let _konccordeCache = null;
+let _koncordeCacheTs = 0;
+function getKoncordeData() {
+  if (Date.now() - _koncordeCacheTs < 10 * 60 * 1000 && _konccordeCache) {
+    return _konccordeCache;
   }
-  const cmf = volSum > 0 ? mfvSum / volSum : 0;
-  const azul = Math.round(cmf * 50);
-
-  // Señal combinada
-  let konSignal;
-  if      (azul >= 0 && verde <  0) konSignal = 'Acumulac.';
-  else if (azul >= 0 && verde >= 0) konSignal = 'Alza';
-  else if (azul <  0 && verde >= 0) konSignal = 'Distribuc.';
-  else                              konSignal = 'Baja';
-
-  return { konVerde: verde, konAzul: azul, konSignal };
+  const p = path.join(__dirname, "docs", "data", "koncorde_data.json");
+  try {
+    if (fs.existsSync(p)) {
+      const data = JSON.parse(fs.readFileSync(p, "utf8"));
+      _konccordeCache = data.tickers || {};
+      _koncordeCacheTs = Date.now();
+      return _konccordeCache;
+    }
+  } catch (e) {
+    console.warn("koncorde_data.json read error:", e.message);
+  }
+  return {};
 }
 
 // ── MACD (12, 26, 9) ─────────────────────────────────────────────────────
@@ -246,11 +227,11 @@ app.get("/api/quote/:symbol", async (req, res) => {
       v1w: absAt(5), v1m: absAt(21), v3m: absAt(63), v6m: absAt(126), v1y: absAt(252),
       // Volumen vs media 3 meses
       vol1d: volPct(0), vol2d: volPct(1), vol3d: volPct(2),
-      // RSI, MACD, ATR, Koncorde
+      // RSI, MACD, ATR, Koncorde Plus
       rsi: calcRSI(closes.slice(-100)),
       ...calcMACD(closes),
       ...calcATR(closes, highs, lows),
-      ...calcKoncorde(closes, volumes, highs, lows),
+      ...(getKoncordeData()[req.params.symbol.toUpperCase()] ?? {}),
       // ── v2: SMAs, OBV, volumen, anti-extensión ──
       sma20:  calcSMA(closes, 20)  ? +calcSMA(closes, 20).toPrecision(6)  : null,
       sma50:  calcSMA(closes, 50)  ? +calcSMA(closes, 50).toPrecision(6)  : null,

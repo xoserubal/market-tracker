@@ -969,8 +969,8 @@ function renderPtfContent(ptfId) {
     recent.forEach(h => {
       const cls   = h.event === 'open' ? 'history-open' : 'history-close';
       const label = h.event === 'open' ? 'COMPRA' : 'VENTA';
-      const hDate = h.event === 'open' ? h.entry_date : h.exit_date;
-      const baseRationale = h.rationale || h.exit_reason || '—';
+      const hDate = h.event === 'open' ? h.entry_date : h.close_date;
+      const baseRationale = h.rationale || h.close_reason || '—';
       const hFactors = h.key_supporting_factors || [];
       const hRisks   = h.key_risks || [];
       const hHasDetail = h.reason_full || hFactors.length || hRisks.length;

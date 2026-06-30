@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import os
+import html
 import re
 import sys
 import time
@@ -596,6 +597,7 @@ def call_model(
     client = OpenAI(
         api_key=api_key,
         base_url="https://openrouter.ai/api/v1",
+        timeout=180.0,
         default_headers={
             "HTTP-Referer": "https://github.com/market-tracker",
             "X-Title":      "AI Picks Lab",
@@ -610,7 +612,12 @@ def call_model(
             {"role": "user",   "content": user_message},
         ],
     )
-    text    = resp.choices[0].message.content
+    msg  = resp.choices[0].message
+    text = msg.content or ""
+    # Reasoning models (MIMO, DeepSeek-R1) sometimes return the visible response
+    # in a separate field when content is empty — try both.
+    if not text.strip():
+        text = getattr(msg, "reasoning_content", None) or getattr(msg, "reasoning", None) or ""
     in_tok  = resp.usage.prompt_tokens
     out_tok = resp.usage.completion_tokens
     return text, in_tok, out_tok, (time.monotonic() - t0) * 1000
@@ -626,15 +633,34 @@ def parse_response(raw: str | None) -> tuple[dict | None, bool]:
     if not raw:
         return None, False
     text = raw.strip()
+    # Strip reasoning/thinking blocks emitted by models like MIMO and DeepSeek-R1
+    # before attempting JSON extraction — otherwise the regex picks up { } inside thinking.
+    text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"<thinking>[\s\S]*?</thinking>", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"<reasoning>[\s\S]*?</reasoning>", "", text, flags=re.IGNORECASE).strip()
+    # Strip markdown fences (handles both outer and inner-after-thinking fences)
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```\s*$", "", text)
-    if not text.startswith("{"):
-        m = re.search(r"\{[\s\S]*\}", text)
-        text = m.group(0) if m else text
-    try:
-        return json.loads(text), True
-    except json.JSONDecodeError:
-        return None, False
+    if text.startswith("{"):
+        try:
+            return json.loads(text), True
+        except json.JSONDecodeError:
+            pass
+    # Try ```json ... ``` block that may appear after thinking text
+    m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
+    if m:
+        try:
+            return json.loads(m.group(1)), True
+        except json.JSONDecodeError:
+            pass
+    # Last resort: greedy match of outermost { ... }
+    m = re.search(r"\{[\s\S]*\}", text)
+    if m:
+        try:
+            return json.loads(m.group(0)), True
+        except json.JSONDecodeError:
+            pass
+    return None, False
 
 
 # ── Validator ──────────────────────────────────────────────────────────────────
@@ -1018,7 +1044,7 @@ def _notify_changes(changes: dict, today: str, model_used: str, quality: int | N
                     line += f"  {meta}"
                 lines.append(line)
                 if p.get("rationale"):
-                    lines.append(f"  <i>{p['rationale']}</i>")
+                    lines.append(f"  <i>{html.escape(p['rationale'])}</i>")
         lines.append("")
 
     if changes["closed"]:
@@ -1042,7 +1068,7 @@ def _notify_changes(changes: dict, today: str, model_used: str, quality: int | N
                     line += f"  (desde {p['entry_date']})"
                 lines.append(line)
                 if p.get("close_reason"):
-                    lines.append(f"  <i>{p['close_reason']}</i>")
+                    lines.append(f"  <i>{html.escape(p['close_reason'])}</i>")
         lines.append("")
 
     lines.append(f"<i>{today} — AI Picks Lab</i>")
@@ -1508,6 +1534,7 @@ def run(force: bool = False, apply: bool = False) -> None:
                 shadow_updated = True
                 n_sel = len(data.get("selected", []))
                 print(f"  [{model_used}] SHADOW {shadow_ptf_id} -> {n_sel} picks applied")
+                _notify_changes(changes, today, model_used, quality)
         elif shadow_ptf_id:
             reasons = []
             if not json_valid:        reasons.append("json_invalid")

@@ -84,16 +84,13 @@ const volFg   = v => { const n=toN(v); if(n==null) return '#aaa'; if(n>=150) ret
 const fmtVol  = v => { const n=toN(v); if(n==null) return '—'; return n+'%'; };
 const rsiBg = v => { const n=toN(v); if(n==null) return ''; if(n>=80) return '#6b0000'; if(n>=70) return '#c0392b'; if(n>=60) return '#e8a87c'; if(n<=20) return '#0d4e0d'; if(n<=30) return '#1a7a1a'; if(n<=40) return '#a8d8a8'; return ''; };
 const rsiFg = v => { const n=toN(v); if(n==null) return '#aaa'; if(n>=70||n<=30) return 'white'; if(n>=60||n<=40) return '#222'; return '#444'; };
-const konSignalStyle = s => {
-  const map = {
-    'Acumulac.':  { bg:'#1a5ca0', fg:'white' },
-    'Alza':       { bg:'#1a7a1a', fg:'white' },
-    'Distribuc.': { bg:'#b86a00', fg:'white' },
-    'Baja':       { bg:'#c0392b', fg:'white' },
-  };
-  return map[s] ?? { bg:'', fg:'#aaa' };
-};
-const konValFg = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?'#c0392b':'#888'; };
+// ── Koncorde Plus helpers ─────────────────────────────────────────────────
+const koncStateStyle = s => ({'accumulation':{bg:'#dbeafe',fg:'#1e40af'},'up':{bg:'#dcfce7',fg:'#15803d'},'distribution':{bg:'#fef3c7',fg:'#b45309'},'down':{bg:'#fee2e2',fg:'#b91c1c'}})[s] ?? {bg:'#f3f4f6',fg:'#6b7280'};
+const koncStateLbl  = s => ({'accumulation':'Acumul.','up':'Alza','distribution':'Distrib.','down':'Baja'})[s] ?? '—';
+const blueFg   = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a5cb0':n<0?'#7b8ea0':'#888'; };
+const greenFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?'#c0392b':'#888'; };
+const trendFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#555577':n<0?'#774455':'#888'; };
+const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
 
 // ── Flow Score ────────────────────────────────────────────────────────────
 function computeFlowScore(d) {
@@ -104,8 +101,8 @@ function computeFlowScore(d) {
   if (d.macdBull === true) r += 1; else if (d.macdBull === false) r -= 1;
   const atr = d.atrPct ?? 0;
   const a = (atr >= 1 && atr <= 3) ? 1 : (atr > 3 && atr <= 6) ? 0.5 : atr > 6 ? -0.5 : 0;
-  const kmap = { 'Alza': 2, 'Acumulac.': 1, 'Distribuc.': -1, 'Baja': -2 };
-  const k = kmap[d.konSignal] ?? 0;
+  const kmap = { 'up': 2, 'accumulation': 1, 'distribution': -1, 'down': -2 };
+  const k = kmap[d.konc_d_state] ?? 0;
   const fh = d.fromHigh ?? 0;
   const t = (fh >= -10 && fh <= 0) ? 1 : (fh >= -25 && fh < -10) ? 0 : -1;
   return Math.round(((m * 2) + r + a + k + t) * 100) / 100;
@@ -126,13 +123,13 @@ const FLOW_STYLE = {
 function computeEarlyFlowScore(d, prev) {
   if (!d) return null;
   let score = 0;
-  if (prev?.konSignal && d.konSignal) {
-    const pk = prev.konSignal, ck = d.konSignal;
-    if      (pk === 'Baja'       && ck === 'Acumulac.') score += 3;
-    else if (pk === 'Distribuc.' && ck === 'Acumulac.') score += 2;
-    else if (pk === 'Acumulac.'  && ck === 'Alza')      score += 1;
-    else if (ck === 'Baja' || ck === 'Distribuc.')      score -= 1;
-  } else if (d.konSignal === 'Baja' || d.konSignal === 'Distribuc.') {
+  if (prev?.konc_d_state && d.konc_d_state) {
+    const pk = prev.konc_d_state, ck = d.konc_d_state;
+    if      (pk === 'down'         && ck === 'accumulation') score += 3;
+    else if (pk === 'distribution' && ck === 'accumulation') score += 2;
+    else if (pk === 'accumulation' && ck === 'up')           score += 1;
+    else if (ck === 'down' || ck === 'distribution')         score -= 1;
+  } else if (d.konc_d_state === 'down' || d.konc_d_state === 'distribution') {
     score -= 1;
   }
   if (prev?.atrPct != null && d.atrPct != null && prev.atrPct > 0) {
@@ -364,8 +361,8 @@ function Portfolio() {
     if (loading.size === 0 && Object.keys(prices).length > 0) {
       const snapshot = {};
       Object.entries(prices).forEach(([ticker, d]) => {
-        if (d.konSignal != null || d.atrPct != null)
-          snapshot[ticker] = { konSignal: d.konSignal ?? null, atrPct: d.atrPct ?? null };
+        if (d.konc_d_state != null || d.atrPct != null)
+          snapshot[ticker] = { konc_d_state: d.konc_d_state ?? null, atrPct: d.atrPct ?? null };
       });
 
       // Persistir snapshot en portfolio.json (funciona entre máquinas)
@@ -394,9 +391,9 @@ function Portfolio() {
             price:     d.price     ?? null,
             flowScore,
             earlyFlow,
-            konSignal: d.konSignal ?? null,
-            konAzul:   d.konAzul   ?? null,
-            konVerde:  d.konVerde  ?? null,
+            konc_d_state: d.konc_d_state ?? null,
+            konc_d_blue:  d.konc_d_blue  ?? null,
+            konc_d_green: d.konc_d_green ?? null,
             rsi:       d.rsi       ?? null,
             w1:        d.w1        ?? null,
             m1:        d.m1        ?? null,
@@ -444,7 +441,7 @@ function Portfolio() {
       const earlyFlow = computeEarlyFlowScore(p, prevSnapshot[item.ticker] ?? null);
       if (earlyFlow == null && flowScore == null) return;
       seen.set(item.ticker, { ticker: item.ticker, flowScore, earlyFlow,
-        konSignal: p.konSignal ?? null, rsi: p.rsi ?? null,
+        konc_d_state: p.konc_d_state ?? null, rsi: p.rsi ?? null,
         w1: p.w1 ?? null, m1: p.m1 ?? null });
     }));
     return [...seen.values()].sort((a, b) => (b.earlyFlow ?? -99) - (a.earlyFlow ?? -99));
@@ -689,7 +686,7 @@ function Portfolio() {
                   <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde + compresión ATR\n+ posición 52W + RSI en zona + momentum modesto.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
                   <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ ajuste Koncorde + ajuste tendencia 52W.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
                   <th data-tip={"Interpretación combinada Early Flow × Flow Score.\nEjemplos:\nEarly≥7 + Flow≥8 → Activación potente\nEarly≥7 + Flow<4 → Setup temprano\nEarly<4 + Flow≥8 → Tendencia madura (tarde)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Lectura</th>
-                  <th data-tip={"Señal combinada Koncorde (Blai5):\nAlza: institucional y minorista compran\nAcumulac.: institucional compra, minorista vende\nDistribuc.: institucional vende, minorista compra\nBaja: ambos venden"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Koncorde</th>
+                  <th data-tip={"Koncorde Plus D (OskarGallard):\nAlza: blue≥0, green≥0\nAcumul.: blue≥0, green<0 (institucional acumula)\nDistrib.: blue<0, green>0\nBaja: blue<0, green<0"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc D</th>
                   <th data-tip={"RSI(14) Wilder.\n>65: sobrecomprado · <35: sobrevendido\nZona ideal de entrada: 45–58\n(RSI en zona = +2 en Early Flow)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>RSI</th>
                   <th data-tip={"Retorno de los últimos 5 días de trading.\nEn Early Flow se valora positivo pero modesto\n(0–4%) como señal de acumulación sin sobreextensión."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1W</th>
                   <th data-tip={"Retorno de los últimos 21 días de trading.\nEn Early Flow se valora neutro a ligeramente positivo\n(−5% a +5%) — confirma consolidación."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1M</th>
@@ -701,7 +698,7 @@ function Portfolio() {
                   const flowCls   = classifyFlow(r.flowScore);
                   const earlySt   = earlyCls ? EARLY_STYLE[earlyCls] : null;
                   const flowSt    = flowCls  ? FLOW_STYLE[flowCls]   : null;
-                  const konSt     = konSignalStyle(r.konSignal);
+                  const konSt     = koncStateStyle(r.konc_d_state);
                   const reading   = (r.earlyFlow != null && r.flowScore != null)
                     ? matrixReading(r.earlyFlow, r.flowScore) : null;
                   return (
@@ -720,9 +717,9 @@ function Portfolio() {
                         {reading ?? '—'}
                       </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontWeight:600,fontSize:10,
-                        background: r.konSignal ? konSt.bg : '', color: r.konSignal ? konSt.fg : '#aaa',
+                        background: r.konc_d_state ? konSt.bg : '', color: r.konc_d_state ? konSt.fg : '#aaa',
                         whiteSpace:'nowrap'}}>
-                        {r.konSignal ?? '—'}
+                        {koncStateLbl(r.konc_d_state)}
                       </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',
                         background:rsiBg(r.rsi),color:rsiFg(r.rsi)}}>
@@ -810,9 +807,11 @@ function Portfolio() {
                     <th title="Volumen vs media 3M">Vol 2D</th>
                     <th title="Volumen vs media 3M">Vol 3D</th>
                     <th title="RSI 14 periodos">RSI</th>
-                    <th title="Koncorde Verde — dinero minorista (Estocástico −50)">K.V</th>
-                    <th title="Koncorde Azul — dinero institucional (ΔOBV normalizado)">K.A</th>
-                    <th title="Señal combinada Koncorde">Konc</th>
+                    <th title="Timeframe (D / 3D / W)">TF</th>
+                    <th title="Tiburones — dinero institucional (NVI oscilador). ↑↓ = slope último bar">Blue</th>
+                    <th title="Pececillos — dinero minorista + tendencia (PVI oscilador). ↑↓ = slope">Green</th>
+                    <th title="Tendencia compuesta (RSI+MFI+BB+Stoc)/2. ↑↓ = slope">Trend</th>
+                    <th title="Estado Koncorde Plus: Acumul. / Alza / Distrib. / Baja">Estado</th>
                     <th title="MACD histograma (12,26,9) — ▲ alcista / ▼ bajista">MACD</th>
                     <th title="ATR(14) normalizado por precio — volatilidad/fuerza del movimiento">ATR%</th>
                     <th title="Flow Score: momentum + RSI/MACD + ATR + Koncorde + tendencia">Flow</th>
@@ -827,8 +826,12 @@ function Portfolio() {
                     const isLoad = loading.has(item.ticker);
                     const price  = p?.price ?? null;
 
-                    return (
-                      <tr key={item.id} style={{background:i%2===0?'white':'#fafafa'}}>
+                    const rowBg  = i%2===0?'white':'#fafafa';
+                  const subBg1 = i%2===0?'#f0f4f8':'#e8ecf0';
+                  const subBg2 = i%2===0?'#e8ecf0':'#e0e4e8';
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr style={{background:rowBg,borderTop:'2px solid #dde8f0'}}>
                         {/* Ticker */}
                         <td>
                           <div style={{display:'flex',alignItems:'center',gap:4}}>
@@ -900,21 +903,21 @@ function Portfolio() {
                           background:rsiBg(p?.rsi),color:rsiFg(p?.rsi)}}>
                           {isLoad ? dot : p?.rsi != null ? p.rsi : '—'}
                         </td>
-                        {/* Koncorde Verde */}
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,
-                          color:konValFg(p?.konVerde)}}>
-                          {isLoad ? dot : p?.konVerde != null ? (p.konVerde>0?'+':'')+p.konVerde : '—'}
+                        {/* Koncorde Plus — D row */}
+                        <td style={{textAlign:'center',fontSize:9,color:'#888',fontWeight:600}}>D</td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,color:blueFg(p?.konc_d_blue)}}>
+                          {isLoad ? dot : fmtKonc(p?.konc_d_blue, p?.konc_d_blue_delta1)}
                         </td>
-                        {/* Koncorde Azul */}
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,
-                          color:konValFg(p?.konAzul)}}>
-                          {isLoad ? dot : p?.konAzul != null ? (p.konAzul>0?'+':'')+p.konAzul : '—'}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,color:greenFg(p?.konc_d_green)}}>
+                          {isLoad ? dot : fmtKonc(p?.konc_d_green, p?.konc_d_green_delta1)}
                         </td>
-                        {/* Koncorde señal */}
-                        {(() => { const s = konSignalStyle(p?.konSignal); return (
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,color:trendFg(p?.konc_d_trend)}}>
+                          {isLoad ? dot : fmtKonc(p?.konc_d_trend, p?.konc_d_trend_delta1)}
+                        </td>
+                        {(() => { const st = koncStateStyle(p?.konc_d_state); return (
                           <td style={{textAlign:'center',fontWeight:600,fontSize:9,
-                            background:p?.konSignal?s.bg:'',color:p?.konSignal?s.fg:'#aaa',whiteSpace:'nowrap'}}>
-                            {isLoad ? dot : p?.konSignal ?? '—'}
+                            background:p?.konc_d_state?st.bg:'',color:p?.konc_d_state?st.fg:'#aaa',whiteSpace:'nowrap'}}>
+                            {isLoad ? dot : koncStateLbl(p?.konc_d_state)}
                           </td>
                         ); })()}
                         {/* MACD */}
@@ -978,7 +981,50 @@ function Portfolio() {
                               cursor:'pointer',background:'#fff5f5',color:'#e74c3c'}}>✕</button>
                         </td>
                       </tr>
-                    );
+                      {/* ── Sub-row 3D ── */}
+                      <tr style={{background:subBg1}}>
+                        <td colSpan={14} style={{padding:0}}/>
+                        <td style={{textAlign:'center',fontSize:9,color:'#888',fontWeight:600,padding:'1px 4px'}}>3D</td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:blueFg(p?.konc_3d_blue)}}>
+                          {fmtKonc(p?.konc_3d_blue, p?.konc_3d_blue_delta1)}
+                        </td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:greenFg(p?.konc_3d_green)}}>
+                          {fmtKonc(p?.konc_3d_green, p?.konc_3d_green_delta1)}
+                        </td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,padding:'1px 4px',color:trendFg(p?.konc_3d_trend)}}>
+                          {fmtKonc(p?.konc_3d_trend, p?.konc_3d_trend_delta1)}
+                        </td>
+                        {(() => { const st = koncStateStyle(p?.konc_3d_state); return (
+                          <td style={{textAlign:'center',fontWeight:600,fontSize:9,padding:'1px 4px',
+                            background:p?.konc_3d_state?st.bg:'',color:p?.konc_3d_state?st.fg:'#aaa',whiteSpace:'nowrap'}}>
+                            {koncStateLbl(p?.konc_3d_state)}
+                          </td>
+                        ); })()}
+                        <td colSpan={6} style={{padding:0}}/>
+                      </tr>
+                      {/* ── Sub-row W ── */}
+                      <tr style={{background:subBg2}}>
+                        <td colSpan={14} style={{padding:0}}/>
+                        <td style={{textAlign:'center',fontSize:9,color:'#888',fontWeight:600,padding:'1px 4px'}}>W</td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:blueFg(p?.konc_w_blue)}}>
+                          {fmtKonc(p?.konc_w_blue, p?.konc_w_blue_delta1)}
+                        </td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:greenFg(p?.konc_w_green)}}>
+                          {fmtKonc(p?.konc_w_green, p?.konc_w_green_delta1)}
+                        </td>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,padding:'1px 4px',color:trendFg(p?.konc_w_trend)}}>
+                          {fmtKonc(p?.konc_w_trend, p?.konc_w_trend_delta1)}
+                        </td>
+                        {(() => { const st = koncStateStyle(p?.konc_w_state); return (
+                          <td style={{textAlign:'center',fontWeight:600,fontSize:9,padding:'1px 4px',
+                            background:p?.konc_w_state?st.bg:'',color:p?.konc_w_state?st.fg:'#aaa',whiteSpace:'nowrap'}}>
+                            {koncStateLbl(p?.konc_w_state)}
+                          </td>
+                        ); })()}
+                        <td colSpan={6} style={{padding:0}}/>
+                      </tr>
+                    </React.Fragment>
+                  );
                   })}
                 </tbody>
               </table>

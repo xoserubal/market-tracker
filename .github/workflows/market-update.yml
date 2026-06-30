@@ -75,6 +75,10 @@ jobs:
         run: python scripts/event_detector.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 9b Koncorde Plus (3 timeframes)
+        run: python scripts/koncorde_calculator.py
+        working-directory: ${{ github.workspace }}
+
       - name: Run pipeline - Step 10 paper trading (AI picks)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

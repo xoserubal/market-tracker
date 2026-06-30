@@ -14,6 +14,7 @@ Env vars (GitHub Secrets):
 """
 from __future__ import annotations
 
+import html
 import json
 import os
 import sys
@@ -57,6 +58,7 @@ PORTFOLIO_LABELS = {
     "EARLY_ROTATION":               "Rot. Temprana",
     "MACRO_THEMATIC_BENEFICIARIES": "Macro Tematico",
     "REJECTED_HIGH_SCORE":          "Rechazados (control)",
+    "MIMO_SHADOW":                  "Mimo Shadow",
 }
 
 CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
@@ -170,7 +172,7 @@ def build_message(
 
     review = picks.get("last_ai_review", {})
     if review.get("market_read"):
-        lines.append(f"<i>{review['market_read']}</i>")
+        lines.append(f"<i>{html.escape(review['market_read'])}</i>")
         lines.append("")
 
     if new_opens:
@@ -193,7 +195,7 @@ def build_message(
                     line += f"  <i>(entrada {p['entry_date']})</i>"
                 lines.append(line)
                 if p.get("rationale"):
-                    lines.append(f"  <i>{p['rationale']}</i>")
+                    lines.append(f"  <i>{html.escape(p['rationale'])}</i>")
         lines.append("")
 
     if new_closes:
@@ -213,7 +215,7 @@ def build_message(
                     line += f"  (desde {p['entry_date']})"
                 lines.append(line)
                 if p.get("close_reason"):
-                    lines.append(f"  <i>{p['close_reason']}</i>")
+                    lines.append(f"  <i>{html.escape(p['close_reason'])}</i>")
         lines.append("")
 
     lines.append(f"<i>{today} — AI Picks Lab (fallback notifier)</i>")

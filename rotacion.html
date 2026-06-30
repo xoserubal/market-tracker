@@ -482,8 +482,8 @@ async function fetchMacro() {
   // NetLiq Δ13w (USD billions = divide by 1000 since FRED is in millions)
   const nlD = netliq.data;
   if (nlD?.current != null) {
-    const delta13w = nlD.v13w != null
-      ? (nlD.current - nlD.v13w) / 1000
+    const delta13w = nlD.v3m != null
+      ? (nlD.current - nlD.v3m) / 1000
       : null;
     out.netliq = withStale({ value: delta13w, raw: nlD.current }, netliq);
   } else {
