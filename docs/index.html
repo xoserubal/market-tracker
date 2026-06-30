@@ -838,7 +838,7 @@ function renderPtfContent(ptfId) {
 
     html += `<table class="picks-table">
       <thead><tr>
-        <th>Ticker</th><th>Entrada</th><th>Actual</th><th>P&amp;L</th><th>10d</th><th title="PCS al entrar → PCS actual si ha cambiado">PCS entrada</th><th>Tamaño</th><th>Convicción</th><th>Desde</th><th>Señal</th><th>Rationale</th>
+        <th>Ticker</th><th>Entrada</th><th>Actual</th><th>P&amp;L</th><th title="Variación respecto al cierre anterior">Sesión</th><th>10d</th><th title="PCS al entrar → PCS actual si ha cambiado">PCS entrada</th><th>Tamaño</th><th>Convicción</th><th>Desde</th><th>Señal</th><th>Rationale</th>
       </tr></thead><tbody>`;
     positions.forEach(p => {
       const convCls = `conv-${(p.conviction || 'LOW').toUpperCase()}`;
@@ -855,6 +855,12 @@ function renderPtfContent(ptfId) {
       const pnlSign = pnl != null ? Math.sign(pnl) : 0;
       const pnlStr = pnl != null
         ? `<span style="color:${pnl > 0 ? 'var(--green)' : pnl < 0 ? 'var(--red)' : 'var(--text2)'};font-weight:700">${pnl > 0 ? '+' : ''}${pnl.toFixed(1)}%</span>`
+        : '<span style="color:var(--text2)">—</span>';
+      const lastSession = closes.length >= 2
+        ? (closes[closes.length - 1] - closes[closes.length - 2]) / closes[closes.length - 2] * 100
+        : null;
+      const lastSessionStr = lastSession != null
+        ? `<span style="color:${lastSession > 0 ? 'var(--green)' : lastSession < 0 ? 'var(--red)' : 'var(--text2)'};font-weight:600">${lastSession > 0 ? '+' : ''}${lastSession.toFixed(2)}%</span>`
         : '<span style="color:var(--text2)">—</span>';
       const rfFactors = p.key_supporting_factors || [];
       const rfRisks   = p.key_risks || [];
@@ -875,6 +881,7 @@ function renderPtfContent(ptfId) {
         <td style="color:var(--text2)">${entryStr}</td>
         <td>${currentStr}</td>
         <td>${pnlStr}</td>
+        <td>${lastSessionStr}</td>
         <td>${sparklineSVG(closes, pnlSign)}</td>
         <td><span class="pcs-bar" style="width:${barW}px"></span>${p.entry_pcs ?? '—'}${pcsArrow}</td>
         <td>${p.size_pct != null ? p.size_pct + '%' : '—'}</td>
