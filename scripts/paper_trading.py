@@ -130,7 +130,7 @@ HARD_RULES = [
     "With strong contradictions, use WATCH or REJECT, not SELECT.",
     "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
     "Every rejected item must have: reason and a valid rejection_category.",
-    "Every candidate with pcs >= 62 that you do not SELECT must appear in watch or rejected with a reason.",
+    "Every candidate with pcs >= 62 that you do not SELECT must appear in EXACTLY ONE of watch or rejected, never both. A ticker in two lists is a hard rule violation — commit to one classification.",
     "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
     "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead.",
     "Review ALL tickers in active_picks_relevant and include each one in open_picks_review. Use action=EXIT if: (a) current_pcs < pcs_min_entry AND current_streak_weeks <= 1, OR (b) current_rot_score <= 2. Otherwise use HOLD. Do not omit any active position from open_picks_review.",
@@ -234,6 +234,14 @@ def _compact_candidate(c: dict, conc: dict | None = None) -> dict:
         # Theme concentration — informational, does not block selections
         "theme_concentration_risk":    (conc or {}).get("theme_risk"),
         "subtheme_concentration_risk": (conc or {}).get("subtheme_risk"),
+        # Koncorde Plus — institutional/retail flow direction, informational.
+        # Daily (D) is noisy; 3D is the sweet spot signal/noise-wise; W confirms.
+        "konc_d_state":   c.get("konc_d_state"),
+        "konc_3d_state":  c.get("konc_3d_state"),
+        "konc_3d_blue":   c.get("konc_3d_blue"),
+        "konc_3d_green":  c.get("konc_3d_green"),
+        "konc_3d_trend":  c.get("konc_3d_trend"),
+        "konc_w_state":   c.get("konc_w_state"),
     }
 
 
@@ -431,7 +439,11 @@ HARD RULES (violations are flagged automatically):
 6. Every selected item needs: portfolio, signal_type, confidence, \
 reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars).
 7. Every rejected item needs: reason and a valid rejection_category.
-8. Every candidate with pcs >= 62 not selected must appear in watch or rejected.
+8. Every candidate with pcs >= 62 not selected must appear in EXACTLY ONE of \
+watch or rejected — never both. If you are torn between WATCH and REJECT for a \
+candidate, that IS the decision: WATCH means "not yet, here is the trigger", \
+REJECT means "no, for this reason". Pick one and commit. A ticker listed in \
+two of selected/watch/rejected is treated as a hard rule violation.
 
 REASONING STYLE (applies to all text fields in selected, watch, rejected):
 - Do not use input field names or flag labels as content. "rs_strong_leader",
@@ -458,8 +470,9 @@ COMPARATIVE REASONING (mandatory — most common failure mode):
   BAD:  "Strong relative strength and high PCS."
   GOOD: "Selected over MARA (PCS=80) because streak_weeks=12 vs MARA's 2 and
          rot_score=9 vs MARA's 4. MARA rejected as better_alternative_available."
-- Every candidate with pcs >= 62 that you do not SELECT must appear in watch or
-  rejected — silence on a high-PCS candidate is not acceptable.
+- Every candidate with pcs >= 62 that you do not SELECT must appear in exactly
+  one of watch or rejected — silence on a high-PCS candidate is not acceptable,
+  and appearing in both is not acceptable either.
 
 OBSERVATION FIELDS (informational — no hard rules, acknowledgement requested):
 - extension_risk measures whether an entry might be a late chase. Values: low/medium/high/extreme.
@@ -471,6 +484,9 @@ OBSERVATION FIELDS (informational — no hard rules, acknowledgement requested):
   by sector. When a theme shows risk "high", note the concentration in your reasoning. You may
   still SELECT tickers in concentrated themes if the signal justifies it. When candidates are
   otherwise equivalent, prefer the less-concentrated theme.
+- Koncorde 3D and W states indicate institutional flow direction. When konc_3d_state="distribution"
+  or konc_w_state="distribution", note this in your reasoning for any SELECT decision. Koncorde
+  daily (konc_d_state) is noisy — weight 3D and W more heavily.
 - These fields exist to collect data: after 30-50 picks we will analyze whether extension_risk
   and theme_concentration correlate with worse returns. Until then, treat them as context only.
 
@@ -1006,6 +1022,7 @@ _PORTFOLIO_LABELS = {
     "EARLY_ROTATION":               "Rot. Temprana",
     "MACRO_THEMATIC_BENEFICIARIES": "Macro Tematico",
     "REJECTED_HIGH_SCORE":          "Rechazados (control)",
+    "MIMO_SHADOW":                  "Mimo Shadow",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 

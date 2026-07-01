@@ -245,7 +245,11 @@ def run() -> None:
 
     if not token or not chat_id:
         print("TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set — skipping notification")
-        return
+        # Exit non-zero so the GitHub Actions step shows as failed (visible in the
+        # Actions tab) instead of silently missing notifications for weeks. The
+        # workflow step uses continue-on-error so this never blocks later steps
+        # (Step 12 Telegram commands, Commit updated data).
+        sys.exit(1)
 
     today        = str(date.today())
     picks        = _load("ai_picks.json")

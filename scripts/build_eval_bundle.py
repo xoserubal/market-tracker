@@ -154,6 +154,12 @@ def _compact_candidate(c: dict) -> dict:
         "momentum_accel": ds.get("momentum_accel"),
         "vol_5d_20d":     ds.get("vol_5d_vs_20d"),
         "spike_flag":     ds.get("spike_flag"),
+        "konc_d_state":   c.get("konc_d_state"),
+        "konc_3d_state":  c.get("konc_3d_state"),
+        "konc_3d_blue":   c.get("konc_3d_blue"),
+        "konc_3d_green":  c.get("konc_3d_green"),
+        "konc_3d_trend":  c.get("konc_3d_trend"),
+        "konc_w_state":   c.get("konc_w_state"),
     }
 
 
