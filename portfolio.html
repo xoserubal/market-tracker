@@ -953,6 +953,16 @@ function Portfolio() {
                             />
                             <div>
                               <span style={{fontWeight:700,color:'#1a6baa',fontSize:12}}>{item.ticker}</span>
+                              {p?.konc_mirror_signal === 'mirror_reversal_confirmed' &&
+                                <span title="Espejo CONFIRMADO: giro azul negativo→positivo (verde sigue negativo) en D y 3D, semanal aún negativo — posible inicio de mini-tendencia."
+                                  style={{marginLeft:5,fontSize:10,background:'#f3e5f5',color:'#7b1fa2',borderRadius:8,padding:'1px 6px',fontWeight:700}}>
+                                  🪞 Espejo
+                                </span>}
+                              {p?.konc_mirror_signal === 'mirror_reversal_daily_only' &&
+                                <span title="Espejo (solo D): giro azul negativo→positivo visible en diario, 3D aún no confirma."
+                                  style={{marginLeft:5,fontSize:10,background:'#f5f5f5',color:'#9e9e9e',borderRadius:8,padding:'1px 6px',fontWeight:700}}>
+                                  🪞 D
+                                </span>}
                               <div style={{fontSize:8,color:'#bbb'}}>{item.addedAt}</div>
                             </div>
                           </div>
