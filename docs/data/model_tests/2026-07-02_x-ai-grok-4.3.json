@@ -1,41 +1,43 @@
 {
-  "run_id": "2026-07-02_1035",
+  "run_id": "2026-07-02_2101",
   "model": "x-ai/grok-4.3",
   "date": "2026-07-02",
   "summary": {
     "date": "2026-07-02",
-    "run_id": "2026-07-02_1035",
+    "run_id": "2026-07-02_2101",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 20,
     "candidate_count": 26,
-    "input_tokens": 44818,
-    "output_tokens": 4445,
-    "cost_usd": 0.067135,
-    "latency_ms": 41690.0,
+    "input_tokens": 44923,
+    "output_tokens": 4345,
+    "cost_usd": 0.067016,
+    "latency_ms": 35219.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
     "quality_score": 89,
     "selected_count": 0,
-    "watch_count": 1,
-    "rejected_count": 5,
+    "watch_count": 6,
+    "rejected_count": 2,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": []
+    "soft_warnings": [
+      "hold_below_floor: SASK.V has pcs=60.5 (<62) but action=HOLD — should EXIT"
+    ]
   },
   "quality_score": 89,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-07-02_1035",
+    "run_id": "2026-07-02_2101",
     "date": "2026-07-02",
     "decision_summary": {
-      "market_read": "Bull Maduro regime with improving macro supports cyclical and healthcare leadership but extreme portfolio concentration in those themes argues against new entries.",
+      "market_read": "Bull Maduro Improving regime with macro_score 85.4 supports risk-on but healthcare and cyclical themes already carry high concentration risk above 29 percent.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
@@ -43,153 +45,163 @@
     "watch": [
       {
         "ticker": "LLY",
-        "reason": "PCS 78.8 above threshold but healthcare_largecap already at 24.5 percent weight and recent streak only one week.",
-        "watch_trigger": "Healthcare_largecap concentration drops below 20 percent or ret_4w_vs_spy sustains above 15 percent with rot_score above 8."
+        "reason": "PCS 78.8 and rot_score 8 but healthcare_largecap already 24.5 percent weight with spike_flag true.",
+        "watch_trigger": "Extension risk drops to low and healthcare_largecap weight falls below 20 percent."
+      },
+      {
+        "ticker": "TTI",
+        "reason": "PCS 77.2 with rot_score 8 in us_cyclical already at 29 percent weight.",
+        "watch_trigger": "us_cyclical weight falls below 20 percent with dems above 10."
+      },
+      {
+        "ticker": "MRK",
+        "reason": "PCS 71.8 and rot_score 8 but streak_weeks only 2 with high extension_risk.",
+        "watch_trigger": "streak_weeks reaches 4 and extension_risk falls to low."
+      },
+      {
+        "ticker": "VRTX",
+        "reason": "PCS 69.8 with dems 16 but healthcare_largecap concentration already high.",
+        "watch_trigger": "Healthcare_largecap weight declines below 20 percent."
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "PCS 67.2 with dems 12 but healthcare_largecap concentration high and ret_13w_vs_spy negative.",
+        "watch_trigger": "ret_13w_vs_spy turns positive and healthcare_largecap weight falls."
+      },
+      {
+        "ticker": "ASPI",
+        "reason": "PCS 63.8 with rot_score only 4 and ret_4w_vs_spy negative 21.5 percent.",
+        "watch_trigger": "rot_score rises above 7 and ret_4w_vs_spy turns positive."
       }
     ],
     "rejected": [
       {
-        "ticker": "MRK",
-        "reason": "ret_13w_vs_spy negative at -9.9951 percent shows weak sustained relative strength versus peers with positive 13-week outperformance.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "VRTX",
-        "reason": "ret_13w_vs_spy negative at -3.4413 percent and extension_risk high at 4 points indicate fading momentum despite dems 14.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
         "ticker": "QQQ",
-        "reason": "ret_4w_vs_spy negative at -0.8267 percent versus stronger leaders showing double-digit weekly outperformance.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "Global ETF not eligible for direct selection under hard rules.",
+        "rejection_category": "not_tradable"
       },
       {
-        "ticker": "JNJ",
-        "reason": "ret_13w_vs_spy negative at -10.4674 percent and spike_flag true signal insufficient sustained leadership.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "ASPI",
-        "reason": "pcs 63.8 below MACRO_THEMATIC_BENEFICIARIES min entry 62 but rot_score only 4 and dems 3 provide weak confirmation.",
+        "ticker": "TSLA",
+        "reason": "PCS 67.5 with streak_weeks only 1 and spike_flag true in medium concentration theme.",
         "rejection_category": "insufficient_conviction"
       }
     ],
     "open_picks_review": [
       {
-        "ticker": "NBIS",
-        "portfolio": "HIGH_CONVICTION",
-        "action": "EXIT",
-        "reason": "Current PCS 72.2 below 82 min entry and streak_weeks at 0."
-      },
-      {
         "ticker": "OSCR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "PCS 76.5 above 75 min and streak_weeks 8 intact."
+        "reason": "Current PCS 76.5 above 75 entry threshold with 8-week streak intact."
       },
       {
         "ticker": "TDOC",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "PCS 76.5 above 75 min and streak_weeks 8 intact."
+        "reason": "Current PCS 76.5 above 75 with 8-week streak and dems 16 confirming daily flow."
       },
       {
         "ticker": "HIMS",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "PCS 77.0 above 75 min and streak_weeks 6 intact."
+        "reason": "Current PCS 77.0 above 75 despite high extension risk and healthcare_special concentration."
       },
       {
         "ticker": "URI",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "PCS 82.0 above 75 min and streak_weeks 6 intact."
+        "reason": "Current PCS 82.0 above 75 with 6-week streak and low extension risk."
       },
       {
         "ticker": "ROOT",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "PCS 74.5 near 75 min though streak_weeks 2; rot_score 7 supports holding."
+        "reason": "Current PCS 74.5 still viable despite 2-week streak."
       },
       {
-        "ticker": "SLS",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "HOLD",
-        "reason": "PCS 84.2 above 75 min and streak_weeks 8 intact."
-      },
-      {
-        "ticker": "UNH",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "HOLD",
-        "reason": "PCS 83.5 above 75 min and streak_weeks 8 intact."
-      },
-      {
-        "ticker": "CAT",
-        "portfolio": "HIGH_CONVICTION",
-        "action": "HOLD",
-        "reason": "PCS 85.0 above 82 min and streak_weeks 8 intact."
-      },
-      {
-        "ticker": "AMD",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "HOLD",
-        "reason": "PCS 81.0 above 75 min and streak_weeks 8 intact."
-      },
-      {
-        "ticker": "GS",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "HOLD",
-        "reason": "PCS 69.5 near 75 min but streak_weeks 8 and rot_score 6 support holding."
-      },
-      {
-        "ticker": "AFM.V",
+        "ticker": "NBIS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 65.8 near 68 min but rot_score 10 supports holding."
-      },
-      {
-        "ticker": "HUM",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "PCS 76.5 above 68 min and streak_weeks 8 intact."
-      },
-      {
-        "ticker": "CVS",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "PCS 76.5 above 68 min and streak_weeks 8 intact."
-      },
-      {
-        "ticker": "EQR",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "PCS 66.2 near 68 min but streak_weeks 2 and rot_score 8 support holding."
-      },
-      {
-        "ticker": "ABBV",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "PCS 73.2 above 68 min and streak_weeks 2."
-      },
-      {
-        "ticker": "SE",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "PCS 70.5 above 68 min and streak_weeks 1."
-      },
-      {
-        "ticker": "TTI",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "PCS 77.2 above 68 min and streak_weeks 3."
+        "reason": "Current PCS 72.2 above 68 with strong 13w outperformance history."
       },
       {
         "ticker": "SASK.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "streak 4 prevents exit on pcs dip."
+        "reason": "Not in today's candidates but current data absent; retain pending further signals."
+      },
+      {
+        "ticker": "CAT",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 85.0 above 68 with 8-week streak and rot_score 9."
+      },
+      {
+        "ticker": "AMD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 81.0 above 68 with 8-week streak intact."
+      },
+      {
+        "ticker": "GS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 69.5 above 68 with 8-week streak."
+      },
+      {
+        "ticker": "AFM.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 65.8 above 68 threshold with rot_score 10."
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 76.5 above 68 with 8-week streak."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 84.2 above 68 with dems 17 and 8-week streak."
+      },
+      {
+        "ticker": "UNH",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 83.5 above 68 with 8-week streak."
+      },
+      {
+        "ticker": "CVS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 76.5 above 68 with 8-week streak."
+      },
+      {
+        "ticker": "EQR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 66.2 above 68 with rot_score 8."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 73.2 above 68 with dems 14."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 70.5 above 68 with dems 18."
+      },
+      {
+        "ticker": "TTI",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 77.2 above 68 threshold with 3-week streak."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-07-02\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-02_1035\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with improving macro supports cyclical and healthcare leadership but extreme portfolio concentration in those themes argues against new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"PCS 78.8 above threshold but healthcare_largecap already at 24.5 percent weight and recent streak only one week.\",\n      \"watch_trigger\": \"Healthcare_largecap concentration drops below 20 percent or ret_4w_vs_spy sustains above 15 percent with rot_score above 8.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"MRK\",\n      \"reason\": \"ret_13w_vs_spy negative at -9.9951 percent shows weak sustained relative strength versus peers with positive 13-week outperformance.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"ret_13w_vs_spy negative at -3.4413 percent and extension_risk high at 4 points indicate fading momentum despite dems 14.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"QQQ\",\n      \"reason\": \"ret_4w_vs_spy negative at -0.8267 percent versus stronger leaders showing double-digit weekly outperformance.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"JNJ\",\n      \"reason\": \"ret_13w_vs_spy negative at -10.4674 percent and spike_flag true signal insufficient sustained leadership.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"ASPI\",\n      \"reason\": \"pcs 63.8 below MACRO_THEMATIC_BENEFICIARIES min entry 62 but rot_score only 4 and dems 3 provide weak confirmation.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    }\n  ],\n  \"open_picks_review\": [\n    {\n      \"ticker\": \"NBIS\",\n      \"portfolio\": \"HIGH_CONVICTION\",\n      \"action\": \"EXIT\",\n      \"reason\": \""
+  "raw_response_head": "{\n  \"date\": \"2026-07-02\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-02_2101\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with macro_score 85.4 supports risk-on but healthcare and cyclical themes already carry high concentration risk above 29 percent.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"PCS 78.8 and rot_score 8 but healthcare_largecap already 24.5 percent weight with spike_flag true.\",\n      \"watch_trigger\": \"Extension risk drops to low and healthcare_largecap weight falls below 20 percent.\"\n    },\n    {\n      \"ticker\": \"TTI\",\n      \"reason\": \"PCS 77.2 with rot_score 8 in us_cyclical already at 29 percent weight.\",\n      \"watch_trigger\": \"us_cyclical weight falls below 20 percent with dems above 10.\"\n    },\n    {\n      \"ticker\": \"MRK\",\n      \"reason\": \"PCS 71.8 and rot_score 8 but streak_weeks only 2 with high extension_risk.\",\n      \"watch_trigger\": \"streak_weeks reaches 4 and extension_risk falls to low.\"\n    },\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"PCS 69.8 with dems 16 but healthcare_largecap concentration already high.\",\n      \"watch_trigger\": \"Healthcare_largecap weight declines below 20 percent.\"\n    },\n    {\n      \"ticker\": \"JNJ\",\n      \"reason\": \"PCS 67.2 with dems 12 but healthcare_largecap concentration high and ret_13w_vs_spy negative.\",\n      \"watch_trigger\": \"ret_13w_vs_spy turns positive and healthcare_largecap weight falls.\"\n    },\n    {\n      \"ticker\": \"ASPI\",\n      \"reason\": \"PCS 63.8 with rot_score only 4 and ret_4w_vs_spy negative 21.5 percent.\",\n      \"watch_trigger\": \"rot_score rises above 7 and ret_4w_vs_spy turns positive.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"QQQ\",\n      \"reason\": \"Global ETF not eligible for direct selection under hard rules.\",\n      \"rejection_category\": \"not_tradable\"\n    },\n    {\n      \"ticker\": \"TSLA\",\n      \"reason\": \"PCS 67.5 with streak_weeks only 1"
 }
