@@ -307,10 +307,17 @@ function macroSignalStyle(signal) {
   return { label: "Neutral", bg: "#f0f0f0", fg: "#555" };
 }
 
-function regimeState(score) {
-  if (score >= 3) return { label: "RISK-ON",  color: "#1b5e20", bg: "#c8e6c9" };
-  if (score >= 2) return { label: "NEUTRAL",  color: "#7a5200", bg: "#fff0cc" };
-  return              { label: "RISK-OFF", color: "#b71c1c", bg: "#ffcdd2" };
+// Risk-Off Monitor — cuenta cuántos de los 4 ratios cruzados de Capa 1 muestran
+// signal="risk-off" (no confundir con el régimen del MacroScore v2, que es un
+// sistema completamente distinto — rotacion.html/backtest). Antes esta caja se
+// llamaba "Macro Regime" y el contador era de risk-on, no de risk-off, lo que
+// hacía que "RISK-OFF (0/4)" no cuadrara con los risk-off reales de la tabla.
+function riskOffMonitorState(riskOffCount) {
+  if (riskOffCount >= 4) return { label: "Confirmed Risk-Off",              color: "#b71c1c", bg: "#ffcdd2" };
+  if (riskOffCount >= 3) return { label: "Risk-Off Warning",                color: "#c62828", bg: "#ffdad6" };
+  if (riskOffCount >= 2) return { label: "Mixed / Defensive Rotation Warning", color: "#7a5200", bg: "#fff0cc" };
+  if (riskOffCount >= 1) return { label: "Mild Defensive Warning",          color: "#8a5200", bg: "#fff7e0" };
+  return                       { label: "Risk-On / No Warning",            color: "#1b5e20", bg: "#c8e6c9" };
 }
 
 // ── Spark ─────────────────────────────────────────────────────────────────
@@ -354,8 +361,8 @@ function RelativeFlowLab() {
     }),
   [history]);
 
-  const regimeScore = React.useMemo(() =>
-    macroRows.filter(m => m.signal === "risk-on").length,
+  const riskOffCount = React.useMemo(() =>
+    macroRows.filter(m => m.signal === "risk-off").length,
   [macroRows]);
 
   // ── Capa 2 ──
@@ -418,11 +425,11 @@ function RelativeFlowLab() {
   React.useEffect(() => { refresh(); }, [refresh]);
 
   const buildRelativeMarkdown = () => {
-    const rs = regimeState(regimeScore);
+    const rs = riskOffMonitorState(riskOffCount);
     const lines = [];
     lines.push("# Relative Flow Lab v2");
     lines.push("");
-    lines.push(`## Macro Regime — ${rs.label} (${regimeScore}/4)`);
+    lines.push(`## Risk-Off Monitor — ${riskOffCount}/4 active (${rs.label})`);
     lines.push("| Ratio | Pair | Signal | 1W | 1M | 3M | RSI | Trend |");
     lines.push("|---|---:|---|---:|---:|---:|---:|---|");
     macroRows.forEach(m => {
@@ -507,7 +514,7 @@ function RelativeFlowLab() {
       .catch(() => showToast('❌ Error al copiar'));
   };
 
-  const rs = regimeState(regimeScore);
+  const rs = riskOffMonitorState(riskOffCount);
 
   return (
     <div className="wrap">
@@ -532,9 +539,9 @@ function RelativeFlowLab() {
         </div>
       </div>
 
-      {/* ── CAPA 1: Macro Regime ── */}
+      {/* ── CAPA 1: Risk-Off Monitor ── */}
       <div className="macro-panel">
-        <div className="macro-header">🔵 Capa 1 — Macro Regime</div>
+        <div className="macro-header">🔵 Capa 1 — Risk-Off Monitor</div>
         <div className="macro-body">
           <div className="macro-table-wrap">
             <table className="macro-table">
@@ -581,8 +588,8 @@ function RelativeFlowLab() {
           </div>
           <div className="regime-box">
             <div className="regime-inner" style={{background: rs.bg}}>
-              <div className="regime-label">Regime Score</div>
-              <div className="regime-score" style={{color: rs.color}}>{regimeScore}<span style={{fontSize:18,fontWeight:400}}>/4</span></div>
+              <div className="regime-label">Risk-Off Monitor</div>
+              <div className="regime-score" style={{color: rs.color}}>{riskOffCount}<span style={{fontSize:18,fontWeight:400}}>/4 active</span></div>
               <div className="regime-state" style={{color: rs.color}}>{rs.label}</div>
             </div>
           </div>
