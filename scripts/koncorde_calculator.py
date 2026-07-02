@@ -31,6 +31,7 @@ import yfinance as yf
 
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
+MIRROR_LOG = DATA / "mirror_signals.jsonl"
 
 # ── Parameters matching Pine Script defaults ───────────────────────────────
 PVI_NVI_LEN  = 15    # EMA length for PVI/NVI smoothing
@@ -308,6 +309,15 @@ def _down_2_bars(arr: np.ndarray) -> bool:
     return bool(arr[-1] < arr[-2] < arr[-3])
 
 
+def _cross_up(arr: np.ndarray) -> bool:
+    """True if the last closed bar crosses from negative to non-negative (fresh flip)."""
+    if len(arr) < 2:
+        return False
+    if np.isnan(arr[-1]) or np.isnan(arr[-2]):
+        return False
+    return bool(arr[-1] >= 0 and arr[-2] < 0)
+
+
 def _state(blue, green) -> str:
     if blue is None or green is None:
         return "neutral"
@@ -353,6 +363,7 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
         f"{pfx}_trend_delta1", f"{pfx}_trend_slope", f"{pfx}_bar_date",
     ]}
     nulls[f"{pfx}_blue_down_2_bars"]  = False
+    nulls[f"{pfx}_blue_cross_up"]     = False
     nulls[f"{pfx}_accumulation_flag"] = False
     nulls[f"{pfx}_distribution_flag"] = False
     nulls[f"{pfx}_bar_closed"]        = True
@@ -393,6 +404,8 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
             f"{pfx}_trend_slope":        t_s,
             # Deterioration/flags — see hoja sección 1.5/1.7
             f"{pfx}_blue_down_2_bars":   _down_2_bars(blue_a),
+            # Fresh negative->positive flip — used by the "espejo" mirror-reversal signal
+            f"{pfx}_blue_cross_up":      _cross_up(blue_a),
             f"{pfx}_accumulation_flag":  state == "accumulation",
             f"{pfx}_distribution_flag":  state == "distribution",
             # This pipeline runs end-of-day on yf.download() — always a closed bar.
@@ -403,6 +416,34 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
     except Exception as e:
         print(f"    compute_tf({tf_name}) error: {e}")
         return nulls
+
+
+def _mirror_signal(
+    d_state, d_cross_up, d_green,
+    td_state, td_cross_up, td_green,
+    w_blue,
+) -> str:
+    """
+    "Espejo" reversal — patrón de seguimiento (2026-07-03), no HARD_RULE, no en el
+    payload IA todavía: blue cruza de negativo a positivo mientras green sigue
+    negativo (estado accumulation), simultáneamente en D y 3D — el cruce fresco en
+    ambos timeframes es lo que confirma que no es ruido de un solo día — con W
+    (blue) todavía negativo, es decir la tendencia semanal de fondo aún no ha
+    girado. Eso último sugiere que puede ser el inicio de una mini-tendencia (al
+    menos a nivel 3D) en vez de solo un rebote de un día, porque todavía hay
+    margen antes de que el timeframe lento lo refleje.
+    """
+    d_ok = (d_state == "accumulation" and d_cross_up
+            and d_green is not None and d_green < 0)
+    td_ok = (td_state == "accumulation" and td_cross_up
+             and td_green is not None and td_green < 0)
+    w_ok = w_blue is not None and w_blue < 0
+
+    if d_ok and td_ok and w_ok:
+        return "mirror_reversal_confirmed"
+    if d_ok and w_ok:
+        return "mirror_reversal_daily_only"
+    return "none"
 
 
 def compute_for_ticker(df: pd.DataFrame) -> dict:
@@ -428,6 +469,12 @@ def compute_for_ticker(df: pd.DataFrame) -> dict:
         result.get("konc_3d_state"),
         result.get("konc_w_state"),
         result.get("konc_3d_blue_down_2_bars", False),
+    )
+
+    result["konc_mirror_signal"] = _mirror_signal(
+        result.get("konc_d_state"), result.get("konc_d_blue_cross_up"), result.get("konc_d_green"),
+        result.get("konc_3d_state"), result.get("konc_3d_blue_cross_up"), result.get("konc_3d_green"),
+        result.get("konc_w_blue"),
     )
 
     return result
@@ -510,6 +557,64 @@ MARKET_TRACKER_TICKERS = {
 }
 
 
+def _log_mirror_signals(
+    koncorde_out: dict[str, dict],
+    price_data: dict[str, pd.DataFrame],
+    today: str,
+) -> None:
+    """
+    Fase de seguimiento del patrón "espejo" (2026-07-03): registra en
+    docs/data/mirror_signals.jsonl CADA ticker del universo (no solo picks de la
+    IA) que muestre mirror_reversal_confirmed hoy, para poder evaluar más adelante
+    si el patrón anticipa subidas — mismo enfoque que compare_vs_baselines.py con
+    las baselines mecánicas. ret_1w/2w/1m se dejan en null aquí; rellenarlos
+    requeriría un script de seguimiento propio (al estilo update_performance.py),
+    no incluido en este cambio.
+
+    Deduplicado por (ticker, date): el pipeline corre 2x/día, pero el cruce en D
+    (konc_d_blue_cross_up) solo puede ser true el día exacto en que ocurre — al
+    día siguiente el valor anterior ya es positivo — así que el mismo evento no
+    debería repetirse más de un día salvo casos límite raros.
+    """
+    seen: set[tuple[str, str]] = set()
+    if MIRROR_LOG.exists():
+        for line in MIRROR_LOG.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                rec = json.loads(line)
+                seen.add((rec.get("ticker"), rec.get("date")))
+            except json.JSONDecodeError:
+                continue
+
+    MIRROR_LOG.parent.mkdir(parents=True, exist_ok=True)
+    n_logged = 0
+    with MIRROR_LOG.open("a", encoding="utf-8") as f:
+        for tk, k in koncorde_out.items():
+            if k.get("konc_mirror_signal") != "mirror_reversal_confirmed":
+                continue
+            if (tk, today) in seen:
+                continue
+            df = price_data.get(tk)
+            price = float(df["close"].iloc[-1]) if df is not None and not df.empty else None
+            f.write(json.dumps({
+                "date":             today,
+                "ticker":           tk,
+                "price":            price,
+                "konc_d_blue":      k.get("konc_d_blue"),
+                "konc_d_green":     k.get("konc_d_green"),
+                "konc_3d_blue":     k.get("konc_3d_blue"),
+                "konc_3d_green":    k.get("konc_3d_green"),
+                "konc_w_blue":      k.get("konc_w_blue"),
+                "konc_3d_bar_date": k.get("konc_3d_bar_date"),
+                "ret_1w": None, "ret_2w": None, "ret_1m": None,
+            }, ensure_ascii=False) + "\n")
+            seen.add((tk, today))
+            n_logged += 1
+    if n_logged:
+        print(f"  mirror_signals.jsonl: {n_logged} nueva(s) señal(es) 'espejo' confirmada(s)")
+
+
 def run() -> None:
     today = datetime.today().strftime("%Y-%m-%d")
     tickers: set[str] = set(MARKET_TRACKER_TICKERS)
@@ -576,6 +681,8 @@ def run() -> None:
     if failed:
         show = failed[:10]
         print(f"  Failed: {show}{'…' if len(failed) > 10 else ''}")
+
+    _log_mirror_signals(koncorde_out, price_data, today)
 
     # Write docs/data/koncorde_data.json (served to portfolio.html via server.js)
     out_path = DATA / "koncorde_data.json"

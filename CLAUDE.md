@@ -454,6 +454,32 @@ Koncorde dentro de PCS o rot_score principal, hard rules universales por Koncord
 
 ---
 
+## Risk-Off Monitor en Relative Flow Lab (fix 2026-07-03)
+
+`relative.html` ("Relative Flow Lab", herramienta separada de `rotacion.html`, con su propio sistema de régimen de 4 ratios cruzados — Copper/Gold, Credit/Equities, Utilities/Discretionary, Low Vol/Momentum) tenía la caja "Macro Regime" con un bug real: el contador (`regimeScore`) contaba ratios con `signal==="risk-on"`, no `"risk-off"`, así que con 2 de 4 ratios en risk-off la cabecera mostraba "RISK-OFF (0/4)" — no cuadraba con la tabla.
+
+Renombrado a **Risk-Off Monitor** (no confundir con el régimen de MacroScore v2 de `rotacion.html`/backtest — sistemas completamente distintos). `riskOffCount` ahora cuenta `signal==="risk-off"` correctamente. 5 estados: `0/4→Risk-On/No Warning`, `1/4→Mild Defensive Warning`, `2/4→Mixed/Defensive Rotation Warning`, `3/4→Risk-Off Warning`, `4/4→Confirmed Risk-Off`. Aplicado en el render y en `copyMarkdown`.
+
+---
+
+## Koncorde "espejo" — patrón de giro por reversión (implementado 2026-07-03)
+
+Nuevo indicador de seguimiento (no HARD_RULE, no en el payload IA todavía — fase de observación, mismo enfoque que `extension_risk`/`konc_alignment`). Detecta un patrón específico: activo sobrevendido con blue y green ambos negativos que de repente gira — blue cruza a positivo mientras green sigue negativo — simultáneamente en D y 3D (confirma que no es ruido de un día), con W (blue) todavía negativo (la tendencia semanal de fondo no ha girado, lo que sugiere que puede ser el inicio de una mini-tendencia, no solo un rebote de un día).
+
+**Campos nuevos** (`scripts/koncorde_calculator.py`):
+- `konc_{d,3d,w}_blue_cross_up`: bool — `blue[-1] >= 0 and blue[-2] < 0` (cruce fresco en la última vela).
+- `konc_mirror_signal`: `"mirror_reversal_confirmed"` (cruce fresco en D **y** 3D + green<0 en ambos + W blue<0) | `"mirror_reversal_daily_only"` (solo D, 3D aún no confirma) | `"none"`.
+
+**Decisión de diseño:** se exige cruce fresco en D **y** 3D simultáneamente para el nivel "confirmed" (más estricto que solo exigir que 3D ya esté en estado accumulation) — dado que las velas 3D se actualizan cada 3 sesiones, esto hace que "confirmed" sea intencionalmente más raro que "daily_only" (verificado con datos reales del universo completo 2026-07-03: 3 tickers en `daily_only`, 0 en `confirmed`, de 194).
+
+**Seguimiento — `docs/data/mirror_signals.jsonl` (nuevo):** cada vez que `koncorde_calculator.py` corre, registra TODOS los tickers del universo (no solo picks de la IA) que muestren `mirror_reversal_confirmed`, con precio y valores blue/green/bar_date, para evaluar más adelante si el patrón anticipa subidas. Deduplicado por `(ticker, date)`. `ret_1w`/`ret_2w`/`ret_1m` quedan en `null` — rellenarlos requeriría un script de seguimiento propio al estilo `update_performance.py`, no incluido en este cambio.
+
+**Dashboard:** badge "🪞 Confirmado" / "🪞 Solo D" en la tabla "Ranking de Setups" de `portfolio.html`, junto a Early Flow/Flow Score.
+
+**Caso real que motivó esto (2026-07-02):** MSTR mostraba `konc_d_state=accumulation` (blue +8.9, green -10.1), `konc_3d_state=accumulation` (blue +17.1, green -34.7), `konc_w_state=down` (blue -1.1) — el patrón exacto — mientras Flow Score (-1.7, "Débil") y Early Flow Score (0.5, "Sin setup") no lo destacaban en absoluto, porque esas dos métricas están calibradas para detectar acumulación silenciosa y temprana, no rebotes en V tras una paliza. Un día después (2026-07-03) el patrón ya se había resuelto al alza (W pasó a positivo) — confirma que la ventana de esta señal es corta por naturaleza.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

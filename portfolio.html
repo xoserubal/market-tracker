@@ -505,7 +505,8 @@ function Portfolio() {
       if (earlyFlow == null && flowScore == null) return;
       seen.set(item.ticker, { ticker: item.ticker, flowScore, earlyFlow,
         konc_3d_state: p.konc_3d_state ?? null, rsi: p.rsi ?? null,
-        w1: p.w1 ?? null, m1: p.m1 ?? null });
+        w1: p.w1 ?? null, m1: p.m1 ?? null,
+        konc_mirror_signal: p.konc_mirror_signal ?? null });
     }));
     return [...seen.values()].sort((a, b) => (b.earlyFlow ?? -99) - (a.earlyFlow ?? -99));
   }, [portfolio, prices, prevSnapshot]);
@@ -756,6 +757,7 @@ function Portfolio() {
               <thead className="rank-thead">
                 <tr style={{background:'#f0f4f8'}}>
                   <th style={{padding:'4px 10px',textAlign:'left',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Ticker</th>
+                  <th data-tip={"Patrón 'espejo': Koncorde azul cruza de negativo a positivo mientras verde sigue negativo (accumulation), a la vez en D y 3D — confirma que no es ruido de un solo día — con W (blue) todavía negativo, indicando que la tendencia semanal de fondo aún no ha girado.\n\nCONFIRMADO: cruce fresco en D y 3D + W negativo → posible inicio de mini-tendencia.\nSOLO D: giro visible en diario, 3D aún no confirma.\n\nEn seguimiento (docs/data/mirror_signals.jsonl) — no es señal de compra por sí sola."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Espejo</th>
                   <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde D + alineación 3D/W\n+ compresión ATR + posición 52W + RSI en zona + momentum modesto.\nBonus: 3D/W alcistas +1 c/u · W bajista contraría D -1\nGiro 3D (down→acum) +1 extra.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
                   <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ Koncorde D + Koncorde W×0.5 + tendencia 52W.\nW alcista suma hasta +1 · W bajista resta hasta -1.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
                   <th data-tip={"Interpretación combinada Early Flow × Flow Score.\nEjemplos:\nEarly≥7 + Flow≥8 → Activación potente\nEarly≥7 + Flow<4 → Setup temprano\nEarly<4 + Flow≥8 → Tendencia madura (tarde)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Lectura</th>
@@ -774,10 +776,18 @@ function Portfolio() {
                   const konSt     = koncStateStyle(r.konc_3d_state);
                   const reading   = (r.earlyFlow != null && r.flowScore != null)
                     ? matrixReading(r.earlyFlow, r.flowScore) : null;
+                  const mirrorSt  = r.konc_mirror_signal === 'mirror_reversal_confirmed'
+                    ? { label: '🪞 Confirmado', bg: '#f3e5f5', fg: '#7b1fa2' }
+                    : r.konc_mirror_signal === 'mirror_reversal_daily_only'
+                    ? { label: '🪞 Solo D', bg: '#f5f5f5', fg: '#9e9e9e' }
+                    : null;
                   return (
                     <tr key={r.ticker} style={{background: i%2===0 ? 'white' : '#fafafa',
                       borderBottom:'1px solid #f0f0f0'}}>
                       <td style={{padding:'4px 10px',fontWeight:700,color:'#1a6baa',fontFamily:'monospace'}}>{r.ticker}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center'}}>
+                        {mirrorSt && <span style={{background:mirrorSt.bg,color:mirrorSt.fg,fontWeight:700,borderRadius:3,padding:'2px 8px',fontSize:10,whiteSpace:'nowrap'}}>{mirrorSt.label}</span>}
+                      </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontWeight:700,fontFamily:'monospace',
                         background: earlySt?.bg || '', color: earlySt?.fg || '#aaa'}}>
                         {r.earlyFlow != null ? r.earlyFlow.toFixed(1) : '—'}
