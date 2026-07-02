@@ -428,9 +428,34 @@ def download_ohlcv(tickers: list[str]) -> dict[str, pd.DataFrame]:
 
 # ── Main ───────────────────────────────────────────────────────────────────
 
+MARKET_TRACKER_TICKERS = {
+    # Major indices (ETF proxies where index has no volume)
+    "^GSPC", "^IXIC", "URTH", "FEZ", "EEM", "IWM", "RSP",
+    # MAG 6
+    "AAPL", "GOOGL", "MSFT", "AMZN",
+    # Bonds / commodities / crypto
+    "TLT", "BTC-USD",
+    # Europe (indices included — fail gracefully if no volume)
+    "^FTSE", "^FCHI", "^GDAXI", "^AEX", "^IBEX", "FTSEMIB.MI",
+    # Asia ETFs
+    "EWJ", "EWY", "MCHI", "EWH",
+    # LATAM ETFs
+    "EWW", "ARGT",
+    # US Sector ETFs
+    "XLK", "XLV", "XLF", "XLY", "XLC", "XLI", "XLP", "XLE", "XLU", "XLRE",
+    # EU Sector ETFs
+    "EXV1.DE", "IQQH.DE", "EXV6.DE", "EXH1.DE", "EXH4.DE",
+    "EXV5.DE", "EXV2.DE", "EXH7.DE", "EXH8.DE", "IPRP.AS",
+    # Uranium
+    "URNM", "U-U.TO", "CCJ", "NXE", "DNN", "LEU",
+    # Coal stocks
+    "HCC", "AMR", "BTU",
+}
+
+
 def run() -> None:
     today = datetime.today().strftime("%Y-%m-%d")
-    tickers: set[str] = set()
+    tickers: set[str] = set(MARKET_TRACKER_TICKERS)
 
     # Collect tickers from ai_candidates.json
     cands_path = DATA / "ai_candidates.json"

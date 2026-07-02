@@ -660,6 +660,81 @@ app.post("/api/sync/pull", (_req, res) => {
   gitPull((err, msg) => res.json({ ok: !err, message: msg }));
 });
 
+// ── Universe ─────────────────────────────────────────────────────────────
+const UNIVERSE_FILE = path.join(__dirname, "docs", "data", "universe.json");
+
+app.get("/api/universe", (_req, res) => {
+  try {
+    if (!fs.existsSync(UNIVERSE_FILE)) return res.json({ tickers: [] });
+    res.json(JSON.parse(fs.readFileSync(UNIVERSE_FILE, "utf8")));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/universe/add", express.json(), (req, res) => {
+  try {
+    const body = req.body || {};
+    const ticker = (body.ticker || "").trim().toUpperCase();
+    if (!ticker) return res.status(400).json({ error: "ticker required" });
+
+    let data = { tickers: [] };
+    if (fs.existsSync(UNIVERSE_FILE))
+      data = JSON.parse(fs.readFileSync(UNIVERSE_FILE, "utf8"));
+
+    if (data.tickers.some(t => t.ticker === ticker))
+      return res.json({ ok: true, already_exists: true });
+
+    data.tickers.push({
+      ticker,
+      name:        body.name        || ticker,
+      asset_type:  body.asset_type  || "stock",
+      tradable:    body.tradable !== false,
+      theme:       body.theme       || "",
+      subtheme:    body.subtheme    || "",
+      region:      body.region      || "US",
+      macro_proxy: body.macro_proxy || "",
+      theme_proxy: body.theme_proxy || "",
+      benchmark:   body.benchmark   || "",
+      priority:    body.priority    || "medium",
+      notes:       body.notes       || "",
+    });
+    fs.writeFileSync(UNIVERSE_FILE, JSON.stringify(data, null, 2), "utf8");
+    res.json({ ok: true, added: ticker });
+
+    const rel = path.relative(__dirname, UNIVERSE_FILE).replace(/\\/g, "/");
+    const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "chore: add ${ticker} to universe from dashboard" && git push origin master`;
+    exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
+      if (err) console.log("⚠ git push universe:", (stderr || err.message).trim());
+      else     console.log("✓ git push universe:", stdout.trim() || "ok");
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/universe/remove", express.json(), (req, res) => {
+  try {
+    const ticker = ((req.body || {}).ticker || "").trim().toUpperCase();
+    if (!ticker) return res.status(400).json({ error: "ticker required" });
+
+    let data = { tickers: [] };
+    if (fs.existsSync(UNIVERSE_FILE))
+      data = JSON.parse(fs.readFileSync(UNIVERSE_FILE, "utf8"));
+
+    const before = data.tickers.length;
+    data.tickers = data.tickers.filter(t => t.ticker !== ticker);
+    if (data.tickers.length === before)
+      return res.json({ ok: true, not_found: true });
+
+    fs.writeFileSync(UNIVERSE_FILE, JSON.stringify(data, null, 2), "utf8");
+    res.json({ ok: true, removed: ticker });
+
+    const rel = path.relative(__dirname, UNIVERSE_FILE).replace(/\\/g, "/");
+    const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "chore: remove ${ticker} from universe from dashboard" && git push origin master`;
+    exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
+      if (err) console.log("⚠ git push universe:", (stderr || err.message).trim());
+      else     console.log("✓ git push universe:", stdout.trim() || "ok");
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
 app.listen(3000, () => {

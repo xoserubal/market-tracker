@@ -133,7 +133,7 @@ HARD_RULES = [
     "Every candidate with pcs >= 62 that you do not SELECT must appear in EXACTLY ONE of watch or rejected, never both. A ticker in two lists is a hard rule violation — commit to one classification.",
     "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
     "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead.",
-    "Review ALL tickers in active_picks_relevant and include each one in open_picks_review. Use action=EXIT if: (a) current_pcs < pcs_min_entry AND current_streak_weeks <= 1, OR (b) current_rot_score <= 2. Otherwise use HOLD. Do not omit any active position from open_picks_review.",
+    "Review ALL tickers in active_picks_relevant and include each one in open_picks_review. Use action=EXIT if: (a) current_pcs < pcs_min_entry AND current_streak_weeks <= 1, OR (b) current_rot_score <= 2, OR (c) current_pcs < 62 (absolute floor — below the minimum entry threshold of any portfolio, exit regardless of streak), OR (d) left_universe=true (ticker dropped out of the screener universe entirely — no current data available, exit is mandatory). Otherwise use HOLD. Do not omit any active position from open_picks_review.",
 ]
 
 NON_TRADABLE_SUBTHEMES = frozenset({
@@ -371,11 +371,14 @@ def build_payload(
         ptf_min = PORTFOLIOS.get(pid, {}).get("pcs_min_entry", 0)
         for pos in ptf.get("positions", []):
             tk = pos["ticker"]
-            current = all_cands_map.get(tk, {})
+            current = all_cands_map.get(tk)
+            left_universe = current is None
+            current = current or {}
             active_positions.append({
                 **pos,
                 "portfolio": pid,
                 "pcs_min_entry": ptf_min,
+                "left_universe": left_universe,
                 "current_pcs": current.get("pcs"),
                 "current_rot_score": current.get("rot_score"),
                 "current_streak_weeks": current.get("streak_weeks"),
@@ -776,10 +779,17 @@ def validate_model_response(
                 r.warn(f"extension_risk_not_acknowledged: {t} has extension_risk={ext}")
 
     # Soft warnings: active positions not covered in open_picks_review (no penalty, log only)
-    active_tickers = {p.get("ticker") for p in payload.get("active_picks_relevant", [])}
-    reviewed_tickers = {rv.get("ticker") for rv in data.get("open_picks_review", [])}
-    for t in active_tickers - reviewed_tickers:
+    active_map = {p.get("ticker"): p for p in payload.get("active_picks_relevant", [])}
+    reviewed_map = {rv.get("ticker"): rv for rv in data.get("open_picks_review", [])}
+    for t in set(active_map) - set(reviewed_map):
         r.warn(f"open_picks_review_missing: {t} not included in open_picks_review")
+    # Soft warning: HOLD on a position that should be EXITed per absolute floor rule
+    for t, rv in reviewed_map.items():
+        if rv.get("action") == "HOLD":
+            pos = active_map.get(t, {})
+            pcs = pos.get("current_pcs")
+            if pcs is not None and pcs < 62:
+                r.warn(f"hold_below_floor: {t} has pcs={pcs:.1f} (<62) but action=HOLD — should EXIT")
 
     return r
 
@@ -1232,11 +1242,14 @@ def _build_shadow_model_payload(
     active_picks = []
     for pos in shadow_pos:
         tk      = pos["ticker"]
-        current = all_cands_full_map.get(tk, {})
+        current = all_cands_full_map.get(tk)
+        left_universe = current is None
+        current = current or {}
         active_picks.append({
             **pos,
             "portfolio":             shadow_portfolio_id,
             "pcs_min_entry":         ptf_min,
+            "left_universe":         left_universe,
             "current_pcs":           current.get("pcs"),
             "current_rot_score":     current.get("rot_score"),
             "current_streak_weeks":  current.get("streak_weeks"),

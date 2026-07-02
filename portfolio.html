@@ -188,6 +188,109 @@ function NotesModal({ ticker, notes, onSave, onClose }) {
   );
 }
 
+// ── UniverseModal ─────────────────────────────────────────────────────────
+const THEMES = ['argentina','cannabis','china_em','commodities_copper','commodities_metals',
+  'crypto','defense_space','energy_storage','europa','global_etf','healthcare_largecap',
+  'healthcare_special','oil_gas','reits','silver_gold_miners','smallcap_em',
+  'smallcap_speculative','uranium_nuclear','us_cyclical','us_defensive','us_tech_ai'];
+
+function UniverseModal({ ticker, onDone, onClose }) {
+  const [name,      setName]      = React.useState('');
+  const [theme,     setTheme]     = React.useState('');
+  const [subtheme,  setSubtheme]  = React.useState('');
+  const [assetType, setAssetType] = React.useState('stock');
+  const [region,    setRegion]    = React.useState('US');
+  const [priority,  setPriority]  = React.useState('medium');
+  const [tradable,  setTradable]  = React.useState(true);
+  const [notes,     setNotes]     = React.useState('');
+  const [saving,    setSaving]    = React.useState(false);
+  const [err,       setErr]       = React.useState('');
+
+  const handleSave = async () => {
+    if (!theme) return setErr('El tema es obligatorio');
+    setSaving(true); setErr('');
+    try {
+      const r = await fetch('/api/universe/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker, name, theme, subtheme, asset_type: assetType,
+          region, priority, tradable, notes }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || 'Error');
+      onDone(d.already_exists);
+    } catch(e) { setErr(e.message); setSaving(false); }
+  };
+
+  const inp = { border:'1px solid #ddd', borderRadius:3, padding:'4px 8px',
+    fontSize:12, width:'100%', boxSizing:'border-box' };
+  const sel = { ...inp, background:'white' };
+
+  return (
+    <div className="overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal" style={{width:480}}>
+        <h3>Añadir <span style={{fontFamily:'monospace'}}>{ticker}</span> al universo screener</h3>
+        <div className="field">
+          <label>Nombre empresa / ETF</label>
+          <input style={inp} value={name} onChange={e=>setName(e.target.value)} placeholder={ticker} autoFocus />
+        </div>
+        <div className="row2">
+          <div className="field">
+            <label>Tema *</label>
+            <select style={sel} value={theme} onChange={e=>setTheme(e.target.value)}>
+              <option value="">— seleccionar —</option>
+              {THEMES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Subtheme</label>
+            <input style={inp} value={subtheme} onChange={e=>setSubtheme(e.target.value)} placeholder="ej. ai_chips" />
+          </div>
+        </div>
+        <div className="row2">
+          <div className="field">
+            <label>Tipo</label>
+            <select style={sel} value={assetType} onChange={e=>setAssetType(e.target.value)}>
+              <option value="stock">stock</option>
+              <option value="etf">etf</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Región</label>
+            <input style={inp} value={region} onChange={e=>setRegion(e.target.value)} placeholder="US" />
+          </div>
+        </div>
+        <div className="row2">
+          <div className="field">
+            <label>Priority</label>
+            <select style={sel} value={priority} onChange={e=>setPriority(e.target.value)}>
+              <option value="high">high</option>
+              <option value="medium">medium</option>
+              <option value="low">low</option>
+            </select>
+          </div>
+          <div className="field" style={{paddingTop:18}}>
+            <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer'}}>
+              <input type="checkbox" checked={tradable} onChange={e=>setTradable(e.target.checked)} />
+              Tradable (incluir en PCS)
+            </label>
+          </div>
+        </div>
+        <div className="field">
+          <label>Notas</label>
+          <input style={inp} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Alta beta, líder sector, etc." />
+        </div>
+        {err && <div style={{color:'#e74c3c',fontSize:11,marginBottom:8}}>⚠ {err}</div>}
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:4}}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Guardando…' : 'Añadir al universo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Portfolio markdown export ─────────────────────────────────────────────
 function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}) {
   const date = new Date().toLocaleDateString('es-ES');
@@ -240,7 +343,8 @@ function Portfolio() {
   const [prevSnapshot, setPrevSnapshot] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('ticker_snapshot') || '{}'); } catch { return {}; }
   });
-  const [stockConfig, setStockConfig] = React.useState({});
+  const [stockConfig,   setStockConfig]   = React.useState({});
+  const [universeTickers, setUniverseTickers] = React.useState(new Set());
   const saveTimer = React.useRef(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3200); };
@@ -260,6 +364,10 @@ function Portfolio() {
     fetch('/api/stock-config')
       .then(r => r.json())
       .then(d => setStockConfig(d || {}))
+      .catch(() => {});
+    fetch('/api/universe')
+      .then(r => r.json())
+      .then(d => setUniverseTickers(new Set((d.tickers || []).map(t => t.ticker))))
       .catch(() => {});
   }, []);
 
@@ -396,7 +504,7 @@ function Portfolio() {
       const earlyFlow = computeEarlyFlowScore(p, prevSnapshot[item.ticker] ?? null);
       if (earlyFlow == null && flowScore == null) return;
       seen.set(item.ticker, { ticker: item.ticker, flowScore, earlyFlow,
-        konc_d_state: p.konc_d_state ?? null, rsi: p.rsi ?? null,
+        konc_3d_state: p.konc_3d_state ?? null, rsi: p.rsi ?? null,
         w1: p.w1 ?? null, m1: p.m1 ?? null });
     }));
     return [...seen.values()].sort((a, b) => (b.earlyFlow ?? -99) - (a.earlyFlow ?? -99));
@@ -557,6 +665,16 @@ function Portfolio() {
           onSave={v=>saveNotes(modal.secId, modal.itemId, v)}
           onClose={()=>setModal(null)} />
       )}
+      {modal?.type==='universe' && (
+        <UniverseModal ticker={modal.ticker}
+          onDone={alreadyExists => {
+            setModal(null);
+            if (alreadyExists) { showToast(`ℹ ${modal.ticker} ya está en el universo`); return; }
+            setUniverseTickers(prev => new Set([...prev, modal.ticker]));
+            showToast(`✓ ${modal.ticker} añadido al universo screener`);
+          }}
+          onClose={()=>setModal(null)} />
+      )}
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12}}>
@@ -641,7 +759,7 @@ function Portfolio() {
                   <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde D + alineación 3D/W\n+ compresión ATR + posición 52W + RSI en zona + momentum modesto.\nBonus: 3D/W alcistas +1 c/u · W bajista contraría D -1\nGiro 3D (down→acum) +1 extra.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
                   <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ Koncorde D + Koncorde W×0.5 + tendencia 52W.\nW alcista suma hasta +1 · W bajista resta hasta -1.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
                   <th data-tip={"Interpretación combinada Early Flow × Flow Score.\nEjemplos:\nEarly≥7 + Flow≥8 → Activación potente\nEarly≥7 + Flow<4 → Setup temprano\nEarly<4 + Flow≥8 → Tendencia madura (tarde)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Lectura</th>
-                  <th data-tip={"Koncorde Plus D (OskarGallard):\nAlza: blue≥0, green≥0\nAcumul.: blue≥0, green<0 (institucional acumula)\nDistrib.: blue<0, green>0\nBaja: blue<0, green<0"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc D</th>
+                  <th data-tip={"Koncorde Plus 3D (OskarGallard):\nAlza: blue≥0, green≥0\nAcumul.: blue≥0, green<0 (institucional acumula)\nDistrib.: blue<0, green>0\nBaja: blue<0, green<0"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc 3D</th>
                   <th data-tip={"RSI(14) Wilder.\n>65: sobrecomprado · <35: sobrevendido\nZona ideal de entrada: 45–58\n(RSI en zona = +2 en Early Flow)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>RSI</th>
                   <th data-tip={"Retorno de los últimos 5 días de trading.\nEn Early Flow se valora positivo pero modesto\n(0–4%) como señal de acumulación sin sobreextensión."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1W</th>
                   <th data-tip={"Retorno de los últimos 21 días de trading.\nEn Early Flow se valora neutro a ligeramente positivo\n(−5% a +5%) — confirma consolidación."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1M</th>
@@ -653,7 +771,7 @@ function Portfolio() {
                   const flowCls   = classifyFlow(r.flowScore);
                   const earlySt   = earlyCls ? EARLY_STYLE[earlyCls] : null;
                   const flowSt    = flowCls  ? FLOW_STYLE[flowCls]   : null;
-                  const konSt     = koncStateStyle(r.konc_d_state);
+                  const konSt     = koncStateStyle(r.konc_3d_state);
                   const reading   = (r.earlyFlow != null && r.flowScore != null)
                     ? matrixReading(r.earlyFlow, r.flowScore) : null;
                   return (
@@ -672,9 +790,9 @@ function Portfolio() {
                         {reading ?? '—'}
                       </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontWeight:600,fontSize:10,
-                        background: r.konc_d_state ? konSt.bg : '', color: r.konc_d_state ? konSt.fg : '#aaa',
+                        background: r.konc_3d_state ? konSt.bg : '', color: r.konc_3d_state ? konSt.fg : '#aaa',
                         whiteSpace:'nowrap'}}>
-                        {koncStateLbl(r.konc_d_state)}
+                        {koncStateLbl(r.konc_3d_state)}
                       </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',
                         background:rsiBg(r.rsi),color:rsiFg(r.rsi)}}>
@@ -798,6 +916,30 @@ function Portfolio() {
                               style={{width:10,height:10,borderRadius:'50%',border:'none',padding:0,
                                 cursor:'pointer',flexShrink:0,
                                 background: stockTickers.has(item.ticker) ? '#1a7a1a' : '#c0392b'}}
+                            />
+                            <button
+                              title={universeTickers.has(item.ticker)
+                                ? `${item.ticker} está en el universo screener — clic para quitar`
+                                : `Añadir ${item.ticker} al universo screener (AI candidates)`}
+                              onClick={async () => {
+                                if (universeTickers.has(item.ticker)) {
+                                  if (!confirm(`¿Quitar ${item.ticker} del universo screener?`)) return;
+                                  const r = await fetch('/api/universe/remove', {
+                                    method:'POST', headers:{'Content-Type':'application/json'},
+                                    body: JSON.stringify({ticker: item.ticker}),
+                                  });
+                                  const d = await r.json();
+                                  if (d.ok) {
+                                    setUniverseTickers(prev => { const s=new Set(prev); s.delete(item.ticker); return s; });
+                                    showToast(`✓ ${item.ticker} quitado del universo`);
+                                  }
+                                } else {
+                                  setModal({type:'universe', ticker:item.ticker});
+                                }
+                              }}
+                              style={{width:10,height:10,borderRadius:'50%',border:'none',padding:0,
+                                cursor:'pointer', flexShrink:0,
+                                background: universeTickers.has(item.ticker) ? '#1a4a8a' : '#888'}}
                             />
                             <div>
                               <span style={{fontWeight:700,color:'#1a6baa',fontSize:12}}>{item.ticker}</span>

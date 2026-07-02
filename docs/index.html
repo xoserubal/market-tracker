@@ -249,6 +249,7 @@
     <button class="ptf-tab" onclick="switchAISection('abtest')">AB Test — Modelos</button>
     <button class="ptf-tab" onclick="switchAISection('reasoning')">Razonamiento</button>
     <button class="ptf-tab" onclick="switchAISection('forceanalysis')">Force Analysis</button>
+    <button class="ptf-tab" onclick="switchAISection('universe')">Universo</button>
   </div>
 
   <div id="aipicks-portfolio-view">
@@ -267,6 +268,10 @@
 
   <div id="aipicks-forceanalysis-view" style="display:none">
     <div id="aipicks-forceanalysis-content"><!-- filled by renderForceAnalysis() --></div>
+  </div>
+
+  <div id="aipicks-universe-view" style="display:none">
+    <div id="aipicks-universe-content"><!-- filled by renderUniverse() --></div>
   </div>
 </div>
 
@@ -1029,12 +1034,110 @@ function switchAISection(id) {
   document.getElementById('aipicks-abtest-view').style.display         = id === 'abtest'        ? '' : 'none';
   document.getElementById('aipicks-reasoning-view').style.display      = id === 'reasoning'     ? '' : 'none';
   document.getElementById('aipicks-forceanalysis-view').style.display  = id === 'forceanalysis' ? '' : 'none';
-  const labels = { portfolio: 'Portfolio', abtest: 'AB Test — Modelos', reasoning: 'Razonamiento', forceanalysis: 'Force Analysis' };
+  document.getElementById('aipicks-universe-view').style.display       = id === 'universe'      ? '' : 'none';
+  const labels = { portfolio: 'Portfolio', abtest: 'AB Test — Modelos', reasoning: 'Razonamiento', forceanalysis: 'Force Analysis', universe: 'Universo' };
   document.querySelectorAll('#aipicks-section-tabs .ptf-tab').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === labels[id]);
   });
   if (id === 'abtest' && _abTestRows) renderABTest(_abTestRows);
   if (id === 'forceanalysis' && _forceAnalysisData) renderForceAnalysis(_forceAnalysisData);
+  if (id === 'universe') loadAndRenderUniverse();
+}
+
+let _universeData = null;
+
+async function loadAndRenderUniverse() {
+  const el = document.getElementById('aipicks-universe-content');
+  el.innerHTML = '<div class="no-positions" style="padding:20px">Cargando universo…</div>';
+  try {
+    const r = await fetch('/api/universe?t=' + Date.now());
+    _universeData = await r.json();
+    renderUniverse(_universeData);
+  } catch(e) {
+    el.innerHTML = `<div class="no-positions" style="color:var(--red)">Error cargando universe.json: ${e.message}</div>`;
+  }
+}
+
+async function removeFromUniverse(ticker) {
+  if (!confirm(`¿Quitar ${ticker} del universo screener?`)) return;
+  try {
+    const r = await fetch('/api/universe/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Error');
+    if (_universeData?.tickers)
+      _universeData.tickers = _universeData.tickers.filter(t => t.ticker !== ticker);
+    renderUniverse(_universeData);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderUniverse(data) {
+  const el = document.getElementById('aipicks-universe-content');
+  const tickers = (data?.tickers || []).slice().sort((a,b) => a.ticker.localeCompare(b.ticker));
+  if (!tickers.length) { el.innerHTML = '<div class="no-positions">universe.json vacío.</div>'; return; }
+
+  // Agrupar por theme
+  const byTheme = {};
+  tickers.forEach(t => {
+    const th = t.theme || '(sin tema)';
+    (byTheme[th] = byTheme[th] || []).push(t);
+  });
+
+  const priorityColor = { high: 'var(--green)', medium: 'var(--yellow)', low: 'var(--text2)' };
+  const tradableColor = t => t.tradable ? 'var(--green)' : 'var(--red)';
+
+  let html = `
+    <div style="margin-bottom:12px;color:var(--text2);font-size:12px">
+      <b style="color:var(--text)">${tickers.length} tickers</b> en el universo screener
+      &nbsp;·&nbsp; ${Object.keys(byTheme).length} temas
+      &nbsp;·&nbsp; <span style="color:var(--green)">${tickers.filter(t=>t.tradable).length} tradables</span>
+    </div>`;
+
+  Object.entries(byTheme).sort(([a],[b]) => a.localeCompare(b)).forEach(([theme, items]) => {
+    html += `
+    <div class="chart-box" style="margin-bottom:12px;padding:12px 16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+        ${theme} <span style="color:var(--text2);font-weight:400">(${items.length})</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.4px">
+            <th style="text-align:left;padding:3px 8px;border-bottom:1px solid var(--border)">Ticker</th>
+            <th style="text-align:left;padding:3px 8px;border-bottom:1px solid var(--border)">Nombre</th>
+            <th style="text-align:left;padding:3px 8px;border-bottom:1px solid var(--border)">Subtheme</th>
+            <th style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border)">Tipo</th>
+            <th style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border)">Región</th>
+            <th style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border)">Tradable</th>
+            <th style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border)">Priority</th>
+            <th style="text-align:left;padding:3px 8px;border-bottom:1px solid var(--border)">Notas</th>
+            <th style="padding:3px 8px;border-bottom:1px solid var(--border)"></th>
+          </tr>
+        </thead>
+        <tbody>`;
+    items.forEach((t, i) => {
+      html += `
+          <tr style="background:${i%2===0?'transparent':'rgba(255,255,255,.03)'}">
+            <td style="padding:4px 8px;font-weight:700;font-family:monospace;color:var(--blue)">${t.ticker}</td>
+            <td style="padding:4px 8px">${t.name || '—'}</td>
+            <td style="padding:4px 8px;color:var(--text2);font-size:11px">${t.subtheme || '—'}</td>
+            <td style="padding:4px 8px;text-align:center;font-size:11px">${t.asset_type || '—'}</td>
+            <td style="padding:4px 8px;text-align:center;font-size:11px">${t.region || '—'}</td>
+            <td style="padding:4px 8px;text-align:center;color:${tradableColor(t)};font-weight:700;font-size:11px">${t.tradable ? '✓' : '✗'}</td>
+            <td style="padding:4px 8px;text-align:center;color:${priorityColor[t.priority]||'var(--text2)'};font-size:11px;font-weight:600">${t.priority || '—'}</td>
+            <td style="padding:4px 8px;color:var(--text2);font-size:11px;font-style:italic">${t.notes || ''}</td>
+            <td style="padding:4px 8px;text-align:center">
+              <button onclick="removeFromUniverse('${t.ticker}')"
+                style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;padding:0 4px;opacity:.6"
+                title="Quitar ${t.ticker} del universo">✕</button>
+            </td>
+          </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+
+  el.innerHTML = html;
 }
 
 function renderABTest(rows) {

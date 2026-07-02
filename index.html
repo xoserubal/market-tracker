@@ -307,7 +307,7 @@ const buildMarkdown = (macroData, rows, manualPrices, autoPrices, prevSnapshot={
       const snap = prevSnapshot[ticker] ?? null;
       const es = computeEarlyFlowScore(d, snap);
       const ec = classifyEarlyFlow(es);
-      md += `| ${name} | ${ticker} | ${fmtPrc(d.price)} | ${fmtRet(d.fromLow)} | ${fmtRet(d.fromHigh)} | ${fmtRet(d.d1)} | ${fmtRet(d.w1)} | ${fmtRet(d.m1)} | ${fmtRet(d.m3)} | ${fmtRet(d.m6)} | ${fmtRet(d.ytd)} | ${fmtRet(d.y1)} | ${fmtRet(d.y3)} | ${d.rsi??'—'} | ${macdStr} | ${d.atrPct!=null?d.atrPct+'%':'—'} | ${koncStateLbl(d.konc_d_state)} | ${fs!=null?fs:'—'} | ${fc??'—'} | ${es!=null?es:'—'} | ${ec??'—'} |\n`;
+      md += `| ${name} | ${ticker} | ${fmtPrc(d.price)} | ${fmtRet(d.fromLow)} | ${fmtRet(d.fromHigh)} | ${fmtRet(d.d1)} | ${fmtRet(d.w1)} | ${fmtRet(d.m1)} | ${fmtRet(d.m3)} | ${fmtRet(d.m6)} | ${fmtRet(d.ytd)} | ${fmtRet(d.y1)} | ${fmtRet(d.y3)} | ${d.rsi??'—'} | ${macdStr} | ${d.atrPct!=null?d.atrPct+'%':'—'} | ${koncStateLbl(d.konc_w_state)} | ${fs!=null?fs:'—'} | ${fc??'—'} | ${es!=null?es:'—'} | ${ec??'—'} |\n`;
     });
     // Spread row
     if (sec.spreadRow) {
@@ -683,7 +683,7 @@ function MarketTracker() {
               { label:'RSI',           tip: "RSI(14) Wilder.\n>70: sobrecomprado · <30: sobrevendido\nZona neutra: 40–60" },
               { label:'MACD',          tip: "MACD(12,26,9) — histograma.\n▲ = histograma ≥ 0 (alcista)\n▼ = histograma < 0 (bajista)" },
               { label:'ATR%',          tip: "ATR(14) Wilder / precio × 100.\nMide la volatilidad normalizada del movimiento diario.\n1–3%: normal · >6%: muy volátil" },
-              { label:'Konc',          tip: "Estado diario Koncorde Plus (OskarGallard):\nAlza: institucional + minorista compran\nAcumulac.: institucional compra, minorista vende\nDistribuc.: institucional vende, minorista compra\nBaja: ambos venden" },
+              { label:'Konc',          tip: "Estado semanal Koncorde Plus (OskarGallard):\nAlza: institucional + minorista compran\nAcumulac.: institucional compra, minorista vende\nDistribuc.: institucional vende, minorista compra\nBaja: ambos venden" },
               { label:'Flow',          tip: "Flow Score: momentum compuesto.\n(1W×0.6 + 1M×0.4)×2 + RSI + MACD + ATR% + Koncorde + tendencia 52W.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4" },
               { label:'Δ',             tip: "Variación del Flow Score vs sesión anterior\n(requiere snapshot guardado)." },
               { label:'Early',         tip: "Early Flow Detector: detecta setups antes del breakout.\nGiro Koncorde + compresión ATR + posición 52W + RSI en zona + momentum modesto.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4" },
@@ -750,8 +750,8 @@ function MarketTracker() {
                         borderBottom:'1px solid #eee',color:'#666',fontFamily:'monospace',fontSize:10}}>
                         {isLoad?dot:v!=null?v+'%':'—'}</td>;
                     })()}
-                    {/* Konc (estado diario Koncorde Plus) */}
-                    {(()=>{ const sig=d?.konc_d_state;
+                    {/* Konc (estado semanal Koncorde Plus) */}
+                    {(()=>{ const sig=d?.konc_w_state;
                       const cm={'up':['#c8e6c9','#1b5e20'],'accumulation':['#e3f2fd','#0d47a1'],
                                 'distribution':['#fff3e0','#e65100'],'down':['#ffcdd2','#b71c1c']};
                       const [bg,fg]=(sig&&cm[sig])?cm[sig]:['transparent','#ccc'];
