@@ -47,22 +47,28 @@ MAX_POSITIONS      = 999               # sin límite práctico (decisión del us
 SYSTEM_PROMPT = """Eres el gestor de una cartera de paper trading experimental llamada MIRROR_ESPEJO.
 
 Esta cartera tiene una única regla de entrada: solo puedes seleccionar tickers que
-muestren la señal Koncorde "espejo" (mirror_reversal_confirmed), que ya viene filtrada
-en la lista de candidatos que recibes. NO se usa PCS, rot_score, DEMS, ni ninguna otra
-métrica del resto del sistema para esta cartera — evalúa únicamente en base al contexto
-de la señal espejo y tu propio juicio sobre si el giro parece creíble.
+muestren la señal Koncorde "espejo", que ya viene filtrada en la lista de candidatos
+que recibes. NO se usa PCS, rot_score, DEMS, ni ninguna otra métrica del resto del
+sistema para esta cartera — evalúa únicamente en base al contexto de la señal espejo
+y tu propio juicio sobre si el giro parece creíble.
 
 Qué es la señal espejo: el activo estaba sobrevendido (blue y green de Koncorde Plus
 ambos negativos). De repente gira: blue cruza de negativo a positivo mientras green
-sigue negativo, simultáneamente en el timeframe diario (D) y en el de 3 días (3D) —
-eso confirma que no es ruido de un solo día. El timeframe semanal (W) todavía tiene
-blue negativo, es decir la tendencia de fondo aún no ha girado — esto sugiere que puede
-ser el inicio de una mini-tendencia (al menos a nivel de unos días), no solo un rebote
-de un día, porque todavía hay margen antes de que el timeframe lento lo refleje.
+sigue negativo. Cada candidato trae un campo "signal" con el nivel de confirmación:
+- "mirror_reversal_confirmed": el cruce es fresco simultáneamente en el timeframe
+  diario (D) y en el de 3 días (3D) — más confirmado, no es ruido de un solo día.
+- "mirror_reversal_daily_only": el cruce solo se ve en D todavía; el 3D aún no lo
+  confirma — señal más temprana pero también más especulativa, con más riesgo de
+  que sea un rebote de un día que se apague antes de confirmarse en 3D.
+En ambos casos, el timeframe semanal (W) todavía tiene blue negativo, es decir la
+tendencia de fondo aún no ha girado — esto sugiere que puede ser el inicio de una
+mini-tendencia, no solo un rebote de un día, porque todavía hay margen antes de que
+el timeframe lento lo refleje.
 
-No toda señal espejo es un giro real — algunas serán ruido o rebotes que se apagan.
-Usa los valores numéricos de blue/green/trend proporcionados y cualquier contexto de
-precio para juzgar si el giro parece limpio o si hay señales de que es débil.
+No toda señal espejo es un giro real — algunas serán ruido o rebotes que se apagan,
+especialmente las "daily_only". Usa los valores numéricos de blue/green/trend
+proporcionados, el nivel de confirmación (signal) y cualquier contexto de precio para
+juzgar si el giro parece limpio o si hay señales de que es débil.
 
 La salida de estas posiciones NO la decides tú — es mecánica: se cierran automáticamente
 cuando el precio cierra un 5% por debajo del máximo alcanzado desde la entrada. No
@@ -173,17 +179,29 @@ def check_trailing_stops(picks: dict, today: str) -> list[dict]:
     return closed_events
 
 
+MIRROR_ELIGIBLE_SIGNALS = ("mirror_reversal_confirmed", "mirror_reversal_daily_only")
+
+
 def build_candidates(koncorde_out: dict[str, dict], already_held: set[str],
                       universe_map: dict[str, dict]) -> list[dict]:
+    """
+    Candidatos elegibles: mirror_reversal_confirmed (D+3D fresco) y también
+    mirror_reversal_daily_only (solo D, 3D aún no confirma) — decisión del
+    usuario 2026-07-03: incluir daily_only también, no solo confirmed, para no
+    perderse señales tempranas como la de VAL (2026-07-03, daily_only). Grok
+    recibe el nivel de cada candidato (signal) para poder ponderarlo.
+    """
     candidates = []
     for tk, k in koncorde_out.items():
-        if k.get("konc_mirror_signal") != "mirror_reversal_confirmed":
+        signal = k.get("konc_mirror_signal")
+        if signal not in MIRROR_ELIGIBLE_SIGNALS:
             continue
         if tk in already_held:
             continue
         u = universe_map.get(tk, {})
         candidates.append({
             "ticker":         tk,
+            "signal":         signal,
             "name":           u.get("name", ""),
             "theme":          u.get("theme", ""),
             "subtheme":       u.get("subtheme", ""),
@@ -227,9 +245,9 @@ def run(apply: bool) -> int:
 
     # ── 2. Candidatos nuevos de hoy ──
     candidates = build_candidates(koncorde_out, already_held, universe_map)
-    print(f"Candidatos MIRROR_ESPEJO hoy (mirror_reversal_confirmed, no en cartera): {len(candidates)}")
+    print(f"Candidatos MIRROR_ESPEJO hoy (confirmed + daily_only, no en cartera): {len(candidates)}")
     for c in candidates:
-        print(f"  {c['ticker']:8s} D(blue={c['konc_d_blue']}, green={c['konc_d_green']})  "
+        print(f"  {c['ticker']:8s} [{c['signal']}] D(blue={c['konc_d_blue']}, green={c['konc_d_green']})  "
               f"3D(blue={c['konc_3d_blue']}, green={c['konc_3d_green']})  W(blue={c['konc_w_blue']})")
 
     if not candidates:
@@ -288,7 +306,7 @@ def run(apply: bool) -> int:
             "ticker":            tk,
             "entry_date":        today,
             "entry_price":       entry_price,
-            "entry_signal":      "mirror_reversal_confirmed",
+            "entry_signal":      c["signal"],
             "size_pct":          SIZE_PCT,
             "high_water_mark":   entry_price,
             "reason":            sel.get("reason", ""),
