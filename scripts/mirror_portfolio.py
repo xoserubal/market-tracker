@@ -217,9 +217,13 @@ def run(apply: bool) -> int:
     already_held = {p["ticker"] for p in ptf.get("positions", [])}
     closed = check_trailing_stops(picks, today)
     if closed:
-        _write_json(PICKS_JSON, picks)
-        print(f"  {len(closed)} posición(es) cerrada(s) por trailing stop, ai_picks.json actualizado.")
+        print(f"  {len(closed)} posición(es) cerrada(s) por trailing stop.")
     already_held -= {c["ticker"] for c in closed}
+
+    # Persistir siempre que --apply esté activo, aunque no haya cambios hoy —
+    # así la cartera aparece en el dashboard desde el primer run, incluso vacía.
+    if apply:
+        _write_json(PICKS_JSON, picks)
 
     # ── 2. Candidatos nuevos de hoy ──
     candidates = build_candidates(koncorde_out, already_held, universe_map)

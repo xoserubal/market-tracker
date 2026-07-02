@@ -680,7 +680,7 @@ function renderOverviewAIPicks(picks) {
   if (!panel || !el) return;
 
   const portfolios = picks.portfolios || {};
-  const GROK_PTFS  = ['HIGH_CONVICTION','CONFIRMED_FLOW_LEADERS','EARLY_ROTATION','MACRO_THEMATIC_BENEFICIARIES'];
+  const GROK_PTFS  = ['HIGH_CONVICTION','CONFIRMED_FLOW_LEADERS','EARLY_ROTATION','MACRO_THEMATIC_BENEFICIARIES','MIRROR_ESPEJO'];
   const MIMO_PTFS  = ['MIMO_SHADOW'];
 
   // Count open positions per model
@@ -736,11 +736,15 @@ const PTF_LABELS = {
   MACRO_THEMATIC_BENEFICIARIES: 'Macro Temático',
   REJECTED_HIGH_SCORE:          'Rechazados (control)',
   MIMO_SHADOW:                  'Mimo Shadow',
+  MIRROR_ESPEJO:                'Espejo (Grok)',
 };
 const PTF_THRESHOLDS = {
   HIGH_CONVICTION: 85, CONFIRMED_FLOW_LEADERS: 78,
   EARLY_ROTATION: 70, MACRO_THEMATIC_BENEFICIARIES: 65, REJECTED_HIGH_SCORE: 75,
   MIMO_SHADOW: 70,
+  // MIRROR_ESPEJO no usa PCS — no aplica un threshold real, se deja fuera
+  // (renderPtfContent cae al fallback ||70 solo para la lista de "candidatos
+  // vistos por el modelo", que no es relevante para esta cartera).
 };
 let _activePtfTab = 'HIGH_CONVICTION';
 let _aipicksData = null;
