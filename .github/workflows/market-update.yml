@@ -83,7 +83,18 @@ jobs:
         run: python scripts/koncorde_shadow_exits.py
         working-directory: ${{ github.workspace }}
 
-      - name: Run pipeline - Step 9d Mirror Espejo portfolio (Grok)
+      - name: Check if this is the morning run
+        id: time_check
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" -lt 14 ]; then
+            echo "is_morning=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_morning=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run pipeline - Step 9d Mirror Espejo portfolio (Grok) — solo por la mañana
+        if: steps.time_check.outputs.is_morning == 'true'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python scripts/mirror_portfolio.py --apply

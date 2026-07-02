@@ -115,17 +115,17 @@ def fetch_last_closes(tickers: list[str]) -> dict[str, float]:
         return {}
     out: dict[str, float] = {}
     try:
+        # group_by="ticker" siempre — con una lista (aunque sea de 1 elemento),
+        # yfinance devuelve columnas MultiIndex (ticker, campo) de todas formas;
+        # sin esto, raw["Close"] falla en silencio para listas de un solo ticker.
         raw = yf.download(tickers, period="5d", auto_adjust=True, progress=False,
-                           group_by="ticker" if len(tickers) > 1 else None)
+                           group_by="ticker")
     except Exception as e:
         print(f"  ⚠ fetch_last_closes error: {e}")
         return out
     for tk in tickers:
         try:
-            if len(tickers) == 1:
-                series = raw["Close"].dropna()
-            else:
-                series = raw[tk]["Close"].dropna()
+            series = raw[tk]["Close"].dropna()
             if len(series):
                 out[tk] = float(series.iloc[-1])
         except Exception:
@@ -158,8 +158,14 @@ def check_trailing_stops(picks: dict, today: str) -> list[dict]:
             remaining.append(pos)  # sin dato hoy: no tocar, reintentar el próximo run
             continue
 
-        hwm = max(pos.get("high_water_mark", pos.get("entry_price", price)), price)
+        # .get(key, default) solo aplica el default si la clave falta, no si vale
+        # None (p.ej. entry_price/high_water_mark quedaron null por un fallo previo
+        # de fetch) — usar "or" en cadena para cubrir ambos casos con seguridad.
+        prev_hwm = pos.get("high_water_mark") or pos.get("entry_price") or price
+        hwm = max(prev_hwm, price)
         pos["high_water_mark"] = hwm
+        if pos.get("entry_price") is None:
+            pos["entry_price"] = price
         stop_price = hwm * (1 - TRAILING_STOP_PCT)
 
         if price <= stop_price:
