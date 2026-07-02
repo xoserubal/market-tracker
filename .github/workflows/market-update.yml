@@ -83,6 +83,13 @@ jobs:
         run: python scripts/koncorde_shadow_exits.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 9d Mirror Espejo portfolio (Grok)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python scripts/mirror_portfolio.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 10 paper trading (AI picks)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

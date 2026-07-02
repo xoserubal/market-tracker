@@ -474,9 +474,29 @@ Nuevo indicador de seguimiento (no HARD_RULE, no en el payload IA todavía — f
 
 **Seguimiento — `docs/data/mirror_signals.jsonl` (nuevo):** cada vez que `koncorde_calculator.py` corre, registra TODOS los tickers del universo (no solo picks de la IA) que muestren `mirror_reversal_confirmed`, con precio y valores blue/green/bar_date, para evaluar más adelante si el patrón anticipa subidas. Deduplicado por `(ticker, date)`. `ret_1w`/`ret_2w`/`ret_1m` quedan en `null` — rellenarlos requeriría un script de seguimiento propio al estilo `update_performance.py`, no incluido en este cambio.
 
-**Dashboard:** badge "🪞 Confirmado" / "🪞 Solo D" en la tabla "Ranking de Setups" de `portfolio.html`, junto a Early Flow/Flow Score.
+**Dashboard:** badge "🪞 Confirmado" / "🪞 Solo D" en `portfolio.html`, en dos sitios: junto al ticker en la tabla principal de posiciones por sección (donde se revisa cada posición día a día) y en el widget secundario "Ranking de Setups" (ordenado por Early Flow). El primer intento solo lo puso en el widget secundario, lo que lo hacía casi invisible — corregido el mismo día tras detectarlo el usuario.
 
-**Caso real que motivó esto (2026-07-02):** MSTR mostraba `konc_d_state=accumulation` (blue +8.9, green -10.1), `konc_3d_state=accumulation` (blue +17.1, green -34.7), `konc_w_state=down` (blue -1.1) — el patrón exacto — mientras Flow Score (-1.7, "Débil") y Early Flow Score (0.5, "Sin setup") no lo destacaban en absoluto, porque esas dos métricas están calibradas para detectar acumulación silenciosa y temprana, no rebotes en V tras una paliza. Un día después (2026-07-03) el patrón ya se había resuelto al alza (W pasó a positivo) — confirma que la ventana de esta señal es corta por naturaleza.
+**Caso real que motivó esto (2026-07-02):** MSTR mostraba `konc_d_state=accumulation` (blue +8.9, green -10.1), `konc_3d_state=accumulation` (blue +17.1, green -34.7), `konc_w_state=down` (blue -1.1) — el patrón exacto — mientras Flow Score (-1.7, "Débil") y Early Flow Score (0.5, "Sin setup") no lo destacaban en absoluto, porque esas dos métricas están calibradas para detectar acumulación silenciosa y temprana, no rebotes en V tras una paliza. Un día después (2026-07-03) el patrón ya se había resuelto al alza (W pasó a positivo, D pasó a estado "up" con green también positivo) — confirma que la ventana de esta señal es corta por naturaleza.
+
+---
+
+## Cartera MIRROR_ESPEJO — gestionada exclusivamente por Grok (implementado 2026-07-03)
+
+Cartera experimental nueva, con una arquitectura deliberadamente distinta al resto del sistema: **no usa PCS, rot_score, DEMS ni ninguna otra métrica** — solo entra en tickers que muestren `konc_mirror_signal="mirror_reversal_confirmed"` (ver sección anterior), y su salida es 100% mecánica (no pasa por la IA).
+
+**Script nuevo: `scripts/mirror_portfolio.py`** (Step 9d del pipeline, `continue-on-error: true` — si falla no bloquea el resto):
+
+- **Entrada — llamada dedicada a Grok** (`x-ai/grok-4.3`, fijo, independiente de `ACTIVE_MODEL`): un prompt propio, separado por completo del payload multi-cartera de `paper_trading.py` — sin las 14 `HARD_RULES` existentes, sin PCS. Solo recibe los tickers en `mirror_reversal_confirmed` de **todo el universo Koncorde** (~194 tickers, no solo los candidatos PCS-elegibles de `ai_candidates.json`) que no estén ya en cartera, con sus valores blue/green/trend D/3D/W. Grok decide si el giro parece creíble o no; puede seleccionar 0 o más.
+- **Salida — trailing stop mecánico, sin IA**: cada run, para cada posición abierta, se actualiza `high_water_mark = max(high_water_mark, cierre_de_hoy)`. Si `cierre_de_hoy <= high_water_mark × 0.95`, se cierra automáticamente (`close_reason: "trailing_stop_5pct_from_high"`). Esto se evalúa **antes** de considerar nuevas entradas, y siempre se aplica (no depende de `--apply`, ver más abajo — la salida mecánica es segura por diseño, no cuesta ni una llamada a la IA).
+- **Tamaño:** 5% fijo por posición. **Sin límite de posiciones simultáneas** (decisión explícita del usuario — universo pequeño y señal ya de por sí restrictiva).
+- **Uso manual:** `py -3 scripts/mirror_portfolio.py` (dry-run: muestra candidatos, no llama a Grok ni escribe nada) · `py -3 scripts/mirror_portfolio.py --apply` (llama a Grok de verdad y aplica cambios — gasta crédito de la API).
+- **Logs:** `docs/data/mirror_portfolio_log.jsonl` (coste, tokens, latencia, respuesta cruda por llamada) — versión ligera del `ai_model_test_summary.jsonl` del sistema principal, sin el quality-scoring completo (no aplica aquí, no hay HARD_RULES que violar).
+- **Reutiliza** `call_model`/`parse_response`/`compute_cost`/`_model_max_tokens` de `paper_trading.py` (import directo) en vez de duplicar la lógica de llamada a OpenRouter.
+- **Telegram:** `MIRROR_ESPEJO: "Espejo (Grok)"` añadido a `_PORTFOLIO_LABELS` en `paper_trading.py` y `notify_telegram.py` — las notificaciones de apertura/cierre ya genéricas del sistema deberían recogerlo sin cambios adicionales (no verificado en producción todavía).
+
+**Verificado (sin gastar API real):** lógica de trailing stop probada con 4 casos (cierre por debajo del stop, nuevo máximo sin cierre, sin dato de precio hoy, cartera vacía/bootstrap) y flujo completo de aplicación de una selección probado con `call_model` mockeado. `build_candidates()` corrido contra datos reales del universo (0 candidatos el día de implementación, esperado — ver sección anterior).
+
+**Pendiente / no incluido en este cambio:** confirmar en producción que las notificaciones de Telegram sí recogen esta cartera nueva sin tocar `notify_telegram.py`/`_notify_changes` más allá del label; el primer `--apply` real (con coste de API) queda para cuando el usuario lo dispare.
 
 ---
 

@@ -1008,6 +1008,7 @@ _PORTFOLIO_LABELS = {
     "MACRO_THEMATIC_BENEFICIARIES": "Macro Tematico",
     "REJECTED_HIGH_SCORE":          "Rechazados (control)",
     "MIMO_SHADOW":                  "Mimo Shadow",
+    "MIRROR_ESPEJO":                "Espejo (Grok)",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 
