@@ -1,7 +1,17 @@
 """
 Gestión del estado early_rotation_candidates (streaks por activo).
 
-Tres condiciones para emitir ROT. TEMPRANA (todas obligatorias):
+Esta señal se llamaba "ROT. TEMPRANA" pero exige persistencia de 3 semanas, no es
+realmente temprana — en rotacion.html (dashboard en vivo) ya se renombró a
+"ROT. CONFIRMADA" y se añadió una señal distinta, genuinamente temprana, basada en
+inflexión (isNewEarlyRotation/qualifiesForNewEarlyRotation en rotacion.html). Este
+módulo de backtest histórico mantiene el nombre de función/campos original
+(evaluate_early_rotation, is_early_rotation) por estabilidad del esquema de
+rotation_history.parquet — no se ha migrado. El equivalente histórico de la nueva
+señal de inflexión no se implementa aquí: Koncorde Plus solo tiene histórico desde
+2026-06-30, insuficiente para un backtest retroactivo del gate Konc 3D.
+
+Tres condiciones para emitir ROT. CONFIRMADA (todas obligatorias):
   1. Persistencia individual: RotScore ≥ 8 durante ≥3 semanas consecutivas
   2. Clúster categorial:      ≥2 activos del mismo clúster con streak ≥3
   3. Filtro benchmark:        SPY > SMA200  OR  Δ13w NetLiq > +300B

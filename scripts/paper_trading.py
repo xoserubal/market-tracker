@@ -39,6 +39,14 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
+sys.path.insert(0, str(Path(__file__).parent))
+from ai_shared import (
+    HARD_RULES,
+    NON_TRADABLE_SUBTHEMES,
+    VALID_REJECT_CATS,
+    compact_candidate as _compact_candidate,
+)
+
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
@@ -119,35 +127,8 @@ SHADOW_MODEL_PORTFOLIOS: dict[str, str] = {
     "xiaomi/mimo-v2.5-pro": "MIMO_SHADOW",
 }
 
-HARD_RULES = [
-    "Only SELECT tickers present in the candidates list.",
-    "Only SELECT tickers with eligible=true.",
-    "Do not SELECT futures, commodities, or macro indices directly.",
-    "If a signal comes from a commodity/macro theme, SELECT the related stock or ETF.",
-    "Do not fill portfolios with mediocre picks — empty selected list is valid.",
-    "Return valid JSON only. No markdown, no explanation, no extra text.",
-    "Do not invent data not present in the payload. If prev_snapshot_available=false, do not speculate on PCS or score changes between weeks.",
-    "With strong contradictions, use WATCH or REJECT, not SELECT.",
-    "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate and explain why it ranked lower).",
-    "Every rejected item must have: reason and a valid rejection_category.",
-    "Every candidate with pcs >= 62 that you do not SELECT must appear in EXACTLY ONE of watch or rejected, never both. A ticker in two lists is a hard rule violation — commit to one classification.",
-    "Do not SELECT a ticker already present in active_picks_relevant — it is already an open position. Mention it in decision_summary if still relevant, but do not add it to selected.",
-    "For HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS portfolios, do not REJECT based primarily on dems or spike_flag when weekly metrics (ret_4w_vs_spy, ret_13w_vs_spy, streak_weeks) are strong. Use WATCH instead.",
-    "Review ALL tickers in active_picks_relevant and include each one in open_picks_review. Use action=EXIT if: (a) current_pcs < pcs_min_entry AND current_streak_weeks <= 1, OR (b) current_rot_score <= 2, OR (c) current_pcs < 62 (absolute floor — below the minimum entry threshold of any portfolio, exit regardless of streak), OR (d) left_universe=true (ticker dropped out of the screener universe entirely — no current data available, exit is mandatory). Otherwise use HOLD. Do not omit any active position from open_picks_review.",
-]
-
-NON_TRADABLE_SUBTHEMES = frozenset({
-    "futures", "commodity", "macro_index", "crude_oil_leveraged",
-})
-
 VALID_PORTFOLIOS = frozenset(PORTFOLIOS) - {"REJECTED_HIGH_SCORE", "MIMO_SHADOW"}
 VALID_SHADOW_PORTFOLIOS = frozenset({"MIMO_SHADOW"})
-
-VALID_REJECT_CATS = frozenset({
-    "insufficient_conviction", "macro_conflict", "weak_flow",
-    "weak_relative_strength", "technical_overextension", "data_quality",
-    "not_tradable", "better_alternative_available",
-})
 
 REQUIRED_RESPONSE_KEYS = {"date", "decision_summary", "selected", "watch", "rejected"}
 
@@ -200,50 +181,6 @@ def _append_jsonl(path: Path, record: dict) -> None:
 
 
 # ── Payload builder ────────────────────────────────────────────────────────────
-
-def _compact_candidate(c: dict, conc: dict | None = None) -> dict:
-    ds = c.get("daily_signals") or {}
-    return {
-        "ticker":         c["ticker"],
-        "name":           c.get("name", ""),
-        "theme":          c.get("theme", ""),
-        "subtheme":       c.get("subtheme", ""),
-        "pcs":            c.get("pcs"),
-        "eligible":       c.get("eligible"),
-        "signal":         c.get("signal"),
-        "rot_score":      c.get("rot_score"),
-        "ret_4w_vs_spy":  c.get("ret_4w_vs_spy"),
-        "ret_13w_vs_spy": c.get("ret_13w_vs_spy"),
-        "streak_weeks":   c.get("streak_weeks"),
-        "dist_52w_high":  c.get("dist_52w_high"),
-        "is_early":       c.get("is_early", False),
-        "flags":          (c.get("flags") or [])[:5],
-        # Daily signals — populated only when pcs_calculator fetched prices
-        "dems":           ds.get("daily_early_momentum_score"),
-        "ret_5d_vs_spy":  ds.get("ret_5d_vs_spy"),
-        "ret_10d_vs_spy": ds.get("ret_10d_vs_spy"),
-        "outperform_d10": ds.get("outperform_days_10d"),
-        "streak_days":    ds.get("streak_days"),
-        "momentum_accel": ds.get("momentum_accel"),
-        "vol_5d_20d":     ds.get("vol_5d_vs_20d"),
-        "spike_flag":     ds.get("spike_flag"),
-        # Extension risk — informational, does not block selections
-        "extension_risk":   c.get("extension_risk"),
-        "extension_points": c.get("extension_points"),
-        "extension_flags":  c.get("extension_flags"),
-        # Theme concentration — informational, does not block selections
-        "theme_concentration_risk":    (conc or {}).get("theme_risk"),
-        "subtheme_concentration_risk": (conc or {}).get("subtheme_risk"),
-        # Koncorde Plus — institutional/retail flow direction, informational.
-        # Daily (D) is noisy; 3D is the sweet spot signal/noise-wise; W confirms.
-        "konc_d_state":   c.get("konc_d_state"),
-        "konc_3d_state":  c.get("konc_3d_state"),
-        "konc_3d_blue":   c.get("konc_3d_blue"),
-        "konc_3d_green":  c.get("konc_3d_green"),
-        "konc_3d_trend":  c.get("konc_3d_trend"),
-        "konc_w_state":   c.get("konc_w_state"),
-    }
-
 
 def compute_theme_concentration(
     candidates: list[dict],
@@ -487,11 +424,20 @@ OBSERVATION FIELDS (informational — no hard rules, acknowledgement requested):
   by sector. When a theme shows risk "high", note the concentration in your reasoning. You may
   still SELECT tickers in concentrated themes if the signal justifies it. When candidates are
   otherwise equivalent, prefer the less-concentrated theme.
-- Koncorde 3D and W states indicate institutional flow direction. When konc_3d_state="distribution"
-  or konc_w_state="distribution", note this in your reasoning for any SELECT decision. Koncorde
-  daily (konc_d_state) is noisy — weight 3D and W more heavily.
-- These fields exist to collect data: after 30-50 picks we will analyze whether extension_risk
-  and theme_concentration correlate with worse returns. Until then, treat them as context only.
+- Koncorde 3D/W is a separate accumulation/distribution context feature — do not treat it as a
+  standalone buy/sell signal. The 3D timeframe is the primary operational Koncorde reading; daily
+  (konc_d_state) is tactical/noisier; weekly (konc_w_state) is structural confirmation.
+  If konc_3d_state="distribution", selecting a new position requires explicit justification in
+  reason_full or key_risks — this will be logged as "KONC_3D_DISTRIBUTION_WARNING" if you SELECT
+  without acknowledging it (no quality score penalty).
+  If DEMS is extreme (>=15) and extension_risk is "high"/"extreme" and konc_3d_state="distribution",
+  prefer WATCH or REJECT unless there is very strong contrary evidence — this combination is logged
+  as "DEMS_EXTREME_KONC_DISTRIBUTION_WARNING" when selected.
+  konc_alignment summarizes 3D+W together (bullish_aligned/accumulation_setup/mixed/
+  distribution_warning/bearish_aligned/neutral) — distribution_warning is the most urgent reading.
+- These fields exist to collect data: after 30-50 picks we will analyze whether extension_risk,
+  theme_concentration, and Koncorde 3D distribution correlate with worse returns. Until then,
+  treat them as context only.
 
 EARLY_ROTATION — daily signals guidance (dems, ret_5d_vs_spy, etc.):
 - dems (Daily Early Momentum Score 0-20): PRIMARY signal for EARLY_ROTATION.
@@ -704,6 +650,7 @@ def validate_model_response(
     data: dict | None,
     payload: dict,
     json_valid: bool,
+    raw_cands: dict[str, dict] | None = None,
 ) -> ValidationResult:
     r = ValidationResult(json_valid=json_valid)
     if not json_valid or data is None:
@@ -766,17 +713,35 @@ def validate_model_response(
             r.add(f"REJECT {t}: invalid rejection_category '{cat}'")
 
     # Soft warnings: extension_risk high/extreme not acknowledged (no penalty, log only)
-    cand_ext = {c["ticker"]: c.get("extension_risk") for c in payload.get("candidates", [])}
+    cand_by_ticker = {c["ticker"]: c for c in payload.get("candidates", [])}
+    raw_cands = raw_cands or {}
     for s in data.get("selected", []):
         t = s.get("ticker", "")
-        ext = cand_ext.get(t)
+        c = cand_by_ticker.get(t, {})
+        ext = c.get("extension_risk")
+        text_fields = " ".join([
+            str(s.get("reason_full", "")),
+            str(s.get("key_risks_or_contradictions", "")),
+        ]).lower()
         if ext in ("high", "extreme"):
-            text_fields = " ".join([
-                str(s.get("reason_full", "")),
-                str(s.get("key_risks_or_contradictions", "")),
-            ]).lower()
             if "extension" not in text_fields and "extend" not in text_fields and "chase" not in text_fields:
                 r.warn(f"extension_risk_not_acknowledged: {t} has extension_risk={ext}")
+
+        # Soft warnings: Koncorde 3D — observation only, no hard rule (hoja sección 2/2.1)
+        konc_3d_state = c.get("konc_3d_state")
+        if konc_3d_state == "distribution":
+            if not any(kw in text_fields for kw in ("koncorde", "distribution", "institutional")):
+                r.warn(f"KONC_3D_DISTRIBUTION_WARNING: {t} selected with konc_3d_state=distribution and no acknowledgement")
+
+        if raw_cands.get(t, {}).get("konc_3d_blue_down_2_bars"):
+            r.warn(f"KONC_3D_BLUE_DOWNTREND_WARNING: {t} selected with konc_3d_blue_down_2_bars=true")
+
+        dems = c.get("dems")
+        if (dems is not None and dems >= 15
+                and ext in ("high", "extreme")
+                and konc_3d_state == "distribution"):
+            r.warn(f"DEMS_EXTREME_KONC_DISTRIBUTION_WARNING: {t} selected with dems={dems}, "
+                   f"extension_risk={ext}, konc_3d_state=distribution")
 
     # Soft warnings: active positions not covered in open_picks_review (no penalty, log only)
     active_map = {p.get("ticker"): p for p in payload.get("active_picks_relevant", [])}
@@ -954,19 +919,15 @@ def _log_shadow_picks(
     is_valid_run: bool,
     forced_run: bool,
     cand_pcs: dict | None = None,
+    cand_snapshot: dict[str, dict] | None = None,
 ) -> None:
     today = str(date.today())
     valid_for_tracking = is_valid_run and not forced_run
-    # Build lookup: ticker → candidate data (for extension/concentration fields)
-    cand_lookup: dict[str, dict] = {}
-    if cand_pcs:
-        for c in (cand_pcs if isinstance(cand_pcs, list) else []):
-            if isinstance(c, dict):
-                cand_lookup[c.get("ticker", "")] = c
+    cand_snapshot = cand_snapshot or {}
     for s in data.get("selected", []):
         t = s.get("ticker", "")
         pcs_val = (cand_pcs.get(t) if isinstance(cand_pcs, dict) else None) or s.get("pcs")
-        cand = cand_lookup.get(t, {})
+        cand = cand_snapshot.get(t, {})
         _append_jsonl(SHADOW_LOG, {
             "date":         today,
             "run_id":       run_id,
@@ -988,6 +949,20 @@ def _log_shadow_picks(
             # Theme concentration at time of selection
             "theme_concentration_risk":    cand.get("theme_concentration_risk"),
             "subtheme_concentration_risk": cand.get("subtheme_concentration_risk"),
+            # Koncorde Plus at time of selection — richer than the model payload
+            # (which only gets konc_alignment) so we can later check whether Konc 3D
+            # distribution/deterioration correlated with worse ret_1w/2w/1m (hoja 16.2).
+            "konc_3d_state":              cand.get("konc_3d_state"),
+            "konc_3d_blue":               cand.get("konc_3d_blue"),
+            "konc_3d_green":              cand.get("konc_3d_green"),
+            "konc_3d_blue_slope":         cand.get("konc_3d_blue_slope"),
+            "konc_3d_blue_down_2_bars":   cand.get("konc_3d_blue_down_2_bars"),
+            "konc_3d_distribution_flag":  cand.get("konc_3d_distribution_flag"),
+            "konc_w_blue":                cand.get("konc_w_blue"),
+            "konc_w_state":               cand.get("konc_w_state"),
+            "konc_alignment":             cand.get("konc_alignment"),
+            "konc_3d_bar_date":           cand.get("konc_3d_bar_date"),
+            "konc_w_bar_date":            cand.get("konc_w_bar_date"),
             "entry_price":  None,   # filled by a separate price-fetch step
             "ret_1d":  None, "ret_3d":  None, "ret_1w":  None,
             "ret_2w":  None, "ret_1m":  None, "ret_3m":  None,
@@ -1429,6 +1404,22 @@ def run(force: bool = False, apply: bool = False) -> None:
     if not isinstance(picks, dict):
         picks = {}
 
+    # Per-ticker snapshot for shadow_picks.jsonl logging: raw candidate fields
+    # (extension_risk, konc_* — including the fields not sent to the model) plus
+    # theme concentration at time of selection.
+    _raw_cands = cands_data.get("candidates", [])
+    _conc_map, _ = compute_theme_concentration(_raw_cands, picks)
+    cand_snapshot: dict[str, dict] = {}
+    for c in _raw_cands:
+        tk = c.get("ticker")
+        if not tk:
+            continue
+        merged = dict(c)
+        conc = _conc_map.get(tk, {})
+        merged["theme_concentration_risk"]    = conc.get("theme_risk")
+        merged["subtheme_concentration_risk"] = conc.get("subtheme_risk")
+        cand_snapshot[tk] = merged
+
     meaningful_today = [
         e for e in events_raw
         if e.get("date") == today and e.get("type") != "first_snapshot"
@@ -1512,7 +1503,7 @@ def run(force: bool = False, apply: bool = False) -> None:
                 except Exception as exc2:
                     error = f"primary={exc}; fallback={exc2}"
 
-        v       = validate_model_response(data, model_payload, json_valid)
+        v       = validate_model_response(data, model_payload, json_valid, raw_cands=cand_snapshot)
         quality = compute_quality_score(data, v, model_payload)
         print(f"q={quality}/100  viol={v.hard_rule_violations}")
 
@@ -1537,7 +1528,8 @@ def run(force: bool = False, apply: bool = False) -> None:
         if data and json_valid:
             _log_shadow_picks(model_used, data, is_active,
                               run_id=run_id, is_valid_run=is_valid_run,
-                              forced_run=force, cand_pcs=cand_pcs)
+                              forced_run=force, cand_pcs=cand_pcs,
+                              cand_snapshot=cand_snapshot)
 
         if is_active and data and is_valid_run:
             if force and not apply:

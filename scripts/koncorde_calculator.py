@@ -247,6 +247,7 @@ def _resample_3d(df: pd.DataFrame) -> pd.DataFrame:
     n = len(df)
     remainder = n % 3
     rows = []
+    dates = []
     for i in range(remainder, n, 3):
         block = df.iloc[i:i + 3]
         if len(block) < 3:
@@ -258,7 +259,10 @@ def _resample_3d(df: pd.DataFrame) -> pd.DataFrame:
             "close":  float(block["close"].iloc[-1]),
             "volume": float(block["volume"].sum()),
         })
-    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=["open","high","low","close","volume"])
+        dates.append(block.index[-1])
+    if not rows:
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+    return pd.DataFrame(rows, index=pd.Index(dates))
 
 
 def _resample_weekly(df: pd.DataFrame) -> pd.DataFrame:
@@ -295,6 +299,15 @@ def _last(arr: np.ndarray):
     return round(v, 2) if not np.isnan(v) else None
 
 
+def _down_2_bars(arr: np.ndarray) -> bool:
+    """True if the last 3 closed bars show strictly decreasing values (persistent deterioration)."""
+    if len(arr) < 3:
+        return False
+    if any(np.isnan(arr[i]) for i in (-1, -2, -3)):
+        return False
+    return bool(arr[-1] < arr[-2] < arr[-3])
+
+
 def _state(blue, green) -> str:
     if blue is None or green is None:
         return "neutral"
@@ -307,6 +320,28 @@ def _state(blue, green) -> str:
     return "down"
 
 
+def _konc_alignment(state_3d, state_w, blue_down_2_bars_3d: bool) -> str:
+    """
+    Summary reading across 3D/W timeframes. Priority order (most to least urgent):
+    distribution_warning > bearish_aligned > accumulation_setup > bullish_aligned > mixed > neutral.
+
+    accumulation_setup deliberately takes priority over bullish_aligned whenever 3D is in
+    accumulation with a non-bearish W — an accumulation setup is operationally more relevant
+    than a generic bullish alignment, even if W also happens to read "up".
+    """
+    if state_3d is None or state_w is None:
+        return "neutral"
+    if state_3d == "distribution" or blue_down_2_bars_3d:
+        return "distribution_warning"
+    if state_3d == "down" and state_w in ("distribution", "down"):
+        return "bearish_aligned"
+    if state_3d == "accumulation" and state_w not in ("distribution", "down"):
+        return "accumulation_setup"
+    if state_3d in ("accumulation", "up") and state_w in ("accumulation", "up"):
+        return "bullish_aligned"
+    return "mixed"
+
+
 # ── Per-ticker computation ─────────────────────────────────────────────────
 
 def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
@@ -315,8 +350,12 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
     nulls = {k: None for k in [
         f"{pfx}_blue", f"{pfx}_green", f"{pfx}_trend", f"{pfx}_trend_ma", f"{pfx}_state",
         f"{pfx}_blue_delta1", f"{pfx}_blue_slope", f"{pfx}_green_delta1", f"{pfx}_green_slope",
-        f"{pfx}_trend_delta1", f"{pfx}_trend_slope",
+        f"{pfx}_trend_delta1", f"{pfx}_trend_slope", f"{pfx}_bar_date",
     ]}
+    nulls[f"{pfx}_blue_down_2_bars"]  = False
+    nulls[f"{pfx}_accumulation_flag"] = False
+    nulls[f"{pfx}_distribution_flag"] = False
+    nulls[f"{pfx}_bar_closed"]        = True
     if len(df) < MIN_BARS:
         return nulls
     try:
@@ -335,19 +374,31 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
         b_d1, b_s  = _slope(blue_a)
         g_d1, g_s  = _slope(green_a)
         t_d1, t_s  = _slope(trend_a)
+        state = _state(b, g)
+
+        last_idx = df.index[-1]
+        bar_date = last_idx.strftime("%Y-%m-%d") if hasattr(last_idx, "strftime") else str(last_idx)
 
         return {
-            f"{pfx}_blue":         b,
-            f"{pfx}_green":        g,
-            f"{pfx}_trend":        t,
-            f"{pfx}_trend_ma":     tm,
-            f"{pfx}_state":        _state(b, g),
-            f"{pfx}_blue_delta1":  b_d1,
-            f"{pfx}_blue_slope":   b_s,
-            f"{pfx}_green_delta1": g_d1,
-            f"{pfx}_green_slope":  g_s,
-            f"{pfx}_trend_delta1": t_d1,
-            f"{pfx}_trend_slope":  t_s,
+            f"{pfx}_blue":               b,
+            f"{pfx}_green":              g,
+            f"{pfx}_trend":              t,
+            f"{pfx}_trend_ma":           tm,
+            f"{pfx}_state":              state,
+            f"{pfx}_blue_delta1":        b_d1,
+            f"{pfx}_blue_slope":         b_s,
+            f"{pfx}_green_delta1":       g_d1,
+            f"{pfx}_green_slope":        g_s,
+            f"{pfx}_trend_delta1":       t_d1,
+            f"{pfx}_trend_slope":        t_s,
+            # Deterioration/flags — see hoja sección 1.5/1.7
+            f"{pfx}_blue_down_2_bars":   _down_2_bars(blue_a),
+            f"{pfx}_accumulation_flag":  state == "accumulation",
+            f"{pfx}_distribution_flag":  state == "distribution",
+            # This pipeline runs end-of-day on yf.download() — always a closed bar.
+            # Flip to false if this is ever run intraday on a partial bar.
+            f"{pfx}_bar_closed":         True,
+            f"{pfx}_bar_date":           bar_date,
         }
     except Exception as e:
         print(f"    compute_tf({tf_name}) error: {e}")
@@ -372,6 +423,12 @@ def compute_for_ticker(df: pd.DataFrame) -> dict:
     globals()["MIN_BARS"] = 100
     result.update(_compute_tf(df_w, "w"))
     globals()["MIN_BARS"] = orig_min
+
+    result["konc_alignment"] = _konc_alignment(
+        result.get("konc_3d_state"),
+        result.get("konc_w_state"),
+        result.get("konc_3d_blue_down_2_bars", False),
+    )
 
     return result
 
@@ -476,6 +533,19 @@ def run() -> None:
         for sec in portfolio.get("sections", []):
             for item in sec.get("items", []):
                 tk = item.get("ticker")
+                if tk:
+                    tickers.add(tk)
+
+    # Collect tickers from open AI picks (all portfolios, including MIMO_SHADOW) —
+    # so a ticker that drops out of the 91-candidate universe (left_universe=true)
+    # keeps getting Koncorde computed while the position stays open (needed for
+    # shadow exit tracking in koncorde_shadow_exits.py).
+    picks_path = DATA / "ai_picks.json"
+    if picks_path.exists():
+        picks = json.loads(picks_path.read_text(encoding="utf-8"))
+        for ptf in picks.get("portfolios", {}).values():
+            for pos in ptf.get("positions", []):
+                tk = pos.get("ticker")
                 if tk:
                     tickers.add(tk)
 

@@ -160,6 +160,24 @@ function calcSMA(arr, period) {
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
+// ── CMF(20) — Chaikin Money Flow ─────────────────────────────────────────
+// MFM = ((Close-Low)-(High-Close)) / (High-Low), 0 if High==Low
+// MFV = MFM * Volume ; CMF(20) = sum(MFV, 20) / sum(Volume, 20)
+function calcCMF(closes, highs, lows, volumes, period = 20) {
+  const n = closes.length;
+  if (n < period) return null;
+  let mfvSum = 0, volSum = 0;
+  for (let i = n - period; i < n; i++) {
+    const h = highs[i], l = lows[i], c = closes[i], v = volumes[i] ?? 0;
+    if (h == null || l == null || c == null) continue;
+    const hl  = h - l;
+    const mfm = hl !== 0 ? ((c - l) - (h - c)) / hl : 0;
+    mfvSum += mfm * v;
+    volSum += v;
+  }
+  return volSum !== 0 ? +(mfvSum / volSum).toFixed(4) : 0;
+}
+
 // ── OBV + SMA50(OBV) ──────────────────────────────────────────────────────
 function calcOBV(closes, volumes) {
   let obv = 0;
@@ -231,6 +249,7 @@ app.get("/api/quote/:symbol", async (req, res) => {
       rsi: calcRSI(closes.slice(-100)),
       ...calcMACD(closes),
       ...calcATR(closes, highs, lows),
+      cmf20: calcCMF(closes, highs, lows, volumes, 20),
       ...(getKoncordeData()[req.params.symbol.toUpperCase()] ?? {}),
       // ── v2: SMAs, OBV, volumen, anti-extensión ──
       sma20:  calcSMA(closes, 20)  ? +calcSMA(closes, 20).toPrecision(6)  : null,
@@ -604,7 +623,7 @@ app.post("/api/stock-config", express.json(), (req, res) => {
 app.get("/api/stock-candidates", (_req, res) => {
   const p = path.join(__dirname, "backtest/data/processed/stock_candidates.json");
   try {
-    if (!fs.existsSync(p)) return res.json({ candidates: [], active_rot_temprana_clusters: [], updated: null });
+    if (!fs.existsSync(p)) return res.json({ candidates: [], active_confirmed_rotation_clusters: [], updated: null });
     res.json(JSON.parse(fs.readFileSync(p, "utf8")));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

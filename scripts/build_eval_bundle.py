@@ -15,6 +15,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from ai_shared import HARD_RULES, compact_candidate as _compact_candidate
+
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
 
@@ -48,17 +51,6 @@ PORTFOLIOS = {
         "size_range":    [3, 6],
     },
 }
-
-HARD_RULES = [
-    "Only SELECT tickers present in the candidates list.",
-    "Only SELECT tickers with eligible=true.",
-    "Do not SELECT futures, commodities, or macro indices directly.",
-    "Empty selected list is valid — do not fill portfolios with mediocre picks.",
-    "With strong contradictions, use WATCH or REJECT, not SELECT.",
-    "Every selected item must have: portfolio, signal_type, confidence, reason_short (≥20 chars), reason_full (≥100 chars), comparative_edge (≥30 chars, must name at least one peer candidate).",
-    "Every rejected item must have: reason and a valid rejection_category.",
-    "Every candidate with pcs >= 62 that is NOT selected must appear in watch or rejected.",
-]
 
 REASONING_STYLE_RULES = [
     "Do NOT repeat input field names as reasoning (e.g. 'pcs_above_threshold', 'rs_strong_leader' are labels, not analysis).",
@@ -126,41 +118,6 @@ EVALUATION_RUBRIC = {
 def _load(name: str) -> dict:
     p = DATA / name
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
-
-
-def _compact_candidate(c: dict) -> dict:
-    ds = c.get("daily_signals") or {}
-    return {
-        "ticker":         c["ticker"],
-        "name":           c.get("name", ""),
-        "theme":          c.get("theme", ""),
-        "subtheme":       c.get("subtheme", ""),
-        "pcs":            c.get("pcs"),
-        "eligible":       c.get("eligible"),
-        "signal":         c.get("signal"),
-        "rot_score":      c.get("rot_score"),
-        "ret_4w_vs_spy":  c.get("ret_4w_vs_spy"),
-        "ret_13w_vs_spy": c.get("ret_13w_vs_spy"),
-        "streak_weeks":   c.get("streak_weeks"),
-        "dist_52w_high":  c.get("dist_52w_high"),
-        "is_early":       c.get("is_early", False),
-        "flags":          (c.get("flags") or [])[:6],
-        "pcs_components": c.get("pcs_components"),
-        "dems":           ds.get("daily_early_momentum_score"),
-        "ret_5d_vs_spy":  ds.get("ret_5d_vs_spy"),
-        "ret_10d_vs_spy": ds.get("ret_10d_vs_spy"),
-        "outperform_d10": ds.get("outperform_days_10d"),
-        "streak_days":    ds.get("streak_days"),
-        "momentum_accel": ds.get("momentum_accel"),
-        "vol_5d_20d":     ds.get("vol_5d_vs_20d"),
-        "spike_flag":     ds.get("spike_flag"),
-        "konc_d_state":   c.get("konc_d_state"),
-        "konc_3d_state":  c.get("konc_3d_state"),
-        "konc_3d_blue":   c.get("konc_3d_blue"),
-        "konc_3d_green":  c.get("konc_3d_green"),
-        "konc_3d_trend":  c.get("konc_3d_trend"),
-        "konc_w_state":   c.get("konc_w_state"),
-    }
 
 
 def build_bundle() -> dict:

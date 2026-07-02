@@ -9,7 +9,7 @@ Réplica de calcRotScore() en rotacion.html:
     close > SMA200      → 1 pt
 
   Bloque B — Flujo/Volumen (3 pts):
-    CMF(20) > 0                  → 1 pt
+    CMF(20) > 0.05                → 1 pt
     OBV > SMA50(OBV)             → 1 pt
     vol4w / vol12w > 1.10        → 1 pt
 
@@ -89,7 +89,7 @@ def rotation_score(
 
     # ── Bloque B: Flujo/Volumen (3 pts) ──────────────────────────────────────
     cmf20 = _get(t, 'cmf20')
-    comp['cmf_pts'] = (1.0 if cmf20 is not None and cmf20 > 0.0 else 0.0)
+    comp['cmf_pts'] = (1.0 if cmf20 is not None and cmf20 > 0.05 else 0.0)
 
     obv_val  = _get(t, 'obv')
     obv_sma  = _get(t, 'obv_sma50')

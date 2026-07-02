@@ -419,9 +419,9 @@ def export_stock_candidates():
         cleaned.append(rec)
 
     out = {
-        "updated":                      data.get("updated", ""),
-        "active_rot_temprana_clusters": data.get("active_rot_temprana_clusters", []),
-        "candidates":                   cleaned,
+        "updated":                            data.get("updated", ""),
+        "active_confirmed_rotation_clusters": data.get("active_confirmed_rotation_clusters", []),
+        "candidates":                         cleaned,
     }
     write_json(out, "stock_candidates.json")
     n_cand = sum(1 for c in cleaned if c.get("signal") in ("CANDIDATO", "EN_RADAR"))

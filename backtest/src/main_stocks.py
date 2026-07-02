@@ -34,6 +34,11 @@ PROCESSED_DIR = ROOT / "data" / "processed"
 CONFIG_PATH   = ROOT / "config" / "individual_stocks.yaml"
 OUT_PATH      = PROCESSED_DIR / "stock_candidates.json"
 
+# Fase 6b: subtheme_cluster (universe.json) + Koncorde 3D, para la nueva ROT. TEMPRANA
+# por inflexión a nivel de acciones individuales (independiente del macro_cluster ETF).
+UNIVERSE_JSON  = ROOT.parent / "docs" / "data" / "universe.json"
+KONCORDE_JSON  = ROOT.parent / "docs" / "data" / "koncorde_data.json"
+
 START_DATE = "2022-01-01"   # mínimo 3 años para beta + historial score
 
 
@@ -98,8 +103,13 @@ def download_stock(ticker: str, start: str) -> bool:
     return False
 
 
-def get_active_rot_temprana_clusters() -> set[str]:
-    """Lee rotation_history.parquet y devuelve clusters con ROT.TEMPRANA activa."""
+def get_active_confirmed_rotation_clusters() -> set[str]:
+    """
+    Lee rotation_history.parquet y devuelve clusters con ROT. CONFIRMADA activa
+    (persistencia — antes llamada "ROT.TEMPRANA"; renombrada porque exige 3 semanas
+    de persistencia y no es realmente temprana). La columna del parquet histórico
+    sigue llamándose is_early_rotation por estabilidad de esquema, no se ha migrado.
+    """
     rot_path = PROCESSED_DIR / "rotation_history.parquet"
     if not rot_path.exists():
         return set()
@@ -166,20 +176,21 @@ def main() -> int:
         print("  ⚠ No se pudo cargar SPY — abortando")
         return 1
 
-    # Clusters activos con ROT.TEMPRANA
-    active_clusters = get_active_rot_temprana_clusters()
+    # Clusters activos con ROT.CONFIRMADA
+    active_clusters = get_active_confirmed_rotation_clusters()
     label = ", ".join(sorted(active_clusters)) if active_clusters else "ninguno"
-    print(f"  Clusters con ROT.TEMPRANA activa: {label}")
+    print(f"  Clusters con ROT.CONFIRMADA activa: {label}")
 
     # Escanear
-    candidates = scan_stocks(active_clusters, spy_weekly, CONFIG_PATH, RAW_DIR)
+    candidates = scan_stocks(active_clusters, spy_weekly, CONFIG_PATH, RAW_DIR,
+                              universe_path=UNIVERSE_JSON, koncorde_path=KONCORDE_JSON)
 
     # Guardar JSON
     out = {
-        "updated":                      str(pd.Timestamp.now().date()),
-        "active_rot_temprana_clusters": sorted(active_clusters),
-        "failed_downloads":             failed,
-        "candidates":                   candidates,
+        "updated":                          str(pd.Timestamp.now().date()),
+        "active_confirmed_rotation_clusters": sorted(active_clusters),
+        "failed_downloads":                 failed,
+        "candidates":                       candidates,
     }
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
@@ -201,10 +212,15 @@ def main() -> int:
     for c in candidates:
         if c["signal"] in ("CANDIDATO", "EN_RADAR"):
             print(
-                f"    {'⚡' if c['cluster_has_rot_temprana'] else '→'} "
+                f"    {'⚡' if c['cluster_has_confirmed_rotation'] else '→'} "
                 f"{c['ticker']:8s}  cluster={c['cluster']:15s}  "
                 f"score={c['rot_score']}  beta={c['beta_52w']}  "
                 f"streak={c['streak_weeks']}w  signal={c['signal']}"
+            )
+        if c.get("rotation_cluster_type"):
+            print(
+                f"    ⚡ ROT.TEMPRANA (subtheme): {c['ticker']:8s}  "
+                f"{c['rotation_cluster_type']}={c['rotation_cluster_name']}"
             )
 
     return 0

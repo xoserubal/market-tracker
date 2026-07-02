@@ -430,7 +430,7 @@ def score_d(
 
 # ── E. Early Acceleration (0–10) ─────────────────────────────────────────────
 # What: Is this ticker accelerating before the move becomes obvious?
-# Sources: cluster_has_rot_temprana, macd_pts, rsi_pts, streak_weeks
+# Sources: cluster_has_confirmed_rotation, macd_pts, rsi_pts, streak_weeks
 
 def score_e(
     ticker: str, rot_idx: dict, cand_idx: dict
@@ -438,7 +438,7 @@ def score_e(
     d    = cand_idx.get(ticker) or rot_idx.get(ticker) or {}
     comp = d.get("components") or {}
 
-    is_early = bool(d.get("is_early_rotation") or d.get("cluster_has_rot_temprana"))
+    is_early = bool(d.get("is_early_rotation") or d.get("cluster_has_confirmed_rotation"))
     macd     = comp.get("macd_pts", d.get("macd_pts", 0)) or 0
     rsi      = comp.get("rsi_pts",  d.get("rsi_pts",  0)) or 0
     streak   = d.get("streak_weeks") or 0
@@ -534,7 +534,7 @@ def compute_pcs(
         "rot_score":     raw.get("rot_score"),
         "signal":        raw.get("signal"),
         "cluster":       raw.get("cluster"),
-        "is_early":      bool(raw.get("is_early_rotation") or raw.get("cluster_has_rot_temprana")),
+        "is_early":      bool(raw.get("is_early_rotation") or raw.get("cluster_has_confirmed_rotation")),
         "ret_4w_vs_spy": raw.get("ret_4w_vs_spy"),
         "ret_13w_vs_spy":raw.get("ret_13w_vs_spy"),
         "streak_weeks":  raw.get("streak_weeks"),

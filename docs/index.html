@@ -298,6 +298,20 @@ const REGIME_COLORS = {
 };
 
 function regimeColor(r) { return REGIME_COLORS[r] || '#8b949e'; }
+
+// Nombres de régimen menos agresivos para mostrar al usuario (hoja sección 5).
+// Solo capa de display — el valor canónico persistido/leído de macro.history
+// (usado en regimeColor y en cualquier comparación) no cambia.
+function displayRegimeName(regime) {
+  const map = {
+    'Bull Pleno':   'Risk-On Fuerte',
+    'Bull Maduro':  'Risk-On Maduro',
+    'Transición':   'Transición',
+    'Risk-OFF':     'Risk-Off',
+    'Capitulación': 'Estrés / Capitulación',
+  };
+  return map[regime] ?? regime;
+}
 function scoreColor(s)  {
   if (s == null) return '#8b949e';
   if (s >= 70) return '#3fb950';
@@ -487,7 +501,7 @@ function chartMacroFull(history) {
 
   Plotly.newPlot('chart-macro-full', [{
     x: dates, y: scores, type: 'scatter', mode: 'lines', name: 'MacroScore',
-    text: regimes,
+    text: regimes.map(displayRegimeName),
     line: { color: '#58a6ff', width: 2 },
     fill: 'tozeroy', fillcolor: 'rgba(88,166,255,0.07)',
     hovertemplate: '<b>%{x}</b><br>Score: %{y:.1f}<br>%{text}<extra></extra>'
@@ -1580,7 +1594,7 @@ async function init() {
     const deltaFmt = v => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1);
 
     renderCards('overview-cards', [
-      { label:'MacroScore', value: score?.toFixed(0) ?? '—', sub: `${regime} · Δ1w ${deltaFmt(delta1w)}  Δ1m ${deltaFmt(delta1m)}`, cls },
+      { label:'MacroScore', value: score?.toFixed(0) ?? '—', sub: `${displayRegimeName(regime)} · Δ1w ${deltaFmt(delta1w)}  Δ1m ${deltaFmt(delta1m)}`, cls },
       { label:'COMPRA', value: compra, cls: 'bull', sub: `${acum} ACUMULAR` },
       { label:'Rot. Temprana', value: er, cls: er > 0 ? 'info' : '', sub: 'señales activas' },
       { label:'Actualizado', value: rotation.updated, cls: 'info' },
@@ -1605,7 +1619,7 @@ async function init() {
     // Macro page
     renderCards('macro-cards', [
       { label:'MacroScore', value: score?.toFixed(1) ?? '—', cls },
-      { label:'Régimen', value: regime, cls },
+      { label:'Régimen', value: displayRegimeName(regime), cls },
       { label:'HY Spread pts', value: latest?.hy_pts?.toFixed(2) ?? '—', cls: 'info' },
       { label:'Net Liquidity pts', value: latest?.netliq_pts?.toFixed(2) ?? '—', cls: 'info' },
       { label:'Volatilidad pts', value: latest?.vol_pts?.toFixed(2) ?? '—', cls: 'info' },

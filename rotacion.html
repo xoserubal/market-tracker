@@ -127,8 +127,9 @@ function getTickerCluster(ticker) {
   return Object.entries(CLUSTERS).find(([,m]) => m.includes(ticker))?.[0] ?? null;
 }
 
+// ROT. CONFIRMADA (antes llamada "ROT. TEMPRANA") — persistencia, no es realmente temprana:
 // Condición 1: streak ≥3 | Condición 2: ≥2 del mismo clúster | Condición 3: benchmark
-function isEarlyRotation(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
+function isConfirmedRotation(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
   const entry = candidates?.[ticker];
   if (!entry || entry.streak < 3) return false;
   if (spyAboveSma200 !== true && netLiqDeltaB <= 300) return false;
@@ -140,7 +141,7 @@ function isEarlyRotation(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
   return qualifying.length >= 2;
 }
 
-function getEarlyRotMeta(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
+function getConfirmedRotMeta(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
   const cluster = getTickerCluster(ticker);
   const qualifying = cluster
     ? CLUSTERS[cluster].filter(t => { const e = candidates[t]; return e && e.streak >= 3; })
@@ -149,6 +150,41 @@ function getEarlyRotMeta(ticker, candidates, spyAboveSma200, netLiqDeltaB) {
     streak:        candidates?.[ticker]?.streak ?? 0,
     cluster,
     clusterPeers:  qualifying.filter(t => t !== ticker),
+    benchmarkSPY:  spyAboveSma200 === true,
+    benchmarkNetLiq: netLiqDeltaB > 300,
+    netLiqDeltaB,
+  };
+}
+
+// ROT. TEMPRANA (nueva, basada en inflexión — hoja sección 9.2) — a diferencia de
+// ROT. CONFIRMADA, no exige persistencia de varias semanas sino una mejora reciente
+// de score confirmada por RS4w positivo y Koncorde 3D no en distribución. En este
+// universo de ETFs solo se agrupa por macro_cluster; el equivalente para acciones
+// individuales por subtheme_cluster vive en backtest/src/rotation/stock_scanner.py.
+function qualifiesForNewEarlyRotation(currentScore, prevScore, rs4wVsSpy, konc3dState) {
+  if (currentScore == null || currentScore < 6) return false;
+  if (prevScore == null || (currentScore - prevScore) < 2) return false;
+  if (!(rs4wVsSpy > 0)) return false;
+  if (konc3dState === 'distribution') return false;
+  return true;
+}
+
+function isNewEarlyRotation(ticker, qualifyMap, spyAboveSma200, netLiqDeltaB) {
+  if (!qualifyMap[ticker]) return false;
+  if (spyAboveSma200 !== true && netLiqDeltaB <= 300) return false;
+  const cluster = getTickerCluster(ticker);
+  if (!cluster) return false;
+  const peers = CLUSTERS[cluster].filter(t => t !== ticker && qualifyMap[t]);
+  return peers.length >= 1;
+}
+
+function getNewEarlyRotMeta(ticker, qualifyMap, spyAboveSma200, netLiqDeltaB) {
+  const cluster = getTickerCluster(ticker);
+  const peers = cluster ? CLUSTERS[cluster].filter(t => t !== ticker && qualifyMap[t]) : [];
+  return {
+    cluster_type: 'macro_cluster',
+    cluster_name: cluster,
+    clusterPeers: peers,
     benchmarkSPY:  spyAboveSma200 === true,
     benchmarkNetLiq: netLiqDeltaB > 300,
     netLiqDeltaB,
@@ -165,11 +201,28 @@ const DEFAULT_STATE = {
     EMERGENCY_MODE:      {active:false,activated_at:null,expires_date:null},
   },
   early_rotation_candidates:{},
+  macro_score_history:[],
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function getRegime(score) {
   return REGIMES.find(r => score >= r.min) || REGIMES[REGIMES.length-1];
+}
+
+// Nombres de régimen menos agresivos para mostrar al usuario (hoja sección 5).
+// Solo capa de display: el valor canónico (label en REGIMES/current_regime/
+// pending_regime) NO cambia — sigue siendo 'Bull Pleno'/'Bull Maduro'/etc. en
+// todos los sitios donde se compara o persiste. Usar esta función únicamente
+// al renderizar texto para el usuario, nunca en comparaciones de lógica.
+function displayRegimeName(regime) {
+  const map = {
+    'Bull Pleno':   'Risk-On Fuerte',
+    'Bull Maduro':  'Risk-On Maduro',
+    'Transición':   'Transición',
+    'Risk-OFF':     'Risk-Off',
+    'Capitulación': 'Estrés / Capitulación',
+  };
+  return map[regime] ?? regime;
 }
 
 function calcMacroScore(macroData) {
@@ -197,7 +250,7 @@ function calcRotScore(data, spyData) {
     rs13w: rs13w > 2.0,
     rs4w:  rs4w  > 1.0,
     sma200: data.closeAboveSma200 === true,
-    cmf:   data.konAzul != null && data.konAzul > 0,
+    cmf:   data.cmf20 != null && data.cmf20 > 0.05,
     obv:   data.obvAboveSma50 === true,
     vol:   data.volRatio != null && data.volRatio > 1.10,
     macd:  data.macdBull === true,
@@ -219,7 +272,7 @@ function toStars(score) {
   return 1;
 }
 
-function getSignal(rotTotal, fit, flags, spyAboveSma200, isEarlyRot = false) {
+function getSignal(rotTotal, fit, flags, spyAboveSma200, isConfirmedRot = false, isNewEarlyRot = false) {
   const creditFlag = flags?.CREDIT_COMPLACENCY?.active;
   const emergency  = flags?.EMERGENCY_MODE?.active;
   const buyThreshold = creditFlag ? 8 : 7;
@@ -232,22 +285,25 @@ function getSignal(rotTotal, fit, flags, spyAboveSma200, isEarlyRot = false) {
   let level;
   if      (fit && rotTotal >= buyThreshold) level = 'COMPRA';
   else if (fit && rotTotal >= 5)            level = 'ACUMULAR';
-  else if (isEarlyRot)                      level = 'ROT. TEMPRANA';
+  else if (isConfirmedRot)                  level = 'ROT. CONFIRMADA';
+  else if (isNewEarlyRot)                   level = 'ROT. TEMPRANA';
   else if (rotTotal >= 3)                   level = 'VIGILAR';
   else                                      level = null;
 
   // Master Filter: SPY < SMA200 → degrade 1 nivel
-  // ROT. TEMPRANA queda excluida: ya lleva su propio filtro de benchmark (SPY>SMA200 OR NetLiq>300B)
-  if (spyAboveSma200 === false && level && level !== 'ROT. TEMPRANA') {
+  // Ambas señales de rotación quedan excluidas: cada una lleva su propio filtro de
+  // benchmark (SPY>SMA200 OR NetLiq>300B)
+  if (spyAboveSma200 === false && level && level !== 'ROT. CONFIRMADA' && level !== 'ROT. TEMPRANA') {
     const downgrade = { 'COMPRA':'ACUMULAR', 'ACUMULAR':'VIGILAR', 'VIGILAR':null };
     level = downgrade[level] ?? null;
   }
 
   const colors = {
-    'COMPRA':         { color:'#1b5e20', bg:'#e8f5e9' },
-    'ACUMULAR':       { color:'#33691e', bg:'#f1f8e9' },
-    'ROT. TEMPRANA':  { color:'#e65100', bg:'#fff3e0' },
-    'VIGILAR':        { color:'#888',    bg:'#f5f5f5' },
+    'COMPRA':          { color:'#1b5e20', bg:'#e8f5e9' },
+    'ACUMULAR':        { color:'#33691e', bg:'#f1f8e9' },
+    'ROT. CONFIRMADA': { color:'#e65100', bg:'#fff3e0' },
+    'ROT. TEMPRANA':   { color:'#7b1fa2', bg:'#f3e5f5' },
+    'VIGILAR':         { color:'#888',    bg:'#f5f5f5' },
   };
   return level ? { label:level, ...colors[level] } : { label:'—', color:'#ccc', bg:'transparent' };
 }
@@ -374,19 +430,64 @@ function updateStateFromData(prev, macroScore, macroData, rawRegime, vixVal, rot
   // Cada entry guarda last_updated_date; si ya se actualizó hoy, se omite el incremento.
   if (rotScores) {
     for (const [ticker, score] of Object.entries(rotScores)) {
-      const entry = s.early_rotation_candidates[ticker] || { streak: 0, last_score: null, last_updated_date: null };
+      const entry = s.early_rotation_candidates[ticker] || { streak: 0, last_score: null, prev_score: null, last_updated_date: null };
       if (entry.last_updated_date !== now) {
+        // Primera actualización del día: snapshot de prev_score (última lectura del día anterior),
+        // usado por isNewEarlyRotation para detectar inflexión (score actual - prev_score >= 2).
+        entry.prev_score = entry.last_score;
         // Primera actualización del día: incrementar o resetear streak
         entry.streak = score >= 8 ? (entry.streak || 0) + 1 : 0;
         entry.last_updated_date = now;
       }
-      // Si ya se actualizó hoy, solo refrescar last_score (sin tocar streak)
+      // Si ya se actualizó hoy, solo refrescar last_score (sin tocar streak ni prev_score)
       entry.last_score = score;
       s.early_rotation_candidates[ticker] = entry;
     }
   }
 
+  // Historial de MacroScore (Fase 7 — macro_delta_1w/4w + macro_trend). Una entrada
+  // por día, mismo patrón de protección multi-refresh que los streaks de arriba.
+  if (!s.macro_score_history) s.macro_score_history = [];
+  const lastHistEntry = s.macro_score_history[s.macro_score_history.length - 1];
+  if (!lastHistEntry || lastHistEntry.date !== now) {
+    s.macro_score_history.push({ date: now, score: macroScore });
+    if (s.macro_score_history.length > 70) {          // ~10 semanas, margen sobre delta_4w
+      s.macro_score_history = s.macro_score_history.slice(-70);
+    }
+  }
+
   return s;
+}
+
+// Δ1w / Δ4w del MacroScore + tendencia (improving/stable/deteriorating), hoja sección 5.
+function computeMacroTrend(history, currentScore) {
+  if (!history || history.length === 0 || currentScore == null) {
+    return { delta1w: null, delta4w: null, trend: 'stable' };
+  }
+  const findClosestAtOrBefore = (daysAgo) => {
+    const target = new Date();
+    target.setDate(target.getDate() - daysAgo);
+    const targetStr = target.toISOString().slice(0, 10);
+    let best = null;
+    for (const e of history) {
+      if (e.date <= targetStr) best = e;
+    }
+    return best;
+  };
+  const e1w = findClosestAtOrBefore(7);
+  const e4w = findClosestAtOrBefore(28);
+  const delta1w = e1w ? +(currentScore - e1w.score).toFixed(1) : null;
+  const delta4w = e4w ? +(currentScore - e4w.score).toFixed(1) : null;
+  let trend = 'stable';
+  if (delta1w != null && delta4w != null) {
+    if (delta1w > 0 && delta4w > 0) trend = 'improving';
+    else if (delta1w < 0 && delta4w < 0) trend = 'deteriorating';
+  }
+  return { delta1w, delta4w, trend };
+}
+
+function trendLabel(trend) {
+  return { improving: 'Improving', stable: 'Stable', deteriorating: 'Deteriorating' }[trend] ?? '';
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
@@ -702,7 +803,7 @@ function StockCandidates({ data }) {
   const all       = data.candidates || [];
   const active    = all.filter(c => c.signal !== 'IGNORAR');
   const ignorados = all.filter(c => c.signal === 'IGNORAR');
-  const activeCluster = data.active_rot_temprana_clusters || [];
+  const activeCluster = data.active_confirmed_rotation_clusters || [];
 
   const sigStyle = {
     CANDIDATO:{ color:'#e65100', bg:'#fff3e0' },
@@ -716,8 +817,8 @@ function StockCandidates({ data }) {
   const SC_TH = { padding:'6px 10px', textAlign:'left', fontWeight:600, color:'#555', borderBottom:'2px solid #e0e0e0', whiteSpace:'nowrap' };
   const SC_COLS = [
     { h:'Ticker',     tip: null },
-    { h:'Cluster',    tip: "Sector/cluster al que pertenece la acción.\nDetermina si hay ROT.TEMPRANA activa en el ETF del cluster (marca ⚡)." },
-    { h:'Señal',      tip: "⚡ CANDIDATO: cluster ETF con ROT.TEMP activa + streak ≥ 2w\nEN_RADAR: streak ≥ 2w, cluster sin señal ETF todavía\nVIGILAR: score ≥ 6 pero streak < 2w\nIGNORAR: score < 6\n\nCriterios relajados vs sistema ETF (threshold 6 vs 8, streak 2 vs 3)." },
+    { h:'Cluster',    tip: "Sector/cluster al que pertenece la acción (macro_cluster).\nDetermina si hay ROT.CONFIRMADA activa en el ETF del cluster (marca ⚡ en Señal).\n\nBadge morado ⚡ subtheme adicional: ROT.TEMPRANA por inflexión detectada en el subtheme_cluster (universe.json) — independiente del macro_cluster, ej. Crypto/Miners, Uranium." },
+    { h:'Señal',      tip: "⚡ CANDIDATO: cluster ETF con ROT.CONFIRMADA activa + streak ≥ 2w\nEN_RADAR: streak ≥ 2w, cluster sin señal ETF todavía\nVIGILAR: score ≥ 6 pero streak < 2w\nIGNORAR: score < 6\n\nCriterios relajados vs sistema ETF (threshold 6 vs 8, streak 2 vs 3)." },
     { h:'Score',      tip: "RotationScore 0–10 — mismo cálculo que la tabla ETF principal.\n\nUmbral relajado: ≥ 6 (vs ≥ 8 en el sistema ETF).\n\nScore ≥ 8 → zona óptima\nScore 6–7 → elegible para señal" },
     { h:'Streak',     tip: "Semanas consecutivas con Score ≥ 6.\n\nSe necesitan ≥ 2 semanas consecutivas para generar señal activa (EN_RADAR o CANDIDATO)." },
     { h:'Beta 52w',   tip: "Beta calculada sobre retornos semanales — últimas 52 semanas vs SPY.\n\nBeta = Cov(ticker, SPY) / Var(SPY)\n\n> 1.8 = muy alta (rojo)\n> 1.3 = alta (naranja)\n\nActúa como multiplicador del movimiento del sector ETF." },
@@ -745,10 +846,18 @@ function StockCandidates({ data }) {
     return (
       <tr style={{ borderBottom:'1px solid #f0f0f0' }}>
         <td style={{ padding:'5px 10px', fontWeight:700, color:'#222' }}>{c.ticker}</td>
-        <td style={{ padding:'5px 10px', color:'#666', fontSize:11 }}>{c.cluster}</td>
+        <td style={{ padding:'5px 10px', color:'#666', fontSize:11 }}>
+          {c.cluster}
+          {c.rotation_cluster_type === 'subtheme_cluster' && (
+            <span title={`ROT.TEMPRANA por inflexión — subtheme_cluster: ${c.rotation_cluster_name}`}
+              style={{ marginLeft:5, fontSize:9, background:'#f3e5f5', color:'#7b1fa2', borderRadius:8, padding:'1px 6px', fontWeight:700 }}>
+              ⚡ {c.rotation_cluster_name}
+            </span>
+          )}
+        </td>
         <td style={{ padding:'5px 10px' }}>
           <span style={{ background:st.bg, color:st.color, borderRadius:4, padding:'2px 7px', fontWeight:700, fontSize:11, whiteSpace:'nowrap' }}>
-            {c.cluster_has_rot_temprana ? '⚡ ' : ''}{c.signal}
+            {c.cluster_has_confirmed_rotation ? '⚡ ' : ''}{c.signal}
           </span>
         </td>
         <td style={{ padding:'5px 10px', textAlign:'center', fontWeight:700,
@@ -785,7 +894,7 @@ function StockCandidates({ data }) {
         <span style={{ fontSize:14, fontWeight:700, color:'#333' }}>⚡ Acciones individuales — candidatos por cluster</span>
         {activeCluster.length > 0 &&
           <span style={{ fontSize:11, background:'#fff3e0', color:'#e65100', borderRadius:4, padding:'2px 8px', fontWeight:700 }}>
-            ROT.TEMP activa en: {activeCluster.join(', ')}
+            ROT.CONFIRMADA activa en: {activeCluster.join(', ')}
           </span>}
         <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
           {/* Sync status */}
@@ -839,7 +948,7 @@ function StockCandidates({ data }) {
 
       {/* ── Leyenda ── */}
       <div style={{ marginTop:12, fontSize:10, color:'#bbb', display:'flex', gap:20, flexWrap:'wrap' }}>
-        <span><b style={{ color:'#e65100' }}>⚡ CANDIDATO</b>: cluster ETF con ROT.TEMP + score≥6 durante 2w</span>
+        <span><b style={{ color:'#e65100' }}>⚡ CANDIDATO</b>: cluster ETF con ROT.CONFIRMADA + score≥6 durante 2w</span>
         <span><b style={{ color:'#1565c0' }}>EN_RADAR</b>: score≥6 durante 2w, cluster ETF sin señal todavía</span>
         <span>Stop: −10% · Horizonte: 8–13 sem · Amplifier = beta × score</span>
       </div>
@@ -1014,6 +1123,11 @@ function App() {
   );
   const rawRegime        = useMemo(() => getRegime(macroScore), [macroScore]);
 
+  const macroTrend = useMemo(
+    () => computeMacroTrend(appState.macro_score_history, macroScore),
+    [appState.macro_score_history, macroScore]
+  );
+
   // Effective regime: histéresis + term premium degradation
   const effectiveRegime = useMemo(() => {
     const label = appState.current_regime || rawRegime.label;
@@ -1035,18 +1149,40 @@ function App() {
     const spy = quotes['SPY'];
     const netLiqDeltaB = macro.netliq?.value ?? 0;
     const candidates   = appState.early_rotation_candidates;
+
+    // Elegibilidad individual para la nueva ROT. TEMPRANA (inflexión), calculada para
+    // todo el universo antes de evaluar peers de clúster (hoja 9.2: "ambos" activos
+    // deben cumplir inflexión + RS4w + Koncorde, no solo el que se está evaluando).
+    const qualifyMap = {};
+    UNIVERSE.forEach(a => {
+      if (a.ticker === 'SPY') { qualifyMap[a.ticker] = false; return; }
+      const d2 = quotes[a.ticker];
+      if (!d2) { qualifyMap[a.ticker] = false; return; }
+      const r2 = calcRotScore(d2, spy);
+      const prevScore = candidates?.[a.ticker]?.prev_score;
+      qualifyMap[a.ticker] = qualifiesForNewEarlyRotation(r2.total, prevScore, r2.m1Rel, d2.konc_3d_state);
+    });
+
     return UNIVERSE.map(a => {
       const d   = quotes[a.ticker];
       const rot = a.ticker === 'SPY' ? { total:0, blockA:0, blockB:0, blockC:0, w1Rel:null, m1Rel:null, m3Rel:null, bd:{} } : calcRotScore(d, spy);
       const fit = effectiveLeaders.includes(a.ticker);
-      const earlyRot = a.ticker !== 'SPY' && !fit
-        ? isEarlyRotation(a.ticker, candidates, spyAboveSma200, netLiqDeltaB)
+      const confirmedRot = a.ticker !== 'SPY' && !fit
+        ? isConfirmedRotation(a.ticker, candidates, spyAboveSma200, netLiqDeltaB)
         : false;
-      const earlyRotMeta = earlyRot
-        ? getEarlyRotMeta(a.ticker, candidates, spyAboveSma200, netLiqDeltaB)
+      const confirmedRotMeta = confirmedRot
+        ? getConfirmedRotMeta(a.ticker, candidates, spyAboveSma200, netLiqDeltaB)
         : null;
-      const sig = a.ticker === 'SPY' ? { label:'ref', color:'#aaa', bg:'transparent' } : getSignal(rot.total, fit, appState.flags, spyAboveSma200, earlyRot);
-      return { ...a, d, rot, fit, sig, earlyRot, earlyRotMeta };  // sin `extended`: eliminado (pendiente Fase 4)
+      const newEarlyRot = a.ticker !== 'SPY' && !fit && !confirmedRot
+        ? isNewEarlyRotation(a.ticker, qualifyMap, spyAboveSma200, netLiqDeltaB)
+        : false;
+      const newEarlyRotMeta = newEarlyRot
+        ? getNewEarlyRotMeta(a.ticker, qualifyMap, spyAboveSma200, netLiqDeltaB)
+        : null;
+      const sig = a.ticker === 'SPY'
+        ? { label:'ref', color:'#aaa', bg:'transparent' }
+        : getSignal(rot.total, fit, appState.flags, spyAboveSma200, confirmedRot, newEarlyRot);
+      return { ...a, d, rot, fit, sig, confirmedRot, confirmedRotMeta, newEarlyRot, newEarlyRotMeta };
     });
   }, [quotes, effectiveLeaders, appState.flags, appState.early_rotation_candidates, spyAboveSma200, macro]);
 
@@ -1064,7 +1200,12 @@ function App() {
         .sort((a,b) => b.rot.total - a.rot.total).slice(0,6),
     [rows]);
 
-  const early = useMemo(() =>
+  const confirmed = useMemo(() =>
+    rows.filter(r => r.sig.label === 'ROT. CONFIRMADA' && r.ticker !== 'SPY')
+        .sort((a,b) => b.rot.total - a.rot.total).slice(0,4),
+    [rows]);
+
+  const newEarly = useMemo(() =>
     rows.filter(r => r.sig.label === 'ROT. TEMPRANA' && r.ticker !== 'SPY')
         .sort((a,b) => b.rot.total - a.rot.total).slice(0,4),
     [rows]);
@@ -1099,8 +1240,8 @@ function App() {
     const date = new Date().toLocaleString('es-ES',{dateStyle:'full',timeStyle:'short'});
     let md = `# Flujos & Rotación v2 — Snapshot\n**Fecha:** ${date}\n\n`;
 
-    md += `## RÉGIMEN\n**MacroScore:** ${macroScore}/100${macroMaxPossible < 100 ? ` ⚠ (reescalado, ${macroMaxPossible}/100 disponible)` : ''} — **${effectiveRegime.label}**\n`;
-    if (appState.pending_regime) md += `_Transición pendiente → ${appState.pending_regime} (${appState.pending_since_count}/2 lecturas)_\n`;
+    md += `## RÉGIMEN\n**MacroScore:** ${macroScore}/100${macroMaxPossible < 100 ? ` ⚠ (reescalado, ${macroMaxPossible}/100 disponible)` : ''} — **${displayRegimeName(effectiveRegime.label)} ${trendLabel(macroTrend.trend)}** (Δ1w ${macroTrend.delta1w ?? '—'} · Δ4w ${macroTrend.delta4w ?? '—'})\n`;
+    if (appState.pending_regime) md += `_Transición pendiente → ${displayRegimeName(appState.pending_regime)} (${appState.pending_since_count}/2 lecturas)_\n`;
     md += `_${effectiveRegime.desc}_\n`;
     md += `Líderes efectivos: ${effectiveLeaders.join(', ')}\n\n`;
 
@@ -1187,7 +1328,7 @@ function App() {
   };
 
   const copyProtocol = () => {
-    const md = `# Protocolo Flujos & Rotación v2 — Metodología\n\n## 1. MACROSCORE (0–100)\n\nCinco indicadores con pesos no uniformes:\n\n| # | Indicador | Fuente | Peso |\n|---|-----------|--------|------|\n| 1 | HY Credit Spread (BAMLH0A0HYM2) | FRED | 25 |\n| 2 | Net Liquidity Δ13 semanas (WALCL−RRPONTSYD−WTREGEN) | FRED | 25 |\n| 3 | VolScore = min(VIX nivel, VIX term structure ^VIX9D/^VIX3M) | Yahoo | 20 |\n| 4 | Curva 10Y–3M con penalización steepening (T10Y3M) | FRED | 15 |\n| 5 | CFNAI — Chicago Fed National Activity Index | FRED | 15 |\n\n### Umbrales HY Spread (/25)\n<300 bps→25 · 300–374→18.75 · 375–474→12.5 · 475–599→6.25 · ≥600→0\n\n### Umbrales Net Liq Δ13w en USD Billions (/25)\n>+500B→25 · +100–500→18.75 · −100–+100→12.5 · −500–−100→6.25 · <−500→0\n\n### VolScore (/20) — mínimo conservador\nVIX: <14→20 · 14–17.9→15 · 18–22.9→10 · 23–29.9→5 · ≥30→0\nTerm (^VIX9D/^VIX3M): <0.85→20 · 0.85–0.95→15 · 0.95–1.05→10 · 1.05–1.15→5 · >1.15→0\nVolScore = min(VIX_score, Term_score)\n\n### Umbrales Curva 10Y–3M (/15)\nBase: >75bps→20 · 25–75→15 · −25–25→10 · −75–−25→5 · <−75→0\nPenalización: si curva<0 Y Δ13w>+50bps → restar 5 (steepening desde inversión = señal recesión temprana)\nFinal = max(0, base−pen) × 0.75\n\n### Umbrales CFNAI (/15)\n>+0.20→15 · 0–0.20→11.25 · −0.35–0→7.5 · −0.70–−0.35→3.75 · <−0.70→0\n\n---\n\n## 2. REGÍMENES (con histéresis simétrica)\n\n| Score | Régimen |\n|-------|---------|\n| 80–100 | Bull Pleno |\n| 60–79 | Bull Maduro |\n| 40–59 | Transición |\n| 20–39 | Risk-OFF |\n| 0–19 | Capitulación |\n\n**Histéresis (simétrica para subidas y bajadas):** el régimen solo cambia cuando:\n1. El score cruza la frontera en ≥5 puntos (medido contra el borde que se cruza, no el borde inferior siempre)\n2. Ese cruce persiste durante ≥2 lecturas consecutivas\n\nEjemplo ascendente: en Transición (40–59), score sube a 65 → cruce = 65−60 = 5 pts ✓, confirma tras 2 semanas.\nEjemplo descendente: en Bull Maduro (60–79), score baja a 54 → cruce = 60−54 = 6 pts ✓, confirma tras 2 semanas.\n\n**Modificador Term Premium:** si THREEFYTP10 < −0.75 durante ≥13 semanas → degradar régimen 1 nivel.\n\n---\n\n## 3. ROTATION SCORE (0–10)\n\n### Bloque A — Momentum/RS (4 pts)\n- RS 13w vs SPY > +2.0% → 2 pts\n- RS 4w vs SPY > +1.0% → 1 pt\n- Close > SMA200 → 1 pt\n\n### Bloque B — Flujo/Volumen (3 pts)\n- CMF(20) > 0 (Koncorde Azul) → 1 pt\n- OBV > SMA50(OBV) → 1 pt\n- Vol20d / Vol60d > 1.10 → 1 pt\n\n### Bloque C — Momentum técnico (3 pts)\n- MACD histograma > 0 → 1 pt\n- RSI(14) entre 40 y 70 → 1 pt\n- Anti-extensión: Close > SMA20 AND (Close−SMA20)/ATR(14) < 1.5 → 1 pt\n\n---\n\n## 4. SEÑALES\n\n| Señal | Condición |\n|-------|----------|\n| COMPRA | Fit régimen + Score ≥ 7 (≥8 si CREDIT_COMPLACENCY activo) |\n| ACUMULAR | Fit régimen + Score 5–6 |\n| ACUMULAR* | EMERGENCY_MODE activo + Fit Risk-OFF + Score ≥ 6 (acumular defensivos en caída) |\n| ROT. TEMPRANA | Ver §4.1 — tres condiciones obligatorias |\n| VIGILAR | Score 3–4 |\n\n**Master Filter:** si SPY < SMA200 → degradar COMPRA/ACUMULAR/VIGILAR un nivel. ROT. TEMPRANA NO se degrada (tiene su propio filtro de benchmark).\n\n**EMERGENCY_MODE:** si VIX ≥ 35 → todas las señales suprimidas excepto ACUMULAR* para defensivos de Risk-OFF. Duración mínima 14 días.\n\n### §4.1 ROT. TEMPRANA — tres condiciones obligatorias\nSe emite solo si se cumplen las tres a la vez:\n1. **Persistencia individual:** RotScore ≥ 8/10 durante ≥3 lecturas semanales consecutivas\n2. **Clúster categorial:** ≥2 activos del mismo clúster con streak ≥3 simultáneamente\n3. **Filtro benchmark:** SPY > SMA200 OR Δ13w NetLiq > +300B\n\nClústeres definidos:\n| Clúster | Activos |\n|---------|----------|\n| Growth | XLK, XLC, XLY, QQQ, BTC-USD |\n| ValueCyclical | XLF, XLI, XLB, XLE |\n| Defensive | XLP, XLU, XLV, XLRE |\n| Duration | TLT (un solo miembro → nunca dispara, intencional) |\n| Commodities | GC=F, SI=F, BZ=F |\n| SmallEM | IWM, EEM |\n\nNota: si fit con régimen actual, la señal estándar (COMPRA/ACUMULAR) tiene prioridad sobre ROT. TEMPRANA.\n\n---\n\n## 5. LÍDERES CONDICIONALES\n- **IWM** solo si HY Spread < 375 bps AND (Curva > 0 OR Δ13w Curva > 0)\n- **GC=F (Oro)** solo si DFII10 < 1.0% OR DXY en tendencia bajista 3M\n- **INFLATION_OVERLAY** (T5YIE ≥ 2.8% × 4 semanas): TLT/QQQ/XLK pierden fit (salvo Net Liq Δ13w > 300B); XLE/XLB/GC=F/SI=F se promueven como líderes\n\n---\n\n## 6. FLAGS GLOBALES\n| Flag | Activación | Desactivación | Efecto |\n|------|-----------|---------------|--------|\n| CREDIT_COMPLACENCY | HY < 275 bps × 8 semanas | Un periodo HY ≥ 275 → reset streak | Elevar umbral COMPRA a ≥8/10 |\n| INFLATION_OVERLAY | T5YIE ≥ 2.8% × 4 semanas | Un periodo T5YIE < 2.8% → reset streak | Ajustar líderes (ver §5) |\n| TERM_PREMIUM_EXTREME | THREEFYTP10 < −0.75 × 13 semanas | Un periodo ≥ −0.75 → reset streak | Degradar régimen 1 nivel |\n| EMERGENCY_MODE | VIX ≥ 35 (inmediato) | Expiración 14 días desde activación | Suprimir señales; solo ACUMULAR* defensivos |\n`;
+    const md = `# Protocolo Flujos & Rotación v2 — Metodología\n\n## 1. MACROSCORE (0–100)\n\nCinco indicadores con pesos no uniformes:\n\n| # | Indicador | Fuente | Peso |\n|---|-----------|--------|------|\n| 1 | HY Credit Spread (BAMLH0A0HYM2) | FRED | 25 |\n| 2 | Net Liquidity Δ13 semanas (WALCL−RRPONTSYD−WTREGEN) | FRED | 25 |\n| 3 | VolScore = min(VIX nivel, VIX term structure ^VIX9D/^VIX3M) | Yahoo | 20 |\n| 4 | Curva 10Y–3M con penalización steepening (T10Y3M) | FRED | 15 |\n| 5 | CFNAI — Chicago Fed National Activity Index | FRED | 15 |\n\n### Umbrales HY Spread (/25)\n<300 bps→25 · 300–374→18.75 · 375–474→12.5 · 475–599→6.25 · ≥600→0\n\n### Umbrales Net Liq Δ13w en USD Billions (/25)\n>+500B→25 · +100–500→18.75 · −100–+100→12.5 · −500–−100→6.25 · <−500→0\n\n### VolScore (/20) — mínimo conservador\nVIX: <14→20 · 14–17.9→15 · 18–22.9→10 · 23–29.9→5 · ≥30→0\nTerm (^VIX9D/^VIX3M): <0.85→20 · 0.85–0.95→15 · 0.95–1.05→10 · 1.05–1.15→5 · >1.15→0\nVolScore = min(VIX_score, Term_score)\n\n### Umbrales Curva 10Y–3M (/15)\nBase: >75bps→20 · 25–75→15 · −25–25→10 · −75–−25→5 · <−75→0\nPenalización: si curva<0 Y Δ13w>+50bps → restar 5 (steepening desde inversión = señal recesión temprana)\nFinal = max(0, base−pen) × 0.75\n\n### Umbrales CFNAI (/15)\n>+0.20→15 · 0–0.20→11.25 · −0.35–0→7.5 · −0.70–−0.35→3.75 · <−0.70→0\n\n---\n\n## 2. REGÍMENES (con histéresis simétrica)\n\n| Score | Régimen |\n|-------|---------|\n| 80–100 | Bull Pleno (mostrado: Risk-On Fuerte) |\n| 60–79 | Bull Maduro (mostrado: Risk-On Maduro) |\n| 40–59 | Transición |\n| 20–39 | Risk-OFF (mostrado: Risk-Off) |\n| 0–19 | Capitulación (mostrado: Estrés / Capitulación) |\n\n**Histéresis (simétrica para subidas y bajadas):** el régimen solo cambia cuando:\n1. El score cruza la frontera en ≥5 puntos (medido contra el borde que se cruza, no el borde inferior siempre)\n2. Ese cruce persiste durante ≥2 lecturas consecutivas\n\nEjemplo ascendente: en Transición (40–59), score sube a 65 → cruce = 65−60 = 5 pts ✓, confirma tras 2 semanas.\nEjemplo descendente: en Bull Maduro (60–79), score baja a 54 → cruce = 60−54 = 6 pts ✓, confirma tras 2 semanas.\n\n**Modificador Term Premium:** si THREEFYTP10 < −0.75 durante ≥13 semanas → degradar régimen 1 nivel.\n\n---\n\n## 3. ROTATION SCORE (0–10)\n\n### Bloque A — Momentum/RS (4 pts)\n- RS 13w vs SPY > +2.0% → 2 pts\n- RS 4w vs SPY > +1.0% → 1 pt\n- Close > SMA200 → 1 pt\n\n### Bloque B — Flujo/Volumen (3 pts)\n- CMF(20) > 0.05 → 1 pt\n- OBV > SMA50(OBV) → 1 pt\n- Vol20d / Vol60d > 1.10 → 1 pt\n\n### Bloque C — Momentum técnico (3 pts)\n- MACD histograma > 0 → 1 pt\n- RSI(14) entre 40 y 70 → 1 pt\n- Anti-extensión: Close > SMA20 AND (Close−SMA20)/ATR(14) < 1.5 → 1 pt\n\n---\n\n## 4. SEÑALES\n\n| Señal | Condición |\n|-------|----------|\n| COMPRA | Fit régimen + Score ≥ 7 (≥8 si CREDIT_COMPLACENCY activo) |\n| ACUMULAR | Fit régimen + Score 5–6 |\n| ACUMULAR* | EMERGENCY_MODE activo + Fit Risk-OFF + Score ≥ 6 (acumular defensivos en caída) |\n| ROT. CONFIRMADA | Ver §4.1 — persistencia, tres condiciones obligatorias |\n| ROT. TEMPRANA | Ver §4.2 — inflexión, cinco condiciones obligatorias |\n| VIGILAR | Score 3–4 |\n\n**Master Filter:** si SPY < SMA200 → degradar COMPRA/ACUMULAR/VIGILAR un nivel. Ninguna señal ROT.* se degrada (cada una lleva su propio filtro de benchmark).\n\n**EMERGENCY_MODE:** si VIX ≥ 35 → todas las señales suprimidas excepto ACUMULAR* para defensivos de Risk-OFF. Duración mínima 14 días.\n\n### §4.1 ROT. CONFIRMADA — persistencia, tres condiciones obligatorias\n(Antes llamada \"ROT. TEMPRANA\" — renombrada porque exige persistencia de 3 semanas y no es realmente temprana.)\nSe emite solo si se cumplen las tres a la vez:\n1. **Persistencia individual:** RotScore ≥ 8/10 durante ≥3 lecturas semanales consecutivas\n2. **Clúster categorial:** ≥2 activos del mismo clúster con streak ≥3 simultáneamente\n3. **Filtro benchmark:** SPY > SMA200 OR Δ13w NetLiq > +300B\n\n### §4.2 ROT. TEMPRANA — inflexión, cinco condiciones obligatorias\nSeñal nueva basada en inflexión, no en persistencia. Se emite solo si se cumplen las cinco a la vez, y solo si ROT. CONFIRMADA no aplica ya (tiene prioridad):\n1. **Score actual:** RotScore ≥ 6/10\n2. **Inflexión:** RotScore mejora ≥2 puntos vs la lectura semanal anterior\n3. **RS4w:** RS 4 semanas vs SPY > 0\n4. **Koncorde 3D:** konc_3d_state ≠ distribution\n5. **Clúster + benchmark:** ≥2 activos del mismo clúster cumplen 1-4 simultáneamente, Y (SPY > SMA200 OR Δ13w NetLiq > +300B)\n\nClústeres definidos (macro_cluster, compartido por ambas señales ROT.*):\n| Clúster | Activos |\n|---------|----------|\n| Growth | XLK, XLC, XLY, QQQ, BTC-USD |\n| ValueCyclical | XLF, XLI, XLB, XLE |\n| Defensive | XLP, XLU, XLV, XLRE |\n| Duration | TLT (un solo miembro → nunca dispara, intencional) |\n| Commodities | GC=F, SI=F, BZ=F, HG=F |\n| SmallEM | IWM, EEM, EFA, FEZ |\n\nNota: si fit con régimen actual, la señal estándar (COMPRA/ACUMULAR) tiene prioridad sobre ambas ROT.*.\n\n---\n\n## 5. LÍDERES CONDICIONALES\n- **IWM** solo si HY Spread < 375 bps AND (Curva > 0 OR Δ13w Curva > 0)\n- **GC=F (Oro)** solo si DFII10 < 1.0% OR DXY en tendencia bajista 3M\n- **INFLATION_OVERLAY** (T5YIE ≥ 2.8% × 4 semanas): TLT/QQQ/XLK pierden fit (salvo Net Liq Δ13w > 300B); XLE/XLB/GC=F/SI=F se promueven como líderes\n\n---\n\n## 6. FLAGS GLOBALES\n| Flag | Activación | Desactivación | Efecto |\n|------|-----------|---------------|--------|\n| CREDIT_COMPLACENCY | HY < 275 bps × 8 semanas | Un periodo HY ≥ 275 → reset streak | Elevar umbral COMPRA a ≥8/10 |\n| INFLATION_OVERLAY | T5YIE ≥ 2.8% × 4 semanas | Un periodo T5YIE < 2.8% → reset streak | Ajustar líderes (ver §5) |\n| TERM_PREMIUM_EXTREME | THREEFYTP10 < −0.75 × 13 semanas | Un periodo ≥ −0.75 → reset streak | Degradar régimen 1 nivel |\n| EMERGENCY_MODE | VIX ≥ 35 (inmediato) | Expiración 14 días desde activación | Suprimir señales; solo ACUMULAR* defensivos |\n`;
     navigator.clipboard.writeText(md)
       .then(() => showToast('✅ Protocolo v2 copiado'))
       .catch(() => showToast('❌ Error'));
@@ -1242,7 +1383,12 @@ function App() {
           <div style={{ fontSize:50, fontWeight:900, color:effectiveRegime.color, lineHeight:1 }}>{macroScore}</div>
           <div style={{ fontSize:9, color:'#aaa', marginBottom:6 }}>/100</div>
           <div style={{ background:effectiveRegime.color, color:'white', borderRadius:20, padding:'2px 12px', fontSize:11, fontWeight:700 }}>
-            {effectiveRegime.label}
+            {displayRegimeName(effectiveRegime.label)} {trendLabel(macroTrend.trend)}
+          </div>
+          <div style={{ fontSize:9, color:'#888', marginTop:3 }} title="Δ1w / Δ4w del MacroScore">
+            Δ1w {macroTrend.delta1w == null ? '—' : (macroTrend.delta1w > 0 ? '+' : '') + macroTrend.delta1w}
+            {' · '}
+            Δ4w {macroTrend.delta4w == null ? '—' : (macroTrend.delta4w > 0 ? '+' : '') + macroTrend.delta4w}
           </div>
           {macroMaxPossible < 100 && (
             <div style={{ fontSize:9, color:'#e65100', marginTop:4, textAlign:'center' }}>
@@ -1251,7 +1397,7 @@ function App() {
           )}
           {appState.pending_regime && (
             <div style={{ fontSize:9, color:'#888', marginTop:4, textAlign:'center' }}>
-              → {appState.pending_regime} ({appState.pending_since_count}/2)
+              → {displayRegimeName(appState.pending_regime)} ({appState.pending_since_count}/2)
             </div>
           )}
         </div>
@@ -1293,9 +1439,11 @@ function App() {
         </div>
       </div>
 
-      {/* Opportunities + Early Rotation */}
-      {(opps.length > 0 || early.length > 0) && (
-        <div style={{ display:'grid', gridTemplateColumns:early.length>0?'1fr 1fr':'1fr', gap:14, marginBottom:14 }}>
+      {/* Opportunities + Rotación Confirmada + Rotación Temprana */}
+      {(opps.length > 0 || confirmed.length > 0 || newEarly.length > 0) && (
+        <div style={{ display:'grid',
+          gridTemplateColumns:`repeat(${[opps.length>0, confirmed.length>0, newEarly.length>0].filter(Boolean).length}, 1fr)`,
+          gap:14, marginBottom:14 }}>
           {opps.length > 0 && (
             <div>
               <div style={{ fontSize:11, fontWeight:700, color:'#1b5e20', marginBottom:6, textTransform:'uppercase', letterSpacing:1 }}>
@@ -1328,14 +1476,14 @@ function App() {
             </div>
           )}
 
-          {early.length > 0 && (
+          {confirmed.length > 0 && (
             <div>
               <div style={{ fontSize:11, fontWeight:700, color:'#e65100', marginBottom:6, textTransform:'uppercase', letterSpacing:1 }}>
-                ◑ Rotación Anticipada ({early.length})
+                ◑ Rotación Confirmada ({confirmed.length})
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                {early.map(r => {
-                  const m = r.earlyRotMeta;
+                {confirmed.map(r => {
+                  const m = r.confirmedRotMeta;
                   return (
                     <div key={r.ticker} style={{ display:'flex', flexDirection:'column', gap:3,
                       background:'#fff3e0', border:'1px solid #ffcc80', borderRadius:8, padding:'7px 11px' }}>
@@ -1355,6 +1503,41 @@ function App() {
                           <span>Clúster: <b style={{ color:'#555' }}>{m.cluster}</b></span>
                           {m.clusterPeers.length > 0 && <span>Peers: <b style={{ color:'#555' }}>{m.clusterPeers.join(', ')}</b></span>}
                           <span style={{ marginLeft:'auto', color: m.benchmarkSPY ? '#1b5e20' : '#e65100' }}>
+                            {m.benchmarkSPY ? '✓ SPY>SMA200' : `✓ NetLiq +${Math.round(m.netLiqDeltaB)}B`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {newEarly.length > 0 && (
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#7b1fa2', marginBottom:6, textTransform:'uppercase', letterSpacing:1 }}>
+                ⚡ Rotación Temprana ({newEarly.length})
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                {newEarly.map(r => {
+                  const m = r.newEarlyRotMeta;
+                  return (
+                    <div key={r.ticker} style={{ display:'flex', flexDirection:'column', gap:3,
+                      background:'#f3e5f5', border:'1px solid #ce93d8', borderRadius:8, padding:'7px 11px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <div style={{ minWidth:70 }}>
+                          <div style={{ fontSize:12, fontWeight:700 }}>{r.ticker}</div>
+                          <div style={{ fontSize:9, color:'#888' }}>{r.name}</div>
+                        </div>
+                        <Stars score={r.rot.total} />
+                        <span style={{ fontSize:10, fontWeight:700, color:'#7b1fa2', marginLeft:4 }}>{r.rot.total}/10</span>
+                      </div>
+                      {m && (
+                        <div style={{ fontSize:9, color:'#888', display:'flex', gap:10, flexWrap:'wrap' }}>
+                          <span>Clúster: <b style={{ color:'#555' }}>{m.cluster_name}</b></span>
+                          {m.clusterPeers.length > 0 && <span>Peers: <b style={{ color:'#555' }}>{m.clusterPeers.join(', ')}</b></span>}
+                          <span style={{ marginLeft:'auto', color: m.benchmarkSPY ? '#1b5e20' : '#7b1fa2' }}>
                             {m.benchmarkSPY ? '✓ SPY>SMA200' : `✓ NetLiq +${Math.round(m.netLiqDeltaB)}B`}
                           </span>
                         </div>
@@ -1386,9 +1569,9 @@ function App() {
             <ThTip style={TH_S} tip={"OBV — On-Balance Volume\n\nAcumula el volumen del día según dirección del precio (suma si sube, resta si baja). Confirma si el dinero acompaña al precio.\n\nCriterio: OBV > SMA(OBV, 10) → +1 pt\nDivergencia OBV/precio = señal de debilidad.\n\nBloque B · Componente 'Flujo'"}>OBV</ThTip>
             <ThTip style={TH_S} tip={"Ratio Volumen 20d / 60d\n\nCompara el volumen reciente con su media trimestral.\n• >1.1 = volumen acelerado → +1 pt\n• <1.0 = volumen desacelerado → 0 pt\n\nDetecta acumulación institucional temprana antes de que el precio arranque.\n\nBloque B · Componente 'Volumen'"}>Vol20/60</ThTip>
             <ThTip style={TH_S} tip={"Puntuación por bloque del RotationScore\n\nA (4 pts) — Momentum relativo:\n  RS4w (1pt) + RS13w (2pt) + SMA200 (1pt)\n\nB (3 pts) — Flujo / Volumen:\n  CMF (1pt) + OBV (1pt) + Vol20/60 (1pt)\n\nC (3 pts) — Técnico:\n  MACD (1pt) + RSI anti-ext (1pt) + anti-extremal (1pt)\n\nTotal = A + B + C = Score /10"}>A·B·C</ThTip>
-            <Th col="rot" label="Score /10" tip={"RotationScore v2 — 10 puntos, 3 bloques\n\nA (4 pts): RS4w + RS13w(×2) + SMA200\nB (3 pts): CMF + OBV + Vol20/60\nC (3 pts): MACD + RSI + AntiExtremal\n\n≥8 → zona ROT.TEMPRANA\n≥7 → COMPRA (con Fit)\n5–6 → ACUMULAR (con Fit)\n<5 → sin señal"} />
+            <Th col="rot" label="Score /10" tip={"RotationScore v2 — 10 puntos, 3 bloques\n\nA (4 pts): RS4w + RS13w(×2) + SMA200\nB (3 pts): CMF + OBV + Vol20/60\nC (3 pts): MACD + RSI + AntiExtremal\n\n≥8 durante 3 semanas → zona ROT.CONFIRMADA\n≥6 con inflexión (+2 vs semana anterior) → posible ROT.TEMPRANA\n≥7 → COMPRA (con Fit)\n5–6 → ACUMULAR (con Fit)\n<5 → sin señal"} />
             <ThTip style={TH_S} tip={"Fit — Aptitud del activo\n\n✓ El activo tiene suficiente historial y liquidez para que el score sea fiable.\n✗ Señal descartada por datos insuficientes, correlación baja o activo sin historial.\n\nFiltra falsos positivos. Sin Fit, el score se ignora para señales de entrada."}>Fit</ThTip>
-            <ThTip style={TH_S} tip={"Señal de entrada\n\n▲ COMPRA: Fit ✓ + Score ≥ 7\n◉ ACUMULAR: Fit ✓ + Score 5–6\n⚡ ROT.TEMPRANA: score≥8 durante 3w + ≥2 ETFs en cluster + SPY>SMA200 o NetLiq>300B\n\n⚠ Master Filter: SPY < SMA200 degrada 1 nivel (salvo ROT.TEMP, que lleva su propio filtro de benchmark)."}>Señal</ThTip>
+            <ThTip style={TH_S} tip={"Señal de entrada\n\n▲ COMPRA: Fit ✓ + Score ≥ 7\n◉ ACUMULAR: Fit ✓ + Score 5–6\n◑ ROT.CONFIRMADA: score≥8 durante 3w + ≥2 ETFs en cluster + SPY>SMA200 o NetLiq>300B\n⚡ ROT.TEMPRANA: inflexión (+2 vs semana anterior) + score≥6 + RS4w>0 + Konc 3D≠distribution + ≥2 ETFs en cluster con la misma inflexión + SPY>SMA200 o NetLiq>300B\n\n⚠ Master Filter: SPY < SMA200 degrada 1 nivel (ninguna de las dos señales de rotación se degrada, cada una lleva su propio filtro de benchmark)."}>Señal</ThTip>
           </tr>
         </thead>
         <tbody>
@@ -1460,7 +1643,7 @@ function App() {
           </div>
           <div>
             <b style={{ color:'#333' }}>Señales</b><br/>
-            <span style={{ color:'#666', lineHeight:1.8 }}>COMPRA: Fit+≥7 · ACUMULAR: Fit+5-6 · ROT.TEMP: streak≥3+clúster+benchmark · Master Filter: SPY{'<'}SMA200→-1 nivel (no degrada ROT.TEMP)</span>
+            <span style={{ color:'#666', lineHeight:1.8 }}>COMPRA: Fit+≥7 · ACUMULAR: Fit+5-6 · ROT.CONFIRMADA: streak≥3+clúster+benchmark · ROT.TEMPRANA: inflexión+RS4w+Konc3D+clúster+benchmark · Master Filter: SPY{'<'}SMA200→-1 nivel (no degrada ninguna ROT.*)</span>
           </div>
         </div>
       </div>
