@@ -493,6 +493,40 @@ app.get("/api/oilprice/:code", async (req, res) => {
   }
 });
 
+// ── CNN Fear & Greed proxy ────────────────────────────────────────────────
+// CNN's endpoint requires a browser-like Referer or it returns 418 ("I'm a
+// teapot. You're a bot."). It does send Access-Control-Allow-Origin: * so a
+// direct browser fetch would technically work, but proxying server-side
+// keeps sentiment.html insulated from CNN's bot-detection flakiness and
+// avoids hammering their API on every page load (same rationale as the
+// FRED cache above).
+let _fearGreedCache = null;
+let _fearGreedCacheTs = 0;
+const FEAR_GREED_TTL = 15 * 60 * 1000;
+
+app.get("/api/fear-greed", async (_req, res) => {
+  if (_fearGreedCache && Date.now() - _fearGreedCacheTs < FEAR_GREED_TTL) {
+    return res.json(_fearGreedCache);
+  }
+  try {
+    const r = await fetch("https://production.dataviz.cnn.io/index/fearandgreed/graphdata", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Referer": "https://edition.cnn.com/markets/fear-and-greed",
+        "Accept": "application/json, text/plain, */*",
+      },
+    });
+    if (!r.ok) throw new Error(`CNN respondió ${r.status}`);
+    const data = await r.json();
+    _fearGreedCache = data;
+    _fearGreedCacheTs = Date.now();
+    res.json(data);
+  } catch (err) {
+    if (_fearGreedCache) return res.json(_fearGreedCache); // stale-but-served
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // ── Portfolio CRUD ────────────────────────────────────────────────────────
 const PORTFOLIO_FILE = path.join(__dirname, "portfolio.json");
 

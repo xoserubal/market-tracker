@@ -500,6 +500,26 @@ Cartera experimental nueva, con una arquitectura deliberadamente distinta al res
 
 ---
 
+## Página Sentiment — Fear & Greed (CNN) + link a Finviz Heatmap (implementado 2026-07-06)
+
+Nueva página `sentiment.html` (raíz del repo, servida por `server.js` como el resto de dashboards — `portfolio.html`, `relative.html`, `cycle.html`, `rotacion.html`). Fase puramente visual, sin señal ni hard rule todavía — mismo enfoque que `extension_risk`/Koncorde en su día: observar primero.
+
+**Por qué no iframe:** se evaluó embeber directamente `edition.cnn.com/markets/fear-and-greed` y `finviz.com/map`, pero ambos bloquean el embebido — CNN vía CSP `frame-ancestors` (solo dominios `*.cnn.com`/`*.turner.com`), Finviz vía `X-Frame-Options: SAMEORIGIN`. Además el mapa de Finviz ya no es una imagen estática con query params (`mapimg.ashx?...`) sino una app que renderiza el treemap en cliente (SVG/Canvas vía bundles JS) — no hay forma de replicar su selector de universos (S&P 500, Russell, All Stocks...) sin reconstruir el treemap desde cero (constituyentes por índice + precios de miles de tickers). Decisión: para Finviz, solo un botón de salida (`https://finviz.com/map`, `target="_blank"`) — el selector de universos se usa directamente en su web, no en la nuestra.
+
+**Fear & Greed sí se replica en casa**, porque el endpoint que alimenta la página de CNN es JSON abierto (`production.dataviz.cnn.io/index/fearandgreed/graphdata`, `Access-Control-Allow-Origin: *`) y trae exactamente lo que se ve en la web de CNN: el índice compuesto + histórico de ~1 año + los 7 subcomponentes reales (`market_momentum_sp500`, `stock_price_strength`, `stock_price_breadth`, `put_call_options`, `market_volatility_vix`, `junk_bond_demand`, `safe_haven_demand`), cada uno con su propio score 0-100, rating y serie histórica.
+
+**Proxy server-side, no fetch directo desde el navegador** (`server.js`, nueva ruta `/api/fear-greed`): aunque el endpoint de CNN tiene CORS abierto y en teoría el navegador podría llamarlo directo, sin el header `Referer` correcto CNN devuelve `418 "I'm a teapot. You're a bot."` de forma intermitente (bot-detection, no consistente — en las pruebas a veces respondía 200 incluso sin Referer). Proxyearlo evita que esa flakiness dependa del navegador de cada visita y cachea 15 min (mismo patrón que el cache de FRED ya existente en `server.js`), con fallback a la última respuesta cacheada si CNN falla (`stale-but-served`).
+
+**Página** (`sentiment.html`): gauge principal (semicírculo SVG con aguja, 5 tramos de color — reutiliza la paleta de estado ya usada en todo el resto de la app: `#ffcdd2/#b71c1c` extremo-miedo, `#ffe0b2/#bf360c` miedo, `#fff9c4/#e65100` neutral, `#dcedc8/#33691e` codicia, `#c8e6c9/#1b5e20` codicia extrema — la misma que `STATUS`/`FLOW_STYLE` en `index.html`, no una paleta nueva) + 4 comparativas (cierre anterior, 1 semana, 1 mes, 1 año) + sparkline del último año. Debajo, grid de 7 tarjetas de subcomponentes, cada una con su propio mini-gauge + sparkline de la serie histórica cruda (últimas 90 sesiones). Boundaries del gauge (0-25 miedo extremo, 25-45 miedo, 45-55 neutral, 55-75 codicia, 75-100 codicia extrema) son la clasificación estándar de CNN.
+
+**Nav:** pill "Sentiment" (`#00695c`) añadida a las 5 páginas raíz (`index.html`, `portfolio.html`, `relative.html`, `cycle.html`, `rotacion.html`), mismo patrón visual que el resto (sin componente compartido — cada página repite su propia barra, como ya ocurre con el resto de páginas del sistema).
+
+**Verificado:** JSX transpilado con `@babel/core` sin errores de sintaxis; `/api/fear-greed` probado end-to-end contra CNN real (datos correctos, cache funcionando); captura de pantalla vía Playwright (Edge del sistema, headless) confirma render correcto de gauges/agujas/sparklines y cero errores de consola, tanto en `sentiment.html` como en la barra de navegación de las otras 5 páginas tras el cambio.
+
+**Pendiente / fuera de alcance:** no hay heatmap propio del universo interno (91 tickers de `ai_candidates.json` agrupados por `subtheme`) — se descartó por ahora, solo se pidió el link de salida a Finviz. Extraer una señal cuantitativa del Fear & Greed (para PCS, rot_score o HARD_RULES) queda para cuando haya datos suficientes para justificarlo, mismo criterio que el resto de features en fase de observación.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

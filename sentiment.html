@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sentiment — Market Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
+    .wrap { background: white; min-width: 960px; min-height: 100vh; padding: 16px 20px; overflow-x: auto; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    .title-row { display: flex; align-items: center; gap: 12px; }
+    h1 { font-size: 22px; color: #111; line-height: 1; }
+    .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
+    .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+
+    .finviz-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 14px; margin-bottom: 14px; }
+    .finviz-text { font-size: 11px; color: #667085; }
+    .finviz-btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 12px;
+      font-weight: 700; color: white; background: #2d6a4f; border-radius: 6px; padding: 7px 14px; white-space: nowrap; }
+
+    .fg-panel { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 14px 18px; margin-bottom: 14px; }
+    .fg-main { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+    .fg-stats { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 8px; flex: 1; min-width: 320px; }
+    .stat { border: 1px solid #e6e8eb; border-radius: 6px; padding: 8px 10px; background: white; }
+    .stat .label { font-size: 9px; color: #667085; text-transform: uppercase; letter-spacing: .4px; }
+    .stat .value { margin-top: 3px; font-size: 16px; font-weight: 700; font-family: Consolas, monospace; }
+    .stat .rating { margin-top: 2px; font-size: 9px; font-weight: 600; }
+    .fg-hist-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .45px; color: #344054; margin: 14px 0 6px; }
+
+    .sub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .sub-card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 12px; }
+    .sub-name { font-size: 11px; font-weight: 700; color: #344054; }
+    .sub-desc { font-size: 9px; color: #98a2b3; margin-top: 1px; margin-bottom: 4px; }
+    .sub-rating { font-size: 10px; font-weight: 700; margin-top: 2px; }
+
+    .footer-note { font-size: 9px; color: #98a2b3; margin-top: 14px; font-style: italic; }
+    .error-box { border: 1px solid #ffcdd2; background: #ffebee; color: #b71c1c; border-radius: 6px;
+      padding: 10px 14px; font-size: 12px; margin-bottom: 14px; }
+    .loading { font-size: 12px; color: #98a2b3; padding: 40px 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ── Status palette (misma convención que index.html / relative.html) ──────
+const FG_STYLE = {
+  'extreme fear':  { bg: '#ffcdd2', fg: '#b71c1c', label: 'Miedo Extremo' },
+  'fear':          { bg: '#ffe0b2', fg: '#bf360c', label: 'Miedo' },
+  'neutral':       { bg: '#fff9c4', fg: '#e65100', label: 'Neutral' },
+  'greed':         { bg: '#dcedc8', fg: '#33691e', label: 'Codicia' },
+  'extreme greed': { bg: '#c8e6c9', fg: '#1b5e20', label: 'Codicia Extrema' },
+};
+const fgStyle = rating => FG_STYLE[(rating || '').toLowerCase()] || { bg: '#f0f0f0', fg: '#555', label: rating || '—' };
+
+// Boundaries igual a la clasificación de CNN: 0-25 miedo extremo, 25-45 miedo,
+// 45-55 neutral, 55-75 codicia, 75-100 codicia extrema.
+const FG_SEGMENTS = [
+  [0, 25, '#ffcdd2'], [25, 45, '#ffe0b2'], [45, 55, '#fff9c4'], [55, 75, '#dcedc8'], [75, 100, '#c8e6c9'],
+];
+
+const SUBCOMPONENTS = [
+  { key: 'market_momentum_sp500', name: 'Momentum del Mercado', desc: 'S&P 500 vs media móvil 125 sesiones' },
+  { key: 'stock_price_strength',  name: 'Fortaleza de Precios',  desc: 'Máximos vs mínimos de 52 semanas (NYSE)' },
+  { key: 'stock_price_breadth',   name: 'Amplitud de Mercado',   desc: 'Volumen en subida vs en bajada (McClellan)' },
+  { key: 'put_call_options',      name: 'Ratio Put/Call',        desc: 'Volumen de puts vs calls' },
+  { key: 'market_volatility_vix', name: 'Volatilidad (VIX)',     desc: 'VIX vs su media móvil de 50 sesiones' },
+  { key: 'junk_bond_demand',      name: 'Demanda Bonos Basura',  desc: 'Spread yield junk bonds vs investment grade' },
+  { key: 'safe_haven_demand',     name: 'Demanda de Refugio',    desc: 'Retorno acciones vs bonos, 20 sesiones' },
+];
+
+// ── Gauge — semicírculo con 5 tramos de color + aguja ──────────────────────
+function polar(cx, cy, r, angleDeg) {
+  const a = angleDeg * Math.PI / 180;
+  return { x: cx + r * Math.cos(a), y: cy - r * Math.sin(a) };
+}
+const angleOf = v => 180 * (1 - v / 100);
+
+function arcPath(cx, cy, r, v1, v2) {
+  const p1 = polar(cx, cy, r, angleOf(v1));
+  const p2 = polar(cx, cy, r, angleOf(v2));
+  return `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${r} ${r} 0 0 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+}
+
+function Gauge({ score, size = 200, thick = 18 }) {
+  const cx = size / 2, cy = size / 2 + 6, r = size / 2 - thick - 4;
+  const gap = 0.7; // hueco angular entre tramos, en unidades de score (0-100)
+  const needle = polar(cx, cy, r - thick / 2 - 2, angleOf(score ?? 50));
+  const style = fgStyle(scoreToRating(score));
+  return (
+    <svg width={size} height={size / 2 + 30} viewBox={`0 0 ${size} ${size / 2 + 30}`}>
+      {FG_SEGMENTS.map(([v1, v2, color], i) => (
+        <path key={i} d={arcPath(cx, cy, r, v1 + (i ? gap : 0), v2 - (i < 4 ? gap : 0))}
+          stroke={color} strokeWidth={thick} fill="none" strokeLinecap="butt" />
+      ))}
+      {score != null && (
+        <>
+          <line x1={cx} y1={cy} x2={needle.x.toFixed(2)} y2={needle.y.toFixed(2)}
+            stroke="#1f2933" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx={cx} cy={cy} r="5" fill="#1f2933" />
+        </>
+      )}
+      <text x={4} y={cy + 14} fontSize="9" fill="#98a2b3">0</text>
+      <text x={size - 16} y={cy + 14} fontSize="9" fill="#98a2b3">100</text>
+      <text x={cx} y={cy + 26} textAnchor="middle" fontSize={size >= 180 ? 26 : 16} fontWeight="800" fontFamily="Consolas, monospace" fill={style.fg}>
+        {score != null ? Math.round(score) : '—'}
+      </text>
+    </svg>
+  );
+}
+
+function scoreToRating(score) {
+  if (score == null) return null;
+  if (score < 25) return 'extreme fear';
+  if (score < 45) return 'fear';
+  if (score < 55) return 'neutral';
+  if (score < 75) return 'greed';
+  return 'extreme greed';
+}
+
+// ── Spark (mismo patrón que relative.html) ─────────────────────────────────
+function Spark({ points, color = '#3a6ca0', height = 34 }) {
+  if (!points || points.length < 2) return <span style={{ color: '#aaa', fontSize: 10 }}>sin datos</span>;
+  const vals = points.map(p => p.y);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = (max - min) || 1;
+  const d = vals.map((v, i) => {
+    const x = i / (vals.length - 1) * 100;
+    const y = (height - 4) - ((v - min) / span * (height - 8) + 2);
+    return `${i ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+  const areaD = `${d} L100,${height} L0,${height} Z`;
+  return (
+    <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
+      <path d={areaD} fill={color} opacity="0.12" stroke="none" />
+      <path d={d} fill="none" stroke={color} strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function fmtPct(n) { return n == null ? '—' : Math.round(n); }
+
+function SentimentPage() {
+  const [data, setData] = React.useState(null);
+  const [error, setError] = React.useState(null);
+  const [updated, setUpdated] = React.useState(null);
+
+  const load = React.useCallback(() => {
+    setError(null);
+    fetch('/api/fear-greed?t=' + Date.now())
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(d => { setData(d); setUpdated(new Date()); })
+      .catch(e => setError(e.message));
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const fg = data?.fear_and_greed;
+  const histPoints = (data?.fear_and_greed_historical?.data || []).map(p => ({ x: p.x, y: p.y }));
+
+  return (
+    <div className="wrap">
+      <div className="topbar">
+        <div>
+          <div className="title-row">
+            <h1>Sentiment</h1>
+            <a href="/index.html" className="nav-link" style={{ color: '#1a6b3c', borderColor: '#1a6b3c' }}>Market Tracker</a>
+            <a href="/portfolio.html" className="nav-link" style={{ color: '#3a6ca0', borderColor: '#3a6ca0' }}>Portfolio</a>
+            <a href="/relative.html" className="nav-link" style={{ color: '#7b1fa2', borderColor: '#7b1fa2' }}>Relative Flow</a>
+            <a href="/cycle.html" className="nav-link" style={{ color: '#7f0000', borderColor: '#7f0000' }}>Cycle</a>
+            <a href="/rotacion.html" className="nav-link" style={{ color: '#e65100', borderColor: '#e65100' }}>Flujos & Rotación</a>
+          </div>
+          <div className="meta">Fear & Greed Index (CNN Business) · solo visual, sin señal aplicada todavía</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {updated && <span style={{ fontSize: 11, color: '#999' }}>{updated.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>}
+          <button onClick={load} style={{ background: '#3a6ca0', color: 'white', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            ↻ Actualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="finviz-row">
+        <div className="finviz-text">
+          Heatmap sectorial con selector de universo (S&amp;P 500, Russell, All Stocks, ETFs...) — herramienta de Finviz, se abre en pestaña nueva.
+        </div>
+        <a className="finviz-btn" href="https://finviz.com/map" target="_blank" rel="noopener noreferrer">🗺️ Finviz Heatmap ↗</a>
+      </div>
+
+      {error && (
+        <div className="error-box">
+          No se pudo cargar Fear &amp; Greed ({error}). <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer">Ver en CNN ↗</a>
+        </div>
+      )}
+
+      {!data && !error && <div className="loading">Cargando…</div>}
+
+      {fg && (
+        <div className="fg-panel">
+          <div className="fg-main">
+            <Gauge score={fg.score} size={220} thick={20} />
+            <div className="fg-stats">
+              {[
+                ['Cierre anterior', fg.previous_close],
+                ['Hace 1 semana', fg.previous_1_week],
+                ['Hace 1 mes', fg.previous_1_month],
+                ['Hace 1 año', fg.previous_1_year],
+              ].map(([label, v]) => {
+                const st = fgStyle(scoreToRating(v));
+                return (
+                  <div className="stat" key={label}>
+                    <div className="label">{label}</div>
+                    <div className="value">{fmtPct(v)}</div>
+                    <div className="rating" style={{ color: st.fg }}>{st.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="fg-hist-title">Evolución último año</div>
+          <Spark points={histPoints} color={fgStyle(fg.rating).fg} height={54} />
+        </div>
+      )}
+
+      {data && (
+        <>
+          <div className="fg-hist-title" style={{ marginTop: 4 }}>Subcomponentes</div>
+          <div className="sub-grid">
+            {SUBCOMPONENTS.map(sc => {
+              const d = data[sc.key];
+              if (!d) return null;
+              const st = fgStyle(d.rating);
+              const points = (d.data || []).slice(-90).map(p => ({ x: p.x, y: p.y }));
+              return (
+                <div className="sub-card" key={sc.key}>
+                  <div className="sub-name">{sc.name}</div>
+                  <div className="sub-desc">{sc.desc}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Gauge score={d.score} size={100} thick={10} />
+                    <div style={{ flex: 1 }}>
+                      <div className="sub-rating" style={{ color: st.fg }}>{st.label}</div>
+                      <Spark points={points} color={st.fg} height={28} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <div className="footer-note">
+        Fuente: production.dataviz.cnn.io (mismo feed que edition.cnn.com/markets/fear-and-greed) vía proxy local con caché de 15 min.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<SentimentPage />);
+</script>
+</body>
+</html>
