@@ -339,6 +339,8 @@ app.get("/api/fred/:series", async (req, res) => {
         v3m: isWeekly ? val(13) : isMonthly ? val(3)  : val(65),
         v6m: isWeekly ? val(26) : isMonthly ? val(6)  : val(130),
         v1y: isWeekly ? val(52) : isMonthly ? val(12) : val(252),
+        // Compact history for sparklines (last ~90 observations, ascending date order)
+        history: obs.slice(0, 90).reverse().map(o => ({ date: o.date, value: parseFloat(o.value) })),
       };
     });
     res.json(result);

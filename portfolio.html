@@ -527,6 +527,7 @@ function Portfolio() {
       { key: 'llm_export_cycle',     label: 'Cycle' },
       { key: 'llm_export_relative',  label: 'Relative Flow' },
       { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+      { key: 'llm_export_duration',  label: 'Duration' },
     ];
     const now = Date.now();
     const found = [], missing = [], stale = [];
@@ -549,7 +550,7 @@ function Portfolio() {
     navigator.clipboard.writeText(combined)
       .then(() => {
         if (stale.length) showToast(`⚠️ ${stale.length} secc. desactualizadas: ${stale.join(', ')}`);
-        else if (missing.length) showToast(`✅ ${found.length}/5 pestañas — Falta: ${missing.join(', ')}`);
+        else if (missing.length) showToast(`✅ ${found.length}/${parts.length} pestañas — Falta: ${missing.join(', ')}`);
         else showToast('✅ Todas las pestañas copiadas (datos frescos)');
       })
       .catch(() => showToast('❌ Error al copiar'));

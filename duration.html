@@ -16,6 +16,13 @@
     h1 { font-size: 20px; color: #111; line-height: 1; }
     .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
     .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    button { border: none; border-radius: 3px; padding: 5px 12px; cursor: pointer; font-size: 11px; font-weight: 600; color: white; }
+    button:disabled { cursor: default; opacity: 0.65; }
+    .btn-copy { background: #1a6b3c; }
+    .btn-export { background: #37474f; }
+    .btn-refresh { background: #3a6ca0; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a6b3c; color: white; padding: 10px 22px; border-radius: 20px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 10; }
 
     .thesis-box { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 14px; margin-bottom: 14px; font-size: 11px; color: #475467; line-height: 1.5; }
     .thesis-box b { color: #1f2933; }
@@ -34,6 +41,14 @@
     .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; opacity: .75; }
     .stat .value { margin-top: 3px; font-size: 15px; font-weight: 700; font-family: Consolas, monospace; }
     .stat .sub { margin-top: 2px; font-size: 9px; opacity: .85; }
+
+    .trend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .trend-card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 8px 10px; }
+    .trend-card .label { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; color: #98a2b3; }
+    .trend-card .value { font-size: 15px; font-weight: 700; font-family: Consolas, monospace; margin: 2px 0 4px; }
+
+    .playbook-box { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 12px 16px; margin-bottom: 16px; font-size: 12px; line-height: 1.5; }
+    .playbook-box .weight { font-size: 10px; color: #667085; margin-top: 6px; }
 
     table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
     th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef0f2; white-space: nowrap; }
@@ -116,6 +131,7 @@ const QUOTE_TICKERS = ['TLT', 'TBT', 'IEF', 'EDV', 'ZROZ', 'GC=F', 'DX-Y.NYB', '
 const FRED_SERIES = ['DGS10', 'DGS2', 'DGS30', 'DFII10', 'T5YIE', 'BAMLH0A0HYM2'];
 
 const AUCTION_TENOR_ORDER = ['10-Year', '30-Year', '2-Year']; // 10Y/30Y priorizadas sobre 2Y
+const HISTORY_TICKERS = ['TLT', '^VIX']; // 10Y/HY spread ya traen su propio .history vía /api/fred/:series
 
 function Stat({ label, value, sub, style }) {
   return (
@@ -126,6 +142,50 @@ function Stat({ label, value, sub, style }) {
     </div>
   );
 }
+
+// ── Spark (mismo patrón que sentiment.html/relative.html) ──────────────────
+function Spark({ points, color = '#3a6ca0', height = 34 }) {
+  if (!points || points.length < 2) return <span style={{ color: '#aaa', fontSize: 10 }}>sin datos</span>;
+  const vals = points.map(p => p.y).filter(v => v != null && Number.isFinite(v));
+  if (vals.length < 2) return <span style={{ color: '#aaa', fontSize: 10 }}>sin datos</span>;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = (max - min) || 1;
+  const d = vals.map((v, i) => {
+    const x = i / (vals.length - 1) * 100;
+    const y = (height - 4) - ((v - min) / span * (height - 8) + 2);
+    return `${i ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+  const areaD = `${d} L100,${height} L0,${height} Z`;
+  return (
+    <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
+      <path d={areaD} fill={color} opacity="0.12" stroke="none" />
+      <path d={d} fill="none" stroke={color} strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+// ── Playbook fijo por fase — NO recalcula strikes en vivo (decisión del usuario) ──
+// Nota: las letras A-D aquí son las de la state machine de ESTE monitor (A=watch,
+// D=invalidation), no las fases A-D del análisis externo original que motivó esta
+// página (donde D era "confirmación Japón/yen", una escalada). No son el mismo eje.
+const PLAYBOOK = {
+  A: {
+    action: 'Posición inicial pequeña: TLT put spread (comprar put ligeramente OTM, vender put más abajo, vencimiento 45-90 días). Riesgo máximo = prima pagada. Oro pequeño como hedge de contexto, no como trade principal.',
+    weight: '100% opciones / put spread · 0% TBT hasta confirmación',
+  },
+  B: {
+    action: 'TLT o 10Y ya muestran presión. Considerar añadir: más delta bajista en TLT (ampliar el put spread) o TBT táctico pequeño. No aumentar hedge de equities todavía — crédito/VIX aún no confirman estrés sistémico.',
+    weight: '≈70% opciones TLT / put spread · ≈30% TBT táctico',
+  },
+  C: {
+    action: 'Ruptura core (yields+TLT) confirmada por estrés de crédito/vol/MOVE. Valorar añadir hedge de equities (SPY/QQQ) o reducir beta de cartera. Short USDJPY solo si además hay señal de repatriación limpia (ver sección Japan/Causality Evidence).',
+    weight: 'Mantener core TLT bajista + hedge equity táctico',
+  },
+  D: {
+    action: 'Tesis invalidada por ahora (TLT > 86.5 y 10Y de vuelta bajo 4.55%). Cerrar o reducir significativamente la exposición bajista en TLT — no añadir mientras se mantenga esta lectura.',
+    weight: 'Reducir / cerrar posición',
+  },
+};
 
 function PhaseChecklist({ checks }) {
   const items = [
@@ -148,10 +208,13 @@ function PhaseChecklist({ checks }) {
 function DurationPage() {
   const [quotes, setQuotes] = React.useState({});
   const [fred, setFred] = React.useState({});
+  const [histories, setHistories] = React.useState({});
   const [auctions, setAuctions] = React.useState(null);
   const [errors, setErrors] = React.useState({});
   const [loading, setLoading] = React.useState(true);
   const [updated, setUpdated] = React.useState(null);
+  const [toast, setToast] = React.useState(null);
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 2600); };
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -170,13 +233,21 @@ function DurationPage() {
     const aPromise = fetch('/api/treasury-auctions?t=' + Date.now())
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .catch(e => ({ error: e.message }));
+    const hPromises = HISTORY_TICKERS.map(sym =>
+      fetch('/api/history/' + encodeURIComponent(sym) + '?range=6mo&t=' + Date.now())
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(d => ({ sym, d, err: null }))
+        .catch(e => ({ sym, d: null, err: e.message }))
+    );
 
-    Promise.all([Promise.all(qPromises), Promise.all(fPromises), aPromise]).then(([qResults, fResults, aResult]) => {
-      const q = {}, f = {}, errs = {};
+    Promise.all([Promise.all(qPromises), Promise.all(fPromises), aPromise, Promise.all(hPromises)]).then(([qResults, fResults, aResult, hResults]) => {
+      const q = {}, f = {}, h = {}, errs = {};
       qResults.forEach(({ sym, d, err }) => { q[sym] = d; if (err) errs['quote:' + sym] = err; });
       fResults.forEach(({ series, d, err }) => { f[series] = d; if (err) errs['fred:' + series] = err; });
+      hResults.forEach(({ sym, d, err }) => { h[sym] = d; if (err) errs['history:' + sym] = err; });
       setQuotes(q);
       setFred(f);
+      setHistories(h);
       setAuctions(aResult && !aResult.error ? aResult : null);
       if (aResult?.error) errs['auctions'] = aResult.error;
       setErrors(errs);
@@ -203,6 +274,12 @@ function DurationPage() {
   const ratioTltIef = (tlt?.price && ief?.price) ? tlt.price / ief.price : null;
   const ratioEdvIef = (edv?.price && ief?.price) ? edv.price / ief.price : null;
 
+  // ── Series para sparklines (últimos ~6 meses) ──────────────────────────────
+  const sparkTlt = (histories['TLT']?.series || []).map(p => ({ x: p.date, y: p.close }));
+  const sparkVix = (histories['^VIX']?.series || []).map(p => ({ x: p.date, y: p.close }));
+  const spark10y = (y10?.history || []).map(p => ({ x: p.date, y: p.value }));
+  const sparkHy  = (hy?.history || []).map(p => ({ x: p.date, y: p.value * 100 }));
+
   // ── Evidencia Japón/causalidad — heurística basada en retornos semanales (w1) ──
   const tltDown = tlt?.w1 != null && tlt.w1 < 0;
   const usdjpyDown = usdjpy?.w1 != null && usdjpy.w1 < 0;
@@ -225,8 +302,113 @@ function DurationPage() {
     insufficient_data: { ...C.neutral, label: 'Datos insuficientes' },
   };
 
+  const buildDurationMarkdown = () => {
+    const lines = [];
+    lines.push('# Duration Stress Monitor — BOJ/Treasury Supply Thesis');
+    lines.push('');
+    lines.push(`## ${ps.label}`);
+    lines.push(ps.desc);
+    lines.push(`Checks: pressure=${checks.pressure} · core_break=${checks.coreBreak} · confirmation=${checks.confirmation} · invalidation=${checks.invalidation}`);
+    lines.push('');
+    lines.push('## Trade Structure — TLT Options Playbook (fijo por fase, no recalcula strikes en vivo)');
+    lines.push(PLAYBOOK[phase].action);
+    lines.push(`Ponderación sugerida: ${PLAYBOOK[phase].weight}`);
+    lines.push('');
+    lines.push('## Market Confirmation');
+    lines.push('| Metric | Value | As of |');
+    lines.push('|---|---:|---|');
+    lines.push(`| TLT | ${tlt?.price ?? '-'} (${fmtPct(tlt?.d1)} 1D) | ${tlt?.asOf ?? '-'} |`);
+    lines.push(`| 10Y Yield | ${fmt(y10?.current)}% | ${y10?.date ?? '-'} |`);
+    lines.push(`| 2Y Yield | ${fmt(y2?.current)}% | ${y2?.date ?? '-'} |`);
+    lines.push(`| 30Y Yield | ${fmt(y30?.current)}% | ${y30?.date ?? '-'} |`);
+    lines.push(`| 30Y-10Y Spread | ${fmtBps(spread3010 != null ? spread3010 * 100 : null)} | - |`);
+    lines.push(`| 10Y-2Y Spread | ${fmtBps(spread102 != null ? spread102 * 100 : null)} | - |`);
+    lines.push(`| 10Y Real (DFII10) | ${fmt(dfii10?.current)}% | ${dfii10?.date ?? '-'} |`);
+    lines.push(`| Breakeven 5Y | ${fmt(t5yie?.current)}% | ${t5yie?.date ?? '-'} |`);
+    lines.push(`| HY Spread | ${hyBps != null ? Math.round(hyBps) + 'bps' : '-'} | ${hy?.date ?? '-'} |`);
+    lines.push(`| VIX | ${fmt(vix?.price, 1)} | ${vix?.asOf ?? '-'} |`);
+    lines.push(`| MOVE | ${move?.price != null ? fmt(move.price, 1) : 'no disponible'} | ${move?.asOf ?? '-'} |`);
+    lines.push(`| TLT / IEF | ${fmt(ratioTltIef, 3)} | - |`);
+    lines.push(`| EDV / IEF | ${fmt(ratioEdvIef, 3)} | - |`);
+    lines.push('');
+    lines.push('## Complejo duración');
+    lines.push('| Ticker | Precio | 1D | 1S | 1M |');
+    lines.push('|---|---:|---:|---:|---:|');
+    [['TBT', tbt], ['IEF', ief], ['EDV', edv], ['ZROZ', zroz]].forEach(([name, d]) => {
+      lines.push(`| ${name} | ${d?.price ?? '-'} | ${fmtPct(d?.d1)} | ${fmtPct(d?.w1)} | ${fmtPct(d?.m1)} |`);
+    });
+    lines.push('');
+    lines.push('## Japan / Causality Evidence (contextual, no confirma causa)');
+    lines.push(`- USDJPY ${usdjpy?.price ?? '-'} (${fmtPct(usdjpy?.w1)} 1S) — ${jpyVerdict.text}`);
+    lines.push(`- Oro (GC=F) ${gold?.price ?? '-'} (${fmtPct(gold?.w1)} 1S) — ${goldVerdict.text}`);
+    lines.push(`- DXY ${dxy?.price ?? '-'} (${fmtPct(dxy?.w1)} 1S)`);
+    lines.push('- JGB 10Y/30Y y Japan CDS: no disponibles (sin fuente diaria gratuita fiable).');
+    lines.push('');
+    lines.push('## Auction Stress (Treasury Fiscal Data API, sin yield when-issued → sin tail real)');
+    lines.push('| Tenor | Fecha | High Yield | vs media | Bid-to-Cover | vs media | Proxy estrés | Tail real |');
+    lines.push('|---|---|---:|---:|---:|---:|---|---|');
+    AUCTION_TENOR_ORDER.forEach(tenor => {
+      const t = auctions?.tenors?.[tenor];
+      if (!t) { lines.push(`| ${tenor} | sin datos | | | | | | |`); return; }
+      const badge = AUCTION_BADGE[t.auction_stress_proxy] || AUCTION_BADGE.insufficient_data;
+      lines.push(`| ${tenor} | ${t.auction_date} | ${fmt(t.auction_high_yield)}% | ${fmtBps(t.high_yield_vs_recent_avg)} | ${fmt(t.bid_to_cover)} | ${t.bid_to_cover_vs_recent_avg ?? '-'} | ${badge.label} | n/d |`);
+    });
+    return lines.join('\n');
+  };
+
+  React.useEffect(() => {
+    if (updated) {
+      try {
+        localStorage.setItem('llm_export_duration', buildDurationMarkdown());
+        localStorage.setItem('llm_export_duration_ts', Date.now().toString());
+      } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updated]);
+
+  const copyMarkdown = () => {
+    navigator.clipboard.writeText(buildDurationMarkdown()).then(() => showToast('Copiado para LLM'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',    label: 'Market Tracker' },
+      { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle',     label: 'Cycle' },
+      { key: 'llm_export_relative',  label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+      { key: 'llm_export_duration',  label: 'Duration' },
+    ];
+    const now = Date.now();
+    const found = [], missing = [], stale = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) {
+        found.push(label);
+        const ts = parseInt(localStorage.getItem(key + '_ts') || '0');
+        const hours = ts ? Math.round((now - ts) / 3600000) : null;
+        if (!ts || hours > 23) stale.push(hours != null ? `${label} (${hours}h)` : label);
+        return md;
+      }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    const exportDate = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+    const header = `**Exportado:** ${exportDate}` +
+      (stale.length ? `\n⚠️ **Secciones desactualizadas (>24h):** ${stale.join(', ')} — Abre esas pestañas para refrescar\n` : '\n');
+    const combined = header + '\n---\n\n' + sections.join('\n\n---\n\n');
+    navigator.clipboard.writeText(combined)
+      .then(() => {
+        if (stale.length) showToast(`⚠️ ${stale.length} secc. desactualizadas: ${stale.join(', ')}`);
+        else if (missing.length) showToast(`✅ ${found.length}/${parts.length} pestañas — Falta: ${missing.join(', ')}`);
+        else showToast('✅ Todas las pestañas copiadas (datos frescos)');
+      })
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
   return (
     <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
       <div className="topbar">
         <div>
           <div className="title-row">
@@ -240,11 +422,11 @@ function DurationPage() {
           </div>
           <div className="meta">BOJ/Treasury Supply Thesis — panel observacional, no ejecuta ni recomienda trades automáticamente</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="actions">
           {updated && <span style={{ fontSize: 11, color: '#999' }}>{updated.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>}
-          <button onClick={load} style={{ background: '#3a6ca0', color: 'white', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-            ↻ Actualizar
-          </button>
+          <button className="btn-copy" onClick={copyMarkdown} disabled={!updated}>Copy for LLM</button>
+          <button className="btn-export" onClick={copyAllForLLM}>🗂️ Exportar TODO a LLM</button>
+          <button className="btn-refresh" onClick={load} disabled={loading}>{loading ? 'Cargando…' : '↻ Actualizar'}</button>
         </div>
       </div>
 
@@ -263,6 +445,14 @@ function DurationPage() {
             <div style={{ fontSize: 11, marginTop: 2 }}>{ps.desc}</div>
           </div>
           <PhaseChecklist checks={checks} />
+        </div>
+      )}
+
+      {updated && (
+        <div className="playbook-box" style={{ borderLeft: `4px solid ${ps.fg}` }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>📋 Trade Structure — TLT Options Playbook ({ps.label})</div>
+          <div>{PLAYBOOK[phase].action}</div>
+          <div className="weight"><b>Ponderación sugerida:</b> {PLAYBOOK[phase].weight}</div>
         </div>
       )}
 
@@ -288,6 +478,30 @@ function DurationPage() {
         <Stat label="MOVE" value={move?.price != null ? fmt(move.price, 1) : 'no disponible'} style={styleMove(move?.price)} />
         <Stat label="TLT / IEF" value={fmt(ratioTltIef, 3)} style={C.neutral} />
         <Stat label="EDV / IEF" value={fmt(ratioEdvIef, 3)} style={C.neutral} />
+      </div>
+
+      <div className="section-sub" style={{ marginTop: -4 }}>Tendencia — últimos ~6 meses (los 4 drivers que alimentan la fase A/B/C/D)</div>
+      <div className="trend-grid">
+        <div className="trend-card">
+          <div className="label">TLT</div>
+          <div className="value" style={{ color: styleTlt(tlt?.price).fg }}>{tlt?.price ?? '—'}</div>
+          <Spark points={sparkTlt} color={styleTlt(tlt?.price).fg} />
+        </div>
+        <div className="trend-card">
+          <div className="label">10Y Yield</div>
+          <div className="value" style={{ color: style10y(y10?.current).fg }}>{fmt(y10?.current)}%</div>
+          <Spark points={spark10y} color={style10y(y10?.current).fg} />
+        </div>
+        <div className="trend-card">
+          <div className="label">VIX</div>
+          <div className="value" style={{ color: styleVix(vix?.price).fg }}>{fmt(vix?.price, 1)}</div>
+          <Spark points={sparkVix} color={styleVix(vix?.price).fg} />
+        </div>
+        <div className="trend-card">
+          <div className="label">HY Spread</div>
+          <div className="value" style={{ color: styleHy(hyBps).fg }}>{hyBps != null ? Math.round(hyBps) + 'bps' : '—'}</div>
+          <Spark points={sparkHy} color={styleHy(hyBps).fg} />
+        </div>
       </div>
 
       <table>
