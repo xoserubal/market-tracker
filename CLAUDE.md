@@ -520,6 +520,46 @@ Nueva página `sentiment.html` (raíz del repo, servida por `server.js` como el 
 
 ---
 
+## Duration Stress Monitor — BOJ/Treasury Supply Thesis (implementado 2026-07-07)
+
+Nueva página `duration.html` para vigilar una tesis de trade discrecional (posible venta/reducción japonesa de Treasuries ejerciendo presión bajista sobre la duración larga USA), surgida de un análisis externo sobre los datos de este mismo tracker. Panel puramente observacional — no toca PCS, rot_score ni `HARD_RULES` del motor de picks, mismo enfoque que `sentiment.html` en su día.
+
+**Decisión de framing:** el título y la estructura NO asumen que la causa es japonesa — la atribución a Japón es una hipótesis, no un hecho confirmable con datos públicos. Por eso la página separa en 3 secciones visuales:
+1. **Market Confirmation** (objetivo): TLT (precio + Koncorde vía datos ya existentes), yields 10Y/2Y/30Y (FRED `DGS10/DGS2/DGS30`, pedidos en vivo — no están en `series.yaml`, no hace falta añadirlos ahí), spreads derivados 30Y-10Y y 10Y-2Y, `DFII10`, `T5YIE`, HY spread (`BAMLH0A0HYM2`), VIX, MOVE (`^MOVE`, con fallback elegante si Yahoo no lo sirve), ratios TLT/IEF y EDV/IEF, y tabla de TBT/IEF/EDV/ZROZ.
+2. **Japan/Causality Evidence** (contextual, ambiguo): USDJPY con badge de ambigüedad direccional (yields↑+TLT↓+USDJPY↓ = repatriación/intervención limpia; DXY↑+USDJPY↑ = shock de yields/dólar genérico, no confirma story Japón), oro como cross-check crisis-de-confianza-vs-tipos-reales. Nota explícita: JGB 10Y/30Y y Japan CDS no están disponibles (sin fuente diaria gratuita fiable) — hueco documentado, no cubierto.
+3. **Auction Stress**: subastas del Tesoro (Treasury Fiscal Data API, `api.fiscaldata.treasury.gov`), 10Y/30Y priorizadas sobre 2Y. **El endpoint no publica yield when-issued**, verificado contra la API real — no se puede calcular el tail auténtico (`high_yield - WI_yield`). Se muestra en su lugar `auction_high_yield`, `bid_to_cover`, comparativas vs media de las últimas 8 subastas del mismo tenor, y `auction_stress_proxy` (weak_demand/strong_demand/normal), dejando `true_tail_bps: null` explícito en vez de inventar o mal-etiquetar el proxy como tail real.
+
+**Arquitectura — sin tocar el pipeline de backtest:** `duration.html` sigue el patrón de `sentiment.html`/`relative.html` (fetch en vivo desde el navegador, no lee `docs/data/*.json`). Casi todo el dato ya era servible por proxies genéricos existentes: `/api/quote/:symbol` (TLT, TBT, IEF, EDV, ZROZ, GC=F, DX-Y.NYB, JPY=X, ^VIX, ^MOVE) y `/api/fred/:series` (yields, HY spread). Solo se añadió una ruta nueva, `/api/treasury-auctions` en `server.js` (mismo patrón caché+stale-fallback que `/api/fear-greed`, TTL 6h ya que las subastas no son intradía). También se añadió el campo `asOf` (timestamp del último dato) a `/api/quote/:symbol`, necesario para mostrar freshness real en vez de solo la hora de fetch del navegador.
+
+**State machine A/B/C/D** (recalculada cada carga, sin histéresis en v1 — se añadirá si en producción resulta "flappy"), evaluada en este orden por seguridad (invalidation primero, para que una reversión clara nunca quede enmascarada por una confirmación de contexto obsoleta):
+```
+core_break   = (10Y > 4.60%) AND (TLT < 84)
+confirmation = (hy_spread_bps > 300) OR (VIX > 20) OR (MOVE > 120, umbral provisional sin baseline propio todavía)
+invalidation = (TLT > 86.5) AND (10Y < 4.55%)
+pressure     = (TLT < 84.8) OR (10Y > 4.55%)
+
+if invalidation:                  Fase D — Invalidation
+elif core_break AND confirmation: Fase C — Systemic Confirmation
+elif pressure:                    Fase B — Duration Pressure
+else:                             Fase A — Watch
+```
+`hy_spread_bps = BAMLH0A0HYM2 * 100` — FRED devuelve esta serie en puntos porcentuales, no en bps; normalización aplicada tanto en `duration.html` (JS) como en `duration_monitor.py` (Python). Los niveles trigger están **duplicados a propósito** en ambos archivos (mismo precedente que `calcCMF` duplicado en `server.js`/Python) — mantener sincronizados si cambian.
+
+**Script nuevo: `scripts/duration_monitor.py`** (Step 9e del pipeline, `continue-on-error: true`): obtiene TLT/VIX/MOVE vía yfinance y DGS10/HY spread vía FRED API directa (sin pasar por el paquete `backtest/src`), calcula la misma state machine, y alerta por Telegram solo cuando hay algo nuevo:
+- **Transición de fase** (cualquier dirección) — siempre, salvo en el bootstrap.
+- **Triggers críticos individuales** (`core_break_10y`, `core_break_tlt`, `invalidation_tlt`, `invalidation_10y`) — deduplicados por `condition_id + dirección de cruce + fecha` en `docs/data/duration_monitor_state.json`, así que una condición que sigue activa en la misma dirección no re-alerta en cada run (pipeline 2×/día). Las métricas de contexto (VIX/HY/MOVE individuales, USDJPY, oro) nunca alertan por sí solas, solo alimentan `confirmation`.
+- **`--alert-on-initial`**: en el primer run (sin state file previo) no se alerta nada por defecto, solo se guarda el baseline — evita que el bootstrap dispare una "sorpresa" sobre condiciones que ya eran ciertas antes de que existiera el monitor. Con el flag, sí alerta las condiciones ya activas.
+- **`--dry-run`**: imprime en vez de enviar Telegram y no persiste el state file.
+- Auctions **no** alimenta la state machine ni las alertas en v1 — es puramente informativo en `duration.html`, ningún trigger crítico depende de ello (mantiene el script de alertas simple, sin duplicar la lógica de subastas en Python).
+
+**Nav:** pill "Duration" (`#37474f`) añadida a las 6 páginas raíz (`index.html`, `portfolio.html`, `relative.html`, `cycle.html`, `rotacion.html`, `sentiment.html`).
+
+**Verificado:** sintaxis de `server.js`/`duration_monitor.py` válida; llamada real a la API de Fiscal Data confirma los campos disponibles (`high_yield`, `bid_to_cover_ratio`, sin WI yield) y que algunos registros traen `high_yield: "null"` (string, no JSON null) — manejado explícitamente. `duration_monitor.py --dry-run` corrido contra datos reales de hoy (TLT≈84.8, VIX≈16.3, MOVE≈65, 10Y≈4.49%, HY≈272bps → Fase A, como se esperaba). Bootstrap real ejecutado (sin alertas, state file creado) y una segunda ejecución inmediata confirma dedup (cero mensajes). Lógica de transición de fase y dedup por dirección de cruce verificada además con datos sintéticos en aislamiento (A→C→D, cruces detectados con la dirección correcta, tercera llamada idéntica no genera mensajes). Se corrigió además un bug real detectado en esta verificación: los emojis en los mensajes de alerta rompían `print()` en consola Windows (cp1252) — arreglado forzando stdout/stderr a UTF-8 con `errors="replace"` al inicio del script (GitHub Actions ya usa UTF-8 por defecto, así que solo afectaba a pruebas locales, pero debía arreglarse igualmente).
+
+**Pendiente / fuera de alcance:** JGB 10Y/30Y diario y Japan CDS (sin fuente gratuita fiable); confirmar en producción que `/api/treasury-auctions` sigue respondiendo con el filtro/paginación usados tras cambios futuros de la API; sin histéresis de fase (si resulta demasiado sensible a ruido de un día, se añadirá después); el umbral de MOVE (120) es provisional, sin baseline histórico propio todavía.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

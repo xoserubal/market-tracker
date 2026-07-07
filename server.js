@@ -234,6 +234,7 @@ app.get("/api/quote/:symbol", async (req, res) => {
 
     res.json({
       ticker:   req.params.symbol,
+      asOf:     new Date(timestamps[timestamps.length - 1] * 1000).toISOString(),
       price:    +price.toPrecision(6),
       fromLow:  pct(price, w52Low),
       fromHigh: pct(price, w52High),
@@ -523,6 +524,81 @@ app.get("/api/fear-greed", async (_req, res) => {
     res.json(data);
   } catch (err) {
     if (_fearGreedCache) return res.json(_fearGreedCache); // stale-but-served
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// ── Treasury auction results proxy (Fiscal Data API) ─────────────────────
+// api.fiscaldata.treasury.gov does NOT publish a when-issued yield, so we
+// cannot compute the real auction "tail" (high_yield - WI_yield). Verified
+// against a live call: fields available are cusip/security_type/security_term/
+// auction_date/high_yield/bid_to_cover_ratio, nothing WI-related. We expose
+// auction_high_yield + bid_to_cover plus comparisons vs the trailing average
+// of the same tenor, and leave true_tail_bps explicit null rather than
+// mislabeling a proxy as the real tail.
+let _treasuryAuctionsCache = null;
+let _treasuryAuctionsCacheTs = 0;
+const TREASURY_AUCTIONS_TTL = 6 * 60 * 60 * 1000; // 6h — auctions are weekly/monthly, not intraday
+const AUCTION_TENORS = ["10-Year", "30-Year", "2-Year"]; // display priority: 10Y/30Y over 2Y
+
+app.get("/api/treasury-auctions", async (_req, res) => {
+  if (_treasuryAuctionsCache && Date.now() - _treasuryAuctionsCacheTs < TREASURY_AUCTIONS_TTL) {
+    return res.json(_treasuryAuctionsCache);
+  }
+  try {
+    const fields = "cusip,security_type,security_term,auction_date,high_yield,bid_to_cover_ratio";
+    const url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query"
+      + `?fields=${fields}&filter=security_term:in:(2-Year,10-Year,30-Year)&sort=-auction_date&page[size]=100`;
+    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
+    if (!r.ok) throw new Error(`Fiscal Data respondió ${r.status}`);
+    const json = await r.json();
+    const numOrNull = v => (v == null || v === "null" || v === "") ? null : parseFloat(v);
+    const rows = (json.data || []).map(row => ({
+      cusip: row.cusip,
+      security_term: row.security_term,
+      auction_date: row.auction_date,
+      high_yield: numOrNull(row.high_yield),
+      bid_to_cover: numOrNull(row.bid_to_cover_ratio),
+    }));
+
+    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    const tenors = {};
+    for (const tenor of AUCTION_TENORS) {
+      const tenorRows = rows.filter(row => row.security_term === tenor).slice(0, 8); // latest + trailing window
+      if (!tenorRows.length) { tenors[tenor] = null; continue; }
+      const [latest, ...recent] = tenorRows;
+      const avgYield = avg(recent.map(row => row.high_yield).filter(v => v != null));
+      const avgBtc   = avg(recent.map(row => row.bid_to_cover).filter(v => v != null));
+      const high_yield_vs_recent_avg = (latest.high_yield != null && avgYield != null)
+        ? +((latest.high_yield - avgYield) * 100).toFixed(1) : null; // bps
+      const bid_to_cover_vs_recent_avg = (latest.bid_to_cover != null && avgBtc != null)
+        ? +(latest.bid_to_cover - avgBtc).toFixed(2) : null;
+
+      let auction_stress_proxy = "insufficient_data";
+      if (high_yield_vs_recent_avg != null && bid_to_cover_vs_recent_avg != null) {
+        if (high_yield_vs_recent_avg > 3 && bid_to_cover_vs_recent_avg < -0.05) auction_stress_proxy = "weak_demand";
+        else if (high_yield_vs_recent_avg < -3 && bid_to_cover_vs_recent_avg > 0.05) auction_stress_proxy = "strong_demand";
+        else auction_stress_proxy = "normal";
+      }
+
+      tenors[tenor] = {
+        auction_date: latest.auction_date,
+        cusip: latest.cusip,
+        auction_high_yield: latest.high_yield,
+        bid_to_cover: latest.bid_to_cover,
+        high_yield_vs_recent_avg,
+        bid_to_cover_vs_recent_avg,
+        auction_stress_proxy,
+        true_tail_bps: null, // no when-issued yield published by this API
+      };
+    }
+
+    const result = { as_of: new Date().toISOString(), tenors };
+    _treasuryAuctionsCache = result;
+    _treasuryAuctionsCacheTs = Date.now();
+    res.json(result);
+  } catch (err) {
+    if (_treasuryAuctionsCache) return res.json(_treasuryAuctionsCache); // stale-but-served
     res.status(502).json({ error: err.message });
   }
 });

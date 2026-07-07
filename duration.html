@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Duration Stress Monitor — Market Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
+    .wrap { background: white; min-width: 960px; min-height: 100vh; padding: 16px 20px; overflow-x: auto; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    .title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; color: #111; line-height: 1; }
+    .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
+    .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+
+    .thesis-box { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 14px; margin-bottom: 14px; font-size: 11px; color: #475467; line-height: 1.5; }
+    .thesis-box b { color: #1f2933; }
+
+    .phase-box { display: flex; align-items: center; gap: 18px; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; flex-wrap: wrap; }
+    .phase-label { font-size: 18px; font-weight: 800; }
+    .phase-checks { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; }
+    .phase-check { display: flex; align-items: center; gap: 5px; }
+
+    .section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #344054;
+      margin: 18px 0 4px; padding-bottom: 4px; border-bottom: 2px solid #e6e8eb; }
+    .section-sub { font-size: 10px; color: #98a2b3; margin-bottom: 10px; font-style: italic; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .stat { border-radius: 6px; padding: 8px 10px; }
+    .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; opacity: .75; }
+    .stat .value { margin-top: 3px; font-size: 15px; font-weight: 700; font-family: Consolas, monospace; }
+    .stat .sub { margin-top: 2px; font-size: 9px; opacity: .85; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef0f2; white-space: nowrap; }
+    th { font-size: 9px; text-transform: uppercase; color: #98a2b3; letter-spacing: .3px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+
+    .evidence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .evidence-card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 12px; }
+    .evidence-card .metric { font-size: 15px; font-weight: 700; font-family: Consolas, monospace; }
+    .evidence-card .verdict { margin-top: 6px; font-size: 11px; padding: 4px 8px; border-radius: 5px; }
+
+    .gap-note { border: 1px solid #ffe0b2; background: #fff8ef; color: #8a5200; border-radius: 6px; padding: 8px 12px; font-size: 10px; margin-bottom: 10px; }
+    .freshness { font-size: 9px; color: #98a2b3; margin: 4px 0 4px; }
+    .footer-note { font-size: 9px; color: #98a2b3; margin-top: 14px; font-style: italic; }
+    .error-box { border: 1px solid #ffcdd2; background: #ffebee; color: #b71c1c; border-radius: 6px;
+      padding: 10px 14px; font-size: 12px; margin-bottom: 14px; }
+    .loading { font-size: 12px; color: #98a2b3; padding: 40px 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ── Paleta reutilizada de STATUS/riskOffMonitorState (index.html / relative.html) ──
+const C = {
+  green:   { bg: '#c8e6c9', fg: '#1b5e20' },
+  yellow:  { bg: '#fff9c4', fg: '#e65100' },
+  orange:  { bg: '#ffe0b2', fg: '#bf360c' },
+  red:     { bg: '#ffcdd2', fg: '#b71c1c' },
+  neutral: { bg: '#f0f0f0', fg: '#555' },
+  blue:    { bg: '#e3f2fd', fg: '#1565c0' },
+};
+
+// ── Niveles trigger de la tesis (constantes fijas, duplicadas a propósito en scripts/duration_monitor.py) ──
+const LEVELS = {
+  coreBreak10y: 4.60, coreBreakTlt: 84,
+  confirmHyBps: 300, confirmVix: 20, confirmMove: 120,
+  pressureTlt: 84.8, pressure10y: 4.55,
+  invalidTlt: 86.5, invalid10y: 4.55,
+};
+
+function computePhase({ tlt, y10, hyBps, vix, move }) {
+  if (tlt == null || y10 == null) {
+    return { phase: 'A', checks: { invalidation: null, coreBreak: null, confirmation: null, pressure: null } };
+  }
+  const invalidation = tlt > LEVELS.invalidTlt && y10 < LEVELS.invalid10y;
+  const coreBreak    = y10 > LEVELS.coreBreak10y && tlt < LEVELS.coreBreakTlt;
+  const confirmation = (hyBps != null && hyBps > LEVELS.confirmHyBps)
+    || (vix != null && vix > LEVELS.confirmVix)
+    || (move != null && move > LEVELS.confirmMove);
+  const pressure = tlt < LEVELS.pressureTlt || y10 > LEVELS.pressure10y;
+
+  let phase = 'A';
+  if (invalidation) phase = 'D';
+  else if (coreBreak && confirmation) phase = 'C';
+  else if (pressure) phase = 'B';
+  return { phase, checks: { invalidation, coreBreak, confirmation, pressure } };
+}
+
+const PHASE_STYLE = {
+  A: { ...C.neutral, label: 'Fase A — Watch',                   desc: 'Sin ruptura ni presión de duración detectada.' },
+  B: { ...C.yellow,  label: 'Fase B — Duration Pressure',       desc: 'TLT o 10Y ya muestran presión, sin ruptura sistémica todavía.' },
+  C: { ...C.red,     label: 'Fase C — Systemic Confirmation',   desc: 'Ruptura core (10Y+TLT) confirmada por estrés de crédito/vol/MOVE.' },
+  D: { ...C.blue,    label: 'Fase D — Invalidation',            desc: 'TLT recuperado y yields de vuelta bajo el umbral — tesis invalidada por ahora.' },
+};
+
+// ── Helpers de estilo por métrica ──────────────────────────────────────────
+const styleTlt   = v => v == null ? C.neutral : v < LEVELS.coreBreakTlt ? C.red : v < LEVELS.pressureTlt ? C.yellow : C.green;
+const style10y   = v => v == null ? C.neutral : v > LEVELS.coreBreak10y ? C.red : v > LEVELS.pressure10y ? C.yellow : C.green;
+const styleHy    = bps => bps == null ? C.neutral : bps > LEVELS.confirmHyBps ? C.red : bps > 250 ? C.yellow : C.green;
+const styleVix   = v => v == null ? C.neutral : v > LEVELS.confirmVix ? C.red : v > 15 ? C.yellow : C.green;
+const styleMove  = v => v == null ? C.neutral : v > LEVELS.confirmMove ? C.red : v > 100 ? C.yellow : C.green;
+
+function fmt(n, d = 2) { return n == null || Number.isNaN(n) ? '—' : n.toFixed(d); }
+function fmtBps(n) { return n == null ? '—' : (n > 0 ? '+' : '') + Math.round(n) + 'bps'; }
+function fmtPct(n) { return n == null ? '—' : (n > 0 ? '+' : '') + n + '%'; }
+
+// ── Tickers / series a pedir ────────────────────────────────────────────────
+const QUOTE_TICKERS = ['TLT', 'TBT', 'IEF', 'EDV', 'ZROZ', 'GC=F', 'DX-Y.NYB', 'JPY=X', '^VIX', '^MOVE'];
+const FRED_SERIES = ['DGS10', 'DGS2', 'DGS30', 'DFII10', 'T5YIE', 'BAMLH0A0HYM2'];
+
+const AUCTION_TENOR_ORDER = ['10-Year', '30-Year', '2-Year']; // 10Y/30Y priorizadas sobre 2Y
+
+function Stat({ label, value, sub, style }) {
+  return (
+    <div className="stat" style={{ background: style.bg, color: style.fg }}>
+      <div className="label">{label}</div>
+      <div className="value">{value}</div>
+      {sub && <div className="sub">{sub}</div>}
+    </div>
+  );
+}
+
+function PhaseChecklist({ checks }) {
+  const items = [
+    ['Presión (B)', checks.pressure],
+    ['Ruptura core', checks.coreBreak],
+    ['Confirmación estrés', checks.confirmation],
+    ['Invalidación', checks.invalidation],
+  ];
+  return (
+    <div className="phase-checks">
+      {items.map(([label, v]) => (
+        <div className="phase-check" key={label}>
+          <span>{v == null ? '⚪' : v ? '✅' : '⬜'}</span><span>{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DurationPage() {
+  const [quotes, setQuotes] = React.useState({});
+  const [fred, setFred] = React.useState({});
+  const [auctions, setAuctions] = React.useState(null);
+  const [errors, setErrors] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const [updated, setUpdated] = React.useState(null);
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    const qPromises = QUOTE_TICKERS.map(sym =>
+      fetch('/api/quote/' + encodeURIComponent(sym) + '?t=' + Date.now())
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(d => ({ sym, d, err: null }))
+        .catch(e => ({ sym, d: null, err: e.message }))
+    );
+    const fPromises = FRED_SERIES.map(series =>
+      fetch('/api/fred/' + encodeURIComponent(series) + '?t=' + Date.now())
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(d => ({ series, d, err: null }))
+        .catch(e => ({ series, d: null, err: e.message }))
+    );
+    const aPromise = fetch('/api/treasury-auctions?t=' + Date.now())
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .catch(e => ({ error: e.message }));
+
+    Promise.all([Promise.all(qPromises), Promise.all(fPromises), aPromise]).then(([qResults, fResults, aResult]) => {
+      const q = {}, f = {}, errs = {};
+      qResults.forEach(({ sym, d, err }) => { q[sym] = d; if (err) errs['quote:' + sym] = err; });
+      fResults.forEach(({ series, d, err }) => { f[series] = d; if (err) errs['fred:' + series] = err; });
+      setQuotes(q);
+      setFred(f);
+      setAuctions(aResult && !aResult.error ? aResult : null);
+      if (aResult?.error) errs['auctions'] = aResult.error;
+      setErrors(errs);
+      setUpdated(new Date());
+      setLoading(false);
+    });
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const tlt = quotes['TLT'], tbt = quotes['TBT'], ief = quotes['IEF'], edv = quotes['EDV'], zroz = quotes['ZROZ'];
+  const gold = quotes['GC=F'], dxy = quotes['DX-Y.NYB'], usdjpy = quotes['JPY=X'];
+  const vix = quotes['^VIX'], move = quotes['^MOVE'];
+  const y10 = fred['DGS10'], y2 = fred['DGS2'], y30 = fred['DGS30'], dfii10 = fred['DFII10'], t5yie = fred['T5YIE'], hy = fred['BAMLH0A0HYM2'];
+
+  const hyBps = hy?.current != null ? hy.current * 100 : null;
+  const { phase, checks } = React.useMemo(() => computePhase({
+    tlt: tlt?.price ?? null, y10: y10?.current ?? null, hyBps, vix: vix?.price ?? null, move: move?.price ?? null,
+  }), [tlt, y10, hyBps, vix, move]);
+  const ps = PHASE_STYLE[phase];
+
+  const spread3010 = (y30?.current != null && y10?.current != null) ? y30.current - y10.current : null;
+  const spread102 = (y10?.current != null && y2?.current != null) ? y10.current - y2.current : null;
+  const ratioTltIef = (tlt?.price && ief?.price) ? tlt.price / ief.price : null;
+  const ratioEdvIef = (edv?.price && ief?.price) ? edv.price / ief.price : null;
+
+  // ── Evidencia Japón/causalidad — heurística basada en retornos semanales (w1) ──
+  const tltDown = tlt?.w1 != null && tlt.w1 < 0;
+  const usdjpyDown = usdjpy?.w1 != null && usdjpy.w1 < 0;
+  const usdjpyUp = usdjpy?.w1 != null && usdjpy.w1 > 0;
+  const dxyUp = dxy?.w1 != null && dxy.w1 > 0;
+  let jpyVerdict = { text: 'Sin patrón claro esta semana', style: C.neutral };
+  if (tltDown && usdjpyDown) jpyVerdict = { text: 'Yields↑ + TLT↓ + USDJPY↓ → posible repatriación/intervención limpia', style: C.orange };
+  else if (dxyUp && usdjpyUp) jpyVerdict = { text: 'DXY↑ + USDJPY↑ → shock de yields/dólar genérico, no confirma story de Japón', style: C.neutral };
+
+  const yieldsUpWeek = (y10?.current != null && y10?.v1w != null) ? (y10.current - y10.v1w) > 0 : null;
+  const goldUpWeek = gold?.w1 != null ? gold.w1 >= -1 : null;
+  let goldVerdict = { text: 'Sin señal cruzada clara todavía', style: C.neutral };
+  if (yieldsUpWeek === true && goldUpWeek === true) goldVerdict = { text: 'Yields↑ + oro↑/estable → posible crisis de confianza / degradación monetaria', style: C.orange };
+  else if (yieldsUpWeek === true && goldUpWeek === false) goldVerdict = { text: 'Yields↑ + oro↓ → story de tipos reales, más genérico que específico de Japón', style: C.neutral };
+
+  const AUCTION_BADGE = {
+    weak_demand: { ...C.red, label: 'Demanda débil' },
+    strong_demand: { ...C.green, label: 'Demanda fuerte' },
+    normal: { ...C.neutral, label: 'Normal' },
+    insufficient_data: { ...C.neutral, label: 'Datos insuficientes' },
+  };
+
+  return (
+    <div className="wrap">
+      <div className="topbar">
+        <div>
+          <div className="title-row">
+            <h1>Duration Stress Monitor</h1>
+            <a href="/index.html" className="nav-link" style={{ color: '#1a6b3c', borderColor: '#1a6b3c' }}>Market Tracker</a>
+            <a href="/portfolio.html" className="nav-link" style={{ color: '#3a6ca0', borderColor: '#3a6ca0' }}>Portfolio</a>
+            <a href="/relative.html" className="nav-link" style={{ color: '#7b1fa2', borderColor: '#7b1fa2' }}>Relative Flow</a>
+            <a href="/cycle.html" className="nav-link" style={{ color: '#7f0000', borderColor: '#7f0000' }}>Cycle</a>
+            <a href="/rotacion.html" className="nav-link" style={{ color: '#e65100', borderColor: '#e65100' }}>Flujos & Rotación</a>
+            <a href="/sentiment.html" className="nav-link" style={{ color: '#00695c', borderColor: '#00695c' }}>Sentiment</a>
+          </div>
+          <div className="meta">BOJ/Treasury Supply Thesis — panel observacional, no ejecuta ni recomienda trades automáticamente</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {updated && <span style={{ fontSize: 11, color: '#999' }}>{updated.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>}
+          <button onClick={load} style={{ background: '#3a6ca0', color: 'white', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            ↻ Actualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="thesis-box">
+        <b>Tesis en seguimiento:</b> posible venta/reducción japonesa de Treasuries ejerciendo presión bajista sobre la duración larga USA.
+        La atribución a Japón es una <b>hipótesis</b>, no un hecho confirmado — solo el mercado (yields, TLT, crédito, VIX/MOVE) puede
+        confirmarse con datos públicos hoy. Por eso la evidencia de mercado y la evidencia de causalidad Japón se muestran en secciones separadas.
+      </div>
+
+      {loading && !updated && <div className="loading">Cargando…</div>}
+
+      {updated && (
+        <div className="phase-box" style={{ background: ps.bg, color: ps.fg }}>
+          <div>
+            <div className="phase-label">{ps.label}</div>
+            <div style={{ fontSize: 11, marginTop: 2 }}>{ps.desc}</div>
+          </div>
+          <PhaseChecklist checks={checks} />
+        </div>
+      )}
+
+      {Object.keys(errors).length > 0 && (
+        <div className="error-box">
+          Algunas fuentes fallaron y se omiten con gracia: {Object.entries(errors).map(([k, v]) => `${k} (${v})`).join(' · ')}
+        </div>
+      )}
+
+      <div className="section-title">1. Market Confirmation</div>
+      <div className="section-sub">Objetivo y confirmable con datos públicos de mercado — no asume causa japonesa.</div>
+      <div className="stat-grid">
+        <Stat label="TLT" value={tlt?.price ?? '—'} sub={fmtPct(tlt?.d1)} style={styleTlt(tlt?.price)} />
+        <Stat label="10Y Yield" value={fmt(y10?.current) + '%'} sub={y10?.date} style={style10y(y10?.current)} />
+        <Stat label="2Y Yield" value={fmt(y2?.current) + '%'} sub={y2?.date} style={C.neutral} />
+        <Stat label="30Y Yield" value={fmt(y30?.current) + '%'} sub={y30?.date} style={C.neutral} />
+        <Stat label="30Y-10Y Spread" value={fmtBps(spread3010 != null ? spread3010 * 100 : null)} style={C.neutral} />
+        <Stat label="10Y-2Y Spread" value={fmtBps(spread102 != null ? spread102 * 100 : null)} style={C.neutral} />
+        <Stat label="10Y Real (DFII10)" value={fmt(dfii10?.current) + '%'} sub={dfii10?.date} style={C.neutral} />
+        <Stat label="Breakeven 5Y" value={fmt(t5yie?.current) + '%'} sub={t5yie?.date} style={C.neutral} />
+        <Stat label="HY Spread" value={hyBps != null ? Math.round(hyBps) + 'bps' : '—'} sub={hy?.date} style={styleHy(hyBps)} />
+        <Stat label="VIX" value={fmt(vix?.price, 1)} sub={vix?.asOf?.slice(0, 10)} style={styleVix(vix?.price)} />
+        <Stat label="MOVE" value={move?.price != null ? fmt(move.price, 1) : 'no disponible'} style={styleMove(move?.price)} />
+        <Stat label="TLT / IEF" value={fmt(ratioTltIef, 3)} style={C.neutral} />
+        <Stat label="EDV / IEF" value={fmt(ratioEdvIef, 3)} style={C.neutral} />
+      </div>
+
+      <table>
+        <thead><tr><th>Complejo duración</th><th>Precio</th><th>1D</th><th>1S</th><th>1M</th></tr></thead>
+        <tbody>
+          {[['TBT', tbt], ['IEF', ief], ['EDV', edv], ['ZROZ', zroz]].map(([name, d]) => (
+            <tr key={name}>
+              <td>{name}</td><td>{d?.price ?? '—'}</td><td>{fmtPct(d?.d1)}</td><td>{fmtPct(d?.w1)}</td><td>{fmtPct(d?.m1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="freshness">Yahoo as_of: {tlt?.asOf ? new Date(tlt.asOf).toLocaleString('es') : '—'} · FRED as_of: {y10?.date ?? '—'} (FRED puede tener 1 día de lag)</div>
+
+      <div className="section-title">2. Japan / Causality Evidence</div>
+      <div className="section-sub">Contextual y ambiguo — no confirmable con las fuentes disponibles hoy. No alimenta la fase A/B/C/D.</div>
+      <div className="evidence-grid">
+        <div className="evidence-card">
+          <div className="label" style={{ fontSize: 9, color: '#98a2b3', textTransform: 'uppercase' }}>USDJPY</div>
+          <div className="metric">{usdjpy?.price ?? '—'} <span style={{ fontSize: 11, fontWeight: 400 }}>({fmtPct(usdjpy?.w1)} 1S)</span></div>
+          <div className="verdict" style={{ background: jpyVerdict.style.bg, color: jpyVerdict.style.fg }}>{jpyVerdict.text}</div>
+        </div>
+        <div className="evidence-card">
+          <div className="label" style={{ fontSize: 9, color: '#98a2b3', textTransform: 'uppercase' }}>Oro (GC=F)</div>
+          <div className="metric">{gold?.price ?? '—'} <span style={{ fontSize: 11, fontWeight: 400 }}>({fmtPct(gold?.w1)} 1S)</span></div>
+          <div className="verdict" style={{ background: goldVerdict.style.bg, color: goldVerdict.style.fg }}>{goldVerdict.text}</div>
+        </div>
+        <div className="evidence-card">
+          <div className="label" style={{ fontSize: 9, color: '#98a2b3', textTransform: 'uppercase' }}>DXY</div>
+          <div className="metric">{dxy?.price ?? '—'} <span style={{ fontSize: 11, fontWeight: 400 }}>({fmtPct(dxy?.w1)} 1S)</span></div>
+        </div>
+      </div>
+      <div className="gap-note">
+        JGB 10Y/30Y y Japan CDS no están disponibles: sin fuente diaria gratuita fiable (FRED solo publica la serie mensual de Japón). Hueco documentado, no cubierto en v1.
+      </div>
+
+      <div className="section-title">3. Auction Stress</div>
+      <div className="section-sub">
+        Treasury Fiscal Data API no publica yield when-issued → no se puede calcular el tail real (high yield − WI yield). Se muestra un proxy de estrés en su lugar.
+      </div>
+      <table>
+        <thead>
+          <tr><th>Tenor</th><th>Fecha subasta</th><th>High Yield</th><th>vs media reciente</th><th>Bid-to-Cover</th><th>vs media reciente</th><th>Proxy estrés</th><th>Tail real</th></tr>
+        </thead>
+        <tbody>
+          {AUCTION_TENOR_ORDER.map(tenor => {
+            const t = auctions?.tenors?.[tenor];
+            if (!t) return <tr key={tenor}><td>{tenor}</td><td colSpan="7">sin datos</td></tr>;
+            const badge = AUCTION_BADGE[t.auction_stress_proxy] || AUCTION_BADGE.insufficient_data;
+            return (
+              <tr key={tenor}>
+                <td>{tenor}</td>
+                <td>{t.auction_date}</td>
+                <td>{fmt(t.auction_high_yield)}%</td>
+                <td>{fmtBps(t.high_yield_vs_recent_avg)}</td>
+                <td>{fmt(t.bid_to_cover)}</td>
+                <td>{t.bid_to_cover_vs_recent_avg != null ? (t.bid_to_cover_vs_recent_avg > 0 ? '+' : '') + t.bid_to_cover_vs_recent_avg.toFixed(2) : '—'}</td>
+                <td><span className="badge" style={{ background: badge.bg, color: badge.fg }}>{badge.label}</span></td>
+                <td>n/d</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="freshness">Auctions as_of (caché del proxy): {auctions?.as_of ? new Date(auctions.as_of).toLocaleString('es') : '—'}</div>
+
+      <div className="footer-note">
+        Fuentes: Yahoo Finance (precios/indicadores vía proxy local), FRED (yields/HY spread, ~1 día de lag), Treasury Fiscal Data API (subastas, caché 6h).
+        Panel puramente observacional — no toca PCS, rot_score ni HARD_RULES del motor de picks.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<DurationPage />);
+</script>
+</body>
+</html>

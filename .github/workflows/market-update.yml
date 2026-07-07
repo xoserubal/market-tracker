@@ -83,6 +83,15 @@ jobs:
         run: python scripts/koncorde_shadow_exits.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 9e Duration Stress Monitor (BOJ/Treasury thesis)
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/duration_monitor.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Check if this is the morning run
         id: time_check
         run: |
