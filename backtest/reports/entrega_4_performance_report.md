@@ -6,7 +6,7 @@
 
 - Señales COMPRA — alpha medio 13w (Modo A): +2.4%  | hit rate: +49.4%  | t-stat: 0.45
 - ROT. TEMPRANA: 44% convergen a COMPRA/ACUMULAR  | lead time mediano: 21w
-- Recession basket: alpha medio 13w en transiciones = -1.2%
+- Recession basket: alpha medio 13w en transiciones = -1.1%
 
 ---
 
@@ -16,18 +16,18 @@
 
 | Señal | Hz | N obs | N ind. | Mean α | Median α | Std | t-stat | Hit% |
 |-------|-----|-------|--------|--------|----------|-----|--------|------|
-| COMPRA | 4w | 1181 | 18 | +1.1% | -0.2% | +10.3% | 0.46 | +48.0% |
-| COMPRA | 13w | 1146 | 18 | +2.4% | -0.1% | +22.6% | 0.45 | +49.4% |
-| COMPRA | 26w | 1124 | 18 | +4.6% | -0.8% | +41.2% | 0.47 | +46.6% |
-| ACUMULAR | 4w | 1990 | 18 | -0.1% | -0.2% | +5.3% | -0.08 | +47.0% |
-| ACUMULAR | 13w | 1977 | 18 | +0.0% | -0.7% | +11.3% | 0.00 | +44.6% |
-| ACUMULAR | 26w | 1958 | 18 | +0.0% | -1.3% | +15.7% | 0.01 | +45.8% |
+| COMPRA | 4w | 1180 | 18 | +1.1% | -0.2% | +10.3% | 0.46 | +48.1% |
+| COMPRA | 13w | 1145 | 18 | +2.4% | -0.1% | +22.6% | 0.45 | +49.4% |
+| COMPRA | 26w | 1123 | 18 | +4.6% | -0.8% | +41.2% | 0.47 | +46.7% |
+| ACUMULAR | 4w | 1986 | 18 | -0.1% | -0.2% | +5.3% | -0.07 | +47.1% |
+| ACUMULAR | 13w | 1973 | 18 | +0.0% | -0.7% | +11.3% | 0.01 | +44.6% |
+| ACUMULAR | 26w | 1954 | 18 | +0.0% | -1.2% | +15.7% | 0.01 | +45.9% |
 | ROT. TEMPRANA | 4w | 53 | 15 | -1.2% | -0.6% | +5.4% | -0.88 | +43.4% |
 | ROT. TEMPRANA | 13w | 47 | 15 | +2.6% | +2.2% | +7.1% | 1.40 | +63.8% |
 | ROT. TEMPRANA | 26w | 45 | 14 | +3.8% | +3.5% | +8.8% | 1.64 | +68.9% |
-| VIGILAR | 4w | 9575 | 19 | +0.1% | -0.1% | +5.5% | 0.08 | +48.6% |
-| VIGILAR | 13w | 9491 | 19 | +0.4% | -0.3% | +12.7% | 0.14 | +47.7% |
-| VIGILAR | 26w | 9337 | 19 | +1.2% | -0.4% | +24.5% | 0.21 | +48.1% |
+| VIGILAR | 4w | 9580 | 19 | +0.1% | -0.1% | +5.5% | 0.08 | +48.6% |
+| VIGILAR | 13w | 9496 | 19 | +0.4% | -0.3% | +12.7% | 0.14 | +47.7% |
+| VIGILAR | 26w | 9342 | 19 | +1.2% | -0.4% | +24.5% | 0.21 | +48.1% |
 | IGNORAR | 4w | 6211 | 19 | +0.1% | +0.0% | +6.1% | 0.04 | +50.1% |
 | IGNORAR | 13w | 6178 | 19 | +0.4% | +0.1% | +11.6% | 0.15 | +50.2% |
 | IGNORAR | 26w | 6128 | 19 | +0.8% | -0.5% | +18.3% | 0.18 | +48.2% |
@@ -66,7 +66,7 @@
 |---------|-------|------------|------|--------|
 | Bull Pleno | 246 | +9.8% | +61.4% | 0.54 |
 | Bull Maduro | 695 | +1.3% | +48.8% | 0.31 |
-| Transición | 197 | -2.5% | +38.6% | -0.96 |
+| Transición | 196 | -2.4% | +38.8% | -0.95 |
 | Risk-OFF | 8 | -8.9% | +0.0% | -4.58 |
 
 ### Modo B
@@ -88,7 +88,7 @@
 | Commodities | 298 | +1.4% | +45.3% | 0.17 |
 | Value/Cyclical | 430 | +0.9% | +50.0% | 0.26 |
 | Small/EM | 69 | +0.1% | +53.6% | 0.01 |
-| Defensive | 144 | -2.6% | +38.2% | -0.79 |
+| Defensive | 143 | -2.6% | +38.5% | -0.77 |
 | Duration | 28 | -3.9% | +35.7% | -0.40 |
 
 ### Modo B
@@ -129,7 +129,7 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 | 2018-12-28 | Transición → Risk-OFF | no | -1.9% | -6.0% | -5.0% |
 | 2022-11-11 | Transición → Risk-OFF | no | +2.0% | -7.8% | -5.4% |
 | 2023-02-10 | Transición → Risk-OFF | no | +1.1% | +2.6% | -9.1% |
-| 2023-08-11 | Transición → Risk-OFF | no | -7.4% | -6.2% | -16.1% |
+| 2023-07-07 | Transición → Risk-OFF | no | +1.7% | -5.5% | -5.2% |
 | 2008-09-26 | Transición → Risk-OFF | no | +10.1% | +20.2% | +18.7% |
 | 2018-12-28 | Transición → Risk-OFF | no | -1.9% | -6.0% | -5.0% |
 | 2022-11-11 | Transición → Risk-OFF | no | +2.0% | -7.8% | -5.4% |
@@ -140,18 +140,18 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 | 2024-07-26 | Transición → Risk-OFF | no | +1.3% | -7.4% | -16.8% |
 | 2025-10-10 | Transición → Risk-OFF | no | -3.5% | +2.6% | +3.9% |
 
-**Alpha 13w basket completo:** -1.2%  n=14
-**Alpha 13w regimen deflacionario:** -1.2%  n=14
+**Alpha 13w basket completo:** -1.1%  n=14
+**Alpha 13w regimen deflacionario:** -1.1%  n=14
 **Alpha 13w regimen inflacionario:** —  n=0
-**Falsos positivos (basket underperforma SPY en 4w):** 5/14 (36%)
+**Falsos positivos (basket underperforma SPY en 4w):** 4/14 (29%)
 
 ---
 
 ## Sección 6 — Modo A vs Modo B (2023-04-18 en adelante)
 
-- COMPRA: Modo A α13w=-0.0%  Modo B α13w=-4.3%  nA=190  nB=110
-- ACUMULAR: Modo A α13w=-1.8%  Modo B α13w=-1.8%  nA=310  nB=271
-- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.6%  nA=2310  nB=2406
+- COMPRA: Modo A α13w=+0.0%  Modo B α13w=-4.3%  nA=189  nB=110
+- ACUMULAR: Modo A α13w=-1.7%  Modo B α13w=-1.8%  nA=306  nB=271
+- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.6%  nA=2315  nB=2406
 
 ---
 
@@ -172,5 +172,5 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **14**
 
 **¿ROT. TEMPRANA adelanta?**  DEBIL — solo 44% convergen.
 
-**¿El framework detecta crisis?**  NO — alpha medio negativo (-1.2% a 13w en transiciones).
+**¿El framework detecta crisis?**  NO — alpha medio negativo (-1.1% a 13w en transiciones).
 

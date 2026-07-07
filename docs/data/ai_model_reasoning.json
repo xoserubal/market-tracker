@@ -1,6 +1,6 @@
 {
   "date": "2026-07-07",
-  "run_id": "2026-07-07_1054",
+  "run_id": "2026-07-07_2121",
   "candidates": [
     "SLS",
     "OSCR",
@@ -27,77 +27,172 @@
     "GS",
     "DHR",
     "BBAR",
-    "AFM.V",
-    "CORZ",
     "WCP.TO",
-    "VAL"
+    "VAL",
+    "CORZ"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 90,
+      "quality_score": 96,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving regime with macro score 75 supports selective leadership, but extreme healthcare_special concentration at 64.5 percent argues against new additions.",
-        "risk_posture": "cautious",
-        "should_select_picks": false
+        "market_read": "Bull Maduro regime with improving macro delta of 14.17 supports selective leadership in low-concentration themes.",
+        "risk_posture": "normal",
+        "should_select_picks": true
       },
-      "selected": [],
-      "watch": [
+      "selected": [
         {
           "ticker": "SE",
-          "reason": "PCS 78.5 and dems 18 with outperform_d10=8 and no spike_flag show strong daily breadth in low-concentration china_em theme, but only 2-week streak prevents CONFIRMED_FLOW_LEADERS entry now.",
-          "watch_trigger": "Streak_weeks reaching 4 with rot_score sustained at 7 or higher"
-        },
+          "portfolio": "CONFIRMED_FLOW_LEADERS",
+          "signal_type": "confirmed_leader",
+          "confidence": "high",
+          "reason_short": "78.5 PCS, rot_score 7, dems 18, low theme concentration.",
+          "reason_full": "SE reaches 78.5 PCS above 78 threshold for CONFIRMED_FLOW_LEADERS with 17.5 percent 4w RS, 12.8 percent 13w RS, rot_score 7, and dems 18 plus momentum_accel true, confirming early institutional flow in china_em theme carrying only low concentration risk versus 64.5 percent healthcare_special exposure.",
+          "comparative_edge": "Selected over LLY (PCS 78.8) and VRTX (PCS 77.8) because china_em theme concentration risk is low compared to already-high healthcare_largecap weight at 24.5 percent, and dems 18 exceeds both peers.",
+          "key_supporting_factors": [
+            "dems 18 with acceleration true exceeds healthcare peers like LLY at 9.",
+            "china_em theme risk low allows addition without increasing sector concentration above 64 percent.",
+            "ret_5d_vs_spy 11.23 percent and outperform_d10 8 confirm sustained daily breadth.",
+            "konc_w_state up provides structural confirmation absent in several healthcare names."
+          ],
+          "key_risks_or_contradictions": [
+            "streak_weeks only 2 is shorter than many active 8-week positions.",
+            "dist_52w_high -47.32 percent indicates material drawdown from peak.",
+            "theme_exposure low but macro improvement must persist for continuation."
+          ]
+        }
+      ],
+      "watch": [
         {
           "ticker": "LLY",
-          "reason": "PCS 78.8 and rot_score 8 with 2-week streak provide solid weekly leadership, but distribution_warning on konc_3d_state and high healthcare_largecap concentration risk warrant waiting.",
-          "watch_trigger": "Konc_3d_state shifting to up and healthcare allocation below 50 percent"
+          "reason": "PCS 78.8 qualifies but healthcare_largecap concentration already high at 24.5 percent and extension_risk medium with Koncorde mixed.",
+          "watch_trigger": "Any reduction in healthcare weight below 20 percent or rot_score increase above 9."
         },
         {
           "ticker": "VRTX",
-          "reason": "PCS 77.8 with rot_score 8 and outperform_d10=8, but extreme extension_risk and only 2-week streak keep it sidelined.",
-          "watch_trigger": "Extension_points dropping below 3 with streak extending to 4 weeks"
+          "reason": "PCS 77.8 and rot 8 qualify but extreme extension_risk 6 points plus healthcare_largecap concentration risk high.",
+          "watch_trigger": "Extension points drop below 3 and dems exceed 12 with no spike."
         },
         {
           "ticker": "JNJ",
-          "reason": "PCS 72.2 crossed EARLY_ROTATION threshold with rot_score 7 and dems 9, but healthcare_largecap concentration already high.",
-          "watch_trigger": "Healthcare allocation declining below 55 percent with consistent rot_score above 7"
-        },
-        {
-          "ticker": "QQQ",
-          "reason": "PCS 70.2 with low theme risk and bullish Koncorde alignment, yet only 1-week streak and negative ret_4w_vs_spy limit conviction.",
-          "watch_trigger": "Streak_weeks reaching 3 with positive ret_4w_vs_spy"
-        },
-        {
-          "ticker": "MRK",
-          "reason": "PCS 68.2 with rot_score 7 and dems 9 in healthcare_largecap, but pcs below CONFIRMED threshold and high sector concentration.",
-          "watch_trigger": "PCS crossing 75 with streak_weeks at 4 or more"
-        },
-        {
-          "ticker": "TSLA",
-          "reason": "PCS 67.5 with dems 11 and momentum_accel true, but only 1-week streak and medium extension_risk in already-weighted us_tech_ai.",
-          "watch_trigger": "Streak_weeks reaching 3 with rot_score at 7"
-        },
-        {
-          "ticker": "GS",
-          "reason": "PCS 65.2 crossed MACRO_THEMATIC threshold with 8-week streak, but us_cyclical exposure already at 18 percent and dems only 3.",
-          "watch_trigger": "Dems rising above 8 with theme_concentration_risk falling to low"
-        },
-        {
-          "ticker": "DHR",
-          "reason": "PCS 63.0 signal upgrade but rot_score 6 with negative ret_13w_vs_spy and high healthcare_largecap concentration.",
-          "watch_trigger": "Rot_score reaching 8 with positive ret_13w_vs_spy"
-        },
-        {
-          "ticker": "BBAR",
-          "reason": "PCS 62.8 with 7-week streak and rot_score 7, but argentina theme shows weak macro fit and spike_flag present.",
-          "watch_trigger": "PCS above 68 with no spike_flag and macro_delta positive"
+          "reason": "PCS 72.2 in EARLY_ROTATION range but healthcare_largecap concentration already elevated and dems only 9.",
+          "watch_trigger": "PCS rises above 75 with streak_weeks reaching 4."
         }
       ],
       "rejected": [
         {
+          "ticker": "GS",
+          "reason": "PCS 65.2 meets MACRO_THEMATIC threshold but us_cyclical theme already medium concentration and dems only 3 with spike_flag true.",
+          "rejection_category": "weak_flow"
+        },
+        {
           "ticker": "SASK.V",
-          "reason": "PCS 73.0 with 5-week streak but negative ret_4w_vs_spy and distribution_warning on both daily and 3D Koncorde.",
+          "reason": "PCS 73.0 in EARLY range but ret_4w_vs_spy negative and streak_weeks only 5 with uranium theme low conviction.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "PCS 27 far below all portfolio thresholds with zero streak and negative relative returns.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "VAL",
+          "reason": "PCS 27 and 39.8% 13w underperformance vs SPY show no leadership.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "CORZ",
+          "reason": "PCS 49.5 with negative 4w returns and distribution Koncorde alignment.",
+          "rejection_category": "insufficient_conviction"
+        }
+      ]
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 97,
+      "decision_summary": {
+        "market_read": "Bull Maduro regime with macro score 85.4 and improving trend (+14.17 delta); healthcare leaders dominate PCS rankings with multiple 8-week streaks intact.",
+        "risk_posture": "normal",
+        "should_select_picks": true
+      },
+      "selected": [
+        {
+          "ticker": "SE",
+          "portfolio": "MIMO_SHADOW",
+          "signal_type": "early_rotation",
+          "confidence": "medium",
+          "reason_short": "Dems 18 with acceleration, 8-day breadth, china_em diversification",
+          "reason_full": "SE posts dems=18 with momentum_accel=true and outperform_d10=8, the strongest daily signal among all non-open eligible candidates. The china_em theme carries zero current MIMO_SHADOW exposure, providing critical diversification from 64.5% healthcare concentration. Konc_3d_state is distribution acknowledged, but the explosive 11.2% 5d outperformance with no spike flag and PCS 78.5≥68 justifies entry.",
+          "comparative_edge": "Over OSCR (PCS=84): dems=18 vs 7, no spike vs spike_flag=true, china_em diversification vs healthcare 64.5% concentration.",
+          "key_supporting_factors": [
+            "Daily momentum score of 18 with acceleration confirmed is the highest among all non-open eligible candidates.",
+            "Outperform_d10=8 with no spike_flag confirms broad-based multi-day institutional flow over eight consecutive days.",
+            "china_em theme carries zero current MIMO_SHADOW weight, providing critical diversification from healthcare at 64.5%.",
+            "PCS 78.5 with ret_4w of 17.5% and ret_13w of 12.8% shows both short and medium-term relative strength building."
+          ],
+          "key_risks_or_contradictions": [
+            "Koncorde 3D state is distribution with konc_alignment=distribution_warning, suggesting potential profit-taking.",
+            "Streak_weeks is only 2, meaning the weekly trend is still early and vulnerable if daily momentum fades.",
+            "SE is 47.3% below its 52-week high, implying significant overhead resistance despite recent outperformance.",
+            "vol_5d_20d at 1.45 indicates elevated recent volatility that could produce sharp pullbacks."
+          ]
+        }
+      ],
+      "watch": [
+        {
+          "ticker": "OSCR",
+          "reason": "PCS=84 with rot=9 and 8-week streak are compelling, but extension_risk high (5 pts), spike_flag=true, dems=7 below threshold, and healthcare_special already 64.5% of portfolio block selection.",
+          "watch_trigger": "dems rising above 10, extension_risk declining to medium, or healthcare concentration dropping below 50%."
+        },
+        {
+          "ticker": "LLY",
+          "reason": "PCS=78.8 with rot=8 and dems=9 near threshold, but streak_weeks only 2, konc_3d_state=distribution, and healthcare_largecap at high concentration.",
+          "watch_trigger": "streak extending to 3+ weeks with dems above 10 and konc_3d transitioning out of distribution."
+        },
+        {
+          "ticker": "URI",
+          "reason": "Strong 7-week streak with 35.7% 13w outperformance, but dems=3 is critically weak and konc_3d=distribution_warning limits entry confidence.",
+          "watch_trigger": "dems rising above 10 with outperform_d10 improving above 6 days."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "VRTX",
+          "reason": "Extension_risk extreme (6 pts) with spike_flag=true, dist_sma20_atr_extreme, and streak_weeks only 2 despite PCS=77.8 and konc bullish.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "JNJ",
+          "reason": "13-week outperformance is negative at -7.5% vs SPY with spike_flag=true and high extension risk at 5 points despite recent 4w bounce.",
           "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "SASK.V",
+          "reason": "Dems=4 critically weak with negative 4w outperformance (-4.4%), konc_3d_state=distribution, and no acceleration despite PCS=73.0.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "MRK",
+          "reason": "13-week outperformance is negative at -9.2% vs SPY with rs_neutral flag; PCS=68.2 barely above MIMO threshold with limited conviction.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "QQQ",
+          "reason": "Broad market ETF with dems=4, streak_weeks=1, rot_score=6; insufficient daily and weekly conviction at PCS=70.2.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "TSLA",
+          "reason": "PCS=67.5 falls below MIMO_SHADOW minimum entry of 68; dems=4, streak_weeks=1, and konc_3d_state=distribution.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "GS",
+          "reason": "PCS=65.2 falls below MIMO_SHADOW minimum entry threshold of 68 with dems=9 but only medium extension and moderate theme flow.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "DHR",
+          "reason": "PCS=63.0 falls below MIMO_SHADOW minimum entry threshold of 68; signal recently upgraded from IGNORAR with no established weekly trend.",
+          "rejection_category": "insufficient_conviction"
         }
       ]
     }
