@@ -1,157 +1,276 @@
 {
-  "run_id": "2026-07-08_1014",
+  "run_id": "2026-07-08_2104",
   "model": "x-ai/grok-4.3",
   "date": "2026-07-08",
   "summary": {
     "date": "2026-07-08",
-    "run_id": "2026-07-08_1014",
+    "run_id": "2026-07-08_2104",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 18,
-    "candidate_count": 28,
-    "input_tokens": 47217,
-    "output_tokens": 2347,
-    "cost_usd": 0.064889,
-    "latency_ms": 29944.0,
+    "candidate_count": 27,
+    "input_tokens": 44823,
+    "output_tokens": 5364,
+    "cost_usd": 0.069439,
+    "latency_ms": 40582.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 78,
+    "quality_score": 92,
     "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 0,
+    "watch_count": 11,
+    "rejected_count": 13,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": []
+    "soft_warnings": [
+      "hold_below_floor: VAL has pcs=30.0 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: WCP.TO has pcs=35.0 (<62) but action=HOLD — should EXIT"
+    ]
   },
-  "quality_score": 78,
+  "quality_score": 92,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-07-08_1014",
+    "run_id": "2026-07-08_2104",
     "date": "2026-07-08",
     "decision_summary": {
-      "market_read": "Bull Maduro Improving regime offers macro support but no candidates meet selection thresholds.",
-      "risk_posture": "defensive",
+      "market_read": "Bull Maduro Improving regime with broad macro support but extreme healthcare theme concentration at 94.5% combined.",
+      "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
-    "watch": [],
-    "rejected": [],
+    "watch": [
+      {
+        "ticker": "VRTX",
+        "reason": "PCS 77.8 with 8-week streak, bullish Koncorde alignment, and 6 outperform_d10 but extreme healthcare_largecap concentration already 30%.",
+        "watch_trigger": "PCS sustained above 78 with rot_score increase to 9 and reduced theme weight via exits"
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS 72.5 with 5-week streak and rot 7 but uranium theme new and macro improving delta noted; extension medium.",
+        "watch_trigger": "streak_weeks reach 7 with ret_13w_vs_spy above 20%"
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "PCS 69.2 with ret_4w_vs_spy 18.1 but high extension risk 4 points, spike_flag, and healthcare_largecap concentration.",
+        "watch_trigger": "ret_5d_vs_spy turn positive for 3 days and extension_risk drop to low"
+      },
+      {
+        "ticker": "NUE",
+        "reason": "PCS 68.8 yet ret_4w_vs_spy negative -12.1 and streak_weeks 0 with dems only 3.",
+        "watch_trigger": "streak_weeks reach 3 and dems exceed 8"
+      },
+      {
+        "ticker": "MRK",
+        "reason": "PCS 68.2 with ret_13w_vs_spy negative and only 3-week streak; low individual_rs at 11.",
+        "watch_trigger": "ret_13w_vs_spy turn positive above 5%"
+      },
+      {
+        "ticker": "REG",
+        "reason": "PCS 67.2 with mixed Koncorde alignment, negative ret_13w_vs_spy, streak only 3 weeks.",
+        "watch_trigger": "streak_weeks reach 5 and ret_13w_vs_spy exceed 5%"
+      },
+      {
+        "ticker": "AFM.V",
+        "reason": "PCS 65.8 with rot_score 9 and 5-week streak but theme_poor flag and silver_gold_miners weak macro fit.",
+        "watch_trigger": "ret_13w_vs_spy exceed 20% and theme_concentration_risk remain low"
+      },
+      {
+        "ticker": "GS",
+        "reason": "PCS 64.8 with streak_weeks 0, negative ret_4w_vs_spy, and spike_flag plus dems only 2.",
+        "watch_trigger": "streak_weeks reach 3 and ret_4w_vs_spy exceed 5%"
+      },
+      {
+        "ticker": "BBAR",
+        "reason": "PCS 63.5 with 7-week streak but argentina theme macro risk and distribution_warning Koncorde.",
+        "watch_trigger": "ret_13w_vs_spy exceed 20% without spike_flag"
+      },
+      {
+        "ticker": "DHR",
+        "reason": "PCS 63.0 with VIGILAR signal, ret_13w_vs_spy negative, streak only 1 week.",
+        "watch_trigger": "streak_weeks reach 3 and rot_score to 8"
+      },
+      {
+        "ticker": "SE",
+        "reason": "Open position with current PCS 62.5 below 68 threshold, distribution_warning Koncorde, high china_em volatility.",
+        "watch_trigger": "current_pcs recover above 68 with dems sustained above 14"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "HIMS",
+        "reason": "Already open position in CONFIRMED_FLOW_LEADERS; Koncorde 3D distribution plus extreme extension and theme concentration 64.5%.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "SLS",
+        "reason": "Already open position; high healthcare_special concentration and extension_risk high with momentum_decay flag.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "Already open position with current PCS 84.0; healthcare_special concentration extreme.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "Already open position; healthcare_largecap concentration 30%.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Already open position; healthcare_largecap concentration risk.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "CVS",
+        "reason": "Already open position; healthcare_largecap already 30% weight.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "ABBV",
+        "reason": "Already open position; healthcare_largecap concentration high.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "ROOT",
+        "reason": "Already open position; healthcare_special concentration extreme at 64.5%.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "LLY",
+        "reason": "Already open position; healthcare_largecap concentration 30%.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "Already open position; healthcare_special concentration extreme.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "CAT",
+        "reason": "Already open position; us_cyclical coverage sufficient.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "AMD",
+        "reason": "Already open position; us_tech_ai coverage met.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "EQR",
+        "reason": "Already open position; reits exposure adequate.",
+        "rejection_category": "better_alternative_available"
+      }
+    ],
     "open_picks_review": [
       {
         "ticker": "OSCR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 84.0 exceeds threshold with rot_score 9 and streak 8 weeks."
+        "reason": "Current PCS 84.0 exceeds 75 entry, streak 8 weeks intact."
       },
       {
         "ticker": "TDOC",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 76.5 exceeds threshold with streak 8 weeks intact."
+        "reason": "Current PCS 76.5 above 75, streak 8 weeks sustained."
       },
       {
         "ticker": "HIMS",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 84.5 exceeds threshold with rot_score 9 and streak 7 weeks."
-      },
-      {
-        "ticker": "URI",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "EXIT",
-        "reason": "Current PCS 72.8 below 75 entry and streak 0 weeks."
+        "reason": "Current PCS 84.5 high, rot 9 and 7-week streak."
       },
       {
         "ticker": "ROOT",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 79.5 exceeds threshold with streak 3 weeks."
-      },
-      {
-        "ticker": "SE",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "EXIT",
-        "reason": "Current PCS 62.5 below 62 floor."
-      },
-      {
-        "ticker": "NBIS",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current PCS 61.5 below 62 floor."
+        "reason": "Current PCS 79.5 above 75, dems 17 prior."
       },
       {
         "ticker": "CAT",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 73.5 exceeds threshold with streak 8 weeks."
+        "reason": "Current PCS 73.5 above 68, streak 8 weeks."
       },
       {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 72.5 exceeds threshold with streak 8 weeks."
+        "reason": "Current PCS 72.5 above 68, streak 8 weeks."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.0 exceeds threshold with streak 8 weeks."
+        "reason": "Current PCS 81.0 above 68, streak 8 weeks."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 84.2 exceeds threshold with streak 8 weeks."
+        "reason": "Current PCS 84.2 above 68, streak 8 weeks."
       },
       {
         "ticker": "UNH",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 84.0 exceeds threshold with streak 8 weeks."
+        "reason": "Current PCS 84.0 above 68, streak 8 weeks."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.0 exceeds threshold with streak 8 weeks."
+        "reason": "Current PCS 81.0 above 68, streak 8 weeks."
       },
       {
         "ticker": "EQR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 70.8 exceeds threshold with streak 3 weeks."
+        "reason": "Current PCS 70.8 above 68, dems 9."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 80.2 exceeds threshold with streak 3 weeks."
+        "reason": "Current PCS 80.2 above 68, rot 9."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 62.5, streak 2; no exit criteria met."
+      },
+      {
+        "ticker": "LLY",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 78.2 above 68, Koncorde bullish_aligned."
       },
       {
         "ticker": "VAL",
         "portfolio": "MIRROR_ESPEJO",
-        "action": "EXIT",
-        "reason": "Current PCS 30.0 and rot_score 1.0 trigger exit."
+        "action": "HOLD",
+        "reason": "Mirror daily blue crossed positive; no PCS threshold applies."
       },
       {
         "ticker": "AMR",
         "portfolio": "MIRROR_ESPEJO",
         "action": "EXIT",
-        "reason": "left_universe true requires mandatory exit."
+        "reason": "left_universe=true, exit mandatory."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIRROR_ESPEJO",
-        "action": "EXIT",
-        "reason": "Current PCS 35.0 and rot_score 2.0 trigger exit."
+        "action": "HOLD",
+        "reason": "Mirror daily blue positive; streak 0 acceptable for mirror."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-07-08\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-08_1014\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime improving with +14.17 macro delta but many healthcare candidates show Koncorde distribution_warning and high extension_risk.\",\n    \"risk_posture\": \"cautious\",\n    \"should"
+  "raw_response_head": "{\n  \"date\": \"2026-07-08\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-08_2104\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with broad macro support but extreme healthcare theme concentration at 94.5% combined.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"PCS 77.8 with 8-week streak, bullish Koncorde alignment, and 6 outperform_d10 but extreme healthcare_largecap concentration already 30%.\",\n      \"watch_trigger\": \"PCS sustained above 78 with rot_score increase to 9 and reduced theme weight via exits\"\n    },\n    {\n      \"ticker\": \"SASK.V\",\n      \"reason\": \"PCS 72.5 with 5-week streak and rot 7 but uranium theme new and macro improving delta noted; extension medium.\",\n      \"watch_trigger\": \"streak_weeks reach 7 with ret_13w_vs_spy above 20%\"\n    },\n    {\n      \"ticker\": \"JNJ\",\n      \"reason\": \"PCS 69.2 with ret_4w_vs_spy 18.1 but high extension risk 4 points, spike_flag, and healthcare_largecap concentration.\",\n      \"watch_trigger\": \"ret_5d_vs_spy turn positive for 3 days and extension_risk drop to low\"\n    },\n    {\n      \"ticker\": \"NUE\",\n      \"reason\": \"PCS 68.8 yet ret_4w_vs_spy negative -12.1 and streak_weeks 0 with dems only 3.\",\n      \"watch_trigger\": \"streak_weeks reach 3 and dems exceed 8\"\n    },\n    {\n      \"ticker\": \"MRK\",\n      \"reason\": \"PCS 68.2 with ret_13w_vs_spy negative and only 3-week streak; low individual_rs at 11.\",\n      \"watch_trigger\": \"ret_13w_vs_spy turn positive above 5%\"\n    },\n    {\n      \"ticker\": \"REG\",\n      \"reason\": \"PCS 67.2 with mixed Koncorde alignment, negative ret_13w_vs_spy, streak only 3 weeks.\",\n      \"watch_trigger\": \"streak_weeks reach 5 and ret_13w_vs_spy exceed 5%\"\n    },\n    {\n      \"ticker\": \"AFM.V\",\n      \"reason\": \"PCS 65.8 with rot_score 9 and 5-week streak but theme_poor flag and silver_gold_miners weak macro fit.\",\n      \"watch_trigger\": \"ret_13w_vs_spy exceed 20% and theme_co"
 }
