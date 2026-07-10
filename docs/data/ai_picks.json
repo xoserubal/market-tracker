@@ -2670,51 +2670,51 @@
   },
   "last_ai_review": {
     "date": "2026-07-10",
-    "market_read": "Bull Maduro stable macro regime but healthcare sector showing widespread PCS deterioration with 12 names crossing down, signaling rotation pressure on the portfolio's dominant 100% healthcare concentration.",
+    "market_read": "Macro regime is Bull Maduro Stable at 71.25 with zero weekly or monthly delta, but MIMO_SHADOW portfolio is 100% healthcare-concentrated with multiple Koncorde distribution warnings, limiting the attractiveness of adding more positions.",
     "risk_posture": "cautious",
     "should_select": false,
     "watch": [
       {
+        "ticker": "SASK.V",
+        "reason": "PCS 80 with rot=8 and 5-week streak delivering 15.6% 4w and 19% 13w outperformance vs SPY in uranium_nuclear — the only high-PCS non-healthcare diversifier available. However, Koncorde shows distribution across all three timeframes (3D, daily, weekly) and spike_flag=true with dems only 5, preventing a confident entry despite strong weekly metrics.",
+        "watch_trigger": "Select if konc_3d_state shifts from distribution to up or accumulation, AND spike_flag resolves with 3+ consecutive days of outperformance (streak_days >= 3)."
+      },
+      {
         "ticker": "URI",
-        "reason": "7-week streak with 31.9% 13w outperformance in us_cyclical is the best non-healthcare diversifier available, but dems=4, ret_4w=-1.5%, and konc_alignment=distribution_warning indicate fading near-term momentum that prevents conviction.",
-        "watch_trigger": "dems rising above 10 with positive ret_4w_vs_spy would confirm daily momentum aligning with the strong weekly trend, making this a SELECT for us_cyclical diversification."
+        "reason": "7-week weekly streak with 31.9% 13w outperformance vs SPY in us_cyclical provides needed diversification from 100% healthcare exposure. But 4w outperformance is negative at -1.5% and dems=4 indicates the recent daily momentum has faded, making entry premature despite the strong longer-term streak.",
+        "watch_trigger": "Select if ret_4w_vs_spy turns positive AND dems rises above 10, confirming the weekly streak is reaccelerating rather than coasting on prior strength."
       },
       {
         "ticker": "TSLA",
-        "reason": "Massive PCS jump from 49.2 to 70.5 with rot_score doubling from 3 to 7 signals early thematic re-rating in us_tech_ai, but only 1-week streak, ret_4w=-2.5%, dems=7 below threshold, and konc_3d=distribution prevent entry.",
-        "watch_trigger": "Signal upgrade to EN_RADAR plus streak building to 3+ weeks with positive ret_4w and dems above 10 would confirm the rotation is sustainable enough for MIMO_SHADOW entry."
+        "reason": "Rotation score jumped from 3 to 7 this week with dems=10 and momentum_accel=true, suggesting early institutional interest. But signal is still VIGILAR (not EN_RADAR), streak is only 1 week, and spike_flag=true means the move may not have multi-day breadth. PCS jumped from 49.2 to 70.5 in one week — aggressive but unconfirmed.",
+        "watch_trigger": "Select if signal upgrades to EN_RADAR AND streak_weeks reaches 3+ AND spike_flag resolves with outperform_d10 >= 6 confirming multi-day breadth."
       }
     ],
     "rejected": [
       {
-        "ticker": "SASK.V",
-        "reason": "PCS 80.0 with rot=8 and 5-week streak looks attractive, but konc_alignment=distribution_warning across 3D and weekly timeframes combined with spike_flag=true and dems=5 suggests the 15.6% 4w move is distributional rather than accumulative.",
-        "rejection_category": "technical_overextension"
-      },
-      {
         "ticker": "VRTX",
-        "reason": "13-week outperformance of only +0.36% vs SPY is essentially flat despite rot=8 and 2-week streak; healthcare_largecap is already 30% of portfolio weight so this adds zero diversification with weak relative strength.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS 71.2 with rot=8 and bullish-aligned Koncorde, but adding a healthcare_largecap name when MIMO_SHADOW is already 100% healthcare-concentrated (70% healthcare_special + 30% healthcare_largecap) would amplify sector rotation risk to unacceptable levels. ret_13w_vs_spy of only 0.36% also lags far behind peers like HUM at 89.5%.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "NBIS",
-        "reason": "Signal is IGNORAR with rot=4, zero weekly streak, dems=3, and ret_4w=-2.8%; every metric falls below minimum conviction thresholds for any portfolio entry.",
+        "reason": "PCS 70.5 with signal still at IGNORAR and rot=4, indicating the system does not recognize this as actionable. Zero streak weeks and ret_4w_vs_spy of -2.8% confirm no weekly leadership is established. 13w outperformance of 61.5% is legacy strength, not current momentum.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "GS",
-        "reason": "8-week streak but 13w outperformance of only 5.1% vs SPY is far below existing holdings like AMD at 124%, ret_4w=-0.9% shows weakening trend, and spike_flag=true with dems=4 provides no daily confirmation.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS 64.2 is below the MIMO_SHADOW minimum entry threshold of 68.0. Additionally, ret_4w_vs_spy is negative at -0.9%, dems=3 shows negligible daily flow, and spike_flag=true on an already weak signal provides no edge over existing us_cyclical exposure via CAT (PCS 64.5, streak=8).",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "MRK",
-        "reason": "13-week outperformance is negative at -9.2% vs SPY despite rot=8, meaning the ticker lags the benchmark on the timeframe that matters most; 3-week streak is too thin to overcome the structural underperformance.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS 63.8 falls below the MIMO_SHADOW minimum entry of 68.0, and ret_13w_vs_spy is negative at -9.2%, meaning it has underperformed SPY over the full quarter despite a 3-week recent streak. Adding to healthcare_largecap at 30% weight would worsen the existing concentration problem.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "JNJ",
-        "reason": "13-week outperformance is negative at -3.5% vs SPY with only 3-week streak and spike_flag=true; healthcare_largecap already 30% of portfolio with high concentration risk, and this adds no diversification or strength.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS 63.2 is below the MIMO_SHADOW minimum entry of 68.0 with ret_13w_vs_spy of -3.5%, confirming longer-term underperformance. Rot=7 and 3-week streak are modest compared to existing healthcare_largecap holdings like ABBV (rot=10, 10.1% 4w) and UNH (8-week streak, 30.4% 13w).",
+        "rejection_category": "insufficient_conviction"
       }
     ]
   }
