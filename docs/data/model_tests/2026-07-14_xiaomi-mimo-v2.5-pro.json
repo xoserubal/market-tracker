@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-07-14_0955",
+  "run_id": "2026-07-14_2058",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-07-14",
   "summary": {
     "date": "2026-07-14",
-    "run_id": "2026-07-14_0955",
+    "run_id": "2026-07-14_2058",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
     "candidate_count": 27,
-    "input_tokens": 29646,
-    "output_tokens": 10052,
-    "cost_usd": 0.021641,
-    "latency_ms": 159985.0,
+    "input_tokens": 27915,
+    "output_tokens": 5991,
+    "cost_usd": 0.017355,
+    "latency_ms": 148828.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 89,
+    "quality_score": 90,
     "selected_count": 0,
-    "watch_count": 3,
-    "rejected_count": 4,
+    "watch_count": 1,
+    "rejected_count": 7,
     "fallback_used": false,
     "error": null
   },
@@ -29,148 +29,135 @@
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 89,
+  "quality_score": 90,
   "response": {
     "date": "2026-07-14",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-07-14_0955",
+    "run_id": "2026-07-14_2058",
     "decision_summary": {
-      "market_read": "Bull Maduro regime with improving macro (score 75, +3.75 weekly delta) supports momentum continuation, but MIMO_SHADOW is 83% concentrated in healthcare after exits and no new non-healthcare candidate clears the 68 PCS entry floor.",
+      "market_read": "Macro regime Bull Maduro Improving with strong +14.17 weekly delta, but broad-based PCS deterioration across tech, cyclical, and EM tickers signals sector rotation underway rather than uniform expansion.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
-        "ticker": "TMO",
-        "reason": "PCS 66.5 rising from 62.5 (crossed up) but still 1.5 points below the 68 entry floor. Rotation score 6 with 1-week streak and konc_bullish_aligned shows early accumulation, and ret_4w of +6.21% vs SPY confirms short-term leadership. However, ret_13w of -3.91% and dems=6 mean weekly confirmation and daily flow are both insufficient for immediate entry.",
-        "watch_trigger": "PCS crossing above 68 with streak_weeks >= 2 and ret_13w turning positive above 0%"
-      },
-      {
         "ticker": "CI",
-        "reason": "PCS 65.8 rising sharply from 58.2 with dems=14 (the strongest daily momentum score among sub-68 candidates) and konc_bullish_aligned. However, only 1-week streak, ret_4w of -0.60% vs SPY, and PCS 2.2 points below the 68 entry floor require further weekly confirmation before selection.",
-        "watch_trigger": "PCS crossing above 68 with streak_weeks >= 2 and positive 4-week outperformance vs SPY"
-      },
-      {
-        "ticker": "EQR",
-        "reason": "PCS 62.8 below the 68 entry threshold but offers unique diversification into reits (zero current MIMO_SHADOW exposure, low theme concentration risk). Rotation score 6 with 4-week streak, konc_bullish_aligned, and ret_13w of +4.67% vs SPY show positive weekly leadership, but dems=5 and PCS 5.2 points below floor require patience.",
-        "watch_trigger": "PCS crossing above 68 with rotation score improving to 7+ and dems rising above 10"
+        "reason": "CI shows the strongest emerging daily signal among sub-68 candidates with dems=14, no spike_flag, momentum_accel=true, and konc_alignment bullish_aligned. PCS rose from 58.2 to 65.8 this week, but remains below the MIMO_SHADOW entry threshold of 68. Ret_13w_vs_spy of +2.4% is modest and streak_weeks is only 1, insufficient for immediate entry at this PCS level.",
+        "watch_trigger": "SELECT if PCS crosses above 68 while maintaining dems >= 12 with no spike_flag and weekly streak extends to 2+ weeks."
       }
     ],
     "rejected": [
       {
         "ticker": "VRTX",
-        "reason": "PCS 69.8 barely clears the 68 minimum but ret_13w is negative at -0.46% vs SPY, dems=3 indicates negligible daily flow, and the -9.04% 5-day drawdown signals active selling. Konc_alignment=distribution_warning across both 3D and weekly timeframes, and healthcare_largecap theme is already at high concentration in the portfolio. Insufficient conviction to add a weak-position healthcare name when stronger alternatives like ABBV (PCS 77.8, rot=9, 4-week streak) already exist in the portfolio.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "PCS=69.8 is above min_entry but 13-week outperformance is negative at -0.5%, 5-day return is -9.35% showing sharp recent weakness, dems=3 is very low, and Koncorde alignment is distribution_warning. Weekly leadership is not established with only 3-week streak and rot=6.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "JNJ",
-        "reason": "PCS 68.0 sits exactly at the entry floor with ret_13w of -1.82% vs SPY (negative longer-term leadership), dems=4 indicating weak daily momentum, and konc_alignment=distribution_warning. While rot=7 and a 4-week streak show some institutional accumulation, negative 13-week outperformance does not justify adding to a portfolio already 83% concentrated in healthcare with stronger-held names like UNH (PCS 81, rot=8, 8-week streak) and CVS (PCS 81, rot=8, 8-week streak) in the same theme.",
+        "reason": "PCS=68.0 sits exactly at the min_entry threshold but 13-week outperformance is negative at -1.8%, dems=4 is weak, rs_neutral flag indicates no leadership, and Koncorde alignment is distribution_warning. The combination of negative 13w relative strength and weak daily momentum does not justify entry into an already healthcare-saturated portfolio.",
         "rejection_category": "insufficient_conviction"
       },
       {
+        "ticker": "TMO",
+        "reason": "PCS=66.5 is below MIMO_SHADOW min_entry of 68, 13-week outperformance is negative at -3.9%, extension risk is high at 5 points with dist_sma20_atr_high plus spike_flag plus rsi_high, and streak_weeks is only 1. Despite bullish-aligned Koncorde, the combination of sub-threshold PCS, negative 13w, and extreme extension flags make entry unjustifiable.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "URI",
+        "reason": "PCS=63.8 is below min_entry, streak_weeks=0 with rot=5, 4-week outperformance is negative at -0.8%, dems=3 is weak, Koncorde alignment is distribution_warning across both 3D and weekly timeframes, and signal is IGNORAR. Zero weekly momentum combined with distribution state provides no entry justification.",
+        "rejection_category": "weak_flow"
+      },
+      {
         "ticker": "NBIS",
-        "reason": "PCS 63.5 crossed down from 75.5 indicating sharp momentum deterioration, with rot=4 (moderate), zero weekly streak, ret_4w of -4.10% vs SPY, and konc_alignment=neutral. The us_tech_ai theme is flagged as weak and the portfolio already holds AMD (PCS 73, rot=8, 8-week streak) as a stronger tech leader. No compelling entry signal.",
+        "reason": "PCS=63.5 is below min_entry, streak_weeks=0 with rot=4, 4-week outperformance is negative at -4.1%, 10-day outperformance is deeply negative at -27.1%, dems=3, and Koncorde 3D state is distribution. The ai_cloud subtheme has low concentration but the signal quality is far below entry standards.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "EQR",
+        "reason": "PCS=62.8 is below min_entry, reits theme is flagged weak with only B_theme_flow=10, ret_13w_vs_spy is modest at +4.7% on a 4-week streak with rot=6, dems=4 is below 10 threshold for daily momentum. While Koncorde is bullish-aligned, the weak theme flow and sub-threshold PCS do not overcome the bar for a new healthcare-concentrated portfolio.",
         "rejection_category": "weak_flow"
       },
       {
         "ticker": "DHR",
-        "reason": "PCS 62.5 with rot=5 (moderate), zero weekly streak, and ret_13w of -4.76% vs SPY indicating negative longer-term leadership. Signal is IGNORAR with spike_flag=true on dems=5, meaning recent outperformance is concentrated in a single session. Healthcare_largecap theme is already at high concentration with 5 open positions.",
+        "reason": "PCS=62.5 is below min_entry, streak_weeks=0 with rot=5, 13-week outperformance is negative at -4.8%, signal is IGNORAR, and spike_flag=true on a negative 13w backdrop. Despite strong theme_flow (healthcare_largecap), the absence of weekly leadership and negative medium-term relative strength eliminate it from consideration.",
         "rejection_category": "weak_relative_strength"
       }
     ],
     "open_picks_review": [
       {
-        "ticker": "CAT",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current PCS 60.5 is below the absolute floor of 62, triggering mandatory exit despite 8-week streak and rot=7."
-      },
-      {
-        "ticker": "SE",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current PCS 59.8 is below the absolute floor of 62, triggering mandatory exit despite strong 30.69% 4-week outperformance."
-      },
-      {
-        "ticker": "URI",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current PCS 63.8 is below the 68 entry threshold and streak_weeks is 0 (<=1), triggering exit per rule (a) for deteriorated positions."
-      },
-      {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 73.0 with rot=8, 8-week streak, and 107.5% 13-week outperformance vs SPY maintains dominant tech leadership."
+        "reason": "PCS=73.0, rot=8, 8-week streak, +107% 13w outperformance — strongest sustained weekly leader; dems=10 with momentum_accel provides secondary daily confirmation."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 69.8 remains above 68 floor with rot=5 and 101.2% 13-week outperformance despite streak breaking to 0."
+        "reason": "PCS dropped from 76.2 to 69.8 and streak broke to 0, but PCS remains above 68 min_entry and rot=5 exceeds exit threshold of 2; monitor for streak recovery next week before reassessing."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.8 with rot=9, 8-week streak, and 154.6% 13-week outperformance despite konc_distribution_warning and high extension risk."
+        "reason": "PCS=81.8, rot=9, 8-week streak, +155% 13w outperformance — dominant weekly leader despite konc_distribution_warning and high extension risk (5 pts); weekly strength overrides near-term distribution signals."
       },
       {
         "ticker": "UNH",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.0 with rot=8, 8-week streak, and 31.3% 13-week outperformance; spike_flag noted but weekly metrics remain strong."
+        "reason": "PCS=81.0, rot=8, 8-week streak, +31% 13w outperformance, konc_bullish_aligned — stable confirmed leader with low extension risk; recent 5d weakness of -1.25% is noise within the trend."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.0 with rot=8, 8-week streak, and 24.1% 13-week outperformance; outperform_d10=6 confirms multi-day breadth."
+        "reason": "PCS=81.0, rot=8, 8-week streak, +24% 13w outperformance; konc_w_state distribution noted but 3D remains up and weekly leadership is intact across all exit thresholds."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 77.8 with rot=9, 4-week streak building, and 9.7% 13-week outperformance; konc_distribution_warning noted but weekly trend intact."
+        "reason": "PCS=77.8, rot=9, 4-week streak building, konc_3d_state distribution noted but weekly rot=9 with +9.7% 13w outperformance keeps it above all exit thresholds; watch for konc_3d shift."
       },
       {
         "ticker": "TDOC",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 76.5 with rot=7, 8-week streak, 78.7% 13-week outperformance, and 33.7% 4-week outperformance; extreme extension acknowledged but weekly leadership dominant."
+        "reason": "PCS=76.5, rot=7, 8-week streak, +79% 13w outperformance, konc_bullish_aligned with 3D up — extension risk high (4 pts) acknowledged but weekly leadership remains dominant."
       },
       {
         "ticker": "HIMS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.5 with rot=8, 8-week streak, and 66.4% 13-week outperformance; konc_distribution_warning noted but streak and PCS confirm sustained flow."
+        "reason": "PCS=81.5, rot=8, 8-week streak, +66% 13w outperformance; konc_distribution_warning acknowledged but weekly metrics are strong across all thresholds and streak is intact."
       },
       {
         "ticker": "ROOT",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 84.0 (highest in set) with rot=8, 4-week streak, and 31.1% 13-week outperformance; konc_bullish_aligned confirms structural accumulation."
+        "reason": "PCS=84.0 is the highest in the candidate set, rot=8, streak extended to 4 weeks from 2 at entry, +31% 13w outperformance, konc_bullish_aligned — signal strengthening since entry."
       },
       {
         "ticker": "LLY",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 72.8 with rot=6, 3-week streak building, and 15.5% 13-week outperformance; konc_distribution_warning but weekly trend is early and positive."
+        "reason": "PCS=72.8, rot=6, streak extended to 3 weeks from 2 at entry, +15% 13w outperformance; konc_3d_state distribution acknowledged but weekly streak is building and no exit thresholds are triggered."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.0 with rot=8, 8-week streak, 108.1% 13-week outperformance, and konc_bullish_aligned; spike_flag noted but weekly dominance intact."
+        "reason": "PCS=81.0, rot=8, 8-week streak, +108% 13w outperformance, konc_bullish_aligned — strongest risk-adjusted healthcare_special position with zero extension risk; dist_52w_high only -4.5%."
       },
       {
         "ticker": "SASK.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 80.0 with rot=9, 6-week streak, and 22.4% 13-week outperformance; konc_distribution_warning and spike_flag noted but rotation score justifies continuation."
+        "reason": "PCS=80.0, rot=9, 6-week streak, +22% 13w outperformance; konc_distribution_warning acknowledged with dems=13 spike_flag, but weekly leadership at rot=9 keeps it well above exit thresholds and provides critical uranium diversification."
       }
     ]
   },
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-07-14\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-14_0955\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with improving macro (score 75, +3.75 weekly delta) supports momentum continuation, but MIMO_SHADOW is 83% concentrated in healthcare after exits and no new non-healthcare candidate clears the 68 PCS entry floor.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"TMO\",\n      \"reason\": \"PCS 66.5 rising from 62.5 (crossed up) but still 1.5 points below the 68 entry floor. Rotation score 6 with 1-week streak and konc_bullish_aligned shows early accumulation, and ret_4w of +6.21% vs SPY confirms short-term leadership. However, ret_13w of -3.91% and dems=6 mean weekly confirmation and daily flow are both insufficient for immediate entry.\",\n      \"watch_trigger\": \"PCS crossing above 68 with streak_weeks >= 2 and ret_13w turning positive above 0%\"\n    },\n    {\n      \"ticker\": \"CI\",\n      \"reason\": \"PCS 65.8 rising sharply from 58.2 with dems=14 (the strongest daily momentum score among sub-68 candidates) and konc_bullish_aligned. However, only 1-week streak, ret_4w of -0.60% vs SPY, and PCS 2.2 points below the 68 entry floor require further weekly confirmation before selection.\",\n      \"watch_trigger\": \"PCS crossing above 68 with streak_weeks >= 2 and positive 4-week outperformance vs SPY\"\n    },\n    {\n      \"ticker\": \"EQR\",\n      \"reason\": \"PCS 62.8 below the 68 entry threshold but offers unique diversification into reits (zero current MIMO_SHADOW exposure, low theme concentration risk). Rotation score 6 with 4-week streak, konc_bullish_aligned, and ret_13w of +4.67% vs SPY show positive weekly leadership, but dems=5 and PCS 5.2 points below floor require patience.\",\n      \"watch_trigger\": \"PCS crossing above 68 with rotation score improving to 7+ and dems rising above 10\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"VRTX\",\n      \"r"
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-07-14\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-14_2058\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime Bull Maduro Improving with strong +14.17 weekly delta, but broad-based PCS deterioration across tech, cyclical, and EM tickers signals sector rotation underway rather than uniform expansion.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CI\",\n      \"reason\": \"CI shows the strongest emerging daily signal among sub-68 candidates with dems=14, no spike_flag, momentum_accel=true, and konc_alignment bullish_aligned. PCS rose from 58.2 to 65.8 this week, but remains below the MIMO_SHADOW entry threshold of 68. Ret_13w_vs_spy of +2.4% is modest and streak_weeks is only 1, insufficient for immediate entry at this PCS level.\",\n      \"watch_trigger\": \"SELECT if PCS crosses above 68 while maintaining dems >= 12 with no spike_flag and weekly streak extends to 2+ weeks.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"PCS=69.8 is above min_entry but 13-week outperformance is negative at -0.5%, 5-day return is -9.35% showing sharp recent weakness, dems=3 is very low, and Koncorde alignment is distribution_warning. Weekly leadership is not established with only 3-week streak and rot=6.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"JNJ\",\n      \"reason\": \"PCS=68.0 sits exactly at the min_entry threshold but 13-week outperformance is negative at -1.8%, dems=4 is weak, rs_neutral flag indicates no leadership, and Koncorde alignment is distribution_warning. The combination of negative 13w relative strength and weak daily momentum does not justify entry into an already healthcare-saturated portfolio.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"TMO\",\n      \"reason\": \"PCS=66.5 is below MIMO_SHADOW min_entry of 68, 13-week outperformance is negative at "
 }
