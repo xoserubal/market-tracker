@@ -1,46 +1,45 @@
 {
-  "run_id": "2026-07-16_1006",
+  "run_id": "2026-07-16_2054",
   "model": "x-ai/grok-4.3",
   "date": "2026-07-16",
   "summary": {
     "date": "2026-07-16",
-    "run_id": "2026-07-16_1006",
+    "run_id": "2026-07-16_2054",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
-    "event_count": 16,
-    "candidate_count": 29,
-    "input_tokens": 44815,
-    "output_tokens": 3717,
-    "cost_usd": 0.065311,
-    "latency_ms": 42595.0,
+    "event_count": 18,
+    "candidate_count": 28,
+    "input_tokens": 39581,
+    "output_tokens": 3598,
+    "cost_usd": 0.058471,
+    "latency_ms": 27284.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 92,
+    "quality_score": 89,
     "selected_count": 0,
-    "watch_count": 1,
-    "rejected_count": 10,
+    "watch_count": 2,
+    "rejected_count": 0,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
     "soft_warnings": [
-      "hold_below_floor: SASK.V has pcs=53.5 (<62) but action=HOLD — should EXIT",
-      "hold_below_floor: VAL has pcs=41.0 (<62) but action=HOLD — should EXIT",
-      "hold_below_floor: WCP.TO has pcs=50.2 (<62) but action=HOLD — should EXIT",
-      "hold_below_floor: ASPI has pcs=28.0 (<62) but action=HOLD — should EXIT"
+      "hold_below_floor: VAL has pcs=40.0 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: WCP.TO has pcs=49.2 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: ASPI has pcs=27.0 (<62) but action=HOLD — should EXIT"
     ]
   },
-  "quality_score": 92,
+  "quality_score": 89,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-07-16_1006",
+    "run_id": "2026-07-16_2054",
     "date": "2026-07-16",
     "decision_summary": {
-      "market_read": "Bull Maduro regime improving but healthcare concentration extreme at 70% weight limits new entries.",
+      "market_read": "Bull Maduro Stable regime with macro score 71.25 and zero recent delta offers steady permission but no urgent tailwinds.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
@@ -48,166 +47,96 @@
     "watch": [
       {
         "ticker": "LLY",
-        "reason": "PCS 69 but dems=3 and 3-week streak too weak for entry amid healthcare concentration.",
-        "watch_trigger": "dems rise above 10 with rot_score >=7 and positive ret_5d_vs_spy"
+        "reason": "PCS 68.0 clears MACRO threshold with rot_score 6 and 3-week streak yet healthcare_largecap weight already exceeds 16 percent and theme risk flagged high.",
+        "watch_trigger": "pcs above 72 combined with improvement in streak_weeks or drop in theme_concentration_risk"
+      },
+      {
+        "ticker": "HUM",
+        "reason": "PCS 64.8 and 99 percent 13-week outperformance versus SPY but streak_weeks zero and dems only 3 provide weak daily-weekly alignment.",
+        "watch_trigger": "streak_weeks reaches 4 and dems moves above 10"
       }
     ],
-    "rejected": [
-      {
-        "ticker": "TDOC",
-        "reason": "Already open position in CONFIRMED_FLOW_LEADERS",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SLS",
-        "reason": "Already open position in MIMO_SHADOW",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "HIMS",
-        "reason": "Already open position in CONFIRMED_FLOW_LEADERS",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CVS",
-        "reason": "Already open position in MIMO_SHADOW",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "ABBV",
-        "reason": "Already open position in MIMO_SHADOW",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "OSCR",
-        "reason": "Already open position in CONFIRMED_FLOW_LEADERS",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "UNH",
-        "reason": "Already open position in MIMO_SHADOW",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "AMD",
-        "reason": "Already open position in MIMO_SHADOW",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "BBAR",
-        "reason": "Spike_flag true and ret_13w_vs_spy modest at 20.88% with argentina theme weak",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "META",
-        "reason": "ret_13w_vs_spy negative at -6.03% despite dems=16",
-        "rejection_category": "weak_relative_strength"
-      }
-    ],
+    "rejected": [],
     "open_picks_review": [
       {
         "ticker": "OSCR",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 72.2 above threshold with 8-week streak intact"
+        "reason": "Current PCS 71.2 above floor, rot_score 7, streak 8 weeks."
       },
       {
         "ticker": "TDOC",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 79.5 above threshold with 8-week streak and rot=8"
+        "reason": "Current PCS 78.5 above floor, rot_score 8, streak 8 weeks."
       },
       {
         "ticker": "HIMS",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 77.5 above threshold with 8-week streak"
-      },
-      {
-        "ticker": "ROOT",
-        "portfolio": "CONFIRMED_FLOW_LEADERS",
-        "action": "EXIT",
-        "reason": "Current PCS 60.5 below 62 floor"
-      },
-      {
-        "ticker": "SE",
-        "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
-        "action": "EXIT",
-        "reason": "Current PCS 59.8 below 62 floor"
-      },
-      {
-        "ticker": "NVDA",
-        "portfolio": "MACRO_THEMATIC_BENEFICIARIES",
-        "action": "EXIT",
-        "reason": "Current PCS 58.8 below 62 floor"
+        "reason": "Current PCS 76.5 above floor, rot_score 8, streak 8 weeks."
       },
       {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 68.5 meets 68 threshold with 8-week streak"
+        "reason": "Current PCS 67.5 above floor, rot_score 7, streak 8 weeks."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 77.8 above threshold with strong rot=9"
+        "reason": "Current PCS 76.8 above floor, rot_score 9, streak 8 weeks."
       },
       {
         "ticker": "UNH",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 72.2 above threshold with 8-week streak"
+        "reason": "Current PCS 71.2 above floor, rot_score 7, streak 8 weeks."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 77.0 above threshold with 8-week streak"
+        "reason": "Current PCS 76.0 above floor, rot_score 8, streak 8 weeks."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 73.8 above threshold"
-      },
-      {
-        "ticker": "SASK.V",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS meets threshold with rot=7 and streak=6"
+        "reason": "Current PCS 72.8 above floor, rot_score 9, streak 4 weeks."
       },
       {
         "ticker": "VAL",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "No exit criteria met for mirror position"
+        "reason": "Current data insufficient for exit rule; mirror position continues."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "No exit criteria met for mirror position"
-      },
-      {
-        "ticker": "MAI.V",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "EXIT",
-        "reason": "left_universe=true"
-      },
-      {
-        "ticker": "AMR",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "EXIT",
-        "reason": "left_universe=true"
+        "reason": "Current data insufficient for exit rule; mirror position continues."
       },
       {
         "ticker": "ASPI",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "No exit criteria met for mirror position"
+        "reason": "Current data insufficient for exit rule; mirror position continues."
+      },
+      {
+        "ticker": "MAI.V",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "EXIT",
+        "reason": "left_universe true mandates exit regardless of other metrics."
+      },
+      {
+        "ticker": "AMR",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "EXIT",
+        "reason": "left_universe true mandates exit regardless of other metrics."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-07-16\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-16_1006\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime improving but healthcare concentration extreme at 70% weight limits new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"LLY\", \"reason\": \"PCS 69 but dems=3 and 3-week streak too weak for entry amid healthcare concentration.\", \"watch_trigger\": \"dems rise above 10 with rot_score >=7 and positive ret_5d_vs_spy\"}\n  ],\n  \"rejected\": [\n    {\"ticker\": \"TDOC\", \"reason\": \"Already open position in CONFIRMED_FLOW_LEADERS\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"SLS\", \"reason\": \"Already open position in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"HIMS\", \"reason\": \"Already open position in CONFIRMED_FLOW_LEADERS\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"CVS\", \"reason\": \"Already open position in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"ABBV\", \"reason\": \"Already open position in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"OSCR\", \"reason\": \"Already open position in CONFIRMED_FLOW_LEADERS\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"UNH\", \"reason\": \"Already open position in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"AMD\", \"reason\": \"Already open position in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"BBAR\", \"reason\": \"Spike_flag true and ret_13w_vs_spy modest at 20.88% with argentina theme weak\", \"rejection_category\": \"insufficient_conviction\"},\n    {\"ticker\": \"META\", \"reason\": \"ret_13w_vs_spy negative at -6.03% despite dems=16\", \"rejection_category\": \"weak_relative_strength\"}\n  ],\n  \"open_picks_review\": [\n    {\"ticker\": \"OSCR\", \"portfolio\": \"CONFIRMED_FLOW_LEADERS\""
+  "raw_response_head": "{\n  \"date\": \"2026-07-16\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-16_2054\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Stable regime with macro score 71.25 and zero recent delta offers steady permission but no urgent tailwinds.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"PCS 68.0 clears MACRO threshold with rot_score 6 and 3-week streak yet healthcare_largecap weight already exceeds 16 percent and theme risk flagged high.\",\n      \"watch_trigger\": \"pcs above 72 combined with improvement in streak_weeks or drop in theme_concentration_risk\"\n    },\n    {\n      \"ticker\": \"HUM\",\n      \"reason\": \"PCS 64.8 and 99 percent 13-week outperformance versus SPY but streak_weeks zero and dems only 3 provide weak daily-weekly alignment.\",\n      \"watch_trigger\": \"streak_weeks reaches 4 and dems moves above 10\"\n    }\n  ],\n  \"rejected\": [],\n  \"open_picks_review\": [\n    {\n      \"ticker\": \"OSCR\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"action\": \"HOLD\",\n      \"reason\": \"Current PCS 71.2 above floor, rot_score 7, streak 8 weeks.\"\n    },\n    {\n      \"ticker\": \"TDOC\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"action\": \"HOLD\",\n      \"reason\": \"Current PCS 78.5 above floor, rot_score 8, streak 8 weeks.\"\n    },\n    {\n      \"ticker\": \"HIMS\",\n      \"portfolio\": \"CONFIRMED_FLOW_LEADERS\",\n      \"action\": \"HOLD\",\n      \"reason\": \"Current PCS 76.5 above floor, rot_score 8, streak 8 weeks.\"\n    },\n    {\n      \"ticker\": \"AMD\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"action\": \"HOLD\",\n      \"reason\": \"Current PCS 67.5 above floor, rot_score 7, streak 8 weeks.\"\n    },\n    {\n      \"ticker\": \"SLS\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"action\": \"HOLD\",\n      \"reason\": \"Current PCS 76.8 above floor, rot_score 9, streak 8 weeks.\"\n    },\n    {\n      \"ticker\": \"UNH\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"action\": \"HOLD\",\n      \"reason\": \"Current PCS 71.2 abo"
 }
