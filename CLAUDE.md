@@ -462,6 +462,18 @@ Renombrado a **Risk-Off Monitor** (no confundir con el régimen de MacroScore v2
 
 ---
 
+## Cluster "SECTOR ROTATION" en Relative Flow Lab (implementado 2026-07-17)
+
+Motivación: el usuario señaló que el cluster `COAL / MATERIALS` (Warrior Met/Peabody/Alpha Met — subsector muy nicho) no le aportaba valor accionable, y preguntó cuál era la mejor forma del sistema para ver de qué sectores sale dinero hoy/estos días y hacia dónde entra (otros sectores, bonos, liquidez). Auditoría: ni `relative.html` ni `rotacion.html` cubrían los 11 sectores GICS/SPDR completos como grupo autocontenido — `relative.html` tenía sub-temas dispersos (regiones, sub-sectores de energía, metals, uranium, coal) sin Technology/XLK, Healthcare/XLV, Industrials/XLI, Real Estate/XLRE ni Communication/XLC en ningún ratio.
+
+**Cambio:** nuevo grupo `SECTOR ROTATION` en `RATIO_GROUPS` (`relative.html`), insertado justo después de `RISK / BREADTH`. 14 pares, todos vs `SPY`: los 11 sector ETFs SPDR (XLK, XLF, XLV, XLY, XLP, XLE, XLI, XLB, XLRE, XLC, XLU) más 3 destinos alternativos cuando el dinero sale de acciones — `TLT` (bonos largo plazo), `GLD` (oro), `BIL` (cash proxy, T-Bills). No se creó infraestructura nueva: reutiliza el pipeline `buildRow`/`classify`/`flowChange` ya existente — el ranking "Top 5 Flow Change" (aceleración 5D vs 5D previo) filtrado a este cluster **es** el listado diario de entradas/salidas sectoriales que se pedía, sin métrica nueva que mantener.
+
+**Decisión de diseño:** no se tocó ni se quitó el cluster `COAL / MATERIALS` — 4 filas no penalizan el rendimiento ni saturan la tabla, y el usuario no pidió eliminarlo explícitamente, solo dejó de ser la herramienta principal para lectura de flujos sectoriales. Se aceptó duplicar `Financials vs Market` (XLF/SPY) entre este cluster nuevo y el cluster `FINANCIALS` existente (que lo usa junto a `Regional vs Large Banks`, con un propósito distinto — salud del sistema bancario, no rotación sectorial) en vez de reestructurar clusters existentes, para mantener el cambio acotado a lo pedido.
+
+**Verificado:** `/api/history/:symbol` de `server.js` es genérico (sin whitelist) — confirmado en vivo contra Yahoo para los 6 tickers nuevos que no se usaban ya en otros clusters (XLK, XLV, XLI, XLRE, XLC, BIL, TLT). `relative.html` servido por el proceso local de `server.js` confirma el cluster renderizado.
+
+---
+
 ## Koncorde "espejo" — patrón de giro por reversión (implementado 2026-07-03)
 
 Nuevo indicador de seguimiento (no HARD_RULE, no en el payload IA todavía — fase de observación, mismo enfoque que `extension_risk`/`konc_alignment`). Detecta un patrón específico: activo sobrevendido con blue y green ambos negativos que de repente gira — blue cruza a positivo mientras green sigue negativo — simultáneamente en D y 3D (confirma que no es ruido de un día), con W (blue) todavía negativo (la tendencia semanal de fondo no ha girado, lo que sugiere que puede ser el inicio de una mini-tendencia, no solo un rebote de un día).
