@@ -1,0 +1,117 @@
+{
+  "run_id": "2026-07-18_0923",
+  "model": "x-ai/grok-4.3",
+  "date": "2026-07-18",
+  "summary": {
+    "date": "2026-07-18",
+    "run_id": "2026-07-18_0923",
+    "model": "x-ai/grok-4.3",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 26,
+    "input_tokens": 41590,
+    "output_tokens": 3909,
+    "cost_usd": 0.06176,
+    "latency_ms": 24368.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 78,
+    "selected_count": 0,
+    "watch_count": 0,
+    "rejected_count": 0,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": [
+      "hold_below_floor: VAL has pcs=49.5 (<62) but action=HOLD — should EXIT"
+    ]
+  },
+  "quality_score": 78,
+  "response": {
+    "model": "x-ai/grok-4.3",
+    "run_id": "2026-07-18_0923",
+    "date": "2026-07-18",
+    "decision_summary": {
+      "market_read": "Macro score 66.25 in Bull Maduro Deteriorating regime with -5 weekly and monthly deltas pressures all candidates.",
+      "risk_posture": "defensive",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [],
+    "rejected": [],
+    "open_picks_review": [
+      {
+        "ticker": "TDOC",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "PCS 80 above 75 min and 8-week streak with rot 8 intact."
+      },
+      {
+        "ticker": "HIMS",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "PCS 72 above 75 floor and 8-week streak maintained."
+      },
+      {
+        "ticker": "AMD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 62.8 below 68 min entry and streak_weeks 0."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.8 and rot 9 with 8-week streak confirm leadership."
+      },
+      {
+        "ticker": "UNH",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 75.2 above 68 and 8-week streak intact."
+      },
+      {
+        "ticker": "CVS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 75.2 above 68 with 8-week streak continuing."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.8 above 68 and rot 9 with 4-week streak."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 74.8 above 68 with 8-week streak continuing."
+      },
+      {
+        "ticker": "EQR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 66.5 above 62 absolute floor and streak 4 exceeds 1."
+      },
+      {
+        "ticker": "VAL",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "PCS 49.5 but entry min 0 and mirror signal active."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "PCS 65.8 above floor with rot 7 and mirror daily reversal."
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-07-18\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-07-18_0923\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime deteriorating with -5 macro delta, high healthcare concentration at 66% weight, elevated extension risks across leaders.\",\n    \"risk_posture\": \"defensive\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"LLY\", \"reason\": \"PCS 80.5, rot 8, streak 3 but konc_3d distribution and theme concentration high\", \"watch_trigger\": \"rot_score >=9 and konç_3d up with outperform_d10 >=6\"},\n    {\"ticker\": \"MRK\", \"reason\": \"PCS 76.0, rot 8, streak 4, but ret_13w_vs_spy only 5% and spike_flag true\", \"watch_trigger\": \"streak_weeks >=6 and ret_13w_vs_spy >15%\"},\n    {\"ticker\": \"HUM\", \"reason\": \"PCS 75.2, rot 7, streak 8 but extension medium and high theme concentration\", \"watch_trigger\": \"extension_risk drops to low\"},\n    {\"ticker\": \"OSCR\", \"reason\": \"PCS 74.8 already open in active_picks, additional entry increases concentration\", \"watch_trigger\": \"theme_concentration_risk falls to medium\"},\n    {\"ticker\": \"KIST.L\", \"reason\": \"PCS 74.2, rot 8 but ret_13w_vs_spy only 2.4% and oil theme macro conflict\", \"watch_trigger\": \"ret_13w_vs_spy exceeds 15%\"},\n    {\"ticker\": \"JNJ\", \"reason\": \"PCS 72.8, rot 9 but streak 4 and konc_3d distribution\", \"watch_trigger\": \"streak_weeks >=6 and konç_alignment bullish\"},\n    {\"ticker\": \"ROOT\", \"reason\": \"PCS 72.0, rot 7, ret_13w_vs_spy 9% but momentum_decay flag\", \"watch_trigger\": \"momentum_accel true and dems >=10\"},\n    {\"ticker\": \"TMO\", \"reason\": \"PCS 69.5, ret_13w_vs_spy negative (-2.9%)\", \"watch_trigger\": \"ret_13w_vs_spy turns positive >5%\"},\n    {\"ticker\": \"VRTX\", \"reason\": \"PCS 68.0 but dems 2, ret_5d_vs_spy weak and spike_flag\", \"watch_trigger\": \"dems >=10 and outperform_d10 >=6\"},\n    {\"ticker\": \"EQR\", \"reason\": \"PCS 66.5 already open, current_pcs 66.5 below 68 threshold\", \"watch_trigger\": \"current_pcs recovers above 68\"},\n    {\"ticker\": \"CVE\", \"reason\": \"PCS 66.2, "
+}
