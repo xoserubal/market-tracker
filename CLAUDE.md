@@ -579,6 +579,42 @@ else:                             Fase A — Watch
 
 ---
 
+## Fix del veto absoluto de `konc_alignment` + Koncorde Research Log (implementado 2026-07-21)
+
+**Origen — retrospectiva TNZ.TO (2026-07-17):** TNZ.TO llevaba ~2 semanas acumulando en Koncorde diario (blue subiendo casi monótono) y W había girado alcista, pero justo el día en que el precio "despegó" (2026-07-16), `konc_alignment` pasó de `bullish_aligned` a `distribution_warning` — la etiqueta más alarmante. Causa raíz: `_konc_alignment()` daba **veto absoluto** a un único `state_3d == "distribution"` (o a `blue_down_2_bars_3d`), sin importar lo que dijeran D y W. El 3D es una vela no solapada de 3 sesiones, así que en fases de acumulación de varias semanas es más sensible a dónde cae el corte de la vela que a la tendencia real — en TNZ.TO osciló distribution↔up 5 veces en 10 sesiones. Verificado en producción el 2026-07-21 contra el snapshot de `koncorde_data.json` del día anterior: **138/197 tickers (70%) del universo mostraban `distribution_warning`**, 87 por `state_3d == "distribution"`, y **13 con D y W ambos alcistas** (el patrón exacto de TNZ.TO) — no era un caso aislado.
+
+Se pasó el diagnóstico a un asesor externo (vía `force_analyze.py --audit` / copy-paste manual) para una segunda opinión antes de tocar código. Confirmó el diagnóstico y propuso una cascada revisada + un log de investigación; se adoptó con recorte deliberado del alcance (ver "Fuera de alcance" abajo) — mismo criterio que el resto del proyecto: no añadir señales operativas nuevas sobre un único caso.
+
+### 1. `_konc_alignment()` — ya no es un veto absoluto (`scripts/koncorde_calculator.py`)
+
+Firma nueva: recibe también `state_d` (antes solo `state_3d`/`state_w`/`blue_down_2_bars_3d`). Nuevo estado **`bullish_pending_3d_confirmation`**: si D y W están ambos en `up`/`accumulation` y 3D lee `distribution` (o `blue_down_2_bars_3d`) **sin corroboración de otro timeframe**, ya no salta a `distribution_warning` — se degrada a esta etiqueta intermedia. `distribution_warning` ahora exige que la lectura débil de 3D esté corroborada por D o W también en estado bajista (`distribution`/`down`).
+
+Orden de evaluación = prioridad, documentado como una sola cascada if/elif en el docstring de la función (no una lista de prioridad en prosa separada del código — ese desajuste apareció en el primer borrador del asesor externo y se corrigió antes de implementar, para que prioridad declarada y orden real de evaluación no puedan desincronizarse).
+
+**Verificado:** 12 casos unitarios sintéticos (incluye los cruces D bearish/W bullish, blue_down_2_bars solo, W ausente → neutral) + 8 tickers reales con el patrón exacto de hoy (`ARGT`, `DHR`, `DNN`, `EEM`, `EXH8.DE`, `FXI`, `IWM`, `KWEB`) descargados en vivo — todos los que tenían D+W bullish con 3D débil sin corroborar pasan correctamente a `bullish_pending_3d_confirmation` en vez de `distribution_warning`. `TNZ.TO` en vivo (2026-07-21) muestra hoy D=up/3D=up/W=distribution con `blue_down_2_bars_3d=true` → `distribution_warning` correctamente mantenido (la corroboración de W sí está presente) — confirma que el fix no eliminó el warning real, solo el falso positivo por 3D aislado.
+
+Actualizado también el texto de guía al modelo IA en `paper_trading.py` (sección `OBSERVATION FIELDS`) para explicar el nuevo estado y su severidad relativa a `distribution_warning`.
+
+### 2. Koncorde Research Log (`docs/data/koncorde_signals_history.jsonl`, nuevo)
+
+Una fila diaria por ticker, para **todo el universo Koncorde** (no solo los candidatos PCS), con `konc_d/3d/w_state`, `konc_alignment`, `konc_mirror_signal`, y 8 "ingredientes" objetivos para estudiar más adelante el patrón de acumulación escalonada tipo TNZ.TO — todos calculados en `scripts/koncorde_calculator.py` a partir del OHLCV diario que ya se descarga por ticker (sin llamada extra a yfinance): `konc_d_blue_slope_3/6`, `konc_w_blue_slope`, `konc_d_blue_positive_days_6`, `konc_d_blue_up_count_6`, `volume_vs_20d`, `low_break_20d`, `close_reclaim_3d`, `distance_to_sma20_atr`, `price_range_20d_position`. Deduplicado por `(ticker, date)`, mismo patrón que `mirror_signals.jsonl`. `ret_1w/2w/1m` quedan en `null` (a rellenar por un script de seguimiento futuro, no incluido aquí).
+
+**`distance_to_sma20_atr` se recalcula aquí, no se reutiliza de `pcs_calculator.py`:** el campo ya existía como `dist_sma20_atr` en `pcs_calculator.py`, pero solo para los 128 tickers de `ai_candidates.json` — el universo Koncorde es más amplio (197) y TNZ.TO en concreto nunca estuvo en esos 128, que es justo el gap que motivó esto. Se usa la misma fórmula exacta `(close - SMA20) / ATR14` para no repetir el incidente ya documentado de `calcCMF` duplicado y desincronizado entre JS y Python.
+
+**Deliberadamente fuera de este log — Flow Score / Early Flow Score:** el plan acordado con el asesor pedía loguear también estos dos scores (`shared/flow-score.js`), pero un port fiel necesita retornos relativos a SPY, RSI/MACD de precio y distancia al máximo de 52 semanas — datos que el pipeline Python no calcula para el universo Koncorde completo (solo para los 128 candidatos PCS, vía otro script). Rellenar esos inputs con defaults a cero habría producido valores de Flow Score que no coinciden con lo que muestra el dashboard — inventar el dato es peor que no loguearlo. Queda como seguimiento explícito, no descartado en silencio.
+
+**No se implementaron `accumulation_ramp`/`flush_reclaim`/"Koncorde Radar" como los propuso el asesor originalmente** (señales de WATCH/radar visibles) — recorte deliberado: esas señales están inspiradas en un único caso (TNZ.TO) y el proyecto tiene como principio no añadir complejidad operativa antes de tener datos que la justifiquen (mismo patrón que `extension_risk`/`theme_concentration_risk`/`konc_mirror_signal`, todos lanzados primero como campos observacionales). Los 8 campos "ingrediente" cubren exactamente lo que se necesitaría para construir esas señales más adelante, ya logueados.
+
+### Plan de revisión (4-8 semanas desde 2026-07-21)
+
+Cuando `koncorde_signals_history.jsonl` tenga suficiente histórico con `ret_1w/2w/1m` rellenos: evaluar si alguna combinación de los 8 campos ingrediente (p. ej. `low_break_20d` reciente + `close_reclaim_3d=true` + `konc_d_blue_up_count_6>=4`) predice mejor rendimiento que el ruido. Solo si los datos lo justifican, promover a una señal operativa (`accumulation_ramp`/`flush_reclaim`) visible en dashboard — no antes.
+
+### Fuera de alcance (explícito)
+
+Score continuo (`konc_composite_score`) ponderando D/3D/W — dirección correcta a largo plazo según el asesor, pero no implementado; sigue siendo cascada categórica en v1 del fix. Port de Flow Score/Early Flow Score a Python (ver arriba). Ampliar el gate de ROT.TEMPRANA al universo Koncorde completo (opción C original) — el asesor la revisó a "Koncorde Radar" separado sin tocar `ai_candidates`/ROT.TEMPRANA, y ni siquiera esa versión reducida se implementó todavía, queda para cuando el research log tenga datos.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

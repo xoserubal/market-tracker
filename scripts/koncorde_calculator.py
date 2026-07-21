@@ -32,6 +32,7 @@ import yfinance as yf
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
 MIRROR_LOG = DATA / "mirror_signals.jsonl"
+RESEARCH_LOG = DATA / "koncorde_signals_history.jsonl"
 
 # ── Parameters matching Pine Script defaults ───────────────────────────────
 PVI_NVI_LEN  = 15    # EMA length for PVI/NVI smoothing
@@ -330,32 +331,64 @@ def _state(blue, green) -> str:
     return "down"
 
 
-def _konc_alignment(state_3d, state_w, blue_down_2_bars_3d: bool) -> str:
+def _konc_alignment(state_d, state_3d, state_w, blue_down_2_bars_3d: bool) -> str:
     """
-    Summary reading across 3D/W timeframes. Priority order (most to least urgent):
-    distribution_warning > bearish_aligned > accumulation_setup > bullish_aligned > mixed > neutral.
+    Summary reading across D/3D/W timeframes. Evaluated top-to-bottom, first match
+    wins — this order IS the priority (kept as a single source of truth instead of
+    a prose list that can drift from the actual if/elif order):
 
-    accumulation_setup deliberately takes priority over bullish_aligned whenever 3D is in
-    accumulation with a non-bearish W — an accumulation setup is operationally more relevant
-    than a generic bullish alignment, even if W also happens to read "up".
+      1. distribution_warning              — 3D weak, corroborated by D or W
+      2. bullish_pending_3d_confirmation    — 3D weak in isolation, D+W both bullish
+      3. bearish_aligned                    — 3D down, W bearish
+      4. accumulation_setup                 — 3D accumulation, W not bearish
+      5. bullish_aligned                    — 3D and W both bullish
+      6. mixed                              — none of the above
+      7. neutral                            — missing 3D/W data
+
+    2026-07-21 fix (TNZ.TO retrospective): a single 3D=="distribution" reading (or a
+    2-bar declining 3D blue trend) used to veto straight to distribution_warning with
+    no exception, even when D and W both read bullish. 3D is a non-overlapping
+    3-session block, so during multi-week accumulations it can be more sensitive to
+    exactly which session lands on the block boundary than to the actual trend — in
+    TNZ.TO's case it flip-flopped distribution/up 5 times in 10 sessions while D and W
+    both trended up. An uncorroborated 3D-only weak reading is now demoted to
+    bullish_pending_3d_confirmation instead of triggering the strongest alarm; it still
+    takes priority over accumulation_setup/bullish_aligned/mixed, since a real conflict
+    with 3D is still worth flagging, just not as "distribution_warning".
     """
+    bullish = ("up", "accumulation")
+    bearish = ("distribution", "down")
+
     if state_3d is None or state_w is None:
         return "neutral"
-    if state_3d == "distribution" or blue_down_2_bars_3d:
+
+    d_w_bullish = state_d in bullish and state_w in bullish
+    tf3d_weak = state_3d == "distribution" or blue_down_2_bars_3d
+
+    if state_3d == "distribution" and (state_w in bearish or state_d in bearish):
         return "distribution_warning"
-    if state_3d == "down" and state_w in ("distribution", "down"):
+    if blue_down_2_bars_3d and state_w in bearish:
+        return "distribution_warning"
+    if tf3d_weak and d_w_bullish:
+        return "bullish_pending_3d_confirmation"
+    if state_3d == "down" and state_w in bearish:
         return "bearish_aligned"
-    if state_3d == "accumulation" and state_w not in ("distribution", "down"):
+    if state_3d == "accumulation" and state_w not in bearish:
         return "accumulation_setup"
-    if state_3d in ("accumulation", "up") and state_w in ("accumulation", "up"):
+    if state_3d in bullish and state_w in bullish:
         return "bullish_aligned"
     return "mixed"
 
 
 # ── Per-ticker computation ─────────────────────────────────────────────────
 
-def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
-    """Compute Koncorde Plus for one timeframe df. Returns flat dict of konc_{tf}_* fields."""
+def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None]:
+    """
+    Compute Koncorde Plus for one timeframe df. Returns (flat dict of konc_{tf}_*
+    fields, raw blue array) — the array is exposed so compute_for_ticker can feed
+    the D-timeframe blue series into _compute_research_fields() without a second
+    (duplicate) call to _calc_koncorde_plus().
+    """
     pfx = f"konc_{tf_name}"
     nulls = {k: None for k in [
         f"{pfx}_blue", f"{pfx}_green", f"{pfx}_trend", f"{pfx}_trend_ma", f"{pfx}_state",
@@ -368,7 +401,7 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
     nulls[f"{pfx}_distribution_flag"] = False
     nulls[f"{pfx}_bar_closed"]        = True
     if len(df) < MIN_BARS:
-        return nulls
+        return nulls, None
     try:
         o = df["open"].to_numpy(dtype=float)
         h = df["high"].to_numpy(dtype=float)
@@ -412,10 +445,10 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> dict:
             # Flip to false if this is ever run intraday on a partial bar.
             f"{pfx}_bar_closed":         True,
             f"{pfx}_bar_date":           bar_date,
-        }
+        }, blue_a
     except Exception as e:
         print(f"    compute_tf({tf_name}) error: {e}")
-        return nulls
+        return nulls, None
 
 
 def _mirror_signal(
@@ -446,26 +479,136 @@ def _mirror_signal(
     return "none"
 
 
+def _compute_research_fields(df: pd.DataFrame, blue_d: np.ndarray | None) -> dict:
+    """
+    Koncorde Research Log (2026-07-21, TNZ.TO retrospective follow-up) — objective,
+    self-contained "stealth accumulation" ingredients logged for every ticker in the
+    universe. Deliberately NOT gated into any signal, WATCH tier, radar, or
+    HARD_RULE yet: accumulation_ramp/flush_reclaim were proposed based on a single
+    case (TNZ.TO) and the project's own principle is to not add complexity before
+    there's data to justify it (see CLAUDE.md "Evaluación general del método").
+    Plan: accumulate 4-8 weeks of these fields + ret_1w/2w/1m, then decide whether
+    to promote any combination to an operational signal.
+
+    All fields are computed from the ticker's own daily OHLCV history only (no
+    cross-ticker or benchmark dependency) — Flow Score / Early Flow Score are
+    deliberately NOT ported here, because a faithful port needs SPY-relative
+    returns, price RSI/MACD and 52w-high distance that this pipeline doesn't
+    compute for the full ~197-ticker Koncorde universe (only for the narrower
+    ai_candidates.json PCS universe). Defaulting those inputs to zero would
+    produce Flow Score values that don't match what the dashboard actually shows
+    — fabricating numbers is worse than not logging them. Left as a documented
+    follow-up, not silently dropped.
+    """
+    nulls = {
+        "konc_d_blue_positive_days_6": None,
+        "konc_d_blue_up_count_6":      None,
+        "konc_d_blue_slope_6":         None,
+        "volume_vs_20d":               None,
+        "low_break_20d":               False,
+        "close_reclaim_3d":            False,
+        "distance_to_sma20_atr":       None,
+        "price_range_20d_position":    None,
+    }
+    if len(df) < 26 or blue_d is None or len(blue_d) < 7:
+        return nulls
+    try:
+        h  = df["high"].to_numpy(dtype=float)
+        lo = df["low"].to_numpy(dtype=float)
+        c  = df["close"].to_numpy(dtype=float)
+        v  = df["volume"].to_numpy(dtype=float)
+        n  = len(c)
+
+        last6 = blue_d[-6:]
+        pos_days_6 = None if np.any(np.isnan(last6)) else int(np.sum(last6 > 0))
+        last7 = blue_d[-7:]
+        up_count_6 = None if np.any(np.isnan(last7)) else int(np.sum(np.diff(last7) > 0))
+        blue_slope_6 = None
+        if not (np.isnan(blue_d[-1]) or np.isnan(blue_d[-6])):
+            blue_slope_6 = round((float(blue_d[-1]) - float(blue_d[-6])) / 5.0, 4)
+
+        # ATR14 (Wilder) + distance to SMA20 in ATR units — same formula as
+        # pcs_calculator.py's dist_sma20_atr, recomputed here (not reused) because
+        # this needs to cover the full Koncorde universe, not just the 128 PCS
+        # candidates that pcs_calculator.py has data for.
+        prev_c = np.roll(c, 1)
+        prev_c[0] = c[0]
+        tr = np.maximum(h - lo, np.maximum(np.abs(h - prev_c), np.abs(lo - prev_c)))
+        atr14 = _rma(tr, 14)
+        sma20 = _sma(c, 20)
+        dist_atr = None
+        if not np.isnan(atr14[-1]) and atr14[-1] != 0 and not np.isnan(sma20[-1]):
+            dist_atr = round((float(c[-1]) - float(sma20[-1])) / float(atr14[-1]), 2)
+
+        vol_sma20 = _sma(v, 20)
+        vol_ratio = None
+        if not np.isnan(vol_sma20[-1]) and vol_sma20[-1] != 0:
+            vol_ratio = round(float(v[-1]) / float(vol_sma20[-1]), 2)
+
+        hh20 = _highest(h, 20)
+        ll20 = _lowest(lo, 20)
+        range_pos = None
+        if not np.isnan(hh20[-1]) and not np.isnan(ll20[-1]) and hh20[-1] != ll20[-1]:
+            range_pos = round((float(c[-1]) - float(ll20[-1])) / (float(hh20[-1]) - float(ll20[-1])), 4)
+
+        def _is_fresh_20d_low(i: int) -> bool:
+            if i < 21:
+                return False
+            prior_low = float(np.min(lo[i - 20:i]))
+            return bool(lo[i] <= prior_low)
+
+        low_break_today = _is_fresh_20d_low(n - 1)
+
+        # Reclaim within 3 sessions: a fresh 20d low happened in the last 3 bars,
+        # and today's close has since recovered back above that prior low.
+        reclaim = False
+        for i in range(max(0, n - 3), n):
+            if i < 21:
+                continue
+            prior_low = float(np.min(lo[i - 20:i]))
+            if lo[i] <= prior_low and float(c[-1]) > prior_low:
+                reclaim = True
+                break
+
+        return {
+            "konc_d_blue_positive_days_6": pos_days_6,
+            "konc_d_blue_up_count_6":      up_count_6,
+            "konc_d_blue_slope_6":         blue_slope_6,
+            "volume_vs_20d":               vol_ratio,
+            "low_break_20d":               bool(low_break_today),
+            "close_reclaim_3d":            bool(reclaim),
+            "distance_to_sma20_atr":       dist_atr,
+            "price_range_20d_position":    range_pos,
+        }
+    except Exception as e:
+        print(f"    compute_research_fields error: {e}")
+        return nulls
+
+
 def compute_for_ticker(df: pd.DataFrame) -> dict:
     """Compute all 3 timeframes for a single daily OHLCV DataFrame."""
     result: dict = {}
 
     # Daily (D)
-    result.update(_compute_tf(df, "d"))
+    d_dict, blue_d = _compute_tf(df, "d")
+    result.update(d_dict)
 
     # 3D — non-overlapping 3-session blocks
     df_3d = _resample_3d(df)
-    result.update(_compute_tf(df_3d, "3d"))
+    dict_3d, _ = _compute_tf(df_3d, "3d")
+    result.update(dict_3d)
 
     # Weekly
     df_w = _resample_weekly(df)
     # For weekly, use 100 as minimum (slightly lower — weekly bars are fewer)
     orig_min = MIN_BARS
     globals()["MIN_BARS"] = 100
-    result.update(_compute_tf(df_w, "w"))
+    dict_w, _ = _compute_tf(df_w, "w")
     globals()["MIN_BARS"] = orig_min
+    result.update(dict_w)
 
     result["konc_alignment"] = _konc_alignment(
+        result.get("konc_d_state"),
         result.get("konc_3d_state"),
         result.get("konc_w_state"),
         result.get("konc_3d_blue_down_2_bars", False),
@@ -476,6 +619,8 @@ def compute_for_ticker(df: pd.DataFrame) -> dict:
         result.get("konc_3d_state"), result.get("konc_3d_blue_cross_up"), result.get("konc_3d_green"),
         result.get("konc_w_blue"),
     )
+
+    result.update(_compute_research_fields(df, blue_d))
 
     return result
 
@@ -615,6 +760,63 @@ def _log_mirror_signals(
         print(f"  mirror_signals.jsonl: {n_logged} nueva(s) señal(es) 'espejo' confirmada(s)")
 
 
+def _log_research_history(koncorde_out: dict[str, dict], today: str) -> None:
+    """
+    Koncorde Research Log (2026-07-21) — one row per ticker per day, for EVERY
+    ticker in the universe (not just AI candidates), so patterns like TNZ.TO's
+    multi-week stealth accumulation can be studied after the fact without git
+    archaeology. Purely observational — see _compute_research_fields() docstring
+    for why nothing here gates a signal yet.
+
+    Deduplicated by (ticker, date): the pipeline runs 2x/day but these are all
+    end-of-day daily-bar readings, so the second run of a given day would
+    otherwise duplicate every row.
+    """
+    seen: set[tuple[str, str]] = set()
+    if RESEARCH_LOG.exists():
+        for line in RESEARCH_LOG.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                rec = json.loads(line)
+                seen.add((rec.get("ticker"), rec.get("date")))
+            except json.JSONDecodeError:
+                continue
+
+    RESEARCH_LOG.parent.mkdir(parents=True, exist_ok=True)
+    n_logged = 0
+    with RESEARCH_LOG.open("a", encoding="utf-8") as f:
+        for tk, k in koncorde_out.items():
+            if (tk, today) in seen:
+                continue
+            f.write(json.dumps({
+                "date":                        today,
+                "ticker":                      tk,
+                "konc_d_state":                k.get("konc_d_state"),
+                "konc_3d_state":               k.get("konc_3d_state"),
+                "konc_w_state":                k.get("konc_w_state"),
+                "konc_alignment":              k.get("konc_alignment"),
+                "konc_mirror_signal":          k.get("konc_mirror_signal"),
+                "konc_d_blue_slope_3":         k.get("konc_d_blue_slope"),
+                "konc_d_blue_slope_6":         k.get("konc_d_blue_slope_6"),
+                "konc_w_blue_slope":           k.get("konc_w_blue_slope"),
+                "konc_d_blue_positive_days_6": k.get("konc_d_blue_positive_days_6"),
+                "konc_d_blue_up_count_6":      k.get("konc_d_blue_up_count_6"),
+                "volume_vs_20d":               k.get("volume_vs_20d"),
+                "low_break_20d":               k.get("low_break_20d"),
+                "close_reclaim_3d":            k.get("close_reclaim_3d"),
+                "distance_to_sma20_atr":       k.get("distance_to_sma20_atr"),
+                "price_range_20d_position":    k.get("price_range_20d_position"),
+                # Filled in later by a follow-up script (update_performance.py
+                # pattern) once enough sessions have passed — not computed here.
+                "ret_1w": None, "ret_2w": None, "ret_1m": None,
+            }, ensure_ascii=False) + "\n")
+            seen.add((tk, today))
+            n_logged += 1
+    if n_logged:
+        print(f"  koncorde_signals_history.jsonl: {n_logged} ticker(s) logged")
+
+
 def run() -> None:
     today = datetime.today().strftime("%Y-%m-%d")
     tickers: set[str] = set(MARKET_TRACKER_TICKERS)
@@ -683,6 +885,7 @@ def run() -> None:
         print(f"  Failed: {show}{'…' if len(failed) > 10 else ''}")
 
     _log_mirror_signals(koncorde_out, price_data, today)
+    _log_research_history(koncorde_out, today)
 
     # Write docs/data/koncorde_data.json (served to portfolio.html via server.js)
     out_path = DATA / "koncorde_data.json"

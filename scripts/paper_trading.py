@@ -433,8 +433,11 @@ OBSERVATION FIELDS (informational — no hard rules, acknowledgement requested):
   If DEMS is extreme (>=15) and extension_risk is "high"/"extreme" and konc_3d_state="distribution",
   prefer WATCH or REJECT unless there is very strong contrary evidence — this combination is logged
   as "DEMS_EXTREME_KONC_DISTRIBUTION_WARNING" when selected.
-  konc_alignment summarizes 3D+W together (bullish_aligned/accumulation_setup/mixed/
-  distribution_warning/bearish_aligned/neutral) — distribution_warning is the most urgent reading.
+  konc_alignment summarizes D/3D/W together (bullish_aligned/accumulation_setup/
+  bullish_pending_3d_confirmation/mixed/distribution_warning/bearish_aligned/neutral) —
+  distribution_warning is the most urgent reading. bullish_pending_3d_confirmation means
+  D and W both read bullish but 3D alone is weak and unconfirmed by another timeframe —
+  treat as a softer caution than distribution_warning, not an equivalent one.
 - These fields exist to collect data: after 30-50 picks we will analyze whether extension_risk,
   theme_concentration, and Koncorde 3D distribution correlate with worse returns. Until then,
   treat them as context only.
