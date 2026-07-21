@@ -1,224 +1,186 @@
 {
-  "date": "2026-07-20",
-  "run_id": "2026-07-20_2108",
+  "date": "2026-07-21",
+  "run_id": "2026-07-21_1024",
   "candidates": [
-    "SLS",
     "ABBV",
-    "LLY",
+    "SLS",
+    "CVS",
+    "UCO",
     "TDOC",
-    "MRK",
     "UNH",
     "HUM",
-    "CVS",
-    "OSCR",
     "KIST.L",
-    "JNJ",
-    "ROOT",
-    "HIMS",
-    "TMO",
-    "VRTX",
-    "EQR",
+    "OSCR",
     "CVE",
-    "WCP.TO",
+    "VRTX",
+    "ROOT",
+    "LLY",
+    "TMO",
     "DHR",
-    "SU",
+    "WCP.TO",
     "AMD",
-    "UCO",
-    "META",
-    "TOU.TO",
-    "VNOM",
-    "VAL"
+    "JNJ",
+    "EQR",
+    "HIMS",
+    "SU",
+    "REG",
+    "VLE.TO",
+    "MRK",
+    "YPF"
   ],
   "models": {
     "x-ai/grok-4.3": {
       "quality_score": 91,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving with macro score 75 and positive weekly delta supports healthcare and energy rotation.",
+        "market_read": "Bull Maduro regime deteriorating with macro delta -5.54 and high healthcare concentration at 79.5% weight.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
       "watch": [
         {
-          "ticker": "MRK",
-          "reason": "PCS 81, 4-week streak, 11.4% 4w vs spy, rot_score 8; watch for lower healthcare concentration before entry.",
-          "watch_trigger": "theme_concentration drops below high or streak extends to 6 weeks"
+          "ticker": "ABBV",
+          "reason": "PCS 76.8 with rot_score 9 and ret_13w_vs_spy 17.69 but macro deteriorating and Koncorde 3D distribution",
+          "watch_trigger": "Macro delta turns positive and Koncorde 3D shifts to accumulation"
         },
         {
-          "ticker": "HUM",
-          "reason": "PCS 80.2, 8-week streak, 93.5% 13w vs spy, rot_score 7; strong relative strength but concentration risk blocks entry now.",
-          "watch_trigger": "healthcare_largecap weight falls or dems rises above 12"
+          "ticker": "SLS",
+          "reason": "PCS 76.2 with 8-week streak and ret_13w_vs_spy 134.31 but Koncorde 3D distribution and high theme concentration",
+          "watch_trigger": "Koncorde 3D moves to up with dems rising above 10"
         },
         {
-          "ticker": "OSCR",
-          "reason": "PCS 79.8, 8-week streak, 80% 13w vs spy, rot_score 6; watch for subtheme risk reduction in insurance.",
-          "watch_trigger": "subtheme_concentration_risk falls to low and outperform_d10 exceeds 6"
-        },
-        {
-          "ticker": "KIST.L",
-          "reason": "PCS 79.2, 17% 4w vs spy, rot_score 8, dems 8; oil gas offers diversification from healthcare but streak only 2 weeks.",
-          "watch_trigger": "streak_weeks reaches 4 with rot_score sustained at 8"
-        }
-      ],
-      "rejected": [
-        {
-          "ticker": "TMO",
-          "reason": "PCS 74.5 only 1-week streak, negative 13w vs spy, rot_score 6 too weak for EARLY_ROTATION.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "VRTX",
-          "reason": "PCS 73, 3-week streak, dems 2, spike_flag true, rot_score 7 insufficient for selection.",
-          "rejection_category": "weak_flow"
-        },
-        {
-          "ticker": "CVE",
-          "reason": "PCS 71.2, 1-week streak, spike_flag true, extension_risk high, dems not primary signal.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "WCP.TO",
-          "reason": "Already open position; PCS 70.8, 1-week streak, spike_flag true, extension medium.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "DHR",
-          "reason": "PCS 70.5, 0-week streak, ret_13w negative, rot_score 5, IGNORAR signal.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "SU",
-          "reason": "PCS 68, 1-week streak, ret_13w negative, extension_risk extreme with 7 points.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "AMD",
-          "reason": "PCS 67.8, 0-week streak, ret_4w negative, rot_score 5, IGNORAR signal.",
-          "rejection_category": "weak_relative_strength"
+          "ticker": "CVS",
+          "reason": "PCS 76.0 with 8-week streak and outperform_d10 7 but already high healthcare_largecap exposure",
+          "watch_trigger": "Theme concentration falls below 60% and streak extends to 9 weeks"
         },
         {
           "ticker": "UCO",
-          "reason": "PCS 67.5, 1-week streak, ret_13w negative, distribution_warning on Koncorde, extreme dems with distribution.",
-          "rejection_category": "macro_conflict"
+          "reason": "PCS 74.5 but leveraged commodity ETF violates selection rules on non-equity instruments",
+          "watch_trigger": "Replace with non-commodity oil equity equivalent showing similar rot_score"
         },
-        {
-          "ticker": "META",
-          "reason": "PCS 63.8, 2-week streak, ret_13w negative, rs_underperform flag.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "TOU.TO",
-          "reason": "PCS 63.8, 0-week streak, ret_13w negative, rot_score 5.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "VNOM",
-          "reason": "PCS 63.5, 1-week streak, ret_13w negative, distribution_warning Koncorde.",
-          "rejection_category": "weak_relative_strength"
-        }
-      ]
-    },
-    "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 98,
-      "decision_summary": {
-        "market_read": "Bull Maduro regime with macro improving at +8.75 delta supports momentum continuation across healthcare leadership names.",
-        "risk_posture": "normal",
-        "should_select_picks": true
-      },
-      "selected": [
-        {
-          "ticker": "HUM",
-          "portfolio": "MIMO_SHADOW",
-          "signal_type": "confirmed_leader",
-          "confidence": "high",
-          "reason_short": "93.5% 13w outperformance on 8-week streak with zero extension risk",
-          "reason_full": "HUM posts the second-highest 13-week outperformance in the entire candidate set at 93.5% vs SPY, sustained across an unbroken 8-week streak with rotation score 7 and zero extension points. The 9.2% 4-week outperformance confirms the weekly trend remains actively building. Koncorde alignment shows distribution_warning with all three individual timeframes reading 'up', suggesting the warning stems from blue-green divergence (23 vs 137) rather than price breakdown. Healthcare_largecap concentration at 22% is acknowledged as MIMO total healthcare exposure will exceed 71%, but HUM's 93.5% 13w dwarfs the best non-healthcare alternative KIST.L at 2.4%.",
-          "comparative_edge": "Selected over MRK (PCS=81.0, rot=8, streak=4w) which has higher PCS and rotation score but only 5% 13w outperformance vs HUM's 93.5%, spike_flag true vs false, and half the streak length. MRK's dems=3 is equally weak so daily momentum offers no edge, while HUM's long-term leadership is categorically superior.",
-          "key_supporting_factors": [
-            "93.5% 13-week outperformance vs SPY is the second-highest in the candidate set behind only SLS at 161%, confirming dominant sustained institutional leadership.",
-            "8-week unbroken weekly streak matches the longest durations in the set held by SLS, TDOC, HIMS, OSCR, CVS, and UNH.",
-            "Zero extension points with no spike_flag provides the cleanest risk entry profile among all candidates with PCS above 79.",
-            "Rotation score 7 with 9.2% 4-week outperformance shows the weekly trend is actively building without overextension."
-          ],
-          "key_risks_or_contradictions": [
-            "Healthcare_largecap already holds 22% of MIMO_SHADOW; combined healthcare exposure will exceed 71% after this addition, creating severe sector concentration risk.",
-            "Koncorde alignment reads distribution_warning despite 3D and weekly states both 'up' — the divergence between blue (23) and green (137) flags potential distribution setup.",
-            "Daily momentum score of 5 is below 10, indicating weak near-term flow data that could produce suboptimal entry timing or short-term pullbacks."
-          ]
-        }
-      ],
-      "watch": [
         {
           "ticker": "KIST.L",
-          "reason": "Oil_gas diversifier with rot=8 and 17.1% 4-week outperformance offers the strongest non-healthcare signal, but only a 2-week weekly streak and 2.4% 13-week outperformance indicate the long-term trend is not yet established enough for confirmed entry.",
-          "watch_trigger": "Weekly streak extends to 4+ weeks with 13-week outperformance above 10% and dems sustained above 8."
+          "reason": "PCS 71.2 with outperform_d10 6 but oil_gas theme and mixed Koncorde alignment",
+          "watch_trigger": "Koncorde alignment shifts to bullish_aligned with streak extending to 5 weeks"
         },
         {
-          "ticker": "WCP.TO",
-          "reason": "Grok-open position with dems=11 and momentum_accel=true showing active daily flow, but spike_flag with only 1-week weekly streak creates entry risk without multi-week confirmation.",
-          "watch_trigger": "Spike_flag clears on next weekly close and weekly streak extends to 3+ weeks with sustained 4-week outperformance."
+          "ticker": "CVE",
+          "reason": "PCS 70.2 with spike_flag true and extension_risk high despite dems 9 and Koncorde 3D up",
+          "watch_trigger": "Spike_flag resolves and extension_risk drops to low with continued outperform_d10 above 6"
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "PCS 68.8 with ret_13w_vs_spy only 4.14 and Koncorde 3D distribution",
+          "watch_trigger": "ret_13w_vs_spy exceeds 15 and Koncorde 3D shifts to up"
+        },
+        {
+          "ticker": "ROOT",
+          "reason": "PCS 68.0 with ret_13w_vs_spy 5.05 and Koncorde 3D distribution_warning",
+          "watch_trigger": "ret_13w_vs_spy exceeds 20 and Koncorde alignment improves to mixed"
         },
         {
           "ticker": "TMO",
-          "reason": "Bullish-aligned Koncorde (3D up + weekly up) is the strongest structural reading among all non-open candidates, but negative 13-week outperformance of -2.9% and only 1-week streak need reversal before entry.",
-          "watch_trigger": "13-week outperformance turns positive and weekly streak extends to 3+ weeks while maintaining bullish-aligned Koncorde."
+          "reason": "PCS 66.0 with negative ret_13w_vs_spy -4.74 and Koncorde 3D distribution",
+          "watch_trigger": "ret_13w_vs_spy turns positive and streak_weeks reaches 4"
+        },
+        {
+          "ticker": "DHR",
+          "reason": "PCS 66.0 with ret_13w_vs_spy -1.29, streak_weeks 1 and VIGILAR signal",
+          "watch_trigger": "Streak_weeks reaches 4 and signal upgrades to EN_RADAR"
+        },
+        {
+          "ticker": "AMD",
+          "reason": "PCS 63.5 with negative ret_4w_vs_spy -2.15 and theme_weak flag",
+          "watch_trigger": "ret_4w_vs_spy turns positive and rot_score rises above 7"
+        },
+        {
+          "ticker": "JNJ",
+          "reason": "PCS 63.5 with ret_13w_vs_spy 2.09 and Koncorde 3D distribution_warning",
+          "watch_trigger": "ret_13w_vs_spy exceeds 15 and Koncorde 3D shifts to up"
+        },
+        {
+          "ticker": "EQR",
+          "reason": "PCS 63.2 but already open in active_picks with current_pcs 63.2",
+          "watch_trigger": "Current_pcs rises above 70 with streak extension"
+        },
+        {
+          "ticker": "HIMS",
+          "reason": "PCS 63.2 but already open in active_picks with current_pcs 63.2",
+          "watch_trigger": "Current_pcs rises above 70 with dems above 10"
+        },
+        {
+          "ticker": "SU",
+          "reason": "PCS 62.2 with streak_weeks 0, ret_13w_vs_spy negative and extreme extension_risk",
+          "watch_trigger": "Streak_weeks reaches 3 and extension_risk falls to medium"
+        }
+      ],
+      "rejected": []
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 90,
+      "decision_summary": {
+        "market_read": "Bull Maduro regime with deteriorating macro trend (-5.54 weekly delta) signals fading momentum support for risk-on positioning.",
+        "risk_posture": "cautious",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [
+        {
+          "ticker": "CVE",
+          "reason": "Cenovus has PCS 70.2 with rotation score 7 and bullish-aligned Koncorde confirming structural accumulation, but extension_risk is high at 4 points with dist_sma20_atr_high and spike_flag true, and only a 2-week weekly streak provides insufficient trend confirmation for entry.",
+          "watch_trigger": "Select if extension_risk drops to medium (spike_flag clears and dist_sma20_atr normalizes) while streak extends to 4+ weeks and Koncorde alignment remains bullish."
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "Vertex has PCS 68.8 with rotation score 8 (tied highest among non-open candidates), but dems of 2 is the lowest in the eligible set, spike_flag is true, and Koncorde 3D reads distribution with blue at -3.69 — daily momentum is too weak to justify entry despite the strong weekly flow score.",
+          "watch_trigger": "Select if dems rises above 10 with spike_flag clearing, or if Koncorde 3D transitions from distribution to up while weekly streak extends beyond 4 weeks."
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "Whitecap offers oil_gas diversification at PCS 65.8 with dems 11 and momentum acceleration, but spike_flag is true (most of the 10d +11% move concentrated in single sessions), streak is only 2 weeks, and PCS sits below the 68 min_entry threshold for MIMO_SHADOW — not enough margin for conviction.",
+          "watch_trigger": "Select if PCS rises above 68, spike_flag clears, and weekly streak extends to 4+ weeks confirming the daily surge is sustained institutional accumulation."
         }
       ],
       "rejected": [
         {
-          "ticker": "MRK",
-          "reason": "PCS 81.0 with rot=8 looks strong superficially, but spike_flag true, dems only 3, and 13-week outperformance of just 5% is 18.7x weaker than HUM's 93.5% in the same healthcare_largecap theme.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "UCO",
+          "reason": "UCO is ProShares Ultra Bloomberg Crude Oil, a leveraged commodity ETF that directly tracks crude oil futures — this violates the hard rule against selecting futures, commodities, or macro indices directly.",
+          "rejection_category": "not_tradable"
         },
         {
-          "ticker": "JNJ",
-          "reason": "Rotation score 9 is the highest among all non-open candidates, yet 13-week outperformance of only 2.3% and dems=4 indicate the rotation signal is not translating to sustained price leadership above entry threshold quality.",
+          "ticker": "KIST.L",
+          "reason": "Despite PCS 71.2 and RS leader status, Kistos has only 1.3% 13-week outperformance vs SPY (lowest among all candidates with PCS above 70), indicating the recent 16.4% 4-week surge is a short-term bounce rather than sustained institutional accumulation on a 3-week streak.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "ROOT",
-          "reason": "Healthcare_special theme already at 49.5% MIMO weight and distance from 52-week high is -55.5%, suggesting structural weakness despite the recent 4-week streak; HUM dominates on all key metrics in healthcare.",
+          "reason": "Root Insurance at PCS 68.0 trades 55% below its 52-week high with dems of only 4 and 5.0% 13-week outperformance — MIMO_SHADOW already holds five superior healthcare_special positions (SLS at 134%, OSCR at 83%, TDOC at 65%, HIMS at 8.7%) with stronger sustained leadership profiles.",
           "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "VRTX",
-          "reason": "Spike_flag true with dems only 2, 13-week outperformance of 5.3%, and koncorde 3D in distribution state — multiple contradictions prevent a clean signal for portfolio entry.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "CVE",
-          "reason": "Extension risk high at 4 points with spike_flag, only 1-week weekly streak and 2.1% 13-week outperformance — chasing a short-term energy spike without sustained weekly confirmation.",
-          "rejection_category": "technical_overextension"
+          "ticker": "TMO",
+          "reason": "Thermo Fisher shows negative 13-week outperformance of -4.7% vs SPY despite a recent 13.6% 4-week surge, indicating the long-term trend remains bearish with only a 2-week recovery streak and Koncorde 3D in distribution state with blue at -21.54.",
+          "rejection_category": "weak_relative_strength"
         },
         {
           "ticker": "DHR",
-          "reason": "IGNORAR system signal with zero weekly streak, negative 13-week outperformance of -0.8%, and spike_flag — no qualifying signal exists for portfolio entry at any confidence level.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "SU",
-          "reason": "Extension risk extreme at 7 points with spike_flag, RSI extreme, and negative 13-week outperformance of -7.7% — the most overextended candidate in the set with no sustained trend backing it.",
-          "rejection_category": "technical_overextension"
+          "reason": "Danaher has negative 13-week outperformance of -1.3% vs SPY, only 1-week weekly streak, spike_flag true on a weak signal (VIGILAR), and Koncorde 3D in distribution — the combination of a single-week streak with negative long-term leadership and distribution structure provides no conviction basis.",
+          "rejection_category": "weak_relative_strength"
         },
         {
           "ticker": "AMD",
-          "reason": "PCS 67.8 falls below MIMO_SHADOW minimum entry of 68, combined with IGNORAR signal, zero weekly streak, and negative 4-week outperformance of -1.6% vs SPY.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "AMD shows negative 4-week outperformance of -2.1% vs SPY with only 1-week streak, dems of 4 (well below the 10 threshold for daily momentum consideration), and theme_flow component at 10.0 (weakest among all eligible candidates) reflecting a weak us_tech_ai theme environment.",
+          "rejection_category": "weak_flow"
         },
         {
-          "ticker": "UCO",
-          "reason": "PCS 67.5 below MIMO_SHADOW minimum entry; leveraged crude oil product with koncorde distribution across daily and 3D timeframes provides a structurally unsound entry despite dems=15.",
-          "rejection_category": "not_tradable"
+          "ticker": "JNJ",
+          "reason": "Johnson & Johnson at PCS 63.5 has only 2.1% 13-week outperformance vs SPY on 5-week streak with dems of 4 — MIMO_SHADOW already holds five healthcare_largecap positions with categorically stronger metrics (HUM at 89.8%, ABBV at 17.7%, CVS at 35.7% 13w outperformance).",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "META",
-          "reason": "PCS 63.8 well below minimum entry threshold of 68, negative 13-week outperformance of -10.7%, and koncorde 3D in distribution — no qualifying signal at current readings.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "TOU.TO",
-          "reason": "PCS 63.8 below minimum entry threshold, IGNORAR system signal, zero weekly streak, and negative 13-week outperformance of -0.9% with spike_flag on recent move.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "SU",
+          "reason": "Suncor has extreme extension risk at 7 points (dist_sma20_atr_extreme + spike_flag + rsi_extreme) with Koncorde 3D in distribution and signal IGNORAR — the combination of maximum extension, distribution structure, and ignored signal makes entry categorically unjustifiable.",
+          "rejection_category": "technical_overextension"
         }
       ]
     }
