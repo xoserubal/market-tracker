@@ -1,35 +1,240 @@
 {
-  "run_id": "2026-07-23_1019",
+  "run_id": "2026-07-23_2100",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-07-23",
   "summary": {
     "date": "2026-07-23",
-    "run_id": "2026-07-23_1019",
+    "run_id": "2026-07-23_2100",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
     "candidate_count": 25,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cost_usd": 0.0,
-    "latency_ms": 0.0,
-    "json_valid": false,
-    "schema_valid": false,
+    "input_tokens": 25919,
+    "output_tokens": 9810,
+    "cost_usd": 0.019809,
+    "latency_ms": 145200.0,
+    "json_valid": true,
+    "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 0,
-    "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 0,
+    "quality_score": 100,
+    "selected_count": 1,
+    "watch_count": 17,
+    "rejected_count": 7,
     "fallback_used": false,
-    "error": "Expecting value: line 175 column 1 (char 957)"
+    "error": null
   },
   "validation": {
     "violations": [],
     "soft_warnings": []
   },
-  "quality_score": 0,
-  "response": null,
-  "raw_response_head": ""
+  "quality_score": 100,
+  "response": {
+    "date": "2026-07-23",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-07-23_2100",
+    "decision_summary": {
+      "market_read": "Macro regime is Bull Maduro Improving with strong momentum score 81.25 and positive weekly delta of 15.0.",
+      "risk_posture": "cautious",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "CVE",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "early_rotation",
+        "confidence": "medium",
+        "reason_short": "Highest daily momentum dems 17 with positive 4-week outperformance in oil_gas.",
+        "reason_full": "CVE shows daily momentum score 17 with spike_flag false and outperform_d10 of 8, indicating robust multi-day institutional flow. The 2-week streak and 7.45% 13-week outperformance vs SPY confirm sustained leadership, diversifying from concentrated healthcare themes. Extension_risk is high due to extreme SMA20 distance and RSI, but the strong daily signal justifies entry.",
+        "comparative_edge": "Selected over WCP.TO (PCS=75.5, dems=16) because CVE has dems=17 and higher ret_4w_vs_spy of 12.53% vs WCP.TO's 5.48%, showing stronger recent momentum despite similar extension risk.",
+        "key_supporting_factors": [
+          "Daily momentum score of 17 is the highest among oil_gas candidates, confirming intense near-term flow.",
+          "Outperform_d10 of 8 with 6-day streak shows broad multi-day accumulation without reliance on a spike.",
+          "Oil_gas theme has medium concentration risk, providing diversification from high-concentration healthcare sector.",
+          "Koncorde alignment is bullish_aligned with 3D and weekly both up, supporting structural accumulation."
+        ],
+        "key_risks_or_contradictions": [
+          "Extension_risk is high with dist_sma20_atr_extreme and rsi_high, increasing near-term pullback probability.",
+          "13-week outperformance of 7.45% is moderate, trailing healthcare leaders like SLS at 133.73%.",
+          "Theme concentration in oil_gas could increase if more positions are added, but currently at medium risk."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "CVS",
+        "reason": "Active position with current_pcs 83.2 above entry threshold, holding for continued leadership.",
+        "watch_trigger": "Exit if current_pcs falls below 68 or rotation score drops below 3."
+      },
+      {
+        "ticker": "SLS",
+        "reason": "Active position with current_pcs 81.2 and 8-week streak, but extension_risk high and konc distribution_warning.",
+        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks <= 1."
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Active position with current_pcs 81.0 and 8-week streak, but theme concentration high.",
+        "watch_trigger": "Exit if current_pcs < 68 or rot_score <= 2."
+      },
+      {
+        "ticker": "ABBV",
+        "reason": "Active position with current_pcs 77.8 and 5-week streak, holding for weekly trend continuation.",
+        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks drops to 0."
+      },
+      {
+        "ticker": "LLY",
+        "reason": "Active position with current_pcs 77.0, but konc distribution_warning and dems=5 weak.",
+        "watch_trigger": "Exit if current_pcs < 68 or rotation score falls below 4."
+      },
+      {
+        "ticker": "TDOC",
+        "reason": "Active position with current_pcs 76.5 and 8-week streak, but extension_risk low and dems=4.",
+        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks <= 1."
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "Active position with current_pcs 75.8 and 8-week streak, but dems=3 weak for daily momentum.",
+        "watch_trigger": "Exit if current_pcs < 68 or rotation score <= 2."
+      },
+      {
+        "ticker": "UNH",
+        "reason": "Active position with current_pcs 72.2 and 8-week streak, holding for sustained leadership.",
+        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks drops to 0."
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "Strong weekly metrics with rot=8 and streak=5w, but dems=11 below 14 for early selection.",
+        "watch_trigger": "Select if dems rises above 14 with spike_flag false and PCS sustains above 75."
+      },
+      {
+        "ticker": "AMD",
+        "reason": "High 13-week outperformance at 87.72% but dems=10 and PCS=73 below threshold for primary entry.",
+        "watch_trigger": "Select if PCS rises above 75 and dems improves above 14."
+      },
+      {
+        "ticker": "MRK",
+        "reason": "Solid weekly streak of 5w with dems=11 and konc bullish_pending_3d_confirmation.",
+        "watch_trigger": "Select if dems rises above 14 with spike_flag false and extension_risk remains low."
+      },
+      {
+        "ticker": "TOU.TO",
+        "reason": "Strong daily momentum dems=15 and rot=8, but not selected for diversification focus on CVE.",
+        "watch_trigger": "Select if extension_risk reduces to low and PCS remains above 75."
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "High dems=16 and rot=8, but extension_risk high and not selected due to similar signal to CVE.",
+        "watch_trigger": "Select if extension_risk reduces to medium and daily momentum sustains."
+      },
+      {
+        "ticker": "YPF",
+        "reason": "High dems=17 and positive 13-week outperformance, but PCS=67.2 below min entry threshold.",
+        "watch_trigger": "Select if PCS rises above 68 and dems remains above 14."
+      },
+      {
+        "ticker": "SU",
+        "reason": "Strong daily momentum dems=16, but PCS=67.2 below min entry and streak_weeks=0.",
+        "watch_trigger": "Select if PCS rises above 68 and weekly streak establishes."
+      },
+      {
+        "ticker": "REG",
+        "reason": "Moderate dems=7 and PCS=66.2 below min entry, insufficient for immediate selection.",
+        "watch_trigger": "Select if PCS rises above 68 and dems improves above 10."
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "High dems=15 but PCS=64.2 below min entry and rotation score moderate at 5.",
+        "watch_trigger": "Select if PCS rises above 68 and weekly streak establishes."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "ROOT",
+        "reason": "Weak daily momentum with dems=3 and low rotation score of 6, insufficient conviction for entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "Extension_risk is high with extreme SMA20 distance and RSI, and konc alignment distribution_warning.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "VLE.TO",
+        "reason": "High extension_risk with negative 13-week outperformance and dems=17 but poor longer-term trend.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "SE",
+        "reason": "Weak theme with dems=4 and low relative strength in china_em, insufficient for selection.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "Negative 13-week outperformance of -6.43% despite high dems, indicating weak sustained trend.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "Konc alignment is distribution_warning with dems=7, signaling potential breakdown.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "BBAR",
+        "reason": "Weak daily momentum with dems=5 and low rotation score, insufficient for entry.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 81.2 above entry threshold with 8-week streak, holding for continued leadership."
+      },
+      {
+        "ticker": "UNH",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 72.2 above min entry with 8-week streak, sustaining weekly outperformance."
+      },
+      {
+        "ticker": "CVS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 83.2 above entry with 8-week streak and rotation score 8, holding."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 77.8 above entry with 5-week streak and rot=9, holding for trend continuation."
+      },
+      {
+        "ticker": "TDOC",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 76.5 above entry with 8-week streak, holding despite weak daily momentum."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 75.8 above entry with 8-week streak, holding for weekly leadership."
+      },
+      {
+        "ticker": "LLY",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 77.0 above entry with 4-week streak, holding despite konc distribution_warning."
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 81.0 above entry with 8-week streak, holding for strong 13-week outperformance."
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-07-23\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-23_2100\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime is Bull Maduro Improving with strong momentum score 81.25 and positive weekly delta of 15.0.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"CVE\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"Highest daily momentum dems 17 with positive 4-week outperformance in oil_gas.\",\n      \"reason_full\": \"CVE shows daily momentum score 17 with spike_flag false and outperform_d10 of 8, indicating robust multi-day institutional flow. The 2-week streak and 7.45% 13-week outperformance vs SPY confirm sustained leadership, diversifying from concentrated healthcare themes. Extension_risk is high due to extreme SMA20 distance and RSI, but the strong daily signal justifies entry.\",\n      \"comparative_edge\": \"Selected over WCP.TO (PCS=75.5, dems=16) because CVE has dems=17 and higher ret_4w_vs_spy of 12.53% vs WCP.TO's 5.48%, showing stronger recent momentum despite similar extension risk.\",\n      \"key_supporting_factors\": [\n        \"Daily momentum score of 17 is the highest among oil_gas candidates, confirming intense near-term flow.\",\n        \"Outperform_d10 of 8 with 6-day streak shows broad multi-day accumulation without reliance on a spike.\",\n        \"Oil_gas theme has medium concentration risk, providing diversification from high-concentration healthcare sector.\",\n        \"Koncorde alignment is bullish_aligned with 3D and weekly both up, supporting structural accumulation.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Extension_risk is high with dist_sma20_atr_extreme and rsi_high, increasing near-term pullback probability.\",\n        \"13-week outperformance of 7.45% is moderate, trailing healthcare leaders like SLS at 133.73%.\",\n        \"Theme concentration in oil_gas could increase"
 }
