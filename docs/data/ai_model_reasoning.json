@@ -1,6 +1,6 @@
 {
   "date": "2026-07-27",
-  "run_id": "2026-07-27_1117",
+  "run_id": "2026-07-27_2109",
   "candidates": [
     "ABBV",
     "SLS",
@@ -32,7 +32,7 @@
     "x-ai/grok-4.3": {
       "quality_score": 89,
       "decision_summary": {
-        "market_read": "Bull Maduro regime with improving macro score 72.5 supports selective rotation but extreme healthcare and oil concentration limits new entries.",
+        "market_read": "Bull Maduro regime continues with macro score 75 and +2.5 weekly delta supporting selective cyclical and healthcare leadership.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
@@ -40,113 +40,45 @@
       "watch": [
         {
           "ticker": "URI",
-          "reason": "PCS 82.2 with rot 7 and us_cyclical low concentration offers diversification but streak_weeks only 1 and spike_flag limit conviction.",
-          "watch_trigger": "streak_weeks reaches 3 with outperform_d10 sustained above 6"
+          "reason": "PCS 82.2, rot_score 7, 38.2% 13w vs SPY, low theme concentration, but streak_weeks only 1 and spike_flag true limit immediate entry.",
+          "watch_trigger": "Streak_weeks reaches 3+ or dems climbs above 14 without spike"
         },
         {
           "ticker": "AMD",
-          "reason": "PCS 77 and dems 10 with low tech concentration provides early rotation signal but spike_flag and negative ret_4w_vs_spy reduce reliability.",
-          "watch_trigger": "ret_4w_vs_spy turns positive with momentum_accel confirmed"
+          "reason": "PCS 77, rot_score 8, 73.8% 13w vs SPY and low us_tech_ai concentration, but streak_weeks=1 and dems=5 indicate weak daily confirmation.",
+          "watch_trigger": "Streak_weeks >=2 with dems >=12 and outperform_d10 >=6"
         },
         {
-          "ticker": "VRTX",
-          "reason": "PCS 73 in pharma_biotech_quality with low extension risk but dems 3 and distribution_warning prevent selection.",
-          "watch_trigger": "dems rises above 10 with rot_score stabilizing at 7"
+          "ticker": "UCO",
+          "reason": "PCS 71.5, 25.2% 4w outperformance in oil_gas, dems 10 and outperform_d10 8, but distribution_warning on Koncorde weekly and high theme concentration.",
+          "watch_trigger": "Konc_w_state turns up and rot_score rises to 7+ with no distribution flags"
         },
         {
           "ticker": "KOS",
-          "reason": "High dems 17 and outperform_d10 7 in oil_gas with macro permission but high concentration and mixed konc_alignment weaken case.",
-          "watch_trigger": "konc_3d_state shifts to up with streak_weeks reaching 3"
+          "reason": "PCS 68.2, dems 14 with momentum_accel true and outperform_d10 7, but distribution on both 3D and daily Koncorde plus ret_13w negative.",
+          "watch_trigger": "Konc_3d_state shifts to up and ret_4w_vs_spy sustains above +8%"
         }
       ],
       "rejected": [
         {
-          "ticker": "UCO",
-          "reason": "Extreme extension risk 7 points with ret_4w_vs_spy 25% and ret_10d_vs_spy 29% signals overextension despite dems 15.",
-          "rejection_category": "technical_overextension"
-        },
-        {
           "ticker": "CAT",
-          "reason": "Dems only 7 below threshold for EARLY_ROTATION and ret_4w_vs_spy negative at -9.6 despite pcs 70.5.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "GS",
-          "reason": "Dems 6 and rot 5 with streak_weeks 0 indicate absent weekly leadership despite pcs 69.5.",
+          "reason": "PCS 70.5 but ret_4w_vs_spy -9.57%, rot_score 6, streak_weeks 1 and dems only 4 with no weekly leadership confirmation.",
           "rejection_category": "weak_relative_strength"
         },
         {
+          "ticker": "GS",
+          "reason": "PCS 69.5, rot_score 5, streak_weeks 0 and dems 5 provide insufficient weekly or daily momentum for any portfolio.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
           "ticker": "DHR",
-          "reason": "Streak_weeks 0 and ret_13w_vs_spy near zero at 0.75 with dems 8 show insufficient momentum.",
+          "reason": "PCS 69.2, rot_score 5, streak_weeks 0 and dems 8 fall below EARLY_ROTATION thresholds with negative ret_13w_vs_spy.",
           "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "ROOT",
-          "reason": "Streak_weeks 0 and ret_13w_vs_spy negative at -0.33 with dems 3 confirm weak flow despite pcs 68.5.",
-          "rejection_category": "weak_flow"
-        }
-      ]
-    },
-    "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 90,
-      "decision_summary": {
-        "market_read": "Bull Maduro regime improving with +6.25 delta, but MIMO_SHADOW healthcare concentration at 87.5% weight severely limits safe entry points for new positions.",
-        "risk_posture": "normal",
-        "should_select_picks": false
-      },
-      "selected": [],
-      "watch": [
-        {
-          "ticker": "URI",
-          "reason": "PCS 82.2 with 38.2% 13w outperformance in low-concentration us_cyclical (5.5% weight), but dems=13 sits below the 14 threshold and spike_flag=true prevents a clean early-rotation entry. Only 1-week weekly streak also lacks multi-week confirmation.",
-          "watch_trigger": "dems reaching 14+ without spike_flag, OR streak_weeks extending to 3+ with current momentum sustained."
-        },
-        {
-          "ticker": "AMD",
-          "reason": "73.8% 13w outperformance is the second-strongest among non-open candidates, and us_tech_ai theme offers diversification at 5.5% weight. However dems=10 is in the cautious 10-13 range, spike_flag=true concentrates the move, and only 1-week streak means weekly trend is not yet established.",
-          "watch_trigger": "dems rising above 13 with spike_flag clearing to false, OR streak_weeks extending to 2+ with ret_4w_vs_spy remaining positive."
-        },
-        {
-          "ticker": "KOS",
-          "reason": "Dems=17 without spike is the strongest daily momentum signal available among non-open candidates, and 18.5% 4w outperformance shows accelerating recent flow. However 13w outperformance is negative at -7.9%, Koncorde 3D and daily both read distribution, and oil_gas theme already holds 35.5% weight.",
-          "watch_trigger": "13w outperformance turning positive while dems stays above 14 without spike, AND konc_3d_state resolving from distribution to accumulation or up."
-        }
-      ],
-      "rejected": [
-        {
-          "ticker": "TMO",
-          "reason": "Healthcare_largecap already accounts for 56% of MIMO weight; TMO adds extension_risk=high (4 pts from dist_sma20_atr_high and spike_flag) with Koncorde 3D in distribution at blue=-19.8, and ret_13w_vs_spy of only 7.4% trails every other healthcare open position.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "VRTX",
-          "reason": "Ret_4w_vs_spy of 0.4% and ret_13w_vs_spy of 4.0% are the weakest among all healthcare candidates, dems=3 provides no daily momentum support, and konc_alignment=distribution_warning with 3D and daily both in distribution state.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "UCO",
-          "reason": "Extension_risk=extreme at 7 points from dist_sma20_atr_extreme, ret_4w_extended (+25.2%), and rsi_extreme; as a 2x leveraged crude oil ETF the 13w outperformance is only 1.4% despite the recent surge, and weekly koncorde reads distribution.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "CAT",
-          "reason": "Ret_4w_vs_spy is negative at -9.6%, the worst among all candidates, with dems=7 and spike_flag=true providing weak daily confirmation; streak is only 1 week with rot=6 and 13w outperformance of 6.7% trailing other cyclical picks like URI (38.2%).",
+          "reason": "PCS 68.5, rot_score 4, streak_weeks 0, dems 3 and ret_13w_vs_spy negative indicate weak flow across timeframes.",
           "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "GS",
-          "reason": "Zero weekly streak with ret_4w_vs_spy of -2.4% indicates the weekly trend has not established, dems=6 offers no daily momentum support, and konc_alignment=distribution_warning with 3D blue at -26.33 signals active distribution.",
-          "rejection_category": "weak_flow"
-        },
-        {
-          "ticker": "DHR",
-          "reason": "Zero weekly streak with ret_13w_vs_spy of only 0.8% shows negligible sustained leadership, rot_score=5 is the lowest tier, and healthcare_largecap already dominates at 56% portfolio weight with theme concentration risk high.",
-          "rejection_category": "weak_flow"
-        },
-        {
-          "ticker": "ROOT",
-          "reason": "Stock sits 55.6% below its 52-week high indicating severe structural weakness, rot_score=4 is the lowest among all eligible candidates, ret_13w_vs_spy is negative at -0.3%, and healthcare_special theme already holds 31.5% of portfolio weight.",
-          "rejection_category": "weak_relative_strength"
         }
       ]
     }
