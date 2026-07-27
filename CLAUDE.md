@@ -645,6 +645,27 @@ Score continuo (`konc_composite_score`) ponderando D/3D/W — dirección correct
 
 ---
 
+## Cierre del bucle de medición del Koncorde Research Log + magnitud/aceleración (implementado 2026-07-28)
+
+Contexto: el research log (`koncorde_signals_history.jsonl`, ver sección "Fix del veto absoluto…") llevaba desde el 2026-07-21 acumulando ingredientes objetivos por ticker/día pero con `ret_1w/2w/1m` a `null` en el 100% de las filas (1.379 filas, 7 días, 0 etiquetas) — sin las etiquetas de rendimiento el log es infalsable, no se puede saber qué combinación de ingredientes detecta las mejores oportunidades. Este cambio cierra ese bucle y añade las dos primitivas que faltaban para poder estudiar "grandes magnitudes" y "giros bruscos".
+
+### 1. Dos campos nuevos en `_compute_research_fields` (`scripts/koncorde_calculator.py`)
+
+- **`konc_d_blue_z`** — z-score del `blue` diario contra su propia distribución móvil de ~90 barras (`(blue[-1] − mean) / std`, requiere ≥60 valores válidos). El `blue` es un oscilador cuya magnitud cruda no es comparable entre los ~197 tickers del universo; el z-score responde "¿cuánto dinero entra, *para este ticker*, ahora?" de forma comparable. Verificado: SE blue=47.5 → z=2.52 (magnitud alta genuina); NVDA blue=−29.1 → z=−0.74.
+- **`konc_d_blue_accel`** — aceleración = `slope_3 − slope_6` (ambas ya son pendientes por-barra, misma escala). accel>0 = el dinero no solo entra, entra acelerando (primitiva de inflexión/giro brusco). Verificado: NVDA slope_3=−0.65, slope_6=+4.29 → accel=−4.93 (blue desacelerando/girando a la baja).
+
+Ambos se loguean crudos en el research log (no gated en ninguna señal/HARD_RULE) — mismo criterio que el resto de ingredientes: primero se etiquetan con rendimiento, luego los datos —no pesos elegidos a mano— deciden si un compuesto magnitud+aceleración predice retornos antes de promoverlo. Es el `konc_composite_score` continuo que el asesor externo marcó como dirección correcta, sembrado como campos observacionales.
+
+### 2. `scripts/update_koncorde_performance.py` (nuevo — Step 10c del pipeline)
+
+Compañero de `update_performance.py` (que etiqueta `shadow_picks.jsonl`), adaptado al research log. Rellena in-place `ret_1w/2w/1m` (5/10/21 sesiones) **y `vs_spy_1w/2w/1m`** (alpha vs SPY — necesario para distinguir "mejor oportunidad" de "subió con el mercado"). Entrada = cierre del primer día hábil ≥ fecha de la fila. Un horizonte queda `null` hasta que madura, así que es seguro correrlo en cada pass del pipeline (rellena cada fila según van pasando sesiones). Flags `--dry-run/--force/--ticker/--report`. `end` de yfinance es exclusivo → se pide `today+1` para incluir la barra de hoy cuando ya cerró. Cableado como Step 10c con `continue-on-error: true` (fallo de yfinance no tumba el pipeline). Plantilla de nulls del log ampliada a los 6 campos `ret_/vs_spy_`.
+
+**Verificado:** campos nuevos calculados contra datos reales (aritmética de accel/z-score cuadra exacto); `compute_row_metrics` cruzado contra cálculo manual (SE entrada 2026-04-01 → ret_1m 4.92% ✓, +21 sesiones = 2026-05-01). En el primer run real no maduró ningún horizonte todavía (log de 5 sesiones, barra de hoy sin cerrar) — esperado; el primer lote de `ret_1w` se rellenará en el siguiente run.
+
+**Plan de revisión** (extiende el de la sección del research log): con 4-8 semanas de `ret_/vs_spy_` rellenos, evaluar si `konc_d_blue_z` alto + `konc_d_blue_accel>0` (± los otros 8 ingredientes) predice mejor rendimiento que el ruido. Solo entonces promover a señal operativa.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

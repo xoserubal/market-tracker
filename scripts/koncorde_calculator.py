@@ -504,6 +504,9 @@ def _compute_research_fields(df: pd.DataFrame, blue_d: np.ndarray | None) -> dic
         "konc_d_blue_positive_days_6": None,
         "konc_d_blue_up_count_6":      None,
         "konc_d_blue_slope_6":         None,
+        # 2026-07-28: magnitude + acceleration primitives (see below for rationale)
+        "konc_d_blue_z":               None,
+        "konc_d_blue_accel":           None,
         "volume_vs_20d":               None,
         "low_break_20d":               False,
         "close_reclaim_3d":            False,
@@ -526,6 +529,33 @@ def _compute_research_fields(df: pd.DataFrame, blue_d: np.ndarray | None) -> dic
         blue_slope_6 = None
         if not (np.isnan(blue_d[-1]) or np.isnan(blue_d[-6])):
             blue_slope_6 = round((float(blue_d[-1]) - float(blue_d[-6])) / 5.0, 4)
+
+        # ── Magnitude (blue_z) + acceleration (blue_accel) — added 2026-07-28 ──
+        # blue is an oscillator whose raw magnitude isn't comparable across the
+        # ~197-ticker universe (a "+17" means different things per ticker/regime).
+        # blue_z re-expresses today's blue as a z-score vs its OWN trailing ~90-bar
+        # distribution → "how big is big money entering, FOR THIS TICKER, right now",
+        # comparable across tickers. Deliberately logged raw (not gated into any
+        # signal) so it gets forward-return labels alongside the other ingredients;
+        # the plan is to let the data — not hand-picked weights — decide whether a
+        # magnitude+acceleration composite predicts returns before promoting it.
+        blue_z = None
+        valid_blue = blue_d[~np.isnan(blue_d)]
+        if valid_blue.size >= 60:
+            window = valid_blue[-90:]
+            mu = float(np.mean(window))
+            sd = float(np.std(window))
+            if sd > 1e-9:
+                blue_z = round((float(valid_blue[-1]) - mu) / sd, 2)
+
+        # blue_accel = short-window per-bar slope − long-window per-bar slope.
+        # Both slopes are already per-bar (slope_3 = Δ/2, slope_6 = Δ/5) so they're
+        # on the same scale: accel > 0 means blue is not just rising but rising
+        # faster than its recent pace — the "giro brusco / inflexión" primitive.
+        blue_accel = None
+        if blue_slope_6 is not None and not (np.isnan(blue_d[-1]) or np.isnan(blue_d[-3])):
+            slope_3 = (float(blue_d[-1]) - float(blue_d[-3])) / 2.0
+            blue_accel = round(slope_3 - blue_slope_6, 4)
 
         # ATR14 (Wilder) + distance to SMA20 in ATR units — same formula as
         # pcs_calculator.py's dist_sma20_atr, recomputed here (not reused) because
@@ -574,6 +604,8 @@ def _compute_research_fields(df: pd.DataFrame, blue_d: np.ndarray | None) -> dic
             "konc_d_blue_positive_days_6": pos_days_6,
             "konc_d_blue_up_count_6":      up_count_6,
             "konc_d_blue_slope_6":         blue_slope_6,
+            "konc_d_blue_z":               blue_z,
+            "konc_d_blue_accel":           blue_accel,
             "volume_vs_20d":               vol_ratio,
             "low_break_20d":               bool(low_break_today),
             "close_reclaim_3d":            bool(reclaim),
@@ -802,14 +834,18 @@ def _log_research_history(koncorde_out: dict[str, dict], today: str) -> None:
                 "konc_w_blue_slope":           k.get("konc_w_blue_slope"),
                 "konc_d_blue_positive_days_6": k.get("konc_d_blue_positive_days_6"),
                 "konc_d_blue_up_count_6":      k.get("konc_d_blue_up_count_6"),
+                "konc_d_blue_z":               k.get("konc_d_blue_z"),
+                "konc_d_blue_accel":           k.get("konc_d_blue_accel"),
                 "volume_vs_20d":               k.get("volume_vs_20d"),
                 "low_break_20d":               k.get("low_break_20d"),
                 "close_reclaim_3d":            k.get("close_reclaim_3d"),
                 "distance_to_sma20_atr":       k.get("distance_to_sma20_atr"),
                 "price_range_20d_position":    k.get("price_range_20d_position"),
-                # Filled in later by a follow-up script (update_performance.py
-                # pattern) once enough sessions have passed — not computed here.
+                # Filled in later by scripts/update_koncorde_performance.py
+                # (update_performance.py pattern) once enough sessions have passed —
+                # not computed here. vs_spy_* = alpha (ret − SPY) at each horizon.
                 "ret_1w": None, "ret_2w": None, "ret_1m": None,
+                "vs_spy_1w": None, "vs_spy_2w": None, "vs_spy_1m": None,
             }, ensure_ascii=False) + "\n")
             seen.add((tk, today))
             n_logged += 1

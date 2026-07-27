@@ -128,6 +128,11 @@ jobs:
         run: python scripts/update_performance.py
         working-directory: ${{ github.workspace }}
 
+      - name: Run pipeline - Step 10c update Koncorde research-log returns
+        run: python scripts/update_koncorde_performance.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 11 Telegram notifications
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
