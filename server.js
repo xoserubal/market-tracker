@@ -548,20 +548,26 @@ app.get("/api/treasury-auctions", async (_req, res) => {
     return res.json(_treasuryAuctionsCache);
   }
   try {
-    const fields = "cusip,security_type,security_term,auction_date,high_yield,bid_to_cover_ratio";
+    const fields = "cusip,security_type,security_term,auction_date,high_yield,bid_to_cover_ratio,inflation_index_security";
     const url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query"
       + `?fields=${fields}&filter=security_term:in:(2-Year,10-Year,30-Year)&sort=-auction_date&page[size]=100`;
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
     if (!r.ok) throw new Error(`Fiscal Data respondió ${r.status}`);
     const json = await r.json();
     const numOrNull = v => (v == null || v === "null" || v === "") ? null : parseFloat(v);
-    const rows = (json.data || []).map(row => ({
-      cusip: row.cusip,
-      security_term: row.security_term,
-      auction_date: row.auction_date,
-      high_yield: numOrNull(row.high_yield),
-      bid_to_cover: numOrNull(row.bid_to_cover_ratio),
-    }));
+    // security_type dice "Bond" tanto para 30-Year nominal como para 30-Year TIPS —
+    // el campo que realmente distingue es inflation_index_security. Sin este filtro,
+    // subastas TIPS (yield real ~2.4%) se mezclaban con bonos nominales (~4.7-5%) en
+    // el mismo bucket "30-Year", corrompiendo el promedio y el stress proxy.
+    const rows = (json.data || [])
+      .filter(row => row.inflation_index_security !== "Yes")
+      .map(row => ({
+        cusip: row.cusip,
+        security_term: row.security_term,
+        auction_date: row.auction_date,
+        high_yield: numOrNull(row.high_yield),
+        bid_to_cover: numOrNull(row.bid_to_cover_ratio),
+      }));
 
     const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
     const tenors = {};

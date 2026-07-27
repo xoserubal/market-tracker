@@ -126,6 +126,53 @@ function fmt(n, d = 2) { return n == null || Number.isNaN(n) ? '—' : n.toFixed
 function fmtBps(n) { return n == null ? '—' : (n > 0 ? '+' : '') + Math.round(n) + 'bps'; }
 function fmtPct(n) { return n == null ? '—' : (n > 0 ? '+' : '') + n + '%'; }
 
+// ── Staleness: la fuente (Yahoo/FRED) a veces deja de publicar un ticker durante
+// varias sesiones sin devolver error (^MOVE es el caso conocido) — sin este check
+// el dato viejo se muestra como si fuera de hoy. Umbral más laxo para FRED (lag de
+// 1 día + fines de semana ya es normal) que para quotes de Yahoo.
+function staleInfo(dateStr, thresholdDays) {
+  if (!dateStr) return { stale: false, days: null };
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return { stale: false, days: null };
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  return { stale: days > thresholdDays, days };
+}
+const staleQuote = dateStr => staleInfo(dateStr, 4);
+const staleFred  = dateStr => staleInfo(dateStr, 5);
+
+// ── Proxy de respaldo para MOVE cuando Yahoo no lo sirve ────────────────────
+// ^MOVE es un caso conocido de fuente poco fiable (ver staleInfo arriba) — a veces
+// deja de publicar durante varias sesiones seguidas sin error. Como respaldo, se
+// estima un "MOVE equivalente" a partir de la volatilidad realizada de TLT (dato
+// que sí tenemos siempre, vía /api/history ya usado para el sparkline).
+// Calibrado 2026-07-27 contra 5 años de histórico diario TLT vs ^MOVE reales de Yahoo
+// (1219 sesiones solapadas, excluyendo huecos de ^MOVE): regresión lineal
+// MOVE_est = a + b * TLT_rvol20, donde TLT_rvol20 = stdev anualizada (%) de retornos
+// log de TLT a 20 sesiones (mismo horizonte de 20 días que SMA20/dist_sma20_atr en
+// el resto del proyecto). r²=0.51 — correlación moderada, NO un sustituto exacto:
+// MOVE es volatilidad implícita de opciones sobre futuros de bonos, esto es
+// volatilidad realizada de precio. Por eso se muestra como rango (±1 residual stdev),
+// nunca como número puntual, y solo cuando el dato real de MOVE está ausente/obsoleto.
+const MOVE_PROXY = { window: 20, a: 43.96, b: 3.876, r2: 0.51, residualSd: 16.9 };
+
+function calcRealizedVol(series, window) {
+  const closes = (series || []).map(p => p.close).filter(c => c != null && Number.isFinite(c));
+  if (closes.length < window + 1) return null;
+  const rets = [];
+  for (let i = 1; i < closes.length; i++) rets.push(Math.log(closes[i] / closes[i - 1]));
+  const tail = rets.slice(-window);
+  const mean = tail.reduce((a, b) => a + b, 0) / tail.length;
+  const variance = tail.reduce((a, b) => a + (b - mean) ** 2, 0) / tail.length;
+  return Math.sqrt(variance) * Math.sqrt(252) * 100;
+}
+
+function moveProxyFromTlt(tltSeries) {
+  const rvol = calcRealizedVol(tltSeries, MOVE_PROXY.window);
+  if (rvol == null) return null;
+  const est = MOVE_PROXY.a + MOVE_PROXY.b * rvol;
+  return { rvol, est, lo: est - MOVE_PROXY.residualSd, hi: est + MOVE_PROXY.residualSd };
+}
+
 // ── Tickers / series a pedir ────────────────────────────────────────────────
 const QUOTE_TICKERS = ['TLT', 'TBT', 'IEF', 'EDV', 'ZROZ', 'GC=F', 'DX-Y.NYB', 'JPY=X', '^VIX', '^MOVE'];
 const FRED_SERIES = ['DGS10', 'DGS2', 'DGS30', 'DFII10', 'T5YIE', 'BAMLH0A0HYM2'];
@@ -133,12 +180,18 @@ const FRED_SERIES = ['DGS10', 'DGS2', 'DGS30', 'DFII10', 'T5YIE', 'BAMLH0A0HYM2'
 const AUCTION_TENOR_ORDER = ['10-Year', '30-Year', '2-Year']; // 10Y/30Y priorizadas sobre 2Y
 const HISTORY_TICKERS = ['TLT', '^VIX']; // 10Y/HY spread ya traen su propio .history vía /api/fred/:series
 
-function Stat({ label, value, sub, style }) {
+function Stat({ label, value, sub, style, staleDays }) {
+  const isStale = staleDays != null;
   return (
-    <div className="stat" style={{ background: style.bg, color: style.fg }}>
-      <div className="label">{label}</div>
+    <div className="stat" style={{ background: style.bg, color: style.fg,
+      ...(isStale ? { outline: '2px dashed #bf360c', outlineOffset: '-2px' } : {}) }}>
+      <div className="label">
+        {label}
+        {isStale && <span title={`Sin datos nuevos desde hace ${staleDays} días — la fuente no ha publicado actualizaciones`} style={{ marginLeft: 4 }}>⚠️</span>}
+      </div>
       <div className="value">{value}</div>
       {sub && <div className="sub">{sub}</div>}
+      {isStale && <div className="sub" style={{ color: '#bf360c', fontWeight: 700 }}>obsoleto · {staleDays}d</div>}
     </div>
   );
 }
@@ -263,10 +316,23 @@ function DurationPage() {
   const vix = quotes['^VIX'], move = quotes['^MOVE'];
   const y10 = fred['DGS10'], y2 = fred['DGS2'], y30 = fred['DGS30'], dfii10 = fred['DFII10'], t5yie = fred['T5YIE'], hy = fred['BAMLH0A0HYM2'];
 
+  const staleTlt = staleQuote(tlt?.asOf), staleVix = staleQuote(vix?.asOf), staleMove = staleQuote(move?.asOf);
+  const staleY10 = staleFred(y10?.date), staleY2 = staleFred(y2?.date), staleY30 = staleFred(y30?.date);
+  const staleDfii10 = staleFred(dfii10?.date), staleT5yie = staleFred(t5yie?.date), staleHy = staleFred(hy?.date);
+
+  // Respaldo cuando MOVE está ausente u obsoleto — ver comentario de MOVE_PROXY arriba.
+  const moveMissing = move?.price == null || staleMove.stale;
+  const moveProxy = React.useMemo(
+    () => moveMissing ? moveProxyFromTlt(histories['TLT']?.series) : null,
+    [moveMissing, histories]
+  );
+  const moveEffective = moveMissing && moveProxy ? moveProxy.est : (move?.price ?? null);
+  const moveIsProxy = moveMissing && moveProxy != null;
+
   const hyBps = hy?.current != null ? hy.current * 100 : null;
   const { phase, checks } = React.useMemo(() => computePhase({
-    tlt: tlt?.price ?? null, y10: y10?.current ?? null, hyBps, vix: vix?.price ?? null, move: move?.price ?? null,
-  }), [tlt, y10, hyBps, vix, move]);
+    tlt: tlt?.price ?? null, y10: y10?.current ?? null, hyBps, vix: vix?.price ?? null, move: moveEffective,
+  }), [tlt, y10, hyBps, vix, moveEffective]);
   const ps = PHASE_STYLE[phase];
 
   const spread3010 = (y30?.current != null && y10?.current != null) ? y30.current - y10.current : null;
@@ -309,25 +375,32 @@ function DurationPage() {
     lines.push(`## ${ps.label}`);
     lines.push(ps.desc);
     lines.push(`Checks: pressure=${checks.pressure} · core_break=${checks.coreBreak} · confirmation=${checks.confirmation} · invalidation=${checks.invalidation}`);
+    if (moveIsProxy) {
+      lines.push(`⚠️ MOVE real no disponible — confirmation usa proxy estimado desde volatilidad realizada de TLT: ~${fmt(moveProxy.est, 0)} (rango ${fmt(moveProxy.lo, 0)}–${fmt(moveProxy.hi, 0)}, r²=0.51, no equivalente exacto).`);
+    }
     lines.push('');
     lines.push('## Trade Structure — TLT Options Playbook (fijo por fase, no recalcula strikes en vivo)');
     lines.push(PLAYBOOK[phase].action);
     lines.push(`Ponderación sugerida: ${PLAYBOOK[phase].weight}`);
     lines.push('');
+    const staleTag = s => s.stale ? ` ⚠OBSOLETO(${s.days}d)` : '';
     lines.push('## Market Confirmation');
     lines.push('| Metric | Value | As of |');
     lines.push('|---|---:|---|');
-    lines.push(`| TLT | ${tlt?.price ?? '-'} (${fmtPct(tlt?.d1)} 1D) | ${tlt?.asOf ?? '-'} |`);
-    lines.push(`| 10Y Yield | ${fmt(y10?.current)}% | ${y10?.date ?? '-'} |`);
-    lines.push(`| 2Y Yield | ${fmt(y2?.current)}% | ${y2?.date ?? '-'} |`);
-    lines.push(`| 30Y Yield | ${fmt(y30?.current)}% | ${y30?.date ?? '-'} |`);
+    lines.push(`| TLT | ${tlt?.price ?? '-'} (${fmtPct(tlt?.d1)} 1D) | ${tlt?.asOf ?? '-'}${staleTag(staleTlt)} |`);
+    lines.push(`| 10Y Yield | ${fmt(y10?.current)}% | ${y10?.date ?? '-'}${staleTag(staleY10)} |`);
+    lines.push(`| 2Y Yield | ${fmt(y2?.current)}% | ${y2?.date ?? '-'}${staleTag(staleY2)} |`);
+    lines.push(`| 30Y Yield | ${fmt(y30?.current)}% | ${y30?.date ?? '-'}${staleTag(staleY30)} |`);
     lines.push(`| 30Y-10Y Spread | ${fmtBps(spread3010 != null ? spread3010 * 100 : null)} | - |`);
     lines.push(`| 10Y-2Y Spread | ${fmtBps(spread102 != null ? spread102 * 100 : null)} | - |`);
-    lines.push(`| 10Y Real (DFII10) | ${fmt(dfii10?.current)}% | ${dfii10?.date ?? '-'} |`);
-    lines.push(`| Breakeven 5Y | ${fmt(t5yie?.current)}% | ${t5yie?.date ?? '-'} |`);
-    lines.push(`| HY Spread | ${hyBps != null ? Math.round(hyBps) + 'bps' : '-'} | ${hy?.date ?? '-'} |`);
-    lines.push(`| VIX | ${fmt(vix?.price, 1)} | ${vix?.asOf ?? '-'} |`);
-    lines.push(`| MOVE | ${move?.price != null ? fmt(move.price, 1) : 'no disponible'} | ${move?.asOf ?? '-'} |`);
+    lines.push(`| 10Y Real (DFII10) | ${fmt(dfii10?.current)}% | ${dfii10?.date ?? '-'}${staleTag(staleDfii10)} |`);
+    lines.push(`| Breakeven 5Y | ${fmt(t5yie?.current)}% | ${t5yie?.date ?? '-'}${staleTag(staleT5yie)} |`);
+    lines.push(`| HY Spread | ${hyBps != null ? Math.round(hyBps) + 'bps' : '-'} | ${hy?.date ?? '-'}${staleTag(staleHy)} |`);
+    lines.push(`| VIX | ${fmt(vix?.price, 1)} | ${vix?.asOf ?? '-'}${staleTag(staleVix)} |`);
+    lines.push(`| MOVE | ${move?.price != null ? fmt(move.price, 1) : 'no disponible'} | ${move?.asOf ?? '-'}${staleTag(staleMove)} |`);
+    if (moveIsProxy) {
+      lines.push(`| MOVE proxy (TLT rvol20) | ~${fmt(moveProxy.est, 0)} (rango ${fmt(moveProxy.lo, 0)}–${fmt(moveProxy.hi, 0)}) | r²=0.51, no equivalente exacto |`);
+    }
     lines.push(`| TLT / IEF | ${fmt(ratioTltIef, 3)} | - |`);
     lines.push(`| EDV / IEF | ${fmt(ratioEdvIef, 3)} | - |`);
     lines.push('');
@@ -439,12 +512,20 @@ function DurationPage() {
       {loading && !updated && <div className="loading">Cargando…</div>}
 
       {updated && (
-        <div className="phase-box" style={{ background: ps.bg, color: ps.fg }}>
-          <div>
-            <div className="phase-label">{ps.label}</div>
-            <div style={{ fontSize: 11, marginTop: 2 }}>{ps.desc}</div>
+        <div className="phase-box" style={{ background: ps.bg, color: ps.fg, flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+            <div>
+              <div className="phase-label">{ps.label}</div>
+              <div style={{ fontSize: 11, marginTop: 2 }}>{ps.desc}</div>
+            </div>
+            <PhaseChecklist checks={checks} />
           </div>
-          <PhaseChecklist checks={checks} />
+          {moveIsProxy && (
+            <div style={{ fontSize: 10, marginTop: 8, opacity: 0.9 }}>
+              ⚠️ MOVE real no disponible — el check de confirmación usa un proxy estimado desde volatilidad realizada de TLT
+              (~{fmt(moveProxy.est, 0)}, rango {fmt(moveProxy.lo, 0)}–{fmt(moveProxy.hi, 0)}, r²=0.51 — no equivalente exacto al MOVE real).
+            </div>
+          )}
         </div>
       )}
 
@@ -465,17 +546,22 @@ function DurationPage() {
       <div className="section-title">1. Market Confirmation</div>
       <div className="section-sub">Objetivo y confirmable con datos públicos de mercado — no asume causa japonesa.</div>
       <div className="stat-grid">
-        <Stat label="TLT" value={tlt?.price ?? '—'} sub={fmtPct(tlt?.d1)} style={styleTlt(tlt?.price)} />
-        <Stat label="10Y Yield" value={fmt(y10?.current) + '%'} sub={y10?.date} style={style10y(y10?.current)} />
-        <Stat label="2Y Yield" value={fmt(y2?.current) + '%'} sub={y2?.date} style={C.neutral} />
-        <Stat label="30Y Yield" value={fmt(y30?.current) + '%'} sub={y30?.date} style={C.neutral} />
+        <Stat label="TLT" value={tlt?.price ?? '—'} sub={fmtPct(tlt?.d1)} style={styleTlt(tlt?.price)} staleDays={staleTlt.stale ? staleTlt.days : null} />
+        <Stat label="10Y Yield" value={fmt(y10?.current) + '%'} sub={y10?.date} style={style10y(y10?.current)} staleDays={staleY10.stale ? staleY10.days : null} />
+        <Stat label="2Y Yield" value={fmt(y2?.current) + '%'} sub={y2?.date} style={C.neutral} staleDays={staleY2.stale ? staleY2.days : null} />
+        <Stat label="30Y Yield" value={fmt(y30?.current) + '%'} sub={y30?.date} style={C.neutral} staleDays={staleY30.stale ? staleY30.days : null} />
         <Stat label="30Y-10Y Spread" value={fmtBps(spread3010 != null ? spread3010 * 100 : null)} style={C.neutral} />
         <Stat label="10Y-2Y Spread" value={fmtBps(spread102 != null ? spread102 * 100 : null)} style={C.neutral} />
-        <Stat label="10Y Real (DFII10)" value={fmt(dfii10?.current) + '%'} sub={dfii10?.date} style={C.neutral} />
-        <Stat label="Breakeven 5Y" value={fmt(t5yie?.current) + '%'} sub={t5yie?.date} style={C.neutral} />
-        <Stat label="HY Spread" value={hyBps != null ? Math.round(hyBps) + 'bps' : '—'} sub={hy?.date} style={styleHy(hyBps)} />
-        <Stat label="VIX" value={fmt(vix?.price, 1)} sub={vix?.asOf?.slice(0, 10)} style={styleVix(vix?.price)} />
-        <Stat label="MOVE" value={move?.price != null ? fmt(move.price, 1) : 'no disponible'} style={styleMove(move?.price)} />
+        <Stat label="10Y Real (DFII10)" value={fmt(dfii10?.current) + '%'} sub={dfii10?.date} style={C.neutral} staleDays={staleDfii10.stale ? staleDfii10.days : null} />
+        <Stat label="Breakeven 5Y" value={fmt(t5yie?.current) + '%'} sub={t5yie?.date} style={C.neutral} staleDays={staleT5yie.stale ? staleT5yie.days : null} />
+        <Stat label="HY Spread" value={hyBps != null ? Math.round(hyBps) + 'bps' : '—'} sub={hy?.date} style={styleHy(hyBps)} staleDays={staleHy.stale ? staleHy.days : null} />
+        <Stat label="VIX" value={fmt(vix?.price, 1)} sub={vix?.asOf?.slice(0, 10)} style={styleVix(vix?.price)} staleDays={staleVix.stale ? staleVix.days : null} />
+        <Stat label="MOVE" value={move?.price != null ? fmt(move.price, 1) : 'no disponible'} sub={move?.asOf?.slice(0, 10)} style={styleMove(move?.price)} staleDays={staleMove.stale ? staleMove.days : null} />
+        {moveIsProxy && (
+          <Stat label="MOVE proxy (TLT rvol20)" value={'~' + fmt(moveProxy.est, 0)}
+            sub={`rango ${fmt(moveProxy.lo, 0)}–${fmt(moveProxy.hi, 0)} · r²=0.51`}
+            style={styleMove(moveProxy.est)} />
+        )}
         <Stat label="TLT / IEF" value={fmt(ratioTltIef, 3)} style={C.neutral} />
         <Stat label="EDV / IEF" value={fmt(ratioEdvIef, 3)} style={C.neutral} />
       </div>
