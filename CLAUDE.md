@@ -609,6 +609,16 @@ Tras el fix de staleness de arriba, el usuario pidió una fuente alternativa par
 
 ---
 
+## Export a LLM de Sentiment (implementado 2026-07-28)
+
+`sentiment.html` se quedó fuera del patrón `buildXMarkdown()` + `localStorage` (`llm_export_*`/`_ts`) + botones "Copy for LLM"/"🗂️ Exportar TODO a LLM" cuando se creó (2026-07-06) — quedó documentado como "fuera de alcance". El usuario lo pidió explícitamente el 2026-07-28 tras notar que el bundle cruzado no incluía Sentiment.
+
+Añadido `buildSentimentMarkdown()` (score actual + 4 comparativas temporales + tabla de los 7 subcomponentes, con el mismo rating textual que ya usa el gauge) más el mismo `useEffect`/`copyMarkdown`/`copyAllForLLM`/toast que las otras 6 páginas. Sumada la entrada `{ key: 'llm_export_sentiment', label: 'Sentiment' }` al array `parts` de `index.html`, `portfolio.html`, `relative.html`, `rotacion.html`, `cycle.html` y `duration.html` (las 6 páginas comparten el mismo array literal, ahora con 7 entradas en las 7 páginas).
+
+**Verificado** (Playwright, Edge headless contra el servidor local real): `localStorage.llm_export_sentiment`/`_ts` se pueblan solos al cargar la página, sin pulsar nada; "Copy for LLM" en `sentiment.html` copia el markdown correcto; "Exportar TODO a LLM" en `index.html` incluye la sección de Sentiment en el bundle combinado; cero errores de consola nuevos.
+
+---
+
 ## Fix del veto absoluto de `konc_alignment` + Koncorde Research Log (implementado 2026-07-21)
 
 **Origen — retrospectiva TNZ.TO (2026-07-17):** TNZ.TO llevaba ~2 semanas acumulando en Koncorde diario (blue subiendo casi monótono) y W había girado alcista, pero justo el día en que el precio "despegó" (2026-07-16), `konc_alignment` pasó de `bullish_aligned` a `distribution_warning` — la etiqueta más alarmante. Causa raíz: `_konc_alignment()` daba **veto absoluto** a un único `state_3d == "distribution"` (o a `blue_down_2_bars_3d`), sin importar lo que dijeran D y W. El 3D es una vela no solapada de 3 sesiones, así que en fases de acumulación de varias semanas es más sensible a dónde cae el corte de la vela que a la tendencia real — en TNZ.TO osciló distribution↔up 5 veces en 10 sesiones. Verificado en producción el 2026-07-21 contra el snapshot de `koncorde_data.json` del día anterior: **138/197 tickers (70%) del universo mostraban `distribution_warning`**, 87 por `state_3d == "distribution"`, y **13 con D y W ambos alcistas** (el patrón exacto de TNZ.TO) — no era un caso aislado.

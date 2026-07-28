@@ -16,6 +16,13 @@
     h1 { font-size: 22px; color: #111; line-height: 1; }
     .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
     .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    button { border: none; border-radius: 3px; padding: 5px 12px; cursor: pointer; font-size: 11px; font-weight: 600; color: white; }
+    button:disabled { cursor: default; opacity: 0.65; }
+    .btn-copy { background: #1a6b3c; }
+    .btn-export { background: #37474f; }
+    .btn-refresh { background: #3a6ca0; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a6b3c; color: white; padding: 10px 22px; border-radius: 20px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 10; }
 
     .finviz-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
       border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 14px; margin-bottom: 14px; }
@@ -149,6 +156,8 @@ function SentimentPage() {
   const [data, setData] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [updated, setUpdated] = React.useState(null);
+  const [toast, setToast] = React.useState(null);
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 2600); };
 
   const load = React.useCallback(() => {
     setError(null);
@@ -163,8 +172,94 @@ function SentimentPage() {
   const fg = data?.fear_and_greed;
   const histPoints = (data?.fear_and_greed_historical?.data || []).map(p => ({ x: p.x, y: p.y }));
 
+  const buildSentimentMarkdown = () => {
+    const lines = [];
+    lines.push('# Sentiment — Fear & Greed Index (CNN Business)');
+    lines.push('');
+    if (fg) {
+      const st = fgStyle(scoreToRating(fg.score));
+      lines.push(`## Score actual: ${fmtPct(fg.score)} — ${st.label}`);
+      lines.push('| Referencia | Valor | Rating |');
+      lines.push('|---|---:|---|');
+      [
+        ['Cierre anterior', fg.previous_close],
+        ['Hace 1 semana', fg.previous_1_week],
+        ['Hace 1 mes', fg.previous_1_month],
+        ['Hace 1 año', fg.previous_1_year],
+      ].forEach(([label, v]) => {
+        lines.push(`| ${label} | ${fmtPct(v)} | ${fgStyle(scoreToRating(v)).label} |`);
+      });
+    } else {
+      lines.push('_Sin datos de Fear & Greed disponibles en esta carga._');
+    }
+    lines.push('');
+    lines.push('## Subcomponentes');
+    lines.push('| Componente | Score | Rating |');
+    lines.push('|---|---:|---|');
+    SUBCOMPONENTS.forEach(sc => {
+      const d = data?.[sc.key];
+      if (!d) return;
+      lines.push(`| ${sc.name} | ${fmtPct(d.score)} | ${fgStyle(d.rating).label} |`);
+    });
+    lines.push('');
+    lines.push('Heatmap sectorial (Finviz): https://finviz.com/map — herramienta externa, no incluida en este export.');
+    return lines.join('\n');
+  };
+
+  React.useEffect(() => {
+    if (updated && data) {
+      try {
+        localStorage.setItem('llm_export_sentiment', buildSentimentMarkdown());
+        localStorage.setItem('llm_export_sentiment_ts', Date.now().toString());
+      } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updated]);
+
+  const copyMarkdown = () => {
+    navigator.clipboard.writeText(buildSentimentMarkdown()).then(() => showToast('Copiado para LLM'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',    label: 'Market Tracker' },
+      { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle',     label: 'Cycle' },
+      { key: 'llm_export_relative',  label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
+      { key: 'llm_export_duration',  label: 'Duration' },
+      { key: 'llm_export_sentiment', label: 'Sentiment' },
+    ];
+    const now = Date.now();
+    const found = [], missing = [], stale = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) {
+        found.push(label);
+        const ts = parseInt(localStorage.getItem(key + '_ts') || '0');
+        const hours = ts ? Math.round((now - ts) / 3600000) : null;
+        if (!ts || hours > 23) stale.push(hours != null ? `${label} (${hours}h)` : label);
+        return md;
+      }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    const exportDate = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+    const header = `**Exportado:** ${exportDate}` +
+      (stale.length ? `\n⚠️ **Secciones desactualizadas (>24h):** ${stale.join(', ')} — Abre esas pestañas para refrescar\n` : '\n');
+    const combined = header + '\n---\n\n' + sections.join('\n\n---\n\n');
+    navigator.clipboard.writeText(combined)
+      .then(() => {
+        if (stale.length) showToast(`⚠️ ${stale.length} secc. desactualizadas: ${stale.join(', ')}`);
+        else if (missing.length) showToast(`✅ ${found.length}/${parts.length} pestañas — Falta: ${missing.join(', ')}`);
+        else showToast('✅ Todas las pestañas copiadas (datos frescos)');
+      })
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
   return (
     <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
       <div className="topbar">
         <div>
           <div className="title-row">
@@ -178,11 +273,11 @@ function SentimentPage() {
           </div>
           <div className="meta">Fear & Greed Index (CNN Business) · solo visual, sin señal aplicada todavía</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="actions">
           {updated && <span style={{ fontSize: 11, color: '#999' }}>{updated.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>}
-          <button onClick={load} style={{ background: '#3a6ca0', color: 'white', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-            ↻ Actualizar
-          </button>
+          <button className="btn-copy" onClick={copyMarkdown} disabled={!data}>Copy for LLM</button>
+          <button className="btn-export" onClick={copyAllForLLM}>🗂️ Exportar TODO a LLM</button>
+          <button className="btn-refresh" onClick={load}>↻ Actualizar</button>
         </div>
       </div>
 
