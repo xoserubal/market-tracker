@@ -90,6 +90,14 @@ const CYCLE_MAP = [
           ticker: "MATX", role: "subsegment",
           desc: "Naviera regional (Pacífico). Menos volátil que ZIM. Confirma flujo hacia shipping sin beta extrema." },
       ]},
+      { name: "Trucking & Logistics", tickers: [
+        { name: "Old Dominion Freight",
+          ticker: "ODFL", role: "subsegment",
+          desc: "Transporte LTL (less-than-truckload) de alta calidad. Muy sensible al volumen de carga doméstico. Confirma expansión industrial temprana en el segmento de carretera." },
+        { name: "FedEx",
+          ticker: "FDX", role: "subsegment",
+          desc: "Paquetería y logística global. Proxy de actividad de e-commerce y comercio B2B. Complementa a los railroads con una lectura de última milla." },
+      ]},
     ],
   },
 
@@ -107,8 +115,11 @@ const CYCLE_MAP = [
         { name: "NVIDIA",
           ticker: "NVDA", role: "high_beta",
           desc: "Líder en AI. Alta beta. Detecta momentum y flujo especulativo en tecnología. Cuando NVDA lidera con volumen, el mercado está en modo risk-on." },
+        { name: "Broadcom",
+          ticker: "AVGO", role: "leader",
+          desc: "Diversificado semis + software de infraestructura (VMware). Flujo institucional core en chips, menos especulativo que NVDA. Confirma amplitud del bull en semis." },
         { name: "ASML Holding",
-          ticker: "ASML", role: "subsegment",
+          ticker: "ASML", role: "leader",
           desc: "Equipamiento de semiconductores. Leading indicator adelantado del ciclo de chips. Se mueve antes que los productores (NVDA, TSM)." },
         { name: "VanEck Semiconductors",
           ticker: "SMH", role: "proxy",
@@ -151,6 +162,9 @@ const CYCLE_MAP = [
         { name: "Eaton Corp",
           ticker: "ETN", role: "leader",
           desc: "Gestión de energía eléctrica. Alta exposición a electrificación industrial y data centers. Combina capital goods con tendencia secular de AI." },
+        { name: "Deere & Company",
+          ticker: "DE", role: "leader",
+          desc: "Maquinaria agrícola y de construcción. Indicador del capex agrícola/construcción, complementa a CAT (más minería/infraestructura pesada)." },
         { name: "Illinois Tool Works",
           ticker: "ITW", role: "subsegment",
           desc: "Manufactura diversificada. Márgenes estables. Señal de flujo institucional hacia industriales de calidad." },
@@ -210,15 +224,15 @@ const CYCLE_MAP = [
     ],
   },
 
-  // ── 5. LATE BULL → TOP ────────────────────────────────────────────────
+  // ── 5. LATE BULL → TOP — OIL & GAS ────────────────────────────────────
   {
-    phase: "Late Bull → Top",
-    short: "L.Bull→Top",
+    phase: "Late Bull → Top — Oil & Gas",
+    short: "Oil & Gas",
     order: 5,
     color: "#7f0000",
     lightColor: "#ffebee",
     borderColor: "#f44336",
-    category: "Energy (Oil · Uranium · Coal)",
+    category: "Oil & Gas",
     sectors: [
       { name: "🛢 Oil & Gas", tickers: [
         { name: "Exxon Mobil",
@@ -227,23 +241,45 @@ const CYCLE_MAP = [
         { name: "Chevron",
           ticker: "CVX", role: "leader",
           desc: "Otra major global. Confirma entrada institucional en energía cuando acompaña a XOM. Las dos subiendo = señal robusta de fase energética." },
-        { name: "Schlumberger (SLB)",
-          ticker: "SLB", role: "subsegment",
-          desc: "Servicios petroleros. Leading indicator del ciclo de capex energético. Suele moverse antes que el resto del sector. SLB lidera → XOM confirma." },
-        { name: "Pioneer Natural Resources",
-          ticker: "PXD", role: "high_beta",
-          desc: "Productor shale. Alta sensibilidad al precio del crudo. Detecta fases tempranas de risk-on en energía. Alta beta respecto a XOM/CVX." },
+        { name: "ConocoPhillips",
+          ticker: "COP", role: "subsegment",
+          desc: "E&P puro de gran escala, sin refino. Proxy más limpio del precio del crudo que las integradas XOM/CVX." },
+        { name: "EOG Resources",
+          ticker: "EOG", role: "subsegment",
+          desc: "Shale de bajo coste, disciplina de capital. Referencia de calidad dentro del universo shale, menos volátil que FANG/DVN." },
         { name: "Devon Energy",
-          ticker: "DVN", role: "high_beta",
-          desc: "Mid-cap energética shale. Refuerza señales de flujo agresivo cuando sube junto a PXD. Si DVN lidera sin XOM, señal especulativa." },
+          ticker: "DVN", role: "subsegment",
+          desc: "Mid-cap energética shale. Exposición doméstica al crudo de EEUU. Confirma amplitud del movimiento dentro del subsegmento shale." },
+        { name: "Diamondback Energy",
+          ticker: "FANG", role: "high_beta",
+          desc: "Shale puro Permian, alta beta al precio del crudo. Sustituye a PXD (adquirida por Exxon en 2024) como el productor shale de referencia." },
+        { name: "Schlumberger (SLB)",
+          ticker: "SLB", role: "high_beta",
+          desc: "Servicios petroleros. Leading indicator del ciclo de capex energético — suele moverse antes que el resto del sector, con alta beta al ciclo de inversión." },
         { name: "Energy Select SPDR",
           ticker: "XLE", role: "proxy",
           desc: "ETF energía EEUU. Flujo agregado hacia el sector. Confirma que el movimiento no es solo un stock aislado." },
       ]},
+    ],
+  },
+
+  // ── 5b. LATE BULL → TOP — URANIUM ─────────────────────────────────────
+  {
+    phase: "Late Bull → Top — Uranium",
+    short: "Uranium",
+    order: 6,
+    color: "#7f0000",
+    lightColor: "#ffebee",
+    borderColor: "#f44336",
+    category: "Uranium",
+    sectors: [
       { name: "☢ Uranium", tickers: [
         { name: "Sprott Uranium Miners (URNM)",
           ticker: "URNM", role: "proxy",
           desc: "ETF sectorial. Representa flujo global agregado hacia uranio. Punto de entrada para detectar el inicio de rotación hacia el sector." },
+        { name: "Global X Uranium (URA)",
+          ticker: "URA", role: "proxy",
+          desc: "ETF sectorial alternativo, más diversificado geográficamente que URNM. Proxy secundario para confirmar que el flujo no depende de un solo fondo." },
         { name: "Cameco",
           ticker: "CCJ", role: "leader",
           desc: "Líder del sector. Indicador de entrada institucional en uranio. CCJ subiendo con volumen = señal robusta de ciclo alcista." },
@@ -256,8 +292,27 @@ const CYCLE_MAP = [
         { name: "Centrus Energy",
           ticker: "LEU", role: "subsegment",
           desc: "Fuel cycle (enriquecimiento). Exposición downstream distinta al mining. Señal de demanda real de combustible nuclear, no solo especulación minera." },
+        { name: "Uranium Energy Corp",
+          ticker: "UEC", role: "subsegment",
+          desc: "Productor/developer con activos en EEUU. Exposición a la narrativa de independencia energética nuclear doméstica." },
+        { name: "BWX Technologies",
+          ticker: "BWXT", role: "subsegment",
+          desc: "Componentes nucleares para gobierno/naval + comercial. Exposición downstream distinta a la minería, más ligada a contratos gubernamentales estables." },
       ]},
-      { name: "🪨 Coal", tickers: [
+    ],
+  },
+
+  // ── 5c. LATE BULL → TOP — COAL & STEEL INPUTS ─────────────────────────
+  {
+    phase: "Late Bull → Top — Coal & Steel Inputs",
+    short: "Coal & Steel",
+    order: 7,
+    color: "#7f0000",
+    lightColor: "#ffebee",
+    borderColor: "#f44336",
+    category: "Coal & Steel Inputs",
+    sectors: [
+      { name: "🪨 Coal & Steel Inputs", tickers: [
         { name: "Warrior Met Coal",
           ticker: "HCC", role: "leader",
           desc: "Carbón metalúrgico. Ligado al ciclo del acero y la industria pesada. Indicador de demanda industrial global." },
@@ -267,9 +322,12 @@ const CYCLE_MAP = [
         { name: "Peabody Energy",
           ticker: "BTU", role: "subsegment",
           desc: "Carbón térmico. Exposición a generación eléctrica. Permite distinguir entre demanda eléctrica (BTU) e industrial (HCC/AMR)." },
-        { name: "Arch Resources",
-          ticker: "ARCH", role: "subsegment",
-          desc: "Mix térmico/metalúrgico. Permite detectar rotación interna entre carbón térmico y met. Si ARCH supera a HCC, señal de mayor demanda eléctrica." },
+        { name: "Core Natural Resources",
+          ticker: "CNR", role: "subsegment",
+          desc: "Mix térmico/metalúrgico (fusión CONSOL Energy + Arch Resources, ene-2025). Permite detectar rotación interna entre carbón térmico y met." },
+        { name: "Cleveland-Cliffs",
+          ticker: "CLF", role: "subsegment",
+          desc: "Acero integrado + mineral de hierro, consumidor directo de carbón metalúrgico. Proxy de demanda de steel inputs distinto de X/NUE (que quedan en Materials)." },
         { name: "Teck Resources",
           ticker: "TECK", role: "proxy",
           desc: "Diversificada (carbón met + cobre + zinc). Indicador híbrido del ciclo commodities. Útil como termómetro general de hard assets." },
@@ -281,7 +339,7 @@ const CYCLE_MAP = [
   {
     phase: "Early Bear",
     short: "Early Bear",
-    order: 6,
+    order: 8,
     color: "#004d40",
     lightColor: "#e0f2f1",
     borderColor: "#00897b",
@@ -322,7 +380,7 @@ const CYCLE_MAP = [
   {
     phase: "Late Bear (Approx.)",
     short: "L.Bear Appr.",
-    order: 7,
+    order: 9,
     color: "#37474f",
     lightColor: "#eceff1",
     borderColor: "#78909c",
@@ -338,6 +396,18 @@ const CYCLE_MAP = [
         { name: "Duke Energy",
           ticker: "DUK", role: "leader",
           desc: "Utility eléctrica regulada tradicional. Representa el flujo puramente defensivo/yield dentro del sector. Confirma posicionamiento late-bear." },
+        { name: "Southern Company",
+          ticker: "SO", role: "leader",
+          desc: "Utility eléctrica regulada del sureste de EEUU. Confirma amplitud del flujo defensivo cuando acompaña a NEE/DUK." },
+        { name: "American Electric Power",
+          ticker: "AEP", role: "leader",
+          desc: "Una de las mayores utilities por base regulatoria. Refuerza la señal de búsqueda de yield y estabilidad regulada." },
+        { name: "Dominion Energy",
+          ticker: "D", role: "subsegment",
+          desc: "Utility eléctrica/gas de la costa este, con exposición a data centers (Virginia). Confirma flujo defensivo con un matiz de demanda eléctrica secular." },
+        { name: "Xcel Energy",
+          ticker: "XEL", role: "subsegment",
+          desc: "Utility regulada del medio-oeste. Perfil de riesgo bajo, complementa la muestra sin depender de un solo nombre." },
         { name: "American Tower",
           ticker: "AMT", role: "subsegment",
           desc: "Infraestructura telecom (torres). REIT con carácter defensivo. Sube cuando hay búsqueda de yield y flujo hacia infraestructura crítica." },
@@ -349,7 +419,7 @@ const CYCLE_MAP = [
   {
     phase: "Late Bear",
     short: "Late Bear",
-    order: 8,
+    order: 10,
     color: "#1a237e",
     lightColor: "#e8eaf6",
     borderColor: "#5c6bc0",
@@ -393,8 +463,170 @@ const CYCLE_MAP = [
   },
 ];
 
+// ── Off-cycle Themes ────────────────────────────────────────────────────
+// Rotation themes that don't fit the classic Dow-Theory cycle (they move on
+// their own narratives, not on "expansion → peak → contraction → recovery").
+// Deliberately excluded from PhaseTimeline / CycleSummary — this array has
+// no `order` field and is rendered as a separate, parallel section.
+// Color palette is a shared cool/muted slate family (vs. the warm, distinct
+// colors of the 10 classic phases) to visually read as "outside the cycle".
+const OFFCYCLE_THEMES = [
+  {
+    phase: "Crypto & Mining",
+    short: "Crypto",
+    color: "#37474f",
+    lightColor: "#eceff1",
+    borderColor: "#90a4ae",
+    category: "Off-cycle Theme",
+    sectors: [
+      { name: "Crypto & Mining", tickers: [
+        { name: "iShares Bitcoin Trust",
+          ticker: "IBIT", role: "proxy",
+          desc: "ETF spot de Bitcoin, el más líquido. Proxy directo del apetito institucional por crypto — sin necesidad de un vehículo minero." },
+        { name: "MicroStrategy (Strategy)",
+          ticker: "MSTR", role: "leader",
+          desc: "Proxy apalancado a BTC vía balance corporativo. Alta beta al precio de Bitcoin, con prima/descuento propio sobre el NAV." },
+        { name: "Coinbase",
+          ticker: "COIN", role: "leader",
+          desc: "Exchange líder EEUU. Proxy de actividad de trading + regulación crypto, distinto de la exposición pura al precio de BTC." },
+        { name: "Core Scientific",
+          ticker: "CORZ", role: "subsegment",
+          desc: "Minero de Bitcoin con pivote a AI data centers. Señal híbrida crypto/AI infra." },
+        { name: "Marathon Digital",
+          ticker: "MARA", role: "subsegment",
+          desc: "Minero de Bitcoin puro, alta beta. Confirma si el flujo hacia mining es amplio o concentrado en un solo nombre." },
+        { name: "Riot Platforms",
+          ticker: "RIOT", role: "subsegment",
+          desc: "Minero de Bitcoin puro. Junto a MARA, confirma amplitud del flujo especulativo hacia mining." },
+      ]},
+    ],
+  },
+  {
+    phase: "AI Cloud & Infrastructure",
+    short: "AI Cloud",
+    color: "#37474f",
+    lightColor: "#eceff1",
+    borderColor: "#90a4ae",
+    category: "Off-cycle Theme",
+    sectors: [
+      { name: "AI Cloud & Infrastructure", tickers: [
+        { name: "Nebius Group",
+          ticker: "NBIS", role: "leader",
+          desc: "Neocloud especializado en GPU-as-a-service para AI. Alta beta a la narrativa de capex de infraestructura AI." },
+        { name: "Super Micro Computer",
+          ticker: "SMCI", role: "leader",
+          desc: "Servidores/hardware para data centers AI. Proxy de demanda de infraestructura física para entrenamiento e inferencia." },
+        { name: "Dell Technologies",
+          ticker: "DELL", role: "subsegment",
+          desc: "Servidores enterprise + AI infra, perfil más diversificado y menos especulativo que SMCI." },
+        { name: "Arista Networks",
+          ticker: "ANET", role: "subsegment",
+          desc: "Networking de alta velocidad para data centers. Confirma si el flujo AI infra es amplio (más allá de GPUs) o concentrado." },
+      ]},
+    ],
+  },
+  {
+    phase: "Defense & Space",
+    short: "Defense",
+    color: "#37474f",
+    lightColor: "#eceff1",
+    borderColor: "#90a4ae",
+    category: "Off-cycle Theme",
+    sectors: [
+      { name: "Defense & Space", tickers: [
+        { name: "iShares U.S. Aerospace & Defense",
+          ticker: "ITA", role: "proxy",
+          desc: "ETF sectorial defensa/aeroespacial. Flujo agregado hacia el tema — confirma que el movimiento no es solo un nombre aislado." },
+        { name: "AST SpaceMobile",
+          ticker: "ASTS", role: "leader",
+          desc: "Conectividad satelital directa a móvil. Alta beta, narrativa espacio comercial más que defensa tradicional." },
+        { name: "RTX Corporation",
+          ticker: "RTX", role: "leader",
+          desc: "Prime contractor diversificado (misiles, aviónica, motores). Flujo institucional core en defensa tradicional." },
+        { name: "Red Cat Holdings",
+          ticker: "RCAT", role: "subsegment",
+          desc: "Drones militares de pequeña escala. Alta beta, expuesto a contratos concretos del Pentágono." },
+        { name: "Lockheed Martin",
+          ticker: "LMT", role: "subsegment",
+          desc: "Mayor contractor de defensa por ingresos. Confirma amplitud del flujo hacia defensa tradicional junto a RTX." },
+      ]},
+    ],
+  },
+  {
+    phase: "Latam Emerging",
+    short: "Latam",
+    color: "#37474f",
+    lightColor: "#eceff1",
+    borderColor: "#90a4ae",
+    category: "Off-cycle Theme — Argentina focus",
+    sectors: [
+      { name: "Latam Emerging (Argentina focus)", tickers: [
+        { name: "Global X MSCI Argentina",
+          ticker: "ARGT", role: "proxy",
+          desc: "ETF país Argentina. Flujo agregado hacia la narrativa macro/reforma argentina — confirma que el movimiento es amplio, no un solo nombre." },
+        { name: "Grupo Financiero Galicia",
+          ticker: "GGAL", role: "leader",
+          desc: "Mayor banco privado argentino (ADR). Proxy de confianza en el sistema financiero y expectativas de estabilización macro." },
+        { name: "Banco BBVA Argentina",
+          ticker: "BBAR", role: "leader",
+          desc: "Segundo banco relevante (ADR). Confirma amplitud del flujo bancario junto a GGAL." },
+        { name: "YPF",
+          ticker: "YPF", role: "subsegment",
+          desc: "Petrolera estatal-mixta, Vaca Muerta. Exposición a energía + política energética argentina." },
+        { name: "Vista Energy",
+          ticker: "VIST", role: "subsegment",
+          desc: "Shale puro en Vaca Muerta, más especulativo que YPF. Alta beta a la narrativa de exportación energética argentina." },
+        { name: "Pampa Energía",
+          ticker: "PAM", role: "subsegment",
+          desc: "Generación eléctrica + gas. Exposición distinta (utilities/midstream) dentro del mismo tema país." },
+      ]},
+    ],
+  },
+];
+
 // ── LLM Markdown export ───────────────────────────────────────────────────
-const buildCycleMarkdown = (rows, phases) => {
+const fmtAccelMd = ph => ph.acceleration?.pp != null
+  ? `${ph.acceleration.symbol} ${ph.acceleration.pp > 0 ? '+' : ''}${ph.acceleration.pp.toFixed(1)}pp`
+  : '—';
+
+const rankingTableMd = phases => {
+  let md = `| # | Fase | Score | Aceleración | Breadth | Disp. | Cargados |\n`;
+  md += `|--:|------|------:|:-----------:|:-------:|------:|---------:|\n`;
+  const sorted = [...phases].filter(p => p.score != null).sort((a, b) => b.score - a.score);
+  sorted.forEach((ph, i) => {
+    const breadth = ph.breadth ? `${ph.breadth.pos}/${ph.breadth.total} (${ph.breadth.pct}%)` : '—';
+    const disp = ph.dispersion != null ? ph.dispersion.toFixed(1) : '—';
+    md += `| ${i + 1} | **${ph.phase}** | ${ph.score > 0 ? '+' : ''}${ph.score.toFixed(1)} | ${fmtAccelMd(ph)} | ${breadth} | ${disp} | ${ph.loaded}/${ph.total} |\n`;
+  });
+  return md + '\n';
+};
+
+const detailSectionMd = (phases, rows) => {
+  const spy = rows['SPY'];
+  const fmtR = v => v == null || isNaN(v) ? '—' : v < 0 ? `(${Math.abs(Math.round(v))}%)` : `+${Math.round(v)}%`;
+  let md = '';
+  phases.forEach(ph => {
+    md += `### ${ph.phase} — ${ph.category} (score: ${ph.score != null ? (ph.score > 0 ? '+' : '') + ph.score.toFixed(1) : '—'})\n`;
+    md += `| Rol | Ticker | Nombre | 1M | 3M | α vs SPY | α rank | Signo |\n`;
+    md += `|:---:|:------:|--------|---:|---:|---------:|:------:|:-----:|\n`;
+    ph.sectors.forEach(sec => {
+      md += `| — | — | **${sec.name.toUpperCase()}** | — | — | — | — | — |\n`;
+      sec.tickers.forEach(t => {
+        const d = rows[t.ticker];
+        const spyM3 = spy?.m3 ?? null;
+        const relM3 = d?.m3 != null && spyM3 != null ? d.m3 - spyM3 : null;
+        const rankInfo = ph.tickerRanks?.[t.ticker];
+        const rank = rankInfo ? `#${rankInfo.rank}` : '—';
+        const sign = rankInfo ? (rankInfo.alpha >= 0 ? '▲' : '▽') : '—';
+        md += `| ${t.role} | ${t.ticker} | ${t.name} | ${fmtR(d?.m1)} | ${fmtR(d?.m3)} | ${relM3 != null ? (relM3 > 0 ? '+' : '') + relM3.toFixed(0) + 'pp' : '—'} | ${rank} | ${sign} |\n`;
+      });
+    });
+    md += '\n';
+  });
+  return md;
+};
+
+const buildCycleMarkdown = (rows, phases, offCyclePhases = []) => {
   const date = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
   const spy = rows['SPY'];
   let md = `# Cycle Tracker — Snapshot\n**Fecha:** ${date}\n_Sector rotation · Dow Theory cycle framework · α = relative outperformance vs SPY_\n\n`;
@@ -407,35 +639,31 @@ const buildCycleMarkdown = (rows, phases) => {
     md += `| ${f(spy.m1)} | ${f(spy.m3)} | ${f(spy.ytd)} | ${f(spy.y1)} |\n\n`;
   }
 
-  // Phase ranking
-  md += `## PHASE RANKING (score = avg relativo vs SPY · 70%×3M + 30%×1M)\n`;
-  md += `| # | Fase | Score | Aceleración | Cargados |\n`;
-  md += `|--:|------|------:|:-----------:|---------:|\n`;
-  const sorted = [...phases].filter(p => p.score != null).sort((a, b) => b.score - a.score);
-  sorted.forEach((ph, i) => {
-    const acc = ph.accelerating == null ? '—' : ph.accelerating ? '▲ accel.' : '▽ decel.';
-    md += `| ${i + 1} | **${ph.phase}** | ${ph.score > 0 ? '+' : ''}${ph.score.toFixed(1)} | ${acc} | ${ph.loaded}/${ph.total} |\n`;
-  });
-  md += '\n';
-
-  // Detail by phase
-  md += `## DETALLE POR FASE\n`;
-  const fmtR = v => v == null || isNaN(v) ? '—' : v < 0 ? `(${Math.abs(Math.round(v))}%)` : `+${Math.round(v)}%`;
-  phases.forEach(ph => {
-    md += `### ${ph.phase} — ${ph.category} (score: ${ph.score != null ? (ph.score > 0 ? '+' : '') + ph.score.toFixed(1) : '—'})\n`;
-    md += `| Rol | Ticker | Nombre | 1M | 3M | α vs SPY |\n`;
-    md += `|:---:|:------:|--------|---:|---:|---------:|\n`;
-    ph.sectors.forEach(sec => {
-      md += `| — | — | **${sec.name.toUpperCase()}** | — | — | — |\n`;
-      sec.tickers.forEach(t => {
-        const d = rows[t.ticker];
-        const spyM3 = spy?.m3 ?? null;
-        const relM3 = d?.m3 != null && spyM3 != null ? d.m3 - spyM3 : null;
-        md += `| ${t.role} | ${t.ticker} | ${t.name} | ${fmtR(d?.m1)} | ${fmtR(d?.m3)} | ${relM3 != null ? (relM3 > 0 ? '+' : '') + relM3.toFixed(0) + 'pp' : '—'} |\n`;
-      });
-    });
+  // Resumen visual global (Part 9) — classic phases only
+  const summary = computeCycleSummary(phases);
+  if (summary) {
+    md += `## RESUMEN\n`;
+    md += `- **Fase dominante:** ${summary.dominant.phase} (${summary.dominant.score > 0 ? '+' : ''}${summary.dominant.score.toFixed(1)})\n`;
+    md += `- **Fase perdedora:** ${summary.losing.phase} (${summary.losing.score > 0 ? '+' : ''}${summary.losing.score.toFixed(1)})\n`;
+    if (summary.mostAccel) md += `- **Fase con mayor aceleración:** ${summary.mostAccel.phase} (${fmtAccelMd(summary.mostAccel)})\n`;
+    if (summary.mostDecel) md += `- **Fase con mayor desaceleración:** ${summary.mostDecel.phase} (${fmtAccelMd(summary.mostDecel)})\n`;
     md += '\n';
-  });
+  }
+
+  // Phase ranking (classic cycle)
+  md += `## PHASE RANKING (score = avg α_ticker vs SPY · 70%×3M + 30%×1M por ticker)\n`;
+  md += rankingTableMd(phases);
+
+  // Detail by phase (classic cycle)
+  md += `## DETALLE POR FASE\n`;
+  md += detailSectionMd(phases, rows);
+
+  // Off-cycle Themes — separate, non-cyclical section (Part 6)
+  if (offCyclePhases.length) {
+    md += `## OFF-CYCLE THEMES (no forma parte del ciclo económico — temas de rotación paralelos)\n`;
+    md += rankingTableMd(offCyclePhases);
+    md += detailSectionMd(offCyclePhases, rows);
+  }
 
   md += `_Yahoo Finance (delayed ~15 min) · Not financial advice_\n`;
   return md;
@@ -444,7 +672,7 @@ const buildCycleMarkdown = (rows, phases) => {
 // ── All tickers (deduplicated) ────────────────────────────────────────────
 const ALL_TICKERS = (() => {
   const set = new Set(['SPY']);
-  CYCLE_MAP.forEach(p => p.sectors.forEach(s => s.tickers.forEach(t => set.add(t.ticker))));
+  [...CYCLE_MAP, ...OFFCYCLE_THEMES].forEach(p => p.sectors.forEach(s => s.tickers.forEach(t => set.add(t.ticker))));
   return [...set];
 })();
 
@@ -528,30 +756,74 @@ function Sparkline({ d, width = 62, height = 20 }) {
   );
 }
 
+// ── Acceleration symbol thresholds (Part 3) ───────────────────────────────
+// >+2pp strong accel · 0..+2pp mild accel · -2..0pp mild decel · <-2pp strong decel
+function accelInfo(pp) {
+  if (pp == null || isNaN(pp)) return { pp: null, symbol: '—' };
+  if (pp > 2)  return { pp, symbol: '▲▲' };
+  if (pp > 0)  return { pp, symbol: '▲' };
+  if (pp > -2) return { pp, symbol: '▽' };
+  return { pp, symbol: '▽▽' };
+}
+
+// ── Population standard deviation ─────────────────────────────────────────
+function stdev(arr) {
+  if (!arr.length) return null;
+  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const variance = arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length;
+  return Math.sqrt(variance);
+}
+
 // ── Phase score calculation ───────────────────────────────────────────────
-// Score = 0.7 × avg(relM3) + 0.3 × avg(relM1) — relative to SPY.
-// Falls back to absolute returns when SPY not yet loaded.
-function calcPhaseScores(rows) {
+// α_ticker = 0.7 × relM3 + 0.3 × relM1 (relative to SPY; falls back to
+// absolute return per-metric when SPY isn't loaded yet, and relM1→relM3
+// per-ticker when only the 3M return is available).
+// score_fase = mean(α_ticker) · breadth = %(α_ticker>0) · dispersion = stdev(α_ticker)
+// acceleration = phase-level 1M momentum vs. the (3M−1M)/2 "prior 2 months" baseline.
+function calcPhaseScores(list, rows) {
   const spy = rows['SPY'];
-  return CYCLE_MAP.map(phase => {
+  const spyM3 = spy?.m3 ?? null, spyM1 = spy?.m1 ?? null;
+
+  return list.map(phase => {
     const allT = phase.sectors.flatMap(s => s.tickers);
-    const data = allT.map(t => rows[t.ticker]).filter(Boolean);
-    if (!data.length) return { ...phase, score: null, relM3: null, relM1: null, loaded: 0, total: allT.length };
+    const dataCount = allT.filter(t => rows[t.ticker]).length;
+    const total = allT.length;
 
-    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-    const spyM3 = spy?.m3 ?? null, spyM1 = spy?.m1 ?? null;
+    const tickerStats = allT.map(t => {
+      const d = rows[t.ticker];
+      if (!d || d.m3 == null) return { ticker: t.ticker, alpha: null };
+      const relM3 = spyM3 != null ? d.m3 - spyM3 : d.m3;
+      let relM1 = d.m1 != null ? (spyM1 != null ? d.m1 - spyM1 : d.m1) : null;
+      const usedFallback = relM1 == null;
+      if (usedFallback) relM1 = relM3;
+      return { ticker: t.ticker, relM3, relM1, alpha: relM3 * 0.7 + relM1 * 0.3, usedFallback };
+    });
 
-    const relM3v = data.map(d => d.m3 != null && spyM3 != null ? d.m3 - spyM3 : null).filter(v => v != null);
-    const relM1v = data.map(d => d.m1 != null && spyM1 != null ? d.m1 - spyM1 : null).filter(v => v != null);
-    const absM3v = data.map(d => d.m3).filter(v => v != null);
-    const absM1v = data.map(d => d.m1).filter(v => v != null);
+    const loaded = tickerStats.filter(s => s.alpha != null);
+    if (!loaded.length) {
+      return { ...phase, score: null, breadth: null, dispersion: null, acceleration: accelInfo(null), tickerRanks: {}, loaded: dataCount, total };
+    }
 
-    const relM3 = avg(relM3v) ?? avg(absM3v);
-    const relM1 = avg(relM1v) ?? avg(absM1v);
-    const score = relM3 != null ? relM3 * 0.7 + (relM1 ?? relM3) * 0.3 : null;
-    const accelerating = relM1 != null && relM3 != null ? relM1 > relM3 : null;
+    const fallbackTickers = loaded.filter(s => s.usedFallback).map(s => s.ticker);
+    if (fallbackTickers.length) {
+      console.debug('[cycle] relM1→relM3 fallback applied:', phase.phase, fallbackTickers);
+    }
 
-    return { ...phase, score, relM3, relM1, accelerating, loaded: data.length, total: allT.length };
+    const alphas = loaded.map(s => s.alpha);
+    const score = alphas.reduce((a, b) => a + b, 0) / alphas.length;
+    const dispersion = stdev(alphas);
+    const breadth = { pos: alphas.filter(a => a > 0).length, total: alphas.length, pct: Math.round(alphas.filter(a => a > 0).length / alphas.length * 100) };
+
+    const relM3avg = loaded.reduce((a, s) => a + s.relM3, 0) / loaded.length;
+    const relM1avg = loaded.reduce((a, s) => a + s.relM1, 0) / loaded.length;
+    const prev2Mavg = (relM3avg - relM1avg) / 2;
+    const acceleration = accelInfo(relM1avg - prev2Mavg);
+
+    const ranked = [...loaded].sort((a, b) => b.alpha - a.alpha);
+    const tickerRanks = {};
+    ranked.forEach((s, i) => { tickerRanks[s.ticker] = { rank: i + 1, alpha: s.alpha }; });
+
+    return { ...phase, score, breadth, dispersion, acceleration, tickerRanks, loaded: dataCount, total };
   });
 }
 
@@ -570,9 +842,9 @@ function PhaseTimeline({ phases }) {
         {topPhase && (
           <span style={{ background: topPhase.color, color: 'white', padding: '2px 12px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
             Estimated: {topPhase.phase}
-            {topPhase.accelerating != null && (
+            {topPhase.acceleration?.pp != null && (
               <span style={{ marginLeft: 6, opacity: 0.8, fontSize: 10 }}>
-                {topPhase.accelerating ? '▲ accel.' : '▽ decel.'}
+                {topPhase.acceleration.symbol} {topPhase.acceleration.pp > 0 ? '+' : ''}{topPhase.acceleration.pp.toFixed(1)}pp
               </span>
             )}
           </span>
@@ -606,32 +878,90 @@ function PhaseTimeline({ phases }) {
 }
 
 // ── PhaseRankings ─────────────────────────────────────────────────────────
-function PhaseRankings({ phases }) {
+function PhaseRankings({ phases, title = 'PHASE RANKING — relative momentum vs SPY (highest score = most likely current phase)' }) {
   const sorted = [...phases].filter(p => p.score != null).sort((a, b) => b.score - a.score);
   if (!sorted.length) return null;
   const medals = ['🥇', '🥈', '🥉'];
+  const th = { textAlign: 'left', fontSize: 8, color: '#999', fontWeight: 600, padding: '2px 8px', letterSpacing: '0.3px' };
+  const thNum = { ...th, textAlign: 'center' };
   return (
     <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f8f9fa', borderRadius: 6, border: '1px solid #e0e0e0' }}>
       <div style={{ fontSize: 9, fontWeight: 600, color: '#666', marginBottom: 7, letterSpacing: '0.5px' }}>
-        PHASE RANKING — relative momentum vs SPY (highest score = most likely current phase)
+        {title}
       </div>
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-        {sorted.map((ph, i) => (
-          <div key={ph.phase} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px 3px 5px', borderRadius: 14, border: `1.5px solid ${ph.borderColor}`, background: i === 0 ? ph.lightColor : 'white', fontSize: 9 }}>
-            <span style={{ width: 15, height: 15, borderRadius: 8, background: ph.color, color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
-            {i < 3 && <span style={{ fontSize: 10 }}>{medals[i]}</span>}
-            <span style={{ fontWeight: i === 0 ? 700 : 400, color: '#222' }}>{ph.phase}</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 9, color: ph.score >= 0 ? '#2e7d32' : '#c62828' }}>
-              {ph.score > 0 ? '+' : ''}{ph.score.toFixed(1)}
-            </span>
-            {ph.accelerating != null && (
-              <span style={{ fontSize: 9, color: ph.accelerating ? '#2e7d32' : '#c62828' }}>
-                {ph.accelerating ? '↑' : '↓'}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9 }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #ddd' }}>
+            <th style={thNum}>#</th>
+            <th style={th}>Fase</th>
+            <th style={thNum}>Score</th>
+            <th style={thNum}>Aceleración</th>
+            <th style={thNum}>Breadth</th>
+            <th style={thNum}>Disp.</th>
+            <th style={thNum}>Cargados</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((ph, i) => (
+            <tr key={ph.phase} style={{ background: i === 0 ? ph.lightColor : 'transparent', borderBottom: '1px solid #eee' }}>
+              <td style={{ textAlign: 'center', padding: '3px 8px' }}>
+                <span style={{ width: 15, height: 15, borderRadius: 8, background: ph.color, color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700 }}>{i + 1}</span>
+                {i < 3 && <span style={{ fontSize: 10, marginLeft: 3 }}>{medals[i]}</span>}
+              </td>
+              <td style={{ padding: '3px 8px', fontWeight: i === 0 ? 700 : 400, color: '#222' }}>{ph.phase}</td>
+              <td style={{ textAlign: 'center', padding: '3px 8px', fontFamily: 'monospace', fontWeight: 600, color: ph.score >= 0 ? '#2e7d32' : '#c62828' }}>
+                {ph.score > 0 ? '+' : ''}{ph.score.toFixed(1)}
+              </td>
+              <td style={{ textAlign: 'center', padding: '3px 8px', fontFamily: 'monospace', color: ph.acceleration?.pp == null ? '#999' : ph.acceleration.pp >= 0 ? '#2e7d32' : '#c62828' }}>
+                {ph.acceleration?.pp != null ? `${ph.acceleration.symbol} ${ph.acceleration.pp > 0 ? '+' : ''}${ph.acceleration.pp.toFixed(1)}pp` : '—'}
+              </td>
+              <td style={{ textAlign: 'center', padding: '3px 8px', fontFamily: 'monospace', color: '#555' }}>
+                {ph.breadth ? `${ph.breadth.pos}/${ph.breadth.total} (${ph.breadth.pct}%)` : '—'}
+              </td>
+              <td style={{ textAlign: 'center', padding: '3px 8px', fontFamily: 'monospace', color: '#555' }}>
+                {ph.dispersion != null ? ph.dispersion.toFixed(1) : '—'}
+              </td>
+              <td style={{ textAlign: 'center', padding: '3px 8px', fontFamily: 'monospace', color: '#999' }}>
+                {ph.loaded}/{ph.total}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── CycleSummary — Part 9: instant read of dominant/losing/accel/decel ────
+// Computed over classic cycle phases only (off-cycle themes have no "cycle
+// position" to summarize).
+function computeCycleSummary(classicPhases) {
+  const scored = classicPhases.filter(p => p.score != null);
+  const accelerated = classicPhases.filter(p => p.acceleration?.pp != null);
+  if (!scored.length) return null;
+  const dominant = [...scored].sort((a, b) => b.score - a.score)[0];
+  const losing = [...scored].sort((a, b) => a.score - b.score)[0];
+  const mostAccel = accelerated.length ? [...accelerated].sort((a, b) => b.acceleration.pp - a.acceleration.pp)[0] : null;
+  const mostDecel = accelerated.length ? [...accelerated].sort((a, b) => a.acceleration.pp - b.acceleration.pp)[0] : null;
+  return { dominant, losing, mostAccel, mostDecel };
+}
+
+function CycleSummary({ classicPhases }) {
+  const s = React.useMemo(() => computeCycleSummary(classicPhases), [classicPhases]);
+  if (!s) return null;
+  const item = (label, ph, valueNode) => (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+      <span style={{ fontSize: 9, color: '#888' }}>{label}:</span>
+      <span style={{ fontSize: 10, fontWeight: 700, color: '#222' }}>{ph.phase}</span>
+      {valueNode}
+    </div>
+  );
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', marginBottom: 10, padding: '7px 12px', background: '#fffde7', borderRadius: 6, border: '1px solid #f0e68c' }}>
+      {item('Fase dominante', s.dominant, <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#2e7d32', fontWeight: 700 }}>{s.dominant.score > 0 ? '+' : ''}{s.dominant.score.toFixed(1)}</span>)}
+      {item('Fase perdedora', s.losing, <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#c62828', fontWeight: 700 }}>{s.losing.score > 0 ? '+' : ''}{s.losing.score.toFixed(1)}</span>)}
+      {s.mostAccel && item('Mayor aceleración', s.mostAccel, <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#2e7d32', fontWeight: 700 }}>{s.mostAccel.acceleration.symbol} +{s.mostAccel.acceleration.pp.toFixed(1)}pp</span>)}
+      {s.mostDecel && item('Mayor desaceleración', s.mostDecel, <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#c62828', fontWeight: 700 }}>{s.mostDecel.acceleration.symbol} {s.mostDecel.acceleration.pp.toFixed(1)}pp</span>)}
     </div>
   );
 }
@@ -664,6 +994,8 @@ function PhaseCard({ phase, rows, spy, colIndex = 0 }) {
         <div style={{ width: 26, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>1M</div>
         <div style={{ width: 26, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>3M</div>
         <div style={{ width: 28, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>α</div>
+        <div style={{ width: 16, textAlign: 'center', fontSize: 8, color: '#aaa', fontFamily: 'monospace' }}>Rk</div>
+        <div style={{ width: 12, textAlign: 'center', fontSize: 8, color: '#aaa' }}>±</div>
         <div style={{ width: 64, textAlign: 'center', fontSize: 8, color: '#aaa' }}>1Y~now</div>
       </div>
 
@@ -679,6 +1011,7 @@ function PhaseCard({ phase, rows, spy, colIndex = 0 }) {
             const relM3 = d?.m3 != null && spyM3 != null ? d.m3 - spyM3 : null;
             const isLoading = d == null;
             const dot = <span style={{ color: '#ccc' }}>···</span>;
+            const rankInfo = phase.tickerRanks?.[t.ticker];
 
             return (
               <div key={t.ticker} style={{ display: 'flex', alignItems: 'center', padding: '3px 10px', borderBottom: '1px solid #f2f2f2', gap: 3, background: t.role === 'proxy' ? '#fafbff' : 'white' }}>
@@ -711,6 +1044,16 @@ function PhaseCard({ phase, rows, spy, colIndex = 0 }) {
                 {/* α = vs SPY 3M */}
                 <div style={{ width: 28, textAlign: 'center', fontSize: 9, fontFamily: 'monospace', fontWeight: 600, color: isLoading ? '#ccc' : relM3 == null ? '#bbb' : relM3 >= 0 ? '#2e7d32' : '#c62828' }}>
                   {isLoading ? dot : relM3 != null ? (relM3 > 0 ? '+' : '') + relM3.toFixed(0) : '—'}
+                </div>
+
+                {/* α rank within phase (Part 8) */}
+                <div style={{ width: 16, textAlign: 'center', fontSize: 7.5, fontFamily: 'monospace', color: '#999' }}>
+                  {isLoading || !rankInfo ? '—' : `#${rankInfo.rank}`}
+                </div>
+
+                {/* Signo (Part 8) */}
+                <div style={{ width: 12, textAlign: 'center', fontSize: 9, color: isLoading || !rankInfo ? '#ccc' : rankInfo.alpha >= 0 ? '#2e7d32' : '#c62828' }}>
+                  {isLoading || !rankInfo ? '·' : rankInfo.alpha >= 0 ? '▲' : '▽'}
                 </div>
 
                 {/* Sparkline */}
@@ -750,7 +1093,7 @@ function RoleLegend() {
         </span>
       ))}
       <span style={{ marginLeft: 'auto', fontSize: 8, color: '#bbb', fontFamily: 'monospace' }}>
-        1M · 3M · α = vs SPY (3M pp) · 1Y~now = sparkline
+        1M · 3M · α = vs SPY (3M pp) · Rk = α rank en fase · ± = signo · 1Y~now = sparkline
       </span>
     </div>
   );
@@ -767,13 +1110,13 @@ function CycleTracker() {
 
   React.useEffect(() => {
     if (loading.size === 0 && Object.keys(rows).length > 0) {
-      try { localStorage.setItem('llm_export_cycle', buildCycleMarkdown(rows, phases)); localStorage.setItem('llm_export_cycle_ts', Date.now().toString()); } catch {}
+      try { localStorage.setItem('llm_export_cycle', buildCycleMarkdown(rows, phases, offCyclePhases)); localStorage.setItem('llm_export_cycle_ts', Date.now().toString()); } catch {}
     }
-  }, [rows, loading.size, phases]);
+  }, [rows, loading.size, phases, offCyclePhases]);
 
   const copyForLLM = () => {
     if (!Object.keys(rows).length) { showToast('⚠️ Espera a que carguen los datos'); return; }
-    const md = buildCycleMarkdown(rows, phases);
+    const md = buildCycleMarkdown(rows, phases, offCyclePhases);
     navigator.clipboard.writeText(md)
       .then(() => showToast('✅ Copiado — pégalo en Claude, ChatGPT o cualquier LLM'))
       .catch(() => showToast('❌ Error al copiar'));
@@ -833,7 +1176,8 @@ function CycleTracker() {
   React.useEffect(() => { fetchAll(); }, []);
 
   const spy    = rows['SPY'];
-  const phases = React.useMemo(() => calcPhaseScores(rows), [rows]);
+  const phases = React.useMemo(() => calcPhaseScores(CYCLE_MAP, rows), [rows]);
+  const offCyclePhases = React.useMemo(() => calcPhaseScores(OFFCYCLE_THEMES, rows), [rows]);
   const isLoading = loading.size > 0;
   const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '-');
 
@@ -882,12 +1226,27 @@ function CycleTracker() {
       </div>
 
       <PhaseTimeline phases={phases} />
+      <CycleSummary classicPhases={phases} />
       <PhaseRankings phases={phases} />
       <RoleLegend />
 
-      {/* Phase Cards Grid */}
+      {/* Classic Cycle Phase Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
         {phases.map((ph, i) => (
+          <PhaseCard key={ph.phase} phase={ph} rows={rows} spy={spy} colIndex={i % 4} />
+        ))}
+      </div>
+
+      {/* Off-cycle Themes — parallel, non-cyclical rotation themes */}
+      <div style={{ marginTop: 20, marginBottom: 6 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#37474f' }}>Off-cycle Themes</div>
+        <div style={{ fontSize: 9, color: '#999', fontStyle: 'italic', marginTop: 1 }}>
+          No representa una posición en el ciclo económico — temas de rotación paralelos (narrativa propia, no macro clásica)
+        </div>
+      </div>
+      <PhaseRankings phases={offCyclePhases} title="OFF-CYCLE THEMES — non-cyclical rotation (no forma parte del ciclo)" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {offCyclePhases.map((ph, i) => (
           <PhaseCard key={ph.phase} phase={ph} rows={rows} spy={spy} colIndex={i % 4} />
         ))}
       </div>

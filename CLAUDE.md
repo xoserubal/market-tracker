@@ -676,6 +676,52 @@ Compañero de `update_performance.py` (que etiqueta `shadow_picks.jsonl`), adapt
 
 ---
 
+## Cycle Tracker — optimización de fases, métricas nuevas y Off-cycle Themes (implementado 2026-07-29)
+
+`cycle.html` es una pestaña puramente JS del dashboard (sin conexión al pipeline Python) que estima la fase del ciclo económico (marco Dow Theory / Stovall-Pring) promediando el alfa vs SPY (70%×3M + 30%×1M) de tickers asignados manualmente a cada fase. Se recibió una hoja de instrucciones detallada de 9 partes señalando 6 problemas concretos: muestras desbalanceadas entre fases, una fase "Late Bull → Top" contaminada al mezclar Oil+Uranium+Coal (ciclos poco correlacionados), sin medida de aceleración de segundo orden, sin breadth ni dispersión intra-fase, y sin cobertura de temas de rotación no cíclicos (crypto, AI cloud, defensa/espacio, Argentina). Cambio acotado a este único archivo — sin tocar AI Picks Lab, Portfolio Tracker ni ningún otro módulo.
+
+### 1. Restructuración de `CYCLE_MAP` (10 fases clásicas, antes 8)
+
+La fase única "Late Bull → Top — Energy (Oil · Uranium · Coal)" se separó en tres fases independientes, cada una puntuada por separado aunque comparten posición narrativa en el ciclo: **Oil & Gas** (8: XLE, XOM, CVX, COP, EOG, DVN, FANG, SLB — se retiró PXD, adquirida por Exxon en 2024, sustituida por FANG como productor shale de referencia), **Uranium** (8: URNM, URA, CCJ, NXE, DNN, LEU, UEC, BWXT) y **Coal & Steel Inputs** (6: HCC, AMR, BTU, CLF, TECK — ver nota sobre CNR abajo).
+
+Otras fases ganaron tickers para acercarse al objetivo de 8 slots por fase (Parte 7 de la hoja): Transportation +ODFL/FDX (grupo nuevo "Trucking & Logistics"), Technology +AVGO (y ASML pasa de subsegment a leader), Capital Goods +DE, Utilities +SO/AEP/D/XEL. Materials, Staples & Healthcare y Financials & Cyclicals quedaron sin cambios (Financials mantiene sus 10 slots por decisión explícita del usuario de no fusionarlo con Early Bull).
+
+**Bug real encontrado en verificación, no en la hoja original:** `ARCH` (Arch Resources) está delisted — Arch Resources se fusionó con CONSOL Energy en enero de 2025 para formar **Core Natural Resources**, cotizando como `CNR` en NYSE. El ticker `ARCH` devolvía 404 de Yahoo en producción (confirmado contra la API real antes de decidir el fix). Sustituido por `CNR` en Coal & Steel Inputs.
+
+### 2. Off-cycle Themes — segunda estructura de datos en paralelo (`OFFCYCLE_THEMES`)
+
+4 sub-categorías que no encajan en el ciclo económico clásico porque se mueven por narrativa propia, no por "expansión → pico → contracción → recuperación": **Crypto & Mining** (IBIT, MSTR, COIN, CORZ, MARA, RIOT — se eligió IBIT como proxy único frente a "IBIT o BITX" de la hoja original, por ser el más líquido), **AI Cloud & Infrastructure** (NBIS, SMCI, DELL, ANET, sin proxy), **Defense & Space** (ITA, ASTS, RTX, RCAT, LMT) y **Latam Emerging** (ARGT, GGAL, BBAR, YPF, VIST, PAM).
+
+Deliberadamente **no** se añadió a `CYCLE_MAP` — vive en un array separado, sin campo `order`, excluido de `PhaseTimeline` (la barra de posición en el ciclo) y del resumen visual global (Parte 9) porque ambos responden "¿dónde estamos en el ciclo?", pregunta que no aplica a estos temas. Paleta de color deliberadamente fría/apagada (familia slate `#37474f`/`#eceff1`/`#90a4ae`, igual en las 4 sub-categorías) frente a los colores cálidos y distintos de las 10 fases clásicas, para que se lea visualmente como "fuera del marco cíclico" — sugerencia del revisor externo del plan, no solo el texto de la sección.
+
+Se renderiza en su propia sección "Off-cycle Themes" (grid de 4 tarjetas + tabla de ranking propia, reutilizando `PhaseCard`/`PhaseRankings` sin modificarlos) debajo de la grid de las 10 fases clásicas.
+
+### 3. `calcPhaseScores` generalizado — α por ticker como primitiva única
+
+La función ahora acepta una lista de fases (`calcPhaseScores(list, rows)`) para poder llamarse tanto con `CYCLE_MAP` como con `OFFCYCLE_THEMES`. Cambio de fondo: antes promediaba relM3 y relM1 *por separado* entre tickers y solo componía el alfa a nivel de fase; ahora se calcula `alpha_ticker = 0.7×relM3 + 0.3×relM1` **por ticker primero**, y todo lo demás (score, breadth, dispersión, ranking) se deriva de ese array — es lo que pide literalmente la hoja ("score_fase = promedio(α_ticker)") y es necesario de todos modos para breadth/dispersión/rank por ticker.
+
+Campos nuevos por fase: `breadth` (`{pos, total, pct}`, % de tickers con alfa>0), `dispersion` (desviación estándar poblacional del alfa entre tickers de la fase), `acceleration` (`{pp, symbol}` — `▲▲/▲/▽/▽▽` según `>+2pp / 0..+2pp / -2..0pp / <-2pp`, calculado como `relM1avg − (relM3avg−relM1avg)/2`) y `tickerRanks` (mapa ticker→{rank, alpha} para el ranking dentro de la fase).
+
+**Fallback `relM1 ?? relM3` por ticker:** cuando falta el 1M de un ticker, su alfa colapsa a 100%×relM3 solo para ese ticker (aceptable — pensado para el estado de carga inicial, no para tickers delgados en producción). Se añadió `console.debug('[cycle] relM1→relM3 fallback applied:', ...)` por fase cuando esto ocurre, para detectar sesgo silencioso si empezara a pasar con tickers de baja cobertura (uranio junior, ADRs latam) — sugerencia del revisor externo del plan.
+
+### 4. UI: tabla de ranking, resumen global, columnas nuevas en el detalle
+
+`PhaseRankings` pasó de una fila de pills a una tabla real (columnas # / Fase / Score / Aceleración / Breadth / Disp. / Cargados) — necesario al pasar de 4 a 7 columnas de datos; se reutiliza para el ranking de Off-cycle Themes con un `title` distinto.
+
+Nuevo componente `CycleSummary` (Parte 9): línea de lectura instantánea con Fase dominante, Fase perdedora, Fase con mayor aceleración y Fase con mayor desaceleración — calculado solo sobre las 10 fases clásicas (no sobre Off-cycle Themes), renderizado entre `PhaseTimeline` y `PhaseRankings`.
+
+`PhaseCard` (detalle por fase) gana dos columnas estrechas tras α: **Rk** (posición del ticker dentro de su fase por alfa, desde `tickerRanks`) y **±** (▲/▽ según signo del alfa) — Parte 8 de la hoja.
+
+`buildCycleMarkdown` (export a LLM) espeja todo lo anterior: bloque `## RESUMEN` al principio, columnas Breadth/Disp en las tablas de ranking, columnas rank/sign en el detalle por fase, y una sección `## OFF-CYCLE THEMES` completa (ranking + detalle) después de la sección clásica.
+
+### Verificado
+
+Playwright headless (Edge/Chromium) contra el servidor local real (`node server.js`, puerto 3000): las 10 fases clásicas + 4 off-cycle cargan sin errores de consola tras el fix de `ARCH→CNR` (antes daba un 404 real en `/api/quote/ARCH`, confirmado contra Yahoo directo). Verificación numérica cruzada (script Python independiente replicando la fórmula) contra 4 fases pedidas explícitamente en la revisión del plan — Oil & Gas (score -3.0, breadth 3/8, disp 4.6, accel +10.5pp), Uranium (score -26.7, breadth 0/8 — caída amplia y genuina de los 8 tickers, no un outlier aislado), Utilities (score -2.9, confirma que SO/AEP/D/XEL no rompen ni distorsionan el cálculo) y Latam Emerging off-cycle (score +3.7, breadth 4/6, impulsado por BBAR/GGAL/YPF) — los 4 coinciden exactamente con lo mostrado en pantalla. Export "Copiar para LLM" verificado end-to-end: el markdown en `localStorage.llm_export_cycle` contiene el bloque RESUMEN, las columnas Breadth/Disp y la sección OFF-CYCLE THEMES completa.
+
+**Fuera de alcance (explícito, según la hoja original):** convertir la pestaña en predictiva, conectar con AI Picks Lab, añadir señales de Koncorde/DEMS/PCS, o cambiar la fórmula del alfa individual (70%×3M+30%×1M) — solo cambió la agregación por fase.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
