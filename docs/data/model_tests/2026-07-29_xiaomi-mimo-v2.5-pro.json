@@ -1,190 +1,107 @@
 {
-  "run_id": "2026-07-29_1037",
+  "run_id": "2026-07-29_2049",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-07-29",
   "summary": {
     "date": "2026-07-29",
-    "run_id": "2026-07-29_1037",
+    "run_id": "2026-07-29_2049",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 26,
-    "input_tokens": 29373,
-    "output_tokens": 10978,
-    "cost_usd": 0.022328,
-    "latency_ms": 162950.0,
+    "candidate_count": 25,
+    "input_tokens": 28776,
+    "output_tokens": 6928,
+    "cost_usd": 0.018545,
+    "latency_ms": 100604.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 100,
-    "selected_count": 1,
-    "watch_count": 18,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 6,
     "rejected_count": 6,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": [
-      "KONC_3D_BLUE_DOWNTREND_WARNING: SYK selected with konc_3d_blue_down_2_bars=true"
-    ]
+    "soft_warnings": []
   },
-  "quality_score": 100,
+  "quality_score": 90,
   "response": {
     "date": "2026-07-29",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-07-29_1037",
+    "run_id": "2026-07-29_2049",
     "decision_summary": {
-      "market_read": "Bullish macro regime with improving trend supports selective risk-on entries amid high healthcare concentration.",
-      "risk_posture": "normal",
-      "should_select_picks": true
+      "market_read": "Bull market regime with improving macro conditions and healthcare theme leadership.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "SYK",
-        "portfolio": "MIMO_SHADOW",
-        "signal_type": "early_rotation",
-        "confidence": "medium",
-        "reason_short": "High dems of 16 with no spike for early rotation.",
-        "reason_full": "SYK posts a daily momentum score of 16 with spike_flag false and outperform_d10 of 6, confirming robust multi-day institutional flow. PCS of 74.5 exceeds the minimum entry threshold, and extension_risk is medium but manageable. Rotation score of 6 and weekly streak of 1 week indicate early-stage rotation, justified by the strong daily signal.",
-        "comparative_edge": "Selected over DHR (PCS=73.8, dems=15) because SYK has dems=16 vs DHR's 15, providing slightly stronger daily momentum confirmation despite DHR's lower extension risk and higher rotation score.",
-        "key_supporting_factors": [
-          "Daily momentum score of 16 is among the highest with spike_flag false, confirming organic multi-day flow.",
-          "Outperform_d10 of 6 confirms six consecutive days of outperformance, showing broad daily breadth.",
-          "PCS of 74.5 exceeds the minimum entry threshold of 68, indicating sufficient composite signal strength.",
-          "Extension_risk is medium but no extreme flags, allowing for a managed entry."
-        ],
-        "key_risks_or_contradictions": [
-          "Theme concentration risk is high in healthcare_largecap, increasing sector vulnerability in the portfolio.",
-          "Weekly streak is only 1 week, requiring confirmation for a sustained uptrend.",
-          "Extension_risk is medium with dist_sma20_atr_high, suggesting a possible near-term pullback."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
-        "ticker": "TMO",
-        "reason": "PCS 80.5 with high extension risk and Koncorde distribution warning, not ready for selection.",
-        "watch_trigger": "Select if extension_risk decreases to low and Koncorde aligns bullish across timeframes."
-      },
-      {
         "ticker": "CI",
-        "reason": "High rotation score of 9 but short weekly streak of 1 week and spike_flag true.",
-        "watch_trigger": "Select if streak_weeks extends to 3+ without spike_flag and dems rises above 14."
+        "reason": "Dems 11 with spike_flag true and only 1-week streak, indicating early-stage momentum with near-term extension risk despite high rotation score of 9.",
+        "watch_trigger": "Spike_flag false or dems >=14 to confirm organic multi-day flow."
       },
       {
         "ticker": "ROOT",
-        "reason": "Good weekly streak of 6 weeks but spike_flag true and dems=9 below early rotation threshold.",
-        "watch_trigger": "Select if spike_flag clears and dems reaches 14+ with sustained outperformance."
+        "reason": "Dems 7 below the 10 threshold for daily momentum, weak near-term flow despite 6-week streak and positive 4-week outperformance of 8.6%.",
+        "watch_trigger": "Dems >=10 or momentum acceleration true to strengthen daily signal."
       },
       {
         "ticker": "URI",
-        "reason": "Dems=12 in 10-13 range with spike_flag and Koncorde distribution warning.",
-        "watch_trigger": "Select if dems rises above 14 without spike and extension_risk drops to low."
+        "reason": "Dems 10 with spike_flag true and extension_risk medium in us_cyclical, low theme concentration but daily signal lacks confirmation.",
+        "watch_trigger": "Spike_flag false or dems >=14 with extension risk reduction."
       },
       {
         "ticker": "UNH",
-        "reason": "Strong weekly streak of 8 weeks but dems=5 weak for daily momentum entry.",
-        "watch_trigger": "Select if dems rises above 10 with momentum_accel true, confirming daily flow."
+        "reason": "Dems 6 below 10, weak daily momentum despite 8-week streak and 17.7% 13-week outperformance, requiring daily flow improvement.",
+        "watch_trigger": "Dems >=10 or outperform_d10 >=6 to confirm daily uptrend."
       },
       {
         "ticker": "DHR",
-        "reason": "Dems=15 with no spike but theme concentration risk high; monitoring for better risk/reward.",
-        "watch_trigger": "Select if extension_risk remains low and rotation_score improves to 8+."
+        "reason": "Dems 13 with spike_flag true and extension_risk medium, weekly streak only 2 weeks, indicating incomplete consolidation despite recent 5-day surge.",
+        "watch_trigger": "Spike_flag false or dems >=14 with extension risk low."
       },
       {
-        "ticker": "TDOC",
-        "reason": "Already held with strong signal; monitoring for continuation or exit triggers.",
-        "watch_trigger": "Exit if current_pcs drops below 68 or rot_score falls below 5."
-      },
-      {
-        "ticker": "CVS",
-        "reason": "Already held with 8-week streak and PCS=85; monitoring for overextension.",
-        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks breaks to 0."
-      },
-      {
-        "ticker": "JNJ",
-        "reason": "Already held with high PCS=83.2 and bullish Koncorde; monitoring.",
-        "watch_trigger": "Exit if current_pcs < 68 or rot_score drops below 6."
-      },
-      {
-        "ticker": "NUE",
-        "reason": "Already held with early rotation signal; monitoring for continuation.",
-        "watch_trigger": "Exit if current_pcs < 68 or dems falls below 10 with spike_flag."
-      },
-      {
-        "ticker": "LLY",
-        "reason": "Already held with PCS=80.8 but Koncorde distribution warning acknowledged.",
-        "watch_trigger": "Exit if current_pcs < 68 or extension_risk rises to high."
-      },
-      {
-        "ticker": "OSCR",
-        "reason": "Already held with high 13w outperformance but spike_flag and daily dems weak.",
-        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks remains 1 for too long."
-      },
-      {
-        "ticker": "ABBV",
-        "reason": "Already held with 6-week streak; monitoring for signal strength.",
-        "watch_trigger": "Exit if current_pcs < 68 or rot_score falls below 5."
-      },
-      {
-        "ticker": "MRK",
-        "reason": "Already held with high PCS and bullish Koncorde; monitoring.",
-        "watch_trigger": "Exit if current_pcs < 68 or dems drops below 10."
-      },
-      {
-        "ticker": "SLS",
-        "reason": "Already held but current streak_weeks=0 and recent 4w dip; monitoring for recovery.",
-        "watch_trigger": "Exit if current_pcs < 62 or rot_score <= 2, but currently holding."
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Already held with high 13w outperformance but streak_weeks=0 now; monitoring.",
-        "watch_trigger": "Exit if current_pcs < 62 or rot_score <= 2."
-      },
-      {
-        "ticker": "YPF",
-        "reason": "Already held with rotation score 9; monitoring for continuation.",
-        "watch_trigger": "Exit if current_pcs < 68 or streak_weeks breaks to 0."
-      },
-      {
-        "ticker": "TOU.TO",
-        "reason": "Already held with early rotation signal; monitoring.",
-        "watch_trigger": "Exit if current_pcs < 68 or dems falls below 10."
+        "ticker": "TMO",
+        "reason": "PCS 80.5 with dems 14 but spike_flag true, extension_risk high, and konc_3d_state distribution_warning, elevating near-term pullback risk despite strong weekly metrics.",
+        "watch_trigger": "Spike_flag false or extension_risk reduction to medium/low."
       }
     ],
     "rejected": [
       {
         "ticker": "GS",
-        "reason": "PCS 69.8 with rot_score=5, dems=3 low, and Koncorde distribution warning indicates weak signals.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "Signal IGNORAR with rot_score 5, dems 3, and weak weekly performance of -0.3% 4-week outperformance, insufficient conviction for entry.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "TK",
-        "reason": "PCS 68.2 with ret_13w_vs_spy negative at -12.32%, showing weak relative strength.",
+        "reason": "Ret_13w_vs_spy negative at -12.3%, weak relative strength despite dems 11, indicating poor long-term trend.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "VRTX",
-        "reason": "PCS 68.2 with rot_score=5, spike_flag true, and Koncorde distribution warning.",
-        "rejection_category": "technical_overextension"
+        "reason": "Signal IGNORAR with rot_score 5 and dems 10 but spike_flag true, insufficient conviction with distribution_warning alignment.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "SU",
-        "reason": "PCS 67.2 with extension_risk high, spike_flag true, and weak weekly metrics.",
-        "rejection_category": "technical_overextension"
+        "reason": "Signal IGNORAR with rot_score 5 and spike_flag true, weak daily and weekly signals despite 16.9% 4-week outperformance.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "CVE",
-        "reason": "Exiting open position due to current_pcs=67.0 < pcs_min_entry=68.0 and streak_weeks=0.",
-        "rejection_category": "better_alternative_available"
+        "reason": "Signal IGNORAR with rot_score 5 and spike_flag true, weak flow metrics and konc_alignment distribution_warning.",
+        "rejection_category": "weak_flow"
       },
       {
-        "ticker": "WCP.TO",
-        "reason": "Exiting open position due to current_pcs=62.5 < pcs_min_entry=68.0 and streak_weeks=0.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "AWX",
+        "reason": "Signal IGNORAR with rot_score 4 and dems 3, weak across all metrics with -52.3% distance from 52-week high.",
+        "rejection_category": "weak_flow"
       }
     ],
     "open_picks_review": [
@@ -192,87 +109,81 @@
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=75.8 above min entry, rot_score=5, and streak_weeks=0 but no exit trigger met."
+        "reason": "Current_pcs 75.8 >= min entry 68, rot_score 5 > 2, no exit criteria met despite streak_weeks 0."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Strong signal with pcs=85.0 and streak_weeks=8; monitoring for continuation."
+        "reason": "Current_pcs 85.0, rot_score 8, streak_weeks 8, strong weekly leadership maintained."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=79.8 with streak_weeks=6 and rot_score=6; holding with caution on spike_flag."
+        "reason": "Current_pcs 79.8, rot_score 6, streak_weeks 6, weekly trend intact with dems 15."
       },
       {
         "ticker": "TDOC",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "High pcs=85.0 and streak_weeks=8; monitoring for overextension."
+        "reason": "Current_pcs 85.0, rot_score 8, streak_weeks 8, highest 13-week outperformance at 56.1% vs SPY."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=80.2 with streak_weeks=1 and rot_score=7; holding despite weak daily momentum."
+        "reason": "Current_pcs 80.2, rot_score 7, streak_weeks 1, but 78.9% 13-week outperformance justifies hold."
       },
       {
         "ticker": "LLY",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=80.8 with streak_weeks=5; monitoring due to Koncorde distribution warning."
+        "reason": "Current_pcs 80.8, rot_score 6, streak_weeks 5, weekly uptrend sustained despite -0.6% 4-week dip."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=75.8 with streak_weeks=0 but rot_score=5; no exit trigger."
-      },
-      {
-        "ticker": "CVE",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current pcs=67.0 below pcs_min_entry=68.0 and streak_weeks=0 <=1."
+        "reason": "Current_pcs 75.8, rot_score 5, streak_weeks 0, but 70.4% 13-week outperformance supports continued hold."
       },
       {
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Strong signal with pcs=79.2 and streak_weeks=6; holding."
+        "reason": "Current_pcs 79.2, rot_score 7, streak_weeks 6, bullish-aligned Koncorde confirms accumulation."
       },
       {
         "ticker": "JNJ",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "High pcs=83.2 with streak_weeks=6 and bullish Koncorde; holding."
+        "reason": "Current_pcs 83.2, rot_score 8, streak_weeks 6, clean weekly signal with dems 16 acceleration."
       },
       {
         "ticker": "NUE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=82.5 with streak_weeks=3 and early rotation signal; monitoring."
+        "reason": "Current_pcs 82.5, rot_score 7, streak_weeks 3, daily momentum dems 16 without spike."
       },
       {
         "ticker": "TOU.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=68.5 with streak_weeks=2 and dems=8; holding for diversification."
-      },
-      {
-        "ticker": "WCP.TO",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current pcs=62.5 below pcs_min_entry=68.0 and streak_weeks=0 <=1."
+        "reason": "Current_pcs 68.5, rot_score 7, streak_weeks 2, diversified oil_gas exposure with dems 10."
       },
       {
         "ticker": "YPF",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Pcs=73.5 with streak_weeks=3 and rot_score=9; holding for Argentina exposure."
+        "reason": "Current_pcs 73.5, rot_score 9 highest, streak_weeks 3, Argentina theme diversification."
+      },
+      {
+        "ticker": "SYK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current_pcs 74.5, rot_score 6, streak_weeks 1, daily dems 17 confirms strong flow."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-07-29\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-29_1037\",\n  \"decision_summary\": {\n    \"market_read\": \"Bullish macro regime with improving trend supports selective risk-on entries amid high healthcare concentration.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"SYK\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"High dems of 16 with no spike for early rotation.\",\n      \"reason_full\": \"SYK posts a daily momentum score of 16 with spike_flag false and outperform_d10 of 6, confirming robust multi-day institutional flow. PCS of 74.5 exceeds the minimum entry threshold, and extension_risk is medium but manageable. Rotation score of 6 and weekly streak of 1 week indicate early-stage rotation, justified by the strong daily signal.\",\n      \"comparative_edge\": \"Selected over DHR (PCS=73.8, dems=15) because SYK has dems=16 vs DHR's 15, providing slightly stronger daily momentum confirmation despite DHR's lower extension risk and higher rotation score.\",\n      \"key_supporting_factors\": [\n        \"Daily momentum score of 16 is among the highest with spike_flag false, confirming organic multi-day flow.\",\n        \"Outperform_d10 of 6 confirms six consecutive days of outperformance, showing broad daily breadth.\",\n        \"PCS of 74.5 exceeds the minimum entry threshold of 68, indicating sufficient composite signal strength.\",\n        \"Extension_risk is medium but no extreme flags, allowing for a managed entry.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Theme concentration risk is high in healthcare_largecap, increasing sector vulnerability in the portfolio.\",\n        \"Weekly streak is only 1 week, requiring confirmation for a sustained uptrend.\",\n        \"Extension_risk is medium with dist_sma20_atr_high, suggesting a possible near-term pullback.\"\n      ]\n    }\n  ],\n  \"watch\": [\n    {\n      \"tic"
+  "raw_response_head": "{\n  \"date\": \"2026-07-29\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-29_2049\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull market regime with improving macro conditions and healthcare theme leadership.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"CI\",\n      \"reason\": \"Dems 11 with spike_flag true and only 1-week streak, indicating early-stage momentum with near-term extension risk despite high rotation score of 9.\",\n      \"watch_trigger\": \"Spike_flag false or dems >=14 to confirm organic multi-day flow.\"\n    },\n    {\n      \"ticker\": \"ROOT\",\n      \"reason\": \"Dems 7 below the 10 threshold for daily momentum, weak near-term flow despite 6-week streak and positive 4-week outperformance of 8.6%.\",\n      \"watch_trigger\": \"Dems >=10 or momentum acceleration true to strengthen daily signal.\"\n    },\n    {\n      \"ticker\": \"URI\",\n      \"reason\": \"Dems 10 with spike_flag true and extension_risk medium in us_cyclical, low theme concentration but daily signal lacks confirmation.\",\n      \"watch_trigger\": \"Spike_flag false or dems >=14 with extension risk reduction.\"\n    },\n    {\n      \"ticker\": \"UNH\",\n      \"reason\": \"Dems 6 below 10, weak daily momentum despite 8-week streak and 17.7% 13-week outperformance, requiring daily flow improvement.\",\n      \"watch_trigger\": \"Dems >=10 or outperform_d10 >=6 to confirm daily uptrend.\"\n    },\n    {\n      \"ticker\": \"DHR\",\n      \"reason\": \"Dems 13 with spike_flag true and extension_risk medium, weekly streak only 2 weeks, indicating incomplete consolidation despite recent 5-day surge.\",\n      \"watch_trigger\": \"Spike_flag false or dems >=14 with extension risk low.\"\n    },\n    {\n      \"ticker\": \"TMO\",\n      \"reason\": \"PCS 80.5 with dems 14 but spike_flag true, extension_risk high, and konc_3d_state distribution_warning, elevating near-term pullback risk despite strong weekly metrics.\",\n      \"watch_trigger\": \"Spike_flag false or extension_risk re"
 }
