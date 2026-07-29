@@ -7,6 +7,7 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <script src="/shared/relative-ratio-registry.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
@@ -64,6 +65,21 @@
     .rank-pair { color: #1a6baa; font-family: Consolas, monospace; font-size: 10px; text-align: right; }
     .rank-score { font-family: Consolas, monospace; font-weight: 700; text-align: right; }
 
+    /* ── Question Blocks (primary — Relative Flow Lab v2) ─────────────────── */
+    .qblock { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; margin-bottom: 12px; overflow: hidden; }
+    .qblock-head { padding: 8px 12px; background: #eef3f8; border-bottom: 1px solid #e0e7ef; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .qblock-title { font-size: 12px; font-weight: 800; color: #1a3a5c; text-transform: uppercase; letter-spacing: .4px; }
+    .qblock-question { font-size: 10.5px; color: #5b6b7f; font-style: italic; }
+    .qblock-top { padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; background: white; border-bottom: 1px solid #eef0f3; }
+    .qtop-row { display: grid; grid-template-columns: 20px 190px 74px 1fr; gap: 8px; align-items: center; font-size: 10.5px; padding: 3px 2px; border-radius: 3px; }
+    .qtop-rank { color: #667085; font-family: Consolas, monospace; }
+    .qtop-name { color: #222; font-weight: 600; }
+    .qtop-pair { color: #1a6baa; font-family: Consolas, monospace; font-size: 9.5px; font-weight: 400; }
+    .qtop-interp { color: #445; font-size: 10px; }
+    .qblock-empty { padding: 4px 2px; font-size: 10.5px; color: #aaa; font-style: italic; }
+    .interp-cell { text-align: left !important; font-size: 9.5px; color: #445; max-width: 240px; line-height: 1.35; }
+    .section-label { font-size: 11px; font-weight: 700; color: #7a8699; text-transform: uppercase; letter-spacing: .6px; margin: 4px 0 6px; }
+
     /* ── Cluster ────────────────────────────────────────────────────────── */
     .cluster-grid { display: grid; grid-template-columns: repeat(4, minmax(190px, 1fr)); gap: 8px; margin-bottom: 12px; }
     .cluster { border: 1px solid #e6e8eb; border-radius: 6px; background: white; padding: 8px 9px; }
@@ -97,109 +113,31 @@
 <div id="root"></div>
 <script type="text/babel">
 
-// ── CAPA 1: Macro Regime ratios ───────────────────────────────────────────
-const MACRO_RATIOS = [
-  { name: "Copper vs Gold",        a: "HG=F", b: "GC=F",  invert: false,
-    tip: "Mide crecimiento económico vs refugio.\n↑ = expansión (risk-on)\n↓ = desaceleración / defensivo" },
-  { name: "Credit vs Equities",    a: "HYG",  b: "SPY",   invert: false,
-    tip: "Crédito high yield vs acciones.\n↑ = instituciones comprando riesgo real\n↓ = distribución / stress crediticio" },
-  { name: "Utilities vs Discret. ⚠", a: "XLU", b: "XLY",  invert: true,
-    tip: "Utilities vs consumo discrecional.\n↓ = cíclico activo (risk-on)\n↑ = defensivo (risk-off)\n⚠ Ratio INVERTIDO: baja en entorno risk-on" },
-  { name: "Low Vol vs Momentum ⚠", a: "SPLV", b: "MTUM",  invert: true,
-    tip: "Baja volatilidad vs momentum.\n↓ = apetito por riesgo (risk-on)\n↑ = búsqueda de seguridad (risk-off)\n⚠ Ratio INVERTIDO: baja en entorno risk-on" },
-];
+// ── ratio_registry (shared/relative-ratio-registry.js) ────────────────────
+// Cada ratio declara su `type` (la pregunta que responde) y su `cluster`
+// (agrupación narrativa heredada, usada solo por la Cluster View secundaria).
+// Ver shared/relative-ratio-registry.js para la metadata completa.
+const RATIO_TYPES = window.RATIO_TYPES;
+const REGISTRY_ENTRIES = window.RATIO_REGISTRY.filter(r => r.enabled !== false);
 
-// ── CAPA 2: Relative Flow clusters ───────────────────────────────────────
-const RATIO_GROUPS = [
-  { id: "RISK / BREADTH", items: [
-    { name: "Small Caps vs S&P 500",    a: "IWM",  b: "SPY",
-      tip: "Mide amplitud del mercado.\n↑ = participación amplia (bullish sostenible)\n↓ = concentración en large caps" },
-    { name: "Nasdaq vs Equal Weight",   a: "QQQ",  b: "RSP",
-      tip: "Liderazgo growth vs mercado amplio.\n↑ = concentración en mega caps\n↓ = rotación hacia value/small" },
-    { name: "Discretionary vs Staples", a: "XLY",  b: "XLP",
-      tip: "Consumo cíclico vs defensivo.\n↑ = risk-on\n↓ = risk-off / cautela consumidor" },
-  ]},
-  { id: "SECTOR ROTATION", items: [
-    { name: "Technology vs Market",     a: "XLK",  b: "SPY",
-      tip: "Tecnología vs mercado.\n↑ = flujo hacia growth/tech\n↓ = rotación fuera de tech" },
-    { name: "Financials vs Market",     a: "XLF",  b: "SPY",
-      tip: "Financieras vs mercado.\n↑ = ciclo de crédito activo\n↓ = salida de financieras" },
-    { name: "Healthcare vs Market",     a: "XLV",  b: "SPY",
-      tip: "Salud vs mercado.\n↑ = rotación defensiva hacia healthcare\n↓ = dinero sale de salud" },
-    { name: "Discretionary vs Market",  a: "XLY",  b: "SPY",
-      tip: "Consumo cíclico vs mercado.\n↑ = apetito por riesgo / consumidor fuerte\n↓ = cautela consumidor" },
-    { name: "Staples vs Market",        a: "XLP",  b: "SPY",
-      tip: "Consumo defensivo vs mercado.\n↑ = rotación defensiva\n↓ = dinero sale de staples hacia riesgo" },
-    { name: "Energy vs Market",         a: "XLE",  b: "SPY",
-      tip: "Energía vs mercado.\n↑ = flujo hacia energía / inflación\n↓ = dinero sale de energía" },
-    { name: "Industrials vs Market",    a: "XLI",  b: "SPY",
-      tip: "Industriales vs mercado.\n↑ = apuesta por ciclo económico\n↓ = dinero sale de industriales" },
-    { name: "Materials vs Market",      a: "XLB",  b: "SPY",
-      tip: "Materiales vs mercado.\n↑ = flujo hacia materias primas\n↓ = dinero sale de materiales" },
-    { name: "Real Estate vs Market",    a: "XLRE", b: "SPY",
-      tip: "Inmobiliario vs mercado.\n↑ = apetito por yield / sensibilidad a bajada de tipos\n↓ = presión de tipos altos" },
-    { name: "Communication vs Market",  a: "XLC",  b: "SPY",
-      tip: "Comunicación vs mercado.\n↑ = flujo hacia media/telecom/internet\n↓ = dinero sale de comunicación" },
-    { name: "Utilities vs Market",      a: "XLU",  b: "SPY",
-      tip: "Utilities vs mercado.\n↑ = rotación defensiva (yield, baja beta)\n↓ = dinero sale de utilities hacia riesgo" },
-    { name: "Bonds vs Market",          a: "TLT",  b: "SPY",
-      tip: "Bonos largo plazo vs mercado.\n↑ = dinero sale de acciones hacia renta fija (risk-off)\n↓ = dinero sale de bonos hacia acciones (risk-on)" },
-    { name: "Gold vs Market",           a: "GLD",  b: "SPY",
-      tip: "Oro vs mercado.\n↑ = dinero busca refugio / cobertura\n↓ = apetito por riesgo, oro no atrae flujo" },
-    { name: "Cash vs Market",           a: "BIL",  b: "SPY",
-      tip: "T-Bills (cash proxy) vs mercado.\n↑ = dinero sale a liquidez (defensivo extremo)\n↓ = dinero sale de cash hacia riesgo" },
-  ]},
-  { id: "REGIONS", items: [
-    { name: "Emerging Markets vs World", a: "EEM",  b: "URTH",
-      tip: "Flujo hacia emergentes vs mercado global.\n↑ = apetito por riesgo en EM" },
-    { name: "Brazil vs EM",             a: "EWZ",  b: "EEM",
-      tip: "Flujo hacia Brasil dentro de EM.\n↑ = capital concentrado en Brasil" },
-    { name: "Argentina vs EM",          a: "ARGT", b: "EEM",
-      tip: "Argentina vs emergentes.\n↑ = outperformance relativa Argentina" },
-    { name: "Japan vs EM",              a: "EWJ",  b: "EEM",
-      tip: "Japón vs emergentes.\n↑ = rotación hacia calidad / Asia desarrollada" },
-  ]},
-  { id: "ENERGY", items: [
-    { name: "Energy Equities vs Brent", a: "XLE",  b: "BZ=F",
-      tip: "Energía vs petróleo físico.\n↓ = crudo sube pero equities no → divergencia bajista\n↑ = equities lideran al crudo → acumulación" },
-    { name: "E&P vs Integrated",        a: "XOP",  b: "XLE",
-      tip: "Exploración & producción vs integradas.\n↑ = flujo especulativo / riesgo alto en energía\n↓ = rotación a calidad dentro del sector" },
-    { name: "Materials vs Energy",      a: "XLB",  b: "XLE",
-      tip: "Materiales vs energía.\n↑ = rotación hacia metales / materiales\n↓ = energía lidera commodities" },
-  ]},
-  { id: "METALS", items: [
-    { name: "Gold Miners vs Gold",      a: "GDX",  b: "GLD",
-      tip: "Mineras vs oro físico.\n↑ = early accumulation en miners (señal adelantada)\n↓ = oro sube pero mineras no → divergencia bajista" },
-    { name: "Silver vs Gold",           a: "SI=F", b: "GC=F",
-      tip: "Plata vs oro.\n↑ = apetito industrial / especulativo en metales\n↓ = búsqueda de refugio puro" },
-    { name: "Metals Miners vs Market",  a: "XME",  b: "SPY",
-      tip: "Mineras de metales vs mercado.\n↑ = rotación hacia commodities y materiales" },
-  ]},
-  { id: "URANIUM", items: [
-    { name: "Uranium Miners vs World",  a: "URNM", b: "URTH",
-      tip: "Miners uranio vs mercado global.\n↑ = flujo sectorial emergente en uranio" },
-    { name: "Cameco vs Uranium",        a: "CCJ",  b: "URNM",
-      tip: "Líder vs sector.\n↑ = dinero en calidad (blue chip)\n↓ = dinero en high beta / juniors" },
-    { name: "Broad Nuclear vs Miners",  a: "URA",  b: "URNM",
-      tip: "Nuclear broad vs miners puros.\n↑ = flujo hacia nuclear general (más defensivo)\n↓ = flujo hacia miners especulativos" },
-  ]},
-  { id: "COAL / MATERIALS", items: [
-    { name: "Warrior vs Peabody",            a: "HCC", b: "BTU",
-      tip: "HCC vs BTU — liderazgo interno en carbón met.\n↑ = flujo hacia calidad / met coke" },
-    { name: "Alpha Met vs Peabody",          a: "AMR", b: "BTU",
-      tip: "AMR vs BTU.\n↑ = flujo hacia carbón metalúrgico" },
-    { name: "Warrior vs Metals Miners",      a: "HCC", b: "XME",
-      tip: "HCC vs sector materiales.\n↑ = carbón lidera al sector minero amplio" },
-    { name: "Alpha Met vs Metals Miners",    a: "AMR", b: "XME",
-      tip: "AMR vs sector materiales.\n↑ = carbón metalúrgico lidera materiales" },
-  ]},
-  { id: "FINANCIALS", items: [
-    { name: "Financials vs Market",     a: "XLF", b: "SPY",
-      tip: "Bancos vs mercado.\n↑ = entorno financiero sano, ciclo de crédito activo" },
-    { name: "Regional vs Large Banks",  a: "KRE", b: "XLF",
-      tip: "Bancos regionales vs grandes bancos.\n↑ = riesgo / crédito local activo, sensible a tipos\n↓ = fuga a calidad dentro de financieras" },
-  ]},
-];
+// Adaptador a los campos "legacy" (a/b/name/tip) que usa el resto del render.
+function toLegacyRatio(entry) {
+  const tip = `${entry.primaryQuestion}\n\n↑ ${entry.positiveMeaning}\n↓ ${entry.negativeMeaning}`;
+  return { ...entry, a: entry.pair[0], b: entry.pair[1], name: entry.label, tip };
+}
+
+const ALL_RATIO_DEFS = REGISTRY_ENTRIES.map(toLegacyRatio);
+
+const RATIO_TYPE_ORDER = ["risk_appetite", "anticipation", "rotation", "regions", "sector_snapshot"];
+const DEFS_BY_TYPE = Object.fromEntries(
+  RATIO_TYPE_ORDER.map(t => [t, ALL_RATIO_DEFS.filter(r => r.type === t)])
+);
+
+// Cluster View secundaria — mismo agrupamiento narrativo que antes, ahora
+// derivado del campo `cluster` del registry (orden = primera aparición).
+const CLUSTER_ORDER = [];
+ALL_RATIO_DEFS.forEach(r => { if (!CLUSTER_ORDER.includes(r.cluster)) CLUSTER_ORDER.push(r.cluster); });
+const RATIO_GROUPS = CLUSTER_ORDER.map(id => ({ id, items: ALL_RATIO_DEFS.filter(r => r.cluster === id) }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 const toN = v => v != null && Number.isFinite(+v) ? +v : null;
@@ -322,32 +260,43 @@ function biasStyle(bias) {
   return { background: "#f0f0f0", color: "#555" };
 }
 
-// ── Macro helpers ─────────────────────────────────────────────────────────
-function getMacroSignal(row, invert) {
+// ── Risk Appetite helpers ─────────────────────────────────────────────────
+// Generaliza el antiguo invert:boolean de 4 ratios de Capa 1 a un
+// signalDirection explícito por ratio (registry), sobre las 7 entradas de
+// risk_appetite. "contextual" (ej. QQQ/RSP) no tiene lectura risk-on/off
+// inequívoca — se muestra en la tabla pero no cuenta en el agregado.
+function getRiskAppetiteSignal(row, direction) {
   if (!row || row.error || row.r1m == null) return "neutral";
   const up   = row.r1m > 1  && row.trend !== "Down";
   const down = row.r1m < -1 && row.trend !== "Up";
-  if (invert) return down ? "risk-on" : up ? "risk-off" : "neutral";
-  return up ? "risk-on" : down ? "risk-off" : "neutral";
+  if (direction === "higher_is_risk_off") return down ? "risk-on" : up ? "risk-off" : "neutral";
+  if (direction === "higher_is_risk_on")  return up ? "risk-on" : down ? "risk-off" : "neutral";
+  return "neutral"; // contextual — no cuenta en el agregado
 }
 
-function macroSignalStyle(signal) {
+function riskAppetiteSignalStyle(signal, direction) {
+  if (direction === "contextual") return { label: "Contextual", bg: "#eef0f3", fg: "#5b6b7f" };
   if (signal === "risk-on")  return { label: "Risk-On",  bg: "#c8e6c9", fg: "#1b5e20" };
   if (signal === "risk-off") return { label: "Risk-Off", bg: "#ffcdd2", fg: "#b71c1c" };
   return { label: "Neutral", bg: "#f0f0f0", fg: "#555" };
 }
 
-// Risk-Off Monitor — cuenta cuántos de los 4 ratios cruzados de Capa 1 muestran
-// signal="risk-off" (no confundir con el régimen del MacroScore v2, que es un
-// sistema completamente distinto — rotacion.html/backtest). Antes esta caja se
-// llamaba "Macro Regime" y el contador era de risk-on, no de risk-off, lo que
-// hacía que "RISK-OFF (0/4)" no cuadrara con los risk-off reales de la tabla.
-function riskOffMonitorState(riskOffCount) {
-  if (riskOffCount >= 4) return { label: "Confirmed Risk-Off",              color: "#b71c1c", bg: "#ffcdd2" };
+// Risk Appetite Monitor — cuenta cuántos ratios direccionales (excluye
+// signalDirection:"contextual") muestran signal="risk-off". No confundir con
+// el régimen del MacroScore v2 (sistema completamente distinto —
+// rotacion.html/backtest). Este bloque nunca debe llamarse "Macro Regime".
+function riskAppetiteMonitorState(riskOffCount) {
+  if (riskOffCount >= 4) return { label: "Confirmed Defensive Pressure",     color: "#b71c1c", bg: "#ffcdd2" };
   if (riskOffCount >= 3) return { label: "Risk-Off Warning",                color: "#c62828", bg: "#ffdad6" };
   if (riskOffCount >= 2) return { label: "Mixed / Defensive Rotation Warning", color: "#7a5200", bg: "#fff0cc" };
   if (riskOffCount >= 1) return { label: "Mild Defensive Warning",          color: "#8a5200", bg: "#fff7e0" };
   return                       { label: "Risk-On / No Warning",            color: "#1b5e20", bg: "#c8e6c9" };
+}
+
+// Texto de interpretación dinámico: score>=0 usa positiveMeaning, si no negativeMeaning.
+function interpretationFor(row) {
+  if (!row || row.error || row.score == null) return "-";
+  return row.score >= 0 ? row.positiveMeaning : row.negativeMeaning;
 }
 
 // ── Spark ─────────────────────────────────────────────────────────────────
@@ -370,32 +319,114 @@ function Spark({ ratio, strong }) {
   );
 }
 
+// ── Question Block (bloques primarios por tipo) ────────────────────────────
+function QuestionBlock({ typeKey, rows }) {
+  const meta = RATIO_TYPES[typeKey];
+  const sorted = [...rows].sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
+  const loaded = sorted.filter(r => !r.error);
+  const top = loaded.slice(0, 3);
+  return (
+    <div className="qblock">
+      <div className="qblock-head">
+        <div className="qblock-title">{meta.label}</div>
+        <div className="qblock-question">{meta.question}</div>
+      </div>
+      <div className="qblock-top">
+        {top.length === 0
+          ? <div className="qblock-empty">Cargando datos…</div>
+          : top.map((r, i) => {
+              const sig = classify(r);
+              return (
+                <div className="qtop-row" key={`qtop-${r.id}`}>
+                  <span className="qtop-rank">#{i+1}</span>
+                  <span className="qtop-name">{r.name} <span className="qtop-pair">{r.a}/{r.b}</span></span>
+                  <span className="signal" style={{background:sig.bg,color:sig.fg}}>{sig.label}</span>
+                  <span className="qtop-interp">{interpretationFor(r)}</span>
+                </div>
+              );
+            })
+        }
+      </div>
+      <table className="flow-table">
+        <thead>
+          <tr>
+            <th style={{textAlign:"left"}}>Ratio</th>
+            <th>Pair</th>
+            <th data-tip={"Puntuación compuesta de momentum relativo.\nFórmula: (1W×0.5) + (1M×0.7) + (3M×0.25)\n+ ajuste Trend (±2) + ajuste RSI (±0.8–1.5)\n+ ajuste Flow Change (clippeado ±3)."}>Score</th>
+            <th data-tip={"Clasificación cualitativa basada en Score:\nLeader ≥ 8 · Improving ≥ 3\nWeakening ≤ -3 · Laggard ≤ -8\nNeutral: entre -3 y +3"}>Signal</th>
+            <th data-tip={"Aceleración del flujo relativo.\nDiferencia entre retorno relativo últimos 5D vs 5D previos."}>Flow Chg</th>
+            <th data-tip={"Retorno del ratio en los últimos 5 días."}>1W</th>
+            <th data-tip={"Retorno del ratio en los últimos 21 días."}>1M</th>
+            <th data-tip={"Retorno del ratio en los últimos 63 días."}>3M</th>
+            <th data-tip={"RSI(14) del ratio."}>RSI</th>
+            <th data-tip={"Tendencia de medias móviles del ratio."}>Trend</th>
+            <th style={{textAlign:"left"}} data-tip={"Lectura del ratio según su signalDirection y el signo del Score actual."}>Interpretation</th>
+            <th data-tip={"Gráfico de los últimos 90 días del ratio A/B."}>90D Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r, idx) => {
+            const sig = classify(r);
+            const flowSig = flowChangeLabel(r.flowChange);
+            const c1w = cellStyle(r.r1w), c1m = cellStyle(r.r1m), c3m = cellStyle(r.r3m);
+            return (
+              <tr key={r.id} style={{background: idx % 2 ? "#f8f9fb" : "white"}}>
+                <td className="name" data-tip={r.tip}>{r.name}</td>
+                <td className="tickers">{r.a} / {r.b}</td>
+                <td className="num" style={{fontWeight:700,color:r.score>0?"#1a7a1a":r.score<0?"#b71c1c":"#666"}}>{r.error?"-":fmtNum(r.score)}</td>
+                <td><span className="signal" style={{background:sig.bg,color:sig.fg}}>{sig.label}</span></td>
+                <td className="num" title={`Current 5D: ${fmtPct(r.flowNow)} | Prior 5D: ${fmtPct(r.flowPrev)}`}>
+                  <span className="signal" style={{background:flowSig.bg,color:flowSig.fg,minWidth:86}}>{fmtPct(r.flowChange)}</span>
+                </td>
+                <td className="num" style={c1w}>{fmtPct(r.r1w)}</td>
+                <td className="num" style={c1m}>{fmtPct(r.r1m)}</td>
+                <td className="num" style={c3m}>{fmtPct(r.r3m)}</td>
+                <td className="num" style={{color:r.rsi>60?"#1a7a1a":r.rsi<40?"#b71c1c":"#555"}}>{r.rsi==null?"-":r.rsi.toFixed(0)}</td>
+                <td style={{fontWeight:700,color:r.trend==="Up"?"#1a7a1a":r.trend==="Down"?"#b71c1c":"#777"}}>{r.trend??"-"}</td>
+                <td className="interp-cell">{interpretationFor(r)}</td>
+                <td><Spark ratio={r.ratio} strong={sig.label==="Leader"||sig.label==="Improving"}/></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────
 function RelativeFlowLab() {
   const [history, setHistory] = React.useState({});
   const [loading, setLoading] = React.useState(new Set());
   const [toast,   setToast]   = React.useState(null);
 
-  const allTickers = React.useMemo(() => {
-    const macro = MACRO_RATIOS.flatMap(p => [p.a, p.b]);
-    const flow  = RATIO_GROUPS.flatMap(g => g.items.flatMap(p => [p.a, p.b]));
-    return [...new Set([...macro, ...flow])];
-  }, []);
+  const allTickers = React.useMemo(() =>
+    [...new Set(ALL_RATIO_DEFS.flatMap(p => [p.a, p.b]))],
+  []);
 
-  // ── Capa 1 ──
-  const macroRows = React.useMemo(() =>
-    MACRO_RATIOS.map(pair => {
+  // ── Risk Appetite Monitor (bloque por pregunta #1) ──
+  const riskAppetiteRows = React.useMemo(() =>
+    DEFS_BY_TYPE.risk_appetite.map(pair => {
       const row    = buildRow(pair, history);
-      const signal = getMacroSignal(row, pair.invert);
+      const signal = getRiskAppetiteSignal(row, pair.signalDirection);
       return { ...pair, row, signal };
     }),
   [history]);
 
   const riskOffCount = React.useMemo(() =>
-    macroRows.filter(m => m.signal === "risk-off").length,
-  [macroRows]);
+    riskAppetiteRows.filter(m => m.signal === "risk-off").length,
+  [riskAppetiteRows]);
 
-  // ── Capa 2 ──
+  const riskAppetiteCountable = React.useMemo(() =>
+    riskAppetiteRows.filter(m => m.signalDirection !== "contextual").length,
+  [riskAppetiteRows]);
+
+  // ── Bloques por tipo (Anticipation / Rotation / Regions / Sector Snapshot) ──
+  const rowsByType = React.useMemo(() => Object.fromEntries(
+    RATIO_TYPE_ORDER.map(t => [t, DEFS_BY_TYPE[t].map(pair => buildRow(pair, history))])
+  ), [history]);
+
+  // ── Cluster View (secundaria) ──
   const rowsByGroup = React.useMemo(() =>
     RATIO_GROUPS.map(group => ({
       ...group,
@@ -455,31 +486,59 @@ function RelativeFlowLab() {
   React.useEffect(() => { refresh(); }, [refresh]);
 
   const buildRelativeMarkdown = () => {
-    const rs = riskOffMonitorState(riskOffCount);
+    const rs = riskAppetiteMonitorState(riskOffCount);
     const lines = [];
     lines.push("# Relative Flow Lab v2");
     lines.push("");
-    lines.push(`## Risk-Off Monitor — ${riskOffCount}/4 active (${rs.label})`);
-    lines.push("| Ratio | Pair | Signal | 1W | 1M | 3M | RSI | Trend |");
-    lines.push("|---|---:|---|---:|---:|---:|---:|---|");
-    macroRows.forEach(m => {
+    lines.push(`## Risk Appetite Monitor — ${riskOffCount}/${riskAppetiteCountable} defensive warnings (${rs.label})`);
+    lines.push("Question: Is the market favoring risk-taking or safety?");
+    lines.push("| Ratio | Pair | Direction | Signal | 1W | 1M | 3M | RSI | Trend |");
+    lines.push("|---|---:|---|---|---:|---:|---:|---:|---|");
+    riskAppetiteRows.forEach(m => {
       const r = m.row;
-      lines.push(`| ${m.name} | ${m.a}/${m.b} | ${m.signal} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} |`);
+      const st = riskAppetiteSignalStyle(m.signal, m.signalDirection);
+      lines.push(`| ${m.name} | ${m.a}/${m.b} | ${m.signalDirection} | ${st.label} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} |`);
     });
     if (earlyFlowRatios.length) {
       lines.push("");
       lines.push("## Early Flow (acumulación temprana)");
       earlyFlowRatios.forEach(r => lines.push(`- ${r.name} (${r.a}/${r.b}) — FlowChg: ${fmtPct(r.flowChange)}, RSI: ${r.rsi?.toFixed(0)}, 1M: ${fmtPct(r.r1m)}`));
     }
+
+    RATIO_TYPE_ORDER.filter(t => t !== "risk_appetite").forEach(t => {
+      const meta = RATIO_TYPES[t];
+      const rows = [...rowsByType[t]].filter(r => !r.error).sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
+      lines.push("");
+      lines.push(`## ${meta.label}`);
+      lines.push(`Question: ${meta.question}`);
+      lines.push("");
+      lines.push("Top Signals:");
+      rows.slice(0, 3).forEach((r, i) => lines.push(`${i+1}. ${r.name} (${r.a}/${r.b}) — ${classify(r).label} — ${interpretationFor(r)}`));
+      lines.push("");
+      lines.push("| Ratio | Pair | Score | Signal | Flow Chg | 1W | 1M | 3M | RSI | Trend | Interpretation |");
+      lines.push("|---|---:|---:|---|---:|---:|---:|---:|---:|---|---|");
+      rows.forEach(r => {
+        lines.push(`| ${r.name} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label} | ${fmtPct(r.flowChange)} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} | ${interpretationFor(r)} |`);
+      });
+    });
+
     lines.push("");
-    lines.push("## Top 5 by Score");
-    lines.push("| # | Ratio | Pair | Score | Signal | Flow Chg |");
-    lines.push("|---:|---|---:|---:|---|---:|");
-    rankedRows.slice(0, 5).forEach((r, i) =>
-      lines.push(`| ${i+1} | ${r.name} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label} | ${fmtPct(r.flowChange)} |`)
+    lines.push("## Most Extreme Relative Moves");
+    lines.push("| # | Ratio | Pair | Type | Score | Signal | Flow Chg |");
+    lines.push("|---:|---|---:|---|---:|---|---:|");
+    [...flatRows].sort((a,b) => Math.abs(b.score ?? 0) - Math.abs(a.score ?? 0)).slice(0, 5).forEach((r, i) =>
+      lines.push(`| ${i+1} | ${r.name} | ${r.a}/${r.b} | ${r.type} | ${fmtNum(r.score)} | ${classify(r).label} | ${fmtPct(r.flowChange)} |`)
     );
     lines.push("");
-    lines.push("## Cluster View");
+    lines.push("## Top Flow Change");
+    lines.push("| # | Ratio | Pair | Score | Signal | Flow Chg |");
+    lines.push("|---:|---|---:|---:|---|---:|");
+    accelerationRows.slice(0, 5).forEach((r, i) =>
+      lines.push(`| ${i+1} | ${r.name} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label} | ${fmtPct(r.flowChange)} |`)
+    );
+
+    lines.push("");
+    lines.push("## Cluster View (secondary)");
     lines.push("| Cluster | Bias | Avg Score | Coherence | Active | Best | Worst |");
     lines.push("|---|---|---:|---:|---:|---|---|");
     rowsByGroup.forEach(group => {
@@ -487,8 +546,9 @@ function RelativeFlowLab() {
       lines.push(`| ${group.id} | ${c.bias} | ${fmtNum(c.avgScore)} | ${c.active ? `${c.coherence}%` : "-"} | ${c.positives}+/${c.negatives}- | ${c.best ? `${c.best.a}/${c.best.b}` : "-"} | ${c.worst ? `${c.worst.a}/${c.worst.b}` : "-"} |`);
     });
     lines.push("");
+    lines.push("## Raw Ratio Tables (by cluster)");
     rowsByGroup.forEach(group => {
-      lines.push(`## ${group.id}`);
+      lines.push(`### ${group.id}`);
       lines.push("| Ratio | Pair | Score | Signal | Flow Chg | 1W | 1M | 3M | RSI | Trend | From 52W High |");
       lines.push("|---|---:|---:|---|---:|---:|---:|---:|---:|---|---:|");
       group.rows.forEach(r => {
@@ -546,7 +606,7 @@ function RelativeFlowLab() {
       .catch(() => showToast('❌ Error al copiar'));
   };
 
-  const rs = riskOffMonitorState(riskOffCount);
+  const rs = riskAppetiteMonitorState(riskOffCount);
 
   return (
     <div className="wrap">
@@ -573,37 +633,38 @@ function RelativeFlowLab() {
         </div>
       </div>
 
-      {/* ── CAPA 1: Risk-Off Monitor ── */}
+      {/* ── Bloque #1: Risk Appetite Monitor ── */}
       <div className="macro-panel">
-        <div className="macro-header">🔵 Capa 1 — Risk-Off Monitor</div>
+        <div className="macro-header">🔵 Risk Appetite Monitor — Is the market favoring risk-taking or safety?</div>
         <div className="macro-body">
           <div className="macro-table-wrap">
             <table className="macro-table">
               <thead>
                 <tr>
-                  <th style={{textAlign:"left"}} data-tip="Nombre del ratio macro. ⚠ indica ratio invertido: baja en entorno risk-on.">Ratio</th>
+                  <th style={{textAlign:"left"}} data-tip="Nombre del ratio. La columna Dirección indica cómo leer la subida del ratio — no todos suben con lectura risk-on.">Ratio</th>
                   <th>Pair</th>
+                  <th data-tip={"higher_is_risk_on: sube = risk-on\nhigher_is_risk_off: sube = risk-off (ratio invertido)\ncontextual: sin lectura risk-on/off inequívoca, no cuenta en el agregado"}>Dirección</th>
                   <th data-tip={"Retorno del ratio en los últimos 5 días."}>1W</th>
                   <th data-tip={"Retorno del ratio en los últimos 21 días.\nBase del señal de régimen."}>1M</th>
                   <th data-tip={"Retorno del ratio en los últimos 63 días."}>3M</th>
                   <th data-tip={"RSI(14) del ratio.\nZona 45–60 = momentum moderado."}>RSI</th>
                   <th data-tip={"Tendencia de medias móviles del ratio.\nUp: precio > SMA20 > SMA63\nDown: precio < SMA20 < SMA63"}>Trend</th>
-                  <th data-tip={"Señal de régimen para este ratio.\nRisk-On / Risk-Off / Neutral\nEn ratios ⚠ invertidos, la señal ya está ajustada."}>Señal</th>
+                  <th data-tip={"Señal de régimen para este ratio.\nRisk-On / Risk-Off / Neutral / Contextual (no cuenta en el agregado)."}>Señal</th>
                 </tr>
               </thead>
               <tbody>
-                {macroRows.map(m => {
+                {riskAppetiteRows.map(m => {
                   const r   = m.row;
-                  const st  = macroSignalStyle(m.signal);
+                  const st  = riskAppetiteSignalStyle(m.signal, m.signalDirection);
                   const c1w = cellStyle(r.r1w), c1m = cellStyle(r.r1m), c3m = cellStyle(r.r3m);
                   return (
-                    <tr key={`${m.a}-${m.b}`}>
+                    <tr key={m.id}>
                       <td style={{textAlign:"left",fontWeight:600,cursor:"help",position:"relative"}}
-                        data-tip={m.tip ?? undefined}
                         className="name" data-tip={m.tip}>
                         {m.name}
                       </td>
                       <td style={{fontFamily:"Consolas,monospace",fontSize:10,color:"#1a6baa"}}>{m.a}/{m.b}</td>
+                      <td style={{fontSize:9,color:"#8a94a6"}}>{m.signalDirection.replace(/_/g," ")}</td>
                       <td style={{fontFamily:"Consolas,monospace",...c1w}}>{r.error ? "-" : fmtPct(r.r1w)}</td>
                       <td style={{fontFamily:"Consolas,monospace",...c1m}}>{r.error ? "-" : fmtPct(r.r1m)}</td>
                       <td style={{fontFamily:"Consolas,monospace",...c3m}}>{r.error ? "-" : fmtPct(r.r3m)}</td>
@@ -622,8 +683,8 @@ function RelativeFlowLab() {
           </div>
           <div className="regime-box">
             <div className="regime-inner" style={{background: rs.bg}}>
-              <div className="regime-label">Risk-Off Monitor</div>
-              <div className="regime-score" style={{color: rs.color}}>{riskOffCount}<span style={{fontSize:18,fontWeight:400}}>/4 active</span></div>
+              <div className="regime-label">Risk Appetite Monitor</div>
+              <div className="regime-score" style={{color: rs.color}}>{riskOffCount}<span style={{fontSize:18,fontWeight:400}}>/{riskAppetiteCountable} warnings</span></div>
               <div className="regime-state" style={{color: rs.color}}>{rs.label}</div>
             </div>
           </div>
@@ -655,12 +716,19 @@ function RelativeFlowLab() {
         <div className="stat"><div className="label">Worst</div><div className="value" style={{fontSize:13}}>{summary.worst ? `${summary.worst.a}/${summary.worst.b}` : "-"}</div></div>
       </div>
 
-      {/* ── Top 5 / Flow Change ── */}
+      {/* ── Bloques por pregunta (vista primaria) ── */}
+      <div className="section-label">📍 Question-Based Views</div>
+      <QuestionBlock typeKey="anticipation" rows={rowsByType.anticipation} />
+      <QuestionBlock typeKey="rotation" rows={rowsByType.rotation} />
+      <QuestionBlock typeKey="regions" rows={rowsByType.regions} />
+      <QuestionBlock typeKey="sector_snapshot" rows={rowsByType.sector_snapshot} />
+
+      {/* ── Most Extreme / Flow Change ── */}
       <div className="panel-grid">
         <div className="panel">
-          <div className="panel-title">Top 5 by Score</div>
-          {rankedRows.slice(0, 5).map((r, i) => (
-            <div className="rank-row" key={`top-${r.a}-${r.b}`}>
+          <div className="panel-title">Most Extreme Relative Moves</div>
+          {[...flatRows].sort((a,b) => Math.abs(b.score ?? 0) - Math.abs(a.score ?? 0)).slice(0, 5).map((r, i) => (
+            <div className="rank-row" key={`extreme-${r.a}-${r.b}`}>
               <div className="rank-num">#{i+1}</div>
               <div>{r.name}</div>
               <div className="rank-pair">{r.a}/{r.b}</div>
@@ -684,9 +752,10 @@ function RelativeFlowLab() {
         </div>
       </div>
 
-      {/* ── Cluster View ── */}
+      {/* ── Cluster View (secundaria) ── */}
+      <div className="section-label">🟡 Cluster Coherence View (secondary)</div>
       <div className="panel" style={{marginBottom:12}}>
-        <div className="panel-title">🟢 Capa 2 — Cluster View</div>
+        <div className="panel-title">Cluster View</div>
         <div className="cluster-grid" style={{padding:8,marginBottom:0}}>
           {rowsByGroup.map(group => {
             const c  = clusterSummary(group);
@@ -711,7 +780,8 @@ function RelativeFlowLab() {
         </div>
       </div>
 
-      {/* ── Flow Table ── */}
+      {/* ── Raw Ratio Tables (tertiary, grouped by cluster) ── */}
+      <div className="section-label">🔽 Raw Ratio Tables — by cluster (detailed)</div>
       <table className="flow-table">
         <thead>
           <tr>

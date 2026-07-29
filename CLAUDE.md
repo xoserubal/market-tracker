@@ -722,6 +722,45 @@ Playwright headless (Edge/Chromium) contra el servidor local real (`node server.
 
 ---
 
+## Relative Flow Lab v2 — ratio_registry y vista por pregunta (implementado 2026-07-29)
+
+Rediseño de `relative.html` a partir de una hoja de instrucciones detallada del usuario. Problema de partida: la vista mezclaba en el mismo ranking/cluster ratios conceptualmente distintos (risk-on/off, rotación sectorial, anticipación interna, regiones), lo que generaba lecturas confusas — p. ej. el antiguo "Risk-Off Monitor" (ver sección "Risk-Off Monitor en Relative Flow Lab" más arriba) ya tenía el naming correcto, pero seguía mezclando 4 ratios macro con el resto sin declarar qué pregunta respondía cada uno. Principio rector aplicado: *"un ratio sin pregunta explícita es ruido"*. Cambio acotado a `relative.html` + un fichero de datos nuevo — no toca PCS, rot_score, HARD_RULES ni el motor IA.
+
+### 1. `shared/relative-ratio-registry.js` (nuevo)
+
+Registry central de 45 ratios, cada uno con metadata interpretativa explícita: `id`, `label`, `pair`, `type` (la pregunta que responde: `risk_appetite | anticipation | rotation | regions | sector_snapshot`), `cluster` (agrupación narrativa heredada, solo para la Cluster View secundaria), `signalDirection` (`higher_is_risk_on | higher_is_risk_off | higher_is_bullish | contextual`), `primaryQuestion`, `positiveMeaning`, `negativeMeaning`, `primaryUse`, `actionability`. `type` y `cluster` son campos independientes — un ratio puede vivir en un `cluster` heredado (p. ej. `COAL`) pero clasificarse por `type` en el bloque que le corresponde (p. ej. `anticipation` o `rotation`), sin que ningún ratio existente se pierda ni quede sin metadata. Cargado en `relative.html` vía `<script src="/shared/relative-ratio-registry.js">` antes del script Babel (mismo patrón que `shared/flow-score.js` en `portfolio.html`).
+
+**Composición de los 45 ratios:**
+- `risk_appetite` (7): fusiona los 4 ratios de la antigua "Capa 1" (Copper/Gold, Credit vs Equities, Utilities vs Discretionary, Low Vol vs Momentum) con 3 del antiguo cluster `RISK / BREADTH` (Small Caps vs SPY, Nasdaq vs Equal Weight, Discretionary vs Staples). `XLY/XLP` vive solo aquí (no duplicado en `rotation`, siguiendo la sugerencia explícita de la hoja para evitar el mismo ratio en dos bloques). `QQQ/RSP` es el único con `signalDirection: "contextual"` — su lectura (concentración en mega-cap growth) no tiene una dirección risk-on/off inequívoca (puede reflejar tanto apetito por riesgo como un mercado defensivo concentrado en pocos valores de calidad); se muestra en la tabla pero **no cuenta** en el agregado del monitor.
+- `anticipation` (11): 6 ratios existentes (Energy Equities vs Brent, Gold Miners vs Gold, Regional vs Large Banks, E&P vs Integrated, Silver vs Gold, Broad Nuclear vs Uranium Miners) + `GDXJ/GDX` y `BTC-USD/GC=F` (nuevos, Fase 1) + 3 huérfanos reclasificados (`HCC/BTU`, `AMR/BTU`, `CCJ/URNM` — texto de metadata dictado literalmente por el usuario).
+- `rotation` (7): `XLB/XLE` (reclasificado, antes en cluster ENERGY) + 4 pares nuevos (`XLK/XLF`, `IWD/IWF`, `SMH/IGV`, `XLE/XLK` — solo `IWD/IWF` y `SMH/IGV` requieren tickers nuevos, `XLK/XLF`/`XLE/XLK` combinan tickers ya usados) + 2 huérfanos (`HCC/XME`, `AMR/XME`). Todos con `signalDirection: "contextual"` — responden "hacia dónde rota el capital", no "es esto alcista".
+- `regions` (4): sin cambios (EM vs World, Brazil/EM, Argentina/EM, Japan/EM). `FXI/EEM` y `KWEB/EEM`, mencionados en la hoja original como "ratios iniciales" de este bloque, **no** se añadieron — no estaban en la lista explícita de Fase 1 acordada con el usuario ni en los criterios de aceptación; quedan pendientes (ver Roadmap).
+- `sector_snapshot` (16): los 14 sector-vs-SPY existentes + 2 huérfanos (`URNM/URTH`, `XME/SPY`) — bloque deliberadamente secundario (`actionability: "medium-low"` en casi todos), tal como pide la hoja ("no núcleo del módulo, duplica info del Cycle Tracker").
+
+**Efecto colateral aceptado:** el cluster `FINANCIALS` de la Cluster View ahora solo contiene `KRE/XLF` (antes también repetía `XLF/SPY`, duplicación documentada en la sección "Cluster SECTOR ROTATION" de este mismo archivo). Con un registry único por par, `XLF/SPY` vive solo en su cluster `SECTOR ROTATION`; se aceptó perder esa duplicación intencional previa por ser un efecto secundario menor de pasar a una fuente de datos única por ratio.
+
+### 2. `relative.html` — nueva jerarquía visual
+
+1. **Risk Appetite Monitor** (antes "Risk-Off Monitor") — mismo mecanismo de conteo que antes (`riskAppetiteMonitorState`, estados 0/1/2/3/4+ sin cambios), generalizado de 4 a 6 ratios contables (excluye `QQQ/RSP` contextual) vía `getRiskAppetiteSignal(row, signalDirection)`. Denominador dinámico en el header y en la caja grande (`X/6 warnings`, antes hardcodeado `/4`). Columna nueva "Dirección" en la tabla mostrando el `signalDirection` de cada fila.
+2. **Early Flow Detector** — sin cambios funcionales, ahora alimentado por los 45 ratios del registry en vez de los ~39 anteriores.
+3. **Question-Based Views** (nuevo, primario) — 4 bloques (`QuestionBlock` component), uno por `type` restante (`anticipation`, `rotation`, `regions`, `sector_snapshot`), cada uno con: título + pregunta (`RATIO_TYPES[type].question`), "Top 3" ordenado por score con label + interpretación corta, y tabla completa con columna nueva **Interpretation** (`interpretationFor(row)`: `positiveMeaning` si `score>=0`, si no `negativeMeaning`). La clasificación Leader/Improving/Weakening/Laggard (`classify()`) no cambia — sigue siendo momentum puro; la columna Interpretation es la que traduce esa etiqueta a la pregunta real del bloque (p. ej. `XLU/XLY` sigue pudiendo ser "Leader" mientras su interpretación dice "señal defensiva").
+4. **Most Extreme Relative Moves** (reemplaza "Top 5 by Score") — ranking global por `|score|` descendente, no por score crudo, y explícitamente no llamado "best signals". "Top 5 Flow Change" se mantiene sin cambios.
+5. **Cluster Coherence View** (secundaria, antes "Capa 2") — mecánica sin cambios (`clusterSummary`/`biasStyle`), ahora derivada del campo `cluster` del registry; 11 clusters (antes 8): se suman `RISK APPETITE` (los 7 ratios de risk_appetite, invisibles en Cluster View hasta ahora porque los 4 de Capa 1 nunca habían participado), `STYLE / FACTOR` (`IWD/IWF`) y `CRYPTO` (`BTC-USD/GC=F`).
+6. **Raw Ratio Tables — by cluster** (terciaria, antes la única tabla) — se mantiene igual (Rank global, 6M, From 52W High, sparkline) para quien quiera el detalle técnico completo agrupado por cluster.
+
+### Verificado
+
+Node `--check` sobre el registry + transpilación con `@babel/standalone` del script JSX sin errores de sintaxis. Página cargada end-to-end con Edge headless (CDP directo, sin Playwright instalado en el proyecto) contra `node server.js` real: 4 `QuestionBlock` renderizados, 7 filas en Risk Appetite Monitor, 11 clusters, cero mensajes de consola de error/excepción. Confirmado por consola: `QQQ/RSP` muestra badge "Contextual" y no participa en el conteo (4/6 defensive warnings, no 4/7). Export a Markdown (`localStorage.llm_export_relative`) verificado con contenido real: bloque Risk Appetite Monitor con columna Dirección, las 4 secciones de pregunta con Top Signals + tabla + Interpretation, Most Extreme Relative Moves, Cluster View y Raw Ratio Tables. Tickers nuevos (`IWD`, `IWF`, `SMH`, `IGV`, `GDXJ`, `BTC-USD`) verificados contra `/api/history/:symbol` real antes de integrarlos; `BTC-USD/GC=F` se alinea correctamente porque `alignRatio` indexa por las fechas de `GC=F` (futuro, sin fines de semana), descartando automáticamente las velas de fin de semana de BTC sin lógica adicional.
+
+### Fuera de alcance (explícito, decidido con el usuario antes de implementar)
+
+- **Fase 2 de ratios** (prioridad media en la hoja original): `DX-Y.NYB/GC=F` (DXY vs Gold), `JPY=X/^N225` (USDJPY vs Nikkei), `IJS/IJT` (Small Cap Value vs Growth), `TLT/IEF`, `EDV/IEF`. Nota del usuario: `TLT/IEF`/`EDV/IEF` probablemente encajan también en `duration.html` — evaluar ahí antes de decidir dónde viven.
+- **`FXI/EEM` y `KWEB/EEM`** (mencionados en la hoja original para el bloque Regions pero fuera de la lista de Fase 1 acordada) — pendiente de decisión explícita si se quiere ampliar el bloque `regions`.
+- **Persistencia diaria** (`docs/data/relative_flow_history.jsonl`, marcada como opcional en la hoja original) — no implementada: requeriría un script nuevo (Python o Node) en el pipeline para loguear score/signal/interpretation_state por ratio y día, fuera del alcance de "rediseño interpretativo de `relative.html`". Si se implementa más adelante, permitiría evaluar qué ratios anticipan mejor rendimiento posterior (mismo patrón que `koncorde_signals_history.jsonl`).
+- Rediseño de la fórmula de `score` (1W×0.5 + 1M×0.7 + 3M×0.25 + ajustes) — sin cambios, solo se reinterpretó visualmente vía `type`/`signalDirection`/Interpretation.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
