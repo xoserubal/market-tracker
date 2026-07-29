@@ -660,7 +660,7 @@ app.post("/api/portfolio", express.json(), (req, res) => {
 // ── State persistence (histéresis + flags) ────────────────────────────────
 const STATE_FILE = path.join(__dirname, "state.json");
 const DEFAULT_STATE = {
-  current_regime: null, regime_entered_date: null,
+  current_regime: null, regime_entered_date: null, previous_regime: null,
   pending_regime: null, pending_since_count: 0,
   flags: {
     CREDIT_COMPLACENCY:  { active: false, streak_weeks: 0 },
@@ -669,6 +669,9 @@ const DEFAULT_STATE = {
     EMERGENCY_MODE:      { active: false, activated_at: null, expires_date: null },
   },
   early_rotation_candidates: {},
+  macro_score_history: [],
+  rotation_history: {},
+  regime_coherence_history: [],
 };
 
 // ── Stock config YAML (leer / escribir) ──────────────────────────────────
