@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-07-30_1021",
+  "run_id": "2026-07-30_2104",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-07-30",
   "summary": {
     "date": "2026-07-30",
-    "run_id": "2026-07-30_1021",
+    "run_id": "2026-07-30_2104",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
     "candidate_count": 25,
-    "input_tokens": 28909,
-    "output_tokens": 8606,
-    "cost_usd": 0.020063,
-    "latency_ms": 72380.0,
+    "input_tokens": 28841,
+    "output_tokens": 8789,
+    "cost_usd": 0.020192,
+    "latency_ms": 271785.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
     "quality_score": 90,
     "selected_count": 0,
-    "watch_count": 5,
-    "rejected_count": 6,
+    "watch_count": 3,
+    "rejected_count": 9,
     "fallback_used": false,
     "error": null
   },
@@ -33,69 +33,74 @@
   "response": {
     "date": "2026-07-30",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-07-30_1021",
+    "run_id": "2026-07-30_2104",
     "decision_summary": {
-      "market_read": "Macro regime is bullish with improving trend supporting equity themes across sectors.",
+      "market_read": "Bullish macro environment with improving trends supports risk-on positioning, but high theme concentration in healthcare and oil_gas warrants caution.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
-        "ticker": "SEDANA.ST",
-        "reason": "Dems of 19 with no spike confirms strong daily momentum, but koncorde 3d is in distribution and streak_weeks is only 1, requiring structural confirmation.",
-        "watch_trigger": "Koncorde 3d state changes to up and streak_weeks extends to at least 3 weeks."
-      },
-      {
-        "ticker": "DHR",
-        "reason": "Dems of 13 is in the prefer WATCH range over SELECT, though pcs=77.8 and rot_score=8 show potential.",
-        "watch_trigger": "Dems increases above 14 with no spike or streak_weeks extends to 4 weeks."
-      },
-      {
-        "ticker": "UNH",
-        "reason": "Weekly metrics are strong with streak_weeks=8 and ret_13w_vs_spy=12.56%, but dems=6 is weak for daily confirmation.",
-        "watch_trigger": "Dems rises above 10 or ret_5d_vs_spy shows sustained positive momentum."
-      },
-      {
-        "ticker": "VRTX",
-        "reason": "Dems=10 and spike_flag=true indicate partial momentum, but pcs=68.2 is low and streak_weeks=0 lacks weekly confirmation.",
-        "watch_trigger": "Dems rises above 12 and streak_weeks establishes at least 2 weeks."
+        "ticker": "RYM.NZ",
+        "reason": "Koncorde alignment is distribution_warning, and 13-week outperformance of 5.26% is modest despite rotation score of 8. Low extension risk and low theme concentration in reits offer diversification potential.",
+        "watch_trigger": "If Koncorde alignment shifts to bullish_aligned and 13-week outperformance improves above 10%."
       },
       {
         "ticker": "IRS",
-        "reason": "Dems=12 with no spike and rot_score=8 shows early rotation, but pcs=67.2 is below typical entry and streak_weeks=1 is short.",
-        "watch_trigger": "Streak_weeks extends to 3 and pcs increases above 70."
+        "reason": "PCS of 67.2 is below the minimum entry threshold of 68, but rotation score of 8 and low theme concentration in argentina provide potential. Spike flag is present, requiring confirmation.",
+        "watch_trigger": "If PCS crosses above 68 and spike_flag resolves to false, indicating sustained momentum."
+      },
+      {
+        "ticker": "EQR",
+        "reason": "PCS of 67.5 is below minimum entry, but low extension risk and bullish-aligned Koncorde in reits theme offer diversification. Ret_13w of 4.02% is weak relative to peers.",
+        "watch_trigger": "If PCS crosses above 68 and rotation score improves above 7 with stronger relative strength."
       }
     ],
     "rejected": [
       {
+        "ticker": "TMO",
+        "reason": "Spike flag and medium extension risk with high theme concentration in healthcare_largecap. PCS of 79.8 is high but weekly metrics like ret_13w of 19.96% are weaker than existing open positions like LLY at 35.92%.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
         "ticker": "CVE",
-        "reason": "Spike_flag=true and koncorde 3d in distribution with ret_13w_vs_spy=3.85% indicate technical overextension despite pcs=71.5.",
+        "reason": "High extension risk of 4 points with distribution_warning Koncorde alignment. Oil_gas theme is already highly concentrated at 19.5% weight, and 13-week outperformance of 3.85% is modest.",
         "rejection_category": "technical_overextension"
       },
       {
-        "ticker": "RYM.NZ",
-        "reason": "Spike_flag=true and koncorde 3d distribution with streak_weeks=1 suggest insufficient conviction for entry at pcs=75.0.",
+        "ticker": "SEDANA.ST",
+        "reason": "Distribution_warning Koncorde alignment despite high dems of 19. Healthcare_special theme is highly concentrated, and extension risk is medium, increasing near-term pullback probability.",
         "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "DHR",
+        "reason": "Spike flag and medium extension risk. Healthcare_largecap theme is highly concentrated, and rotation score of 8 is not sufficient to justify entry given existing positions with stronger metrics.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "Low daily momentum score of 4 and weak 4-week outperformance of 1.74%. Healthcare theme concentration is high, and long streak of 8 weeks is offset by lackluster recent relative strength.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "CI",
-        "reason": "Spike_flag=true and ret_13w_vs_spy=1.90% show weak relative strength despite pcs=75.0, with streak_weeks=1.",
+        "reason": "Koncorde alignment is only bullish_pending_3d_confirmation, and healthcare theme concentration is high. Ret_13w of 1.90% is weak relative to peers, reducing conviction.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "UCO",
-        "reason": "Ret_13w_vs_spy=-10.61% indicates negative long-term performance, making it a weak candidate despite pcs=69.0.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "High extension risk of 4 points with distribution_warning. Oil_gas theme concentration is high, and 13-week outperformance is negative at -10.61%, indicating deteriorating longer-term trend.",
+        "rejection_category": "technical_overextension"
       },
       {
-        "ticker": "EQR",
-        "reason": "Spike_flag=true and pcs=67.5 with streak_weeks=1 provide insufficient conviction for selection.",
+        "ticker": "VRTX",
+        "reason": "Low rotation score of 5 and spike flag present. Healthcare theme is concentrated, and streak_weeks is 0, indicating no weekly confirmation for sustained leadership.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "SU",
-        "reason": "Extension_risk high with spike_flag=true and ret_13w_vs_spy=-1.16% suggest technical overextension at pcs=67.2.",
+        "reason": "High extension risk and spike flag. Oil_gas theme is concentrated, and 13-week outperformance is negative at -1.16%, showing weak relative strength over the medium term.",
         "rejection_category": "technical_overextension"
       }
     ],
@@ -104,87 +109,81 @@
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.8 above min entry 68, with 8-week streak and no exit conditions met."
+        "reason": "Current PCS of 75.8 is above minimum entry of 68, and rotation score of 5 is above exit threshold, though streak_weeks is 0, weekly metrics remain acceptable."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 79.8 above min entry 68, with 8-week streak and strong weekly metrics."
+        "reason": "Current PCS of 79.8 is strong, streak_weeks of 8 and rotation score of 6 indicate sustained leadership despite high theme concentration."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 82.8 above min entry 68, with 6-week streak and rotation score 7."
+        "reason": "Current PCS of 82.8 is high, streak_weeks of 6 and rotation score of 7 show consistent weekly outperformance, supporting continued holding."
       },
       {
         "ticker": "TDOC",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 80.5 above min entry 68, with 8-week streak and strong 13w outperformance."
+        "reason": "Current PCS of 80.5 is above threshold, streak_weeks of 8 and rotation score of 7 demonstrate strong sustained leadership, though extension risk is noted."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 80.2 above min entry 68, with streak_weeks=1 and rotation score 7."
+        "reason": "Current PCS of 80.2 is strong, rotation score of 7 and 1-week streak with 13w outperformance of 66.70% justify holding despite daily momentum weakness."
       },
       {
         "ticker": "LLY",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.5 above min entry 68, with 5-week streak and rotation score 7."
+        "reason": "Current PCS of 81.5 is high, streak_weeks of 5 and rotation score of 7 indicate ongoing weekly leadership, though Koncorde distribution warning is acknowledged."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.8 above min entry 68, with rotation score 5 and streak_weeks=0."
+        "reason": "Current PCS of 75.8 is above minimum entry, and rotation score of 5 is above exit threshold, with 13w outperformance of 56.68% showing residual strength despite streak_weeks of 0."
       },
       {
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 83.2 above min entry 68, with 6-week streak and rotation score 8."
+        "reason": "Current PCS of 83.2 is the highest, streak_weeks of 6 and rotation score of 8 confirm strong weekly leadership, supporting continued position."
       },
       {
         "ticker": "JNJ",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 83.2 above min entry 68, with 6-week streak and rotation score 8."
+        "reason": "Current PCS of 83.2 is high, streak_weeks of 6 and rotation score of 8 indicate robust weekly outperformance, maintaining conviction."
       },
       {
         "ticker": "NUE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 67.5 below min entry 68 but streak_weeks=3 >1, so no exit condition triggered."
+        "reason": "Current PCS of 67.5 is slightly below minimum entry of 68, but streak_weeks of 3 and rotation score of 8 show improving weekly trend, so hold pending confirmation."
       },
       {
         "ticker": "TOU.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 68.0 at min entry threshold, with 2-week streak and rotation score 6."
+        "reason": "Current PCS of 68.0 meets minimum entry, streak_weeks of 2 and rotation score of 6 indicate developing weekly leadership with oil_gas diversification."
       },
       {
         "ticker": "YPF",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 73.5 above min entry 68, with 3-week streak and rotation score 9."
+        "reason": "Current PCS of 73.5 is strong, streak_weeks of 3 and rotation score of 9 (highest) confirm sustained leadership in argentina theme, providing diversification."
       },
       {
         "ticker": "SYK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 82.5 above min entry 68, with streak_weeks=1 and rotation score 8."
-      },
-      {
-        "ticker": "TMO",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 79.8 above min entry 68, with 3-week streak and rotation score 6."
+        "reason": "Current PCS of 82.5 is high, streak_weeks of 1 and rotation score of 8 show early weekly strength, and daily momentum of dems=14 supports holding."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-07-30\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-30_1021\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime is bullish with improving trend supporting equity themes across sectors.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"SEDANA.ST\",\n      \"reason\": \"Dems of 19 with no spike confirms strong daily momentum, but koncorde 3d is in distribution and streak_weeks is only 1, requiring structural confirmation.\",\n      \"watch_trigger\": \"Koncorde 3d state changes to up and streak_weeks extends to at least 3 weeks.\"\n    },\n    {\n      \"ticker\": \"DHR\",\n      \"reason\": \"Dems of 13 is in the prefer WATCH range over SELECT, though pcs=77.8 and rot_score=8 show potential.\",\n      \"watch_trigger\": \"Dems increases above 14 with no spike or streak_weeks extends to 4 weeks.\"\n    },\n    {\n      \"ticker\": \"UNH\",\n      \"reason\": \"Weekly metrics are strong with streak_weeks=8 and ret_13w_vs_spy=12.56%, but dems=6 is weak for daily confirmation.\",\n      \"watch_trigger\": \"Dems rises above 10 or ret_5d_vs_spy shows sustained positive momentum.\"\n    },\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"Dems=10 and spike_flag=true indicate partial momentum, but pcs=68.2 is low and streak_weeks=0 lacks weekly confirmation.\",\n      \"watch_trigger\": \"Dems rises above 12 and streak_weeks establishes at least 2 weeks.\"\n    },\n    {\n      \"ticker\": \"IRS\",\n      \"reason\": \"Dems=12 with no spike and rot_score=8 shows early rotation, but pcs=67.2 is below typical entry and streak_weeks=1 is short.\",\n      \"watch_trigger\": \"Streak_weeks extends to 3 and pcs increases above 70.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"CVE\",\n      \"reason\": \"Spike_flag=true and koncorde 3d in distribution with ret_13w_vs_spy=3.85% indicate technical overextension despite pcs=71.5.\",\n      \"rejection_category\": \"technical_overextension\"\n    },\n    {\n      \"ticker\": \"RYM.NZ\",\n      \"reason\": \"Sp"
+  "raw_response_head": "{\n  \"date\": \"2026-07-30\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-07-30_2104\",\n  \"decision_summary\": {\n    \"market_read\": \"Bullish macro environment with improving trends supports risk-on positioning, but high theme concentration in healthcare and oil_gas warrants caution.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"RYM.NZ\",\n      \"reason\": \"Koncorde alignment is distribution_warning, and 13-week outperformance of 5.26% is modest despite rotation score of 8. Low extension risk and low theme concentration in reits offer diversification potential.\",\n      \"watch_trigger\": \"If Koncorde alignment shifts to bullish_aligned and 13-week outperformance improves above 10%.\"\n    },\n    {\n      \"ticker\": \"IRS\",\n      \"reason\": \"PCS of 67.2 is below the minimum entry threshold of 68, but rotation score of 8 and low theme concentration in argentina provide potential. Spike flag is present, requiring confirmation.\",\n      \"watch_trigger\": \"If PCS crosses above 68 and spike_flag resolves to false, indicating sustained momentum.\"\n    },\n    {\n      \"ticker\": \"EQR\",\n      \"reason\": \"PCS of 67.5 is below minimum entry, but low extension risk and bullish-aligned Koncorde in reits theme offer diversification. Ret_13w of 4.02% is weak relative to peers.\",\n      \"watch_trigger\": \"If PCS crosses above 68 and rotation score improves above 7 with stronger relative strength.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"TMO\",\n      \"reason\": \"Spike flag and medium extension risk with high theme concentration in healthcare_largecap. PCS of 79.8 is high but weekly metrics like ret_13w of 19.96% are weaker than existing open positions like LLY at 35.92%.\",\n      \"rejection_category\": \"better_alternative_available\"\n    },\n    {\n      \"ticker\": \"CVE\",\n      \"reason\": \"High extension risk of 4 points with distribution_warning Koncorde alignment. Oil_gas theme is already highly concentrated at 19.5% "
 }
