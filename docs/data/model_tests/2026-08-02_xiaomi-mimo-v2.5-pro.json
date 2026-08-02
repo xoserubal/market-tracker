@@ -1,190 +1,102 @@
 {
-  "run_id": "2026-08-02_0955",
+  "run_id": "2026-08-02_2049",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-08-02",
   "summary": {
     "date": "2026-08-02",
-    "run_id": "2026-08-02_0955",
+    "run_id": "2026-08-02_2049",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
-    "event_count": 2,
-    "candidate_count": 29,
-    "input_tokens": 22725,
-    "output_tokens": 10112,
-    "cost_usd": 0.018683,
-    "latency_ms": 242081.0,
+    "event_count": 6,
+    "candidate_count": 28,
+    "input_tokens": 23931,
+    "output_tokens": 5659,
+    "cost_usd": 0.015333,
+    "latency_ms": 119373.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 100,
-    "selected_count": 1,
-    "watch_count": 6,
-    "rejected_count": 18,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 2,
+    "rejected_count": 9,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": [
-      "KONC_3D_DISTRIBUTION_WARNING: PAM selected with konc_3d_state=distribution and no acknowledgement"
-    ]
+    "soft_warnings": []
   },
-  "quality_score": 100,
+  "quality_score": 90,
   "response": {
     "date": "2026-08-02",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-08-02_0955",
+    "run_id": "2026-08-02_2049",
     "decision_summary": {
-      "market_read": "Macro regime is Bull Maduro with improving trend and score 81.25, supporting selective entries despite high theme concentration risks.",
+      "market_read": "Bull Maduro regime with strong macro improvement (+8.75 weekly delta) supports equity leadership but healthcare concentration at 64% MIMO weight requires caution.",
       "risk_posture": "cautious",
-      "should_select_picks": true
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "PAM",
-        "portfolio": "MIMO_SHADOW",
-        "signal_type": "confirmed_leader",
-        "confidence": "medium",
-        "reason_short": "High rotation score with Argentina theme diversification",
-        "reason_full": "PAM offers rotation score 8 on a 2-week streak with +10.3% 4w outperformance vs SPY, the highest rot among non-open candidates with pcs ≥68. Argentina theme at 5.5% current weight provides critical diversification from 64% healthcare concentration, and konc_alignment is bullish_pending_3d_confirmation despite medium extension risk and spike_flag.",
-        "comparative_edge": "Selected over GGAL (pcs=69.0, rot=7, streak=1, konc=distribution_warning) because PAM's rot=8 vs 7, streak=2 vs 1, and konc alignment is bullish_pending_3d_confirmation vs distribution_warning, offering stronger weekly momentum and better structural confirmation.",
-        "key_supporting_factors": [
-          "Rotation score of 8 with 2-week streak demonstrates sustained weekly leadership.",
-          "Argentina theme provides diversification from high healthcare concentration at 64% portfolio weight.",
-          "Konc_alignment is bullish_pending_3d_confirmation, indicating potential for upward movement.",
-          "4-week outperformance of +10.3% vs SPY shows accelerating trend."
-        ],
-        "key_risks_or_contradictions": [
-          "Extension risk is medium with spike_flag true, suggesting possible near-term pullback.",
-          "Daily momentum score of 8 is below the 14 threshold for strong early rotation signals.",
-          "Ret_13w outperformance of only +2.4% vs SPY trails stronger long-term leaders."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
         "ticker": "TMO",
-        "reason": "High PCS 83.5 but konc_alignment is distribution_warning and theme concentration risk high.",
-        "watch_trigger": "Select if konc_3d_state improves to up or theme concentration decreases."
+        "reason": "Highest PCS at 83.5 with rot=8 and 3-week streak, but konc_alignment is distribution_warning and healthcare_largecap already at 42.5% portfolio weight; need confirmation of 3D accumulation setup.",
+        "watch_trigger": "Koncorde 3D state shifts from distribution to up, or healthcare theme concentration reduces below 35% weight."
       },
       {
-        "ticker": "GGAL",
-        "reason": "Moderate PCS 69.0 with rot 7 but streak only 1 week and konc distribution_warning.",
-        "watch_trigger": "Select if streak extends beyond 2 weeks and konc improves."
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "PCS 68.5 with 3-week streak but konc distribution_warning and lower rot 6.",
-        "watch_trigger": "Select if rotation score increases above 7 or konc improves."
-      },
-      {
-        "ticker": "DHR",
-        "reason": "PCS 68.5 with konc bullish_aligned but rot only 5 and streak 0.",
-        "watch_trigger": "Select if weekly streak initiates or rotation score improves."
-      },
-      {
-        "ticker": "BBAR",
-        "reason": "PCS 68.2 with high 13w outperformance but rot 5 and no streak, konc distribution_warning.",
-        "watch_trigger": "Select if weekly streak begins and rotation score improves."
-      },
-      {
-        "ticker": "SYK",
-        "reason": "PCS 66.5 with konc bullish_pending_3d_confirmation but weak rotation score 5.",
-        "watch_trigger": "Select if PCS rises above 68 and rotation score improves."
+        "ticker": "KOS",
+        "reason": "Strong 32.3% 4w outperformance with rot=7 and 3-week streak, but extension_risk is high (4 points) with spike_flag true and konc_3d_state distribution; need extension risk to subside.",
+        "watch_trigger": "Extension_risk drops to medium or below, or konc_3d_state shifts from distribution to up with continued streak."
       }
     ],
     "rejected": [
       {
-        "ticker": "MRK",
-        "reason": "Already an open position in MIMO_SHADOW with high PCS 83.2 and rot 8.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "GGAL",
+        "reason": "PCS 69.0 with rot=7 but konc_alignment distribution_warning and dems=5 indicates weak daily momentum; weekly streak only 1 week insufficient for conviction.",
+        "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "OSCR",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 80.2 and rot 6.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "WCP.TO",
+        "reason": "PCS 68.5 with rot=6 and 3-week streak, but konc_alignment is distribution_warning despite konc_3d_state up; theme_flow moderate at 15 does not overcome structural caution.",
+        "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "YPF",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 76.0 and rot 8.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SLS",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 75.8 and rot 5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 75.8 and rot 5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "LLY",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 72.2 and rot 5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CVS",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 71.8 and rot 5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "ABBV",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 71.8 and rot 5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "III.L",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 69.8 and rot 6.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "NUE",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 62.8 and rot 7.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SEDANA.ST",
-        "reason": "Currently held in MIMO_SHADOW portfolio with PCS 64.5 and rot 5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "Negative 13-week outperformance of -16.9% vs SPY and high extension risk with distribution_warning.",
-        "rejection_category": "technical_overextension"
+        "ticker": "DHR",
+        "reason": "PCS 68.5 but signal IGNORAR with dems=3, rot=5, and spike_flag true; healthcare_largecap concentration already at 42.5% weight makes entry inadvisable.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "VRTX",
-        "reason": "Weak rotation score 5 with no streak and negative 4w outperformance, konc distribution_warning.",
+        "reason": "PCS 68.2 but signal IGNORAR with dems=4, rot=5, and konc_3d_state distribution; healthcare_largecap theme concentration risk high.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "BBAR",
+        "reason": "PCS 68.2 but signal IGNORAR with dems=5, rot=5, and konc_3d_state distribution; weekly streak 0 indicates lack of sustained leadership.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "UNH",
-        "reason": "PCS 67.8 below entry threshold of 68.0 with weak rotation score 5.",
+        "reason": "PCS 67.8 below minimum entry threshold of 68.0 for MIMO_SHADOW; dems=3 and rot=5 with konc_alignment distribution_warning.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "JNJ",
-        "reason": "PCS 67.8 below entry threshold with rot 5 and no streak, konc bullish_pending_3d_confirmation but insufficient.",
+        "reason": "PCS 67.8 below minimum entry threshold of 68.0 for MIMO_SHADOW; dems=6 with konc_3d_state distribution and theme concentration risk high.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "TECK",
+        "reason": "PCS 67.0 below minimum entry threshold of 68.0 for MIMO_SHADOW; rot=7 but konc_3d_state distribution and dems=7 does not overcome threshold failure.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "CVE",
-        "reason": "High extension risk and mixed konc alignment with PCS 66.5 below threshold.",
-        "rejection_category": "technical_overextension"
-      },
-      {
-        "ticker": "CAT",
-        "reason": "Very low PCS 30.0 and rotation score 1, indicating weak overall signal.",
-        "rejection_category": "weak_flow"
-      },
-      {
-        "ticker": "CORZ",
-        "reason": "Low PCS 36.5 and rot 2 with bearish konc alignment.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS 66.5 below minimum entry threshold of 68.0 for MIMO_SHADOW; extension_risk high with spike_flag true and konc_alignment mixed.",
+        "rejection_category": "insufficient_conviction"
       }
     ],
     "open_picks_review": [
@@ -192,69 +104,75 @@
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.8 above entry threshold and rotation score 5 above minimum, streak reset but no exit criteria met."
+        "reason": "current_pcs 75.8 >= min entry 68.0, rot=5, streak_weeks=0 but condition a not met because pcs above threshold."
       },
       {
         "ticker": "CVS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 71.8 and rotation score 5 maintain above minimums, streak at 0 but not below exit triggers."
+        "reason": "current_pcs 71.8 >= 68.0, rot=5, streak_weeks=0 but no exit criteria triggered."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 71.8 and rotation score 5 are above exit thresholds, streak at 0 but no critical deterioration."
+        "reason": "current_pcs 71.8 >= 68.0, rot=5, streak_weeks=0 but pcs above threshold."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 80.2 and rotation score 6 are strong, streak 1 with positive ret_4w, no exit conditions met."
+        "reason": "current_pcs 80.2 >= 68.0, rot=6, streak_weeks=1, no exit criteria."
       },
       {
         "ticker": "LLY",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 72.2 and rotation score 5 are above minimums, streak at 0 but metrics do not trigger exit."
+        "reason": "current_pcs 72.2 >= 68.0, rot=5, streak_weeks=0 but pcs above threshold."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.8 and rotation score 5 maintain entry criteria, streak at 0 but no exit signals present."
+        "reason": "current_pcs 75.8 >= 68.0, rot=5, streak_weeks=0 but pcs above threshold."
       },
       {
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 83.2 and rotation score 8 are high, streak 6 with positive ret_4w, no exit warranted."
+        "reason": "current_pcs 83.2 >= 68.0, rot=8, streak_weeks=6, strong weekly leadership."
       },
       {
         "ticker": "NUE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 62.8 above absolute floor of 62, rotation score 7 and streak 3 indicate ongoing strength."
+        "reason": "current_pcs 62.8 < 68.0 but streak_weeks=3 >1, so condition a not met; rot=7>2, pcs above absolute floor 62."
       },
       {
         "ticker": "YPF",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 76.0 and rotation score 8 are strong, streak 3 with positive ret_4w, no exit needed."
+        "reason": "current_pcs 76.0 >= 68.0, rot=8, streak_weeks=3, Argentina diversification."
       },
       {
         "ticker": "III.L",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 69.8 and rotation score 6 are above thresholds, streak 1 but ret_4w positive, holding."
+        "reason": "current_pcs 69.8 >= 68.0, rot=6, streak_weeks=1, Europa diversification."
       },
       {
         "ticker": "SEDANA.ST",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 64.5 above floor of 62, rotation score 5 and ret_4w positive despite streak at 0."
+        "reason": "current_pcs 70.5 >= 68.0, rot=6, streak_weeks=1, recent entry."
+      },
+      {
+        "ticker": "PAM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 70.2 >= 68.0, rot=8, streak_weeks=2, Argentina diversification."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-08-02\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-02_0955\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime is Bull Maduro with improving trend and score 81.25, supporting selective entries despite high theme concentration risks.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"PAM\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"High rotation score with Argentina theme diversification\",\n      \"reason_full\": \"PAM offers rotation score 8 on a 2-week streak with +10.3% 4w outperformance vs SPY, the highest rot among non-open candidates with pcs ≥68. Argentina theme at 5.5% current weight provides critical diversification from 64% healthcare concentration, and konc_alignment is bullish_pending_3d_confirmation despite medium extension risk and spike_flag.\",\n      \"comparative_edge\": \"Selected over GGAL (pcs=69.0, rot=7, streak=1, konc=distribution_warning) because PAM's rot=8 vs 7, streak=2 vs 1, and konc alignment is bullish_pending_3d_confirmation vs distribution_warning, offering stronger weekly momentum and better structural confirmation.\",\n      \"key_supporting_factors\": [\n        \"Rotation score of 8 with 2-week streak demonstrates sustained weekly leadership.\",\n        \"Argentina theme provides diversification from high healthcare concentration at 64% portfolio weight.\",\n        \"Konc_alignment is bullish_pending_3d_confirmation, indicating potential for upward movement.\",\n        \"4-week outperformance of +10.3% vs SPY shows accelerating trend.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Extension risk is medium with spike_flag true, suggesting possible near-term pullback.\",\n        \"Daily momentum score of 8 is below the 14 threshold for strong early rotation signals.\",\n        \"Ret_13w outperformance of only +2.4% vs SPY trails stronger long-term leaders.\"\n      ]\n  "
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-02\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-02_2049\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with strong macro improvement (+8.75 weekly delta) supports equity leadership but healthcare concentration at 64% MIMO weight requires caution.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"TMO\",\n      \"reason\": \"Highest PCS at 83.5 with rot=8 and 3-week streak, but konc_alignment is distribution_warning and healthcare_largecap already at 42.5% portfolio weight; need confirmation of 3D accumulation setup.\",\n      \"watch_trigger\": \"Koncorde 3D state shifts from distribution to up, or healthcare theme concentration reduces below 35% weight.\"\n    },\n    {\n      \"ticker\": \"KOS\",\n      \"reason\": \"Strong 32.3% 4w outperformance with rot=7 and 3-week streak, but extension_risk is high (4 points) with spike_flag true and konc_3d_state distribution; need extension risk to subside.\",\n      \"watch_trigger\": \"Extension_risk drops to medium or below, or konc_3d_state shifts from distribution to up with continued streak.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"GGAL\",\n      \"reason\": \"PCS 69.0 with rot=7 but konc_alignment distribution_warning and dems=5 indicates weak daily momentum; weekly streak only 1 week insufficient for conviction.\",\n      \"rejection_category\": \"weak_relative_strength\"\n    },\n    {\n      \"ticker\": \"WCP.TO\",\n      \"reason\": \"PCS 68.5 with rot=6 and 3-week streak, but konc_alignment is distribution_warning despite konc_3d_state up; theme_flow moderate at 15 does not overcome structural caution.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"DHR\",\n      \"reason\": \"PCS 68.5 but signal IGNORAR with dems=3, rot=5, and spike_flag true; healthcare_largecap concentration already at 42.5% weight makes entry inadvisable.\",\n      \"rejection_category\": \"weak_flow\"\n    },\n    {\n     "
 }
