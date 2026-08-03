@@ -31,6 +31,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r backtest/requirements.txt
 
+      # Motor de decisión de Cava AI, fijado a un tag concreto y NUNCA a main:
+      # si el agente cambiara a mitad de un periodo de medición sin que lo
+      # sepamos, los datos de rendimiento de ese periodo dejarían de significar
+      # nada. La versión se sube de forma deliberada (ver CLAUDE.md).
+      - name: Install Cava decision engine (v1.1.0)
+        env:
+          CAVA_TOKEN: ${{ secrets.CAVA_ENGINE_TOKEN }}
+        run: |
+          pip install "git+https://x-access-token:${CAVA_TOKEN}@github.com/xoserubal/cava-decision-engine.git@v1.1.0"
+        continue-on-error: true
+
       - name: Run pipeline - Step 1 fetch data
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
@@ -123,6 +134,14 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python scripts/paper_trading.py
         working-directory: ${{ github.workspace }}
+
+      # Va ANTES del 10b a propósito: así los picks nuevos de hoy entran en el
+      # mismo pase de update_performance y se les rellena el entry_price sin
+      # esperar doce horas.
+      - name: Run pipeline - Step 10d Cava macro portfolio
+        run: python scripts/cava_portfolio.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
 
       - name: Run pipeline - Step 10b update performance tracking
         run: python scripts/update_performance.py

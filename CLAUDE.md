@@ -282,6 +282,7 @@ Gestionados en `docs/data/reminders.json`. El workflow los comprueba cada día y
 |-------|----|-----------|
 | 2026-05-28 | semana3_metricas_horizonte | Prompt para implementar métricas por horizonte + comparativa vs baselines + análisis spike_flag |
 | 2026-07-01 | semana7_motor_avanzado | Prompt para Open Pick Review Engine + validación numérica + rejection_primary_reason + análisis doble conteo PCS |
+| 2026-08-18 | koncorde_research_log_revision | Revisar `koncorde_signals_history.jsonl` (ver "Plan de revisión" en sección "Fix del veto absoluto de `konc_alignment`") — evaluar si los 8+2 campos ingrediente predicen rendimiento; promover a señal operativa solo si los datos lo justifican |
 
 Para añadir un recordatorio: editar `docs/data/reminders.json` directamente (sin tocar código).
 
@@ -857,6 +858,187 @@ Las 5 fases del plan original se completaron en su totalidad, trabajando fase po
 - Fase 5: se documentó un dead branch real (`fragile_no_technical`, inalcanzable con los pesos A:4/B:3/C:3 de este proyecto) en vez de alterar el orden de reglas que pedía el plan.
 
 Ningún cambio tocó AI Picks Lab, Portfolio Tracker, Cycle Tracker, Relative Flow Lab ni ningún otro módulo — todo el trabajo quedó contenido en `rotacion.html` + los campos nuevos de `state.json` (+ `server.js` para los `DEFAULT_STATE` correspondientes), tal como pedía el plan original.
+
+---
+
+## Flechas de tendencia en Flow Score y ATR% — Portfolio Tracker (implementado 2026-08-02)
+
+`portfolio.html` mostraba Flow Score y ATR% como foto estática (solo el valor de hoy). El usuario pidió indicar tendencia respecto de la sesión anterior con flechas de distinto grado de inclinación (no solo ↑/↓ binario), y para ATR% además comparar contra la media histórica propia del ticker.
+
+**Fuente de datos — se reutilizó infraestructura ya existente, no una nueva.** `signals_history.json` (servido vía `/api/signals`, `server.js`) ya registraba `flowScore` una fila por ticker/día desde hace tiempo, pero solo se usaba para escribir (POST), nunca se leía de vuelta para mostrar nada — `portfolio.html` no lo cargaba en ningún estado. `atrPct` no se registraba en absoluto en ese histórico (verificado leyendo el POST antes de tocar código); se añadió como campo nuevo al objeto que se empuja a `/api/signals` en el `useEffect` de guardado de snapshot.
+
+**Implementación (`portfolio.html`):**
+- Nuevo estado `signalsHistory` (fetch de `/api/signals` en la carga inicial, junto a `/api/portfolio`/`/api/stock-config`/`/api/universe`).
+- `buildPrevSessionMap(history)`: para cada ticker, la fila más reciente con fecha estrictamente anterior a hoy — "sesión anterior" real, no un promedio multi-día (así lo pidió el usuario explícitamente).
+- `buildAtrAvgMap(history)`: media histórica de `atrPct` por ticker sobre todas las filas disponibles, con contador `n`.
+- Componente `TrendArrow({delta, strongTh, mildTh, color})`: 4 niveles con inclinación distinta — `↑↑`/`↗`/`↘`/`↓↓` — más un 5º nivel `flat` que **no** renderiza flecha (evita ruido visual en cambios insignificantes). Umbrales de primera pasada (no calibrados contra datos históricos, es una mejora puramente visual/observacional): Flow Score `strongTh=2, mildTh=0.6` (la escala del Flow Score va de single dígitos negativos a ~50+ en momentum extremo — ver `computeFlowScore` en `shared/flow-score.js`); ATR% `strongTh=0.8pp, mildTh=0.25pp`.
+- Celda Flow Score: color de la flecha = `st.fg` (el mismo blanco que ya usa el texto del badge) en vez del color semántico verde/naranja/rojo por defecto — el badge ya tiene fondo saturado (verde/dorado/rojo de `FLOW_STYLE`) y una flecha con su propio color ahí encima quedaba con poco contraste o chocaba visualmente; se decidió tras verlo en pantalla, no a priori.
+- Celda ATR%: fondo neutro (blanco), así que ahí la flecha sí usa el color semántico verde/naranja/rojo. Media histórica se muestra como `·X.X%` en gris solo cuando `n>=10` (bootstrap — con menos de 10 sesiones el promedio no es representativo, mismo criterio que el resto del proyecto para features nuevas de observación).
+
+**Nota de bootstrap real:** como `atrPct` nunca se había guardado en `signals_history.json`, en el momento de implementar esto **la tendencia y la media de ATR% no tienen todavía ningún dato previo que mostrar** — empezarán a aparecer a partir de la sesión siguiente a este cambio, y la media a partir de ~10 sesiones/aperturas de la página. Verificado en pantalla: columna ATR% solo con el valor (`7.7%`, `8.9%`, ...), sin flecha ni media, mientras que Flow Score sí mostró flechas reales desde el primer momento (`4.2↑↑`, `-32.0↑↑`, `-29.8↓↓`, y correctamente sin flecha cuando el cambio era insignificante) porque `flowScore` ya llevaba historial acumulado.
+
+**Verificado:** sintaxis JSX transpila sin errores (`@babel/core` + `@babel/preset-react`, ejecutado en Node fuera del navegador ya que el proyecto no tiene esa dependencia instalada localmente — solo carga Babel standalone vía CDN en el propio HTML). Carga real contra `node server.js` con Edge headless (CDP directo): tabla principal de posiciones (`Cartera`, 63 tickers reales) renderiza las flechas de Flow Score con el ángulo y color esperado, tooltip con el delta exacto (`title="+3.00 vs sesión anterior"`), cero errores de consola/excepciones JS. El widget separado "Ranking de Setups" (que también muestra Flow Score) se dejó sin cambios a propósito — el pedido del usuario era sobre "las acciones en el portfolio" (la tabla principal por posición), no ese ranking secundario.
+
+---
+
+## Reintento de tickers fallidos en Koncorde — 2h después del run principal (implementado 2026-08-02)
+
+**Origen:** el usuario notó en `portfolio.html` que MU y GLEN.L no mostraban ningún dato de Koncorde (Blue/Green/Trend/Estado en blanco), a diferencia del resto de sus posiciones. Diagnóstico antes de tocar código: `koncorde_calculator.py → run()` sí incluye **todos** los tickers de `portfolio.json` en el universo (no solo los 91 candidatos del AI Picks Lab — corrección de una respuesta anterior en esta misma sesión que asumía lo contrario sin leer el código). Reproducida la descarga exacta que hace el script (mismo batch de yfinance, mismo rango de fechas): **MU y GLEN.L descargan perfectamente bien**, tanto individualmente como en el batch real de 25 tickers al que pertenecen en el universo actual (201 tickers). El snapshot vigente de `koncorde_data.json` (fecha `2026-08-01`) simplemente no los tiene — conclusión: fallo transitorio de yfinance en esa descarga por lotes concreta (comportamiento no determinista ya conocido de yfinance con `group_by="ticker"`), no una exclusión real ni un problema estructural.
+
+**Caso distinto encontrado en el mismo diagnóstico — `BNKR.TO`:** sí tiene entrada en `koncorde_data.json`, pero con todos los campos `konc_*` a `null`. Causa real, no un fallo: Yahoo solo tiene histórico bajo el símbolo `BNKR.TO` desde 2026-03-25 (90 sesiones) — es el mismo ticker que graduó de TSX Venture (`BNKR.V`) a la bolsa principal el 2026-07-10 (ver commit `e182645`), y el histórico del símbolo viejo no se traspasa al nuevo. `MIN_BARS` exige ≥100 barras para una lectura Diaria — le faltan ~10 sesiones, y 3D/W necesitan bastante más warmup. **No se implementó ningún fix para este caso** — no es un fallo de descarga, es falta de historial real; se resolverá solo según pasen las sesiones.
+
+**Implementación — `scripts/koncorde_calculator.py`:**
+- `run()` ahora persiste la lista de tickers fallidos de cada pasada completa en `docs/data/koncorde_failed_state.json` (`{ticker: timestamp_ISO}`), reescribiendo el fichero entero cada vez — un ticker que fallaba y ahora tiene éxito simplemente deja de estar en `failed`, así que desaparece solo del fichero sin lógica de merge.
+- `retry_failed(min_age_hours=2.0)`: lee ese estado, reintenta solo los tickers cuyo fallo lleva ≥2h (evita reintentar antes de que Yahoo tenga margen para recuperarse), descarga+calcula solo esos, y hace merge puntual en `koncorde_data.json` existente (no reescribe el fichero completo). Se retiran del estado tanto los que tienen éxito como los que vuelven a fallar — estos últimos se recapturan solos en el siguiente `run()` completo con timestamp nuevo, más simple que llevar la cuenta de reintentos repetidos aquí.
+- **Deliberadamente fuera del retry:** inyección de `konc_*` en `ai_candidates.json`, `mirror_signals.jsonl`, `koncorde_signals_history.jsonl` — son artefactos de universo completo pensados para la pasada principal; un reintento parcial de 2-3 tickers no debe tocarlos. Se resuelven solos en el siguiente `run()` completo (máx. 12h después).
+- CLI: `python scripts/koncorde_calculator.py --retry-failed` (vs. el `run()` normal sin flag).
+
+**Por qué un workflow nuevo y no un paso dentro del mismo run:** un retraso real de 2h no se puede hacer dentro de un único job de CI sin tener el runner ocioso quemando minutos gratis de GitHub Actions. Se creó `.github/workflows/koncorde-retry.yml`, cron `'0 10,22 * * *'` (10:00/22:00 UTC — 2h después de `market-update.yml`, que corre a las 08:00/20:00), mismo patrón de steps (checkout → setup Python → install deps → run script → commit) que el workflow principal, pero minimalista (sin el resto del pipeline) y con `timeout-minutes: 15`.
+
+**Verificado:** sintaxis Python compila (`py_compile`); YAML del workflow nuevo parseable con PyYAML, mismo resultado que el workflow existente ya funcional (confirma que la clave `on:` como booleano `True` en YAML 1.1 es un no-issue preexistente, no algo introducido aquí). Lógica de `retry_failed` probada end-to-end de forma aislada (paths redirigidos a un directorio temporal, sin tocar datos reales): (1) fallo con timestamp de "ahora" → correctamente NO reintenta y lo deja pendiente; (2) fallo con timestamp de hace 3h → reintenta de verdad contra Yahoo, ambos tickers descargan y se escriben en el `koncorde_data.json` de prueba, y el estado queda vacío tras el éxito; (3) estado vacío → no-op limpio. **Aplicado además contra los datos reales de producción** (no solo la prueba aislada): sembrado `docs/data/koncorde_failed_state.json` con MU/GLEN.L a timestamp de hace 3h y ejecutado `--retry-failed` real — ambos ahora tienen datos de Koncorde reales en `docs/data/koncorde_data.json` (`konc_d_state`/`konc_3d_state`/`konc_w_state` = `up` los tres para ambos), cerrando el gap que reportó el usuario sin esperar al próximo run programado. Cambio no commiteado — queda en el árbol de trabajo para que el usuario lo revise.
+
+---
+
+## Flechas de Flow Score/ATR% — 3 niveles (1/2/3 flechas), recalibrado con datos reales (implementado 2026-08-02)
+
+Ajuste sobre "Flechas de tendencia en Flow Score y ATR%" (sección de más arriba, mismo día). Tras ver las flechas en producción, el usuario pidió dos cosas: (1) reservar 1 sola flecha para un movimiento normal y usar 2/3 flechas solo para movimientos violentos/extremos — el diseño original solo tenía 2 niveles (`↗`/`↘` leve, `↑↑`/`↓↓` fuerte); (2) explicar por qué algunas casillas no mostraban ninguna flecha.
+
+**Diagnóstico de la pregunta 2 antes de tocar nada — con datos reales, no supuestos.** Se descargaron cotizaciones en vivo para los 112 tickers del Portfolio Tracker y se comparó el Flow Score de hoy contra `signals_history.json`: **109/112 tenían sesión anterior válida**. De esos 109: 19 (~17%) tenían un cambio genuinamente insignificante (|delta|<0.6) — sin flecha por diseño, no es un fallo. Solo **GLEN.L** carecía de historial (resuelto aparte, ver sección anterior sobre Koncorde — el fetch de precio para ese ticker no se había completado antes); `TSND.V` y `PLNHF` ni siquiera devolvían cotización (`PLNHF` confirmado "possibly delisted" contra Yahoo directamente). Conclusión: la inmensa mayoría de casillas sin flecha son "cambio de sesión insignificante", no "sin datos" — pero con los umbrales originales (`mildTh=0.6, strongTh=2`) **el 61% de las casillas con dato (67/110) caían ya en el nivel "fuerte"** — demasiado sensible, vaciaba de sentido la distinción que pedía el usuario.
+
+**Recalibración con percentiles reales del propio portfolio**, no umbrales a ojo: distribución de |delta| del Flow Score día-anterior sobre los 109 tickers válidos → p50=2.0, p75=4.8, p80=5.2, p90=7.5, p95=9.8, p98=13.2, máx=17.7. Elegidos `mildTh=0.6` (sin cambios, ya daba ~17% sin flecha, razonable), `strongTh=5` (≈p80) y `extremeTh=10` (≈p95). Resultado verificado en producción tras el cambio: de 63 casillas con dato en la tabla `Cartera`, 15 sin flecha (24%) · 29 con 1 flecha (46%) · 15 con 2 flechas (24%) · 4 con 3 flechas (6%) — distribución con forma de campana, mayoría en "movimiento normal", cola larga hacia lo extremo, tal como se pedía.
+
+**Implementación (`portfolio.html`):** `trendBucket()` pasó de 2 umbrales (`strongTh`/`mildTh`) a 3 (`mildTh`/`strongTh`/`extremeTh`), devolviendo 6 buckets direccionales + `flat`. `TREND_ARROWS` cambió de glifos diagonales (`↗`/`↘` para "leve") a flechas rectas repetidas (`↑`/`↑↑`/`↑↑↑`) — el usuario pidió explícitamente "una flecha hacia arriba" para el nivel normal, no una diagonal; usar el mismo glifo repetido en vez de cambiar de símbolo hace más legible la escalada 1→2→3. `trendColor()` añadió un tercer tono más oscuro/saturado por dirección (`extremeUp:'#063d17'`, `extremeDown:'#7a1810'`) para que el nivel extremo también destaque cromáticamente, no solo por el número de flechas.
+
+**ATR% no se recalibró con datos reales** (mismo motivo que la sección anterior: el historial de `atrPct` empezó a registrarse hoy mismo, no hay deltas reales todavía contra los que calibrar) — se mantuvo `mildTh=0.25`/`strongTh=0.8` del primer diseño y se añadió `extremeTh=1.5` como estimación razonable (no verificada), mismo criterio de "primera pasada, pendiente de revisión con datos" que el resto de umbrales nuevos del proyecto.
+
+**Verificado:** sintaxis JSX transpila sin errores. Carga real contra `node server.js` con Edge headless (CDP directo, proceso aislado por `--user-data-dir` propio y terminado por PID exacto al final — lección aprendida de la sesión anterior, donde un `taskkill /IM msedge.exe` sin filtrar cerró de más). Captura de pantalla de la tabla `Cartera` confirma visualmente los 4 niveles conviviendo en la misma columna (ej. `-29.8 ↓↓↓` en rojo oscuro junto a `4.2 ↑` en dorado y `28.9` sin flecha), cero errores de consola.
+
+---
+
+## Integración de Cava AI — motor de decisión macro externo (en curso, 2026-08-02)
+
+Integración de un sistema experto externo ("Cava AI", destilación del conocimiento del analista José Luis Cava) como capa macro de una cartera nueva. **Fase de diseño y validación histórica COMPLETADA; falta el despliegue en pipeline y el script de cartera.**
+
+### Qué es y qué NO es
+
+No es un LLM: es un **árbol de decisión determinista en Python** (~1200 líneas) sobre un corpus de 112 DecisionFrames extraídos de vídeos diarios. Mismo input → mismo output, sin temperatura. El TipBank (804 tips) **no está conectado al motor** — solo lo usa su chatbot, y no se distribuye en el paquete.
+
+**Hallazgo que reorientó el proyecto:** de nuestros 128 candidatos, solo **3** (NVDA, QQQ, MSTR) solapan con los 137 activos canónicos de Cava — nuestro universo son microcaps del TSX Venture, utilities argentinas, mineras... de las que Cava nunca ha hablado. Los tips a nivel de activo son inaplicables al 98 %. Por eso el rol del agente se reenfocó a **marco estructural** (leer el régimen y dictar el campo de juego), no a selección de tickers. Con eso la cobertura pasa de 3 a **91 de 128 candidatos (71 %)**.
+
+### Arquitectura acordada
+
+- **In-process, no HTTP.** Paquete `pip` desde repo privado con tag fijado (`cava-decision-engine@v1.1.0`). Motivo: GitHub Actions no alcanza un FastAPI local, y fijar versión permite atribuir rendimiento (un agente que cambia a mitad de un periodo de medición invalida los datos de ese periodo).
+- **Reparto:** Cava dicta exposición (`deterministic_risk_posture`), AI Picks Lab elige vehículo (PCS). Cava **sustituye** al MacroScore en su cartera, no se mezcla — mezclar haría inatribuible el resultado.
+- **1 query al día**, no una por candidato: el régimen es global.
+
+### Ficheros creados
+
+| Fichero | Qué hace |
+|---|---|
+| `scripts/cava_mapping.py` | Traducción bidireccional: estado macro → vocabulario controlado (7 dimensiones) y categorías de Cava → nuestros `theme`. Enumeración cerrada de 15 categorías como contrato duro. |
+| `scripts/test_cava_mapping.py` | **106 tests**, sin pytest. Incluye anclajes con los episodios reales de 2024-08, 2025-04 y 2026-03. |
+| `scripts/cava_state_history.py` | Reconstruye el estado macro de cualquier fecha desde 2004, sin mirar al futuro. Caché de precios en `docs/data/_cava_price_cache.parquet` (gitignorable). |
+| `scripts/cava_test_1c.py` | Prueba 1C — validación histórica sobre 20 años. |
+| `wiki/AGENTE_EXTERNO_*.md` | 8 documentos: cuestionario inicial, rondas 2-5, notas pre-desarrollo, verificación de la entrega y resultados. |
+
+**El motor externo vive en `C:/Users/Kunio/Dropbox/AI/cava-decision-engine`** (fuera de este repo), importado por ruta absoluta en `cava_test_1c.py`.
+
+### Resultados de la Prueba 1C (5.408 sesiones, 2005-2026)
+
+```
+postura         n     fwd 3m   peor 1m   vol 1m
+risk_on      2177      2.24%    -2.19%   12.20%
+risk_off      852      2.40%    -4.65%   26.63%
+```
+
+- **Como predictor de retorno: NO funciona.** `risk_on` tiene el peor retorno a 3 meses, por debajo de `risk_off`. Usarlo para decidir cuándo estar invertido sería peor que estar invertido siempre (2,95 % de media).
+- **Como discriminador de riesgo: SÍ funciona.** `risk_off` precede al doble de volatilidad y al doble de caída máxima.
+- **Bate a nuestro MacroScore en separación de riesgo:** 14,4 pp de volatilidad vs 11,9 pp; 2,46 pp de drawdown vs 2,23 pp. Y lo hace operando "ciego" de crédito antes de 2023-08 (el spread HY no existe antes en FRED), así que estos números **infravaloran** el marco completo.
+- Nuestro MacroScore sufre **la misma inversión** en retorno (`Risk-OFF` precede al mejor retorno a 3 meses) — no es defecto del marco de Cava, es la naturaleza del dato: los suelos son a la vez lo más peligroso y lo de mejor retorno posterior.
+
+**Decisión derivada:** `deterministic_risk_posture` modula **exposición**, nunca selección, y `risk_off` significa "no añadir riesgo", **no** "vender todo" — cerrar en `risk_off` sería justo el error que los datos desaconsejan.
+
+### Dos errores propios detectados por la verificación (documentados para no repetirlos)
+
+1. **Rama muerta en `cava_mapping.py`:** `DRAWDOWN_WEAK` y `NEAR_HIGHS_PCT` valían ambos −3.0, así que el estado `range` era inalcanzable. Mismo patrón que el `fragile_no_technical` de `rotacion.html`. Lo detectó un test, no una revisión.
+2. **Reconstrucción en cadencia semanal:** borraba las caídas que se recuperan dentro de la semana. De los episodios de estrés de 2024-2026 solo 2 de 3 se registraban; el desarme del carry del yen (agosto 2024, VIX diario 38,6) desaparecía entero. Reescrito para que **cada dimensión use su cadencia real** — precio/volatilidad/crédito diarios, liquidez y régimen semanales.
+
+### Cartera CAVA_MACRO — en marcha desde 2026-08-03
+
+`scripts/cava_portfolio.py` (Step 10d del pipeline, `continue-on-error: true`).
+Primer `--apply` ejecutado: 10 posiciones abiertas, 10 filas en `shadow_picks.jsonl`.
+
+**Reparto:** Cava decide cuántas posiciones (postura) y qué temas son elegibles
+(categorías) · PCS decide qué tickers · las salidas son mecánicas.
+
+**La postura se aplica BINARIA, no en escalera.** Es la decisión menos obvia y la
+que más fácil sería "mejorar" mal en el futuro, así que los números están escritos
+junto a la constante `MAX_POSITIONS_BY_POSTURE`. Medido sobre las 5.345 sesiones
+con dato de futuro:
+
+```
+postura       %tiempo  caída media  mediana  % meses malos    vol   fwd 3m
+risk_on           40%       -2.20%   -1.33%           12%   12.1%    2.24%
+reduce_risk       34%       -2.29%   -1.19%           13%   14.2%    3.09%
+neutral           11%       -2.63%   -1.80%           17%   17.1%    5.96%
+risk_off          16%       -4.65%   -3.10%           34%   26.6%    2.40%
+```
+
+- `reduce_risk` **no** es más peligroso que `risk_on` (13 % de meses malos frente
+  a 12 %, mediana de caída incluso menor) y rinde bastante más. Recortar ahí, un
+  tercio del tiempo, costaría retorno sin evitar riesgo.
+- El orden de las etiquetas **no sigue al riesgo**: `neutral` es más peligroso que
+  `reduce_risk`. Cualquier escalera sobre esos nombres estaría construida sobre
+  distinciones que los datos no sostienen.
+- Solo `risk_off` separa: 34 % de meses malos, casi el triple. Ahí se corta a cero.
+
+**`risk_off` no cierra posiciones**, solo impide abrir nuevas: su retorno posterior
+es mejor que el de `risk_on` (los suelos rebotan), así que vender ahí sería el
+error que los datos desaconsejan.
+
+**Salidas mecánicas** (`review_positions`), reutilizando los criterios que ya usa
+el resto del sistema: `left_universe`, `pcs < 62`, `rot_score <= 2`, más un
+trailing stop del 25 % desde máximos como **cortacircuitos** — está para que una
+posición no se vaya a cero sin que nadie se entere, no para hacer timing; de ahí
+que sea ancho (nuestro universo son small caps con ATR de varios puntos).
+
+**Dos topes de concentración, no uno.** Además del máximo de 3 por `theme` que
+fijó su equipo, hay un tope de 4 por categoría de Cava: sanidad ocupa dos temas
+nuestros (`healthcare_largecap` y `healthcare_special`) que son una sola categoría
+suya, y sin el segundo tope la primera versión metió 6 de 10 posiciones en
+sanidad — justo el sector donde Cava declara no tener opinión.
+
+**Expectativa a vigilar:** de 37 candidatos elegibles el primer día, solo 3 caían
+en categorías que Cava favorece; el 92 % quedó como "sin opinión". En la práctica
+Cava decide cuántas posiciones y el PCS decide cuáles. El log de cada run guarda
+`n_cava_favored` vs `n_no_opinion` para que dentro de unos meses sea un dato
+medido y no una impresión.
+
+### PENDIENTE para retomar
+
+1. **Verificar que el secret `CAVA_ENGINE_TOKEN` está en GitHub Actions.** El
+   paquete se instala en Step 3 del workflow desde
+   `xoserubal/cava-decision-engine@v1.1.0`. Está en el `.env` local, pero **no
+   se ha confirmado que exista también como secret del repositorio** — si falta,
+   el paso fallará (con `continue-on-error`, así que en silencio) y la cartera
+   no operará en el pipeline. Mismo patrón que el incidente del token de
+   Telegram vacío (ver sección correspondiente).
+2. **El primer run del pipeline con esto dentro no se ha visto.** Todo lo
+   ejecutado hasta ahora es local. Conviene mirar la pestaña Actions tras el
+   primer pase programado.
+3. **`entry_price` de las 10 posiciones iniciales queda a `null`** hasta el
+   siguiente pase: se abrieron un lunes antes del cierre y `update_performance`
+   necesita una sesión cerrada. Es autocorregible, pero conviene comprobar que
+   se rellena.
+4. **Prueba 1B** (circuito completo sobre los 76 payloads de may-ago 2026) — sin
+   hacer. Es comprobación de fontanería, no de rentabilidad: ese periodo es
+   uniformemente alcista.
+5. **Empaquetado**: pedimos mover `corpus/` dentro de `cava_engine/` y resolver
+   la ruta desde el módulo; su equipo lo hizo y `pip install` funciona desde
+   fuera del repo (verificado). El `Homepage` del `pyproject.toml` sigue
+   apuntando a `cava-ai/decision-engine`, que no existe — despistó una vez ya.
+6. La validación real sigue siendo el **forward testing en modo sombra**, no el
+   backtest. Empezó el 2026-08-03.
 
 ---
 
