@@ -95,6 +95,60 @@ const greenFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?
 const trendFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#555577':n<0?'#774455':'#888'; };
 const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
 
+// ── Tendencia Flow Score / ATR% vs sesión anterior ──────────────────────────
+// Se apoya en signals_history.json (ya se registraba a diario para Flow Score;
+// atrPct se añade aquí — ver push de entries más abajo). "Sesión anterior" =
+// última fila con fecha < hoy para ese ticker, no un promedio multi-día.
+// 4 niveles: sin flecha (ruido normal) · 1 flecha (movimiento normal)
+// · 2 flechas (violento) · 3 flechas (extremo).
+const TREND_ARROWS = { mildUp:'↑', strongUp:'↑↑', extremeUp:'↑↑↑', mildDown:'↓', strongDown:'↓↓', extremeDown:'↓↓↓' };
+const trendBucket = (delta, mildTh, strongTh, extremeTh) => {
+  const a = Math.abs(delta);
+  if (a < mildTh) return 'flat';
+  const dir = delta > 0 ? 'Up' : 'Down';
+  if (a >= extremeTh) return 'extreme' + dir;
+  if (a >= strongTh)  return 'strong'  + dir;
+  return 'mild' + dir;
+};
+const trendColor = b => ({
+  mildUp:'#4a9e5c',   strongUp:'#0d7a2e',   extremeUp:'#063d17',
+  mildDown:'#c77c1f', strongDown:'#c0392b', extremeDown:'#7a1810',
+})[b] ?? 'inherit';
+function TrendArrow({ delta, mildTh, strongTh, extremeTh, color }) {
+  if (delta == null || isNaN(delta)) return null;
+  const b = trendBucket(delta, mildTh, strongTh, extremeTh);
+  if (b === 'flat') return null;
+  return (
+    <span title={`${delta>=0?'+':''}${delta.toFixed(2)} vs sesión anterior`}
+      style={{marginLeft:3, fontWeight:700, fontSize:9, color: color ?? trendColor(b)}}>
+      {TREND_ARROWS[b]}
+    </span>
+  );
+}
+// Última fila registrada estrictamente antes de hoy, por ticker
+function buildPrevSessionMap(history) {
+  const today = new Date().toISOString().slice(0, 10);
+  const map = {};
+  (history || []).forEach(e => {
+    if (!e.ticker || e.date >= today) return;
+    const cur = map[e.ticker];
+    if (!cur || e.date > cur.date) map[e.ticker] = e;
+  });
+  return map;
+}
+// Media histórica de ATR% por ticker — solo se muestra con >=10 sesiones (bootstrap)
+function buildAtrAvgMap(history) {
+  const acc = {};
+  (history || []).forEach(e => {
+    if (!e.ticker || e.atrPct == null) return;
+    const a = acc[e.ticker] ?? (acc[e.ticker] = { sum:0, n:0 });
+    a.sum += e.atrPct; a.n += 1;
+  });
+  const out = {};
+  Object.entries(acc).forEach(([t,{sum,n}]) => { out[t] = { avg: sum/n, n }; });
+  return out;
+}
+
 const FLOW_STYLE = {
   'Lider':      { bg:'#1a7a1a', fg:'white' },
   'Transicion': { bg:'#b8860b', fg:'white' },
@@ -345,6 +399,7 @@ function Portfolio() {
   });
   const [stockConfig,   setStockConfig]   = React.useState({});
   const [universeTickers, setUniverseTickers] = React.useState(new Set());
+  const [signalsHistory, setSignalsHistory] = React.useState([]);
   const saveTimer = React.useRef(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3200); };
@@ -368,6 +423,10 @@ function Portfolio() {
     fetch('/api/universe')
       .then(r => r.json())
       .then(d => setUniverseTickers(new Set((d.tickers || []).map(t => t.ticker))))
+      .catch(() => {});
+    fetch('/api/signals')
+      .then(r => r.json())
+      .then(d => setSignalsHistory(Array.isArray(d) ? d : []))
       .catch(() => {});
   }, []);
 
@@ -461,6 +520,7 @@ function Portfolio() {
             w1:        d.w1        ?? null,
             m1:        d.m1        ?? null,
             fromHigh:  d.fromHigh  ?? null,
+            atrPct:    d.atrPct    ?? null,
           });
         }
       });
@@ -473,6 +533,10 @@ function Portfolio() {
       }
     }
   }, [prices, loading.size]);
+
+  // ── Tendencia Flow Score / ATR% (sesión anterior + media ATR por ticker) ──
+  const prevSessionMap = React.useMemo(() => buildPrevSessionMap(signalsHistory), [signalsHistory]);
+  const atrAvgMap      = React.useMemo(() => buildAtrAvgMap(signalsHistory), [signalsHistory]);
 
   // ── Resumen global ─────────────────────────────────────────────────────
   const summary = React.useMemo(() => {
@@ -1048,20 +1112,40 @@ function Portfolio() {
                                          : <span style={{color:'#c0392b'}}>▼</span>}
                         </td>
                         {/* ATR% */}
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,color:'#666'}}>
-                          {isLoad ? dot : p?.atrPct != null ? p.atrPct+'%' : '—'}
-                        </td>
+                        {(() => {
+                          const prevAtr = prevSessionMap[item.ticker]?.atrPct;
+                          const delta   = (p?.atrPct != null && prevAtr != null) ? p.atrPct - prevAtr : null;
+                          const avg     = atrAvgMap[item.ticker];
+                          return (
+                            <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,color:'#666',whiteSpace:'nowrap'}}>
+                              {isLoad ? dot : p?.atrPct != null ? (
+                                <>
+                                  {p.atrPct}%
+                                  <TrendArrow delta={delta} mildTh={0.25} strongTh={0.8} extremeTh={1.5} />
+                                  {avg && avg.n >= 10 && (
+                                    <span title={`Media histórica ATR% (${avg.n} sesiones registradas)`}
+                                      style={{color:'#aaa', fontSize:9, marginLeft:3}}>
+                                      ·{avg.avg.toFixed(1)}%
+                                    </span>
+                                  )}
+                                </>
+                              ) : '—'}
+                            </td>
+                          );
+                        })()}
                         {/* Flow Score */}
                         {(() => {
-                          const score = computeFlowScore(p);
-                          const cls   = classifyFlow(score);
-                          const st    = cls ? FLOW_STYLE[cls] : null;
+                          const score  = computeFlowScore(p);
+                          const cls    = classifyFlow(score);
+                          const st     = cls ? FLOW_STYLE[cls] : null;
+                          const prevFl = prevSessionMap[item.ticker]?.flowScore;
+                          const delta  = (score != null && prevFl != null) ? score - prevFl : null;
                           return (
                             <td style={{textAlign:'center',fontWeight:700,fontSize:10,fontFamily:'monospace',
                               background: isLoad||!st ? '' : st.bg,
                               color:      isLoad||!st ? '#aaa' : st.fg,
                               whiteSpace:'nowrap'}}>
-                              {isLoad ? dot : score!=null ? score.toFixed(1) : '—'}
+                              {isLoad ? dot : score!=null ? (<>{score.toFixed(1)}<TrendArrow delta={delta} mildTh={0.6} strongTh={5} extremeTh={10} color={isLoad||!st?undefined:st.fg} /></>) : '—'}
                             </td>
                           );
                         })()}
