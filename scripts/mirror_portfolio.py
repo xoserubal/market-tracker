@@ -172,6 +172,7 @@ def check_trailing_stops(picks: dict, today: str) -> list[dict]:
             close_reason = f"trailing_stop_{int(TRAILING_STOP_PCT*100)}pct_from_high (hwm={hwm:.2f}, close={price:.2f})"
             ptf.setdefault("history", []).append({
                 **pos,
+                "event":        "close",
                 "close_date":   today,
                 "close_price":  price,
                 "close_reason": close_reason,

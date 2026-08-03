@@ -1040,6 +1040,47 @@ medido y no una impresión.
 6. La validación real sigue siendo el **forward testing en modo sombra**, no el
    backtest. Empezó el 2026-08-03.
 
+**Bug encontrado y corregido (2026-08-03): CAVA_MACRO no aparecía en el dashboard.**
+`ai_picks.json` ya tenía las 10 posiciones reales del primer `--apply`, pero
+`docs/index.html` nunca se actualizó al añadir la cartera — las pestañas de AI
+Picks Lab se generan desde `Object.keys(PTF_LABELS)` (línea ~773), y `PTF_LABELS`/
+`PTF_THRESHOLDS` (línea ~732) no tenían la entrada `CAVA_MACRO`, así que la
+posición existía en los datos pero no tenía dónde renderizarse. Mismo patrón que
+tener que añadir cada cartera nueva a `_PORTFOLIO_LABELS` en `paper_trading.py`
+para Telegram — aquí es el equivalente en el dashboard, y se quedó fuera al
+crear la cartera. Arreglado añadiendo `CAVA_MACRO` a `PTF_LABELS` ('Cava Macro'),
+`PTF_THRESHOLDS` (62, el `PCS_MIN_ENTRY` real de `cava_portfolio.py`) y a
+`GROK_PTFS` del mini-panel de overview (portada) — cuenta como posición "Grok"
+porque el vehículo lo elige PCS igual que el resto de carteras Grok, Cava solo
+decide postura/categorías elegibles. La tabla de posiciones usa el layout
+genérico (mismas columnas que el resto): como las posiciones de Cava no tienen
+`conviction`/`rationale`/`entry_signal`, esas columnas caen a '—' — funcional,
+no roto, pero menos informativo que en otras carteras; no se creó una columna
+específica con `theme`/`cava_favor` por mantener el fix acotado al bug de
+visibilidad reportado.
+
+**Bug encontrado y corregido (2026-08-03): los cierres mecánicos de CAVA_MACRO
+y MIRROR_ESPEJO nunca disparaban el aviso de Telegram.** Al confirmar quién
+abre/cierra las posiciones de CAVA_MACRO (`cava_portfolio.py` mismo, sin IA:
+`select()` para altas, `review_positions()` para bajas — `left_universe`,
+`pcs<62`, `rot_score<=2`, trailing stop 25%), se detectó que `review_positions()`
+añadía cada cierre a `ptf["history"]` con `close_date`/`close_price`/
+`close_reason` pero **sin** la clave `"event": "close"` — solo la pone
+`update_portfolio()` en `paper_trading.py` para los cierres decididos por la IA.
+`mirror_portfolio.py` (cartera Espejo, implementada 2026-07-03) tenía el mismo
+problema desde el principio. `notify_telegram.py → _find_unnotified()` filtra
+los cierres exactamente con `if ev.get("event") != "close": continue` — sin esa
+clave, el cierre nunca entra en `new_closes`. No es un retraso: como el estado
+de notificados (`notify_state.json`) solo registra lo que sí se llega a enviar,
+un cierre así se queda sin avisar para siempre, no solo hasta el siguiente run.
+`docs/index.html` no se ve afectado (su render de "Historial de operaciones" no
+exige `event==="close"`, solo trata distinto a `event==="open"` — comentario
+explícito en el código sobre por qué, ya pensado para Espejo). Arreglado
+añadiendo `"event": "close"` en los dos puntos donde falta (`cava_portfolio.py
+→ review_positions()`, `mirror_portfolio.py` → cierre por trailing stop). No
+verificado todavía en producción (ninguna posición de ninguna de las dos
+carteras ha cerrado desde el fix).
+
 ---
 
 ## Roadmap de mejoras pendientes

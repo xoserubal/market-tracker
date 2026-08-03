@@ -680,7 +680,7 @@ function renderOverviewAIPicks(picks) {
   if (!panel || !el) return;
 
   const portfolios = picks.portfolios || {};
-  const GROK_PTFS  = ['HIGH_CONVICTION','CONFIRMED_FLOW_LEADERS','EARLY_ROTATION','MACRO_THEMATIC_BENEFICIARIES','MIRROR_ESPEJO'];
+  const GROK_PTFS  = ['HIGH_CONVICTION','CONFIRMED_FLOW_LEADERS','EARLY_ROTATION','MACRO_THEMATIC_BENEFICIARIES','MIRROR_ESPEJO','CAVA_MACRO'];
   const MIMO_PTFS  = ['MIMO_SHADOW'];
 
   // Count open positions per model
@@ -737,11 +737,13 @@ const PTF_LABELS = {
   REJECTED_HIGH_SCORE:          'Rechazados (control)',
   MIMO_SHADOW:                  'Mimo Shadow',
   MIRROR_ESPEJO:                'Espejo (Grok)',
+  CAVA_MACRO:                   'Cava Macro',
 };
 const PTF_THRESHOLDS = {
   HIGH_CONVICTION: 85, CONFIRMED_FLOW_LEADERS: 78,
   EARLY_ROTATION: 70, MACRO_THEMATIC_BENEFICIARIES: 65, REJECTED_HIGH_SCORE: 75,
   MIMO_SHADOW: 70,
+  CAVA_MACRO: 62,
   // MIRROR_ESPEJO no usa PCS — no aplica un threshold real, se deja fuera
   // (renderPtfContent cae al fallback ||70 solo para la lista de "candidatos
   // vistos por el modelo", que no es relevante para esta cartera).
@@ -1012,11 +1014,24 @@ function renderPtfContent(ptfId) {
               ${hRisks.length ? `<div class="rf-risks">${hRisks.map(r=>`⚠ ${r}`).join('<br>')}</div>` : ''}
             </div></details>`
         : `<span style="color:var(--text2)">${baseRationale}</span>`;
+      // Para las VENTAs: precio de entrada, precio de cierre y P&L.
+      // No se filtra por h.event === 'close' porque la cartera Espejo (mirror_portfolio.py)
+      // no escribe ese campo en sus cierres — basta con tener ambos precios.
+      let hPriceHtml = '';
+      if (h.entry_price != null && h.close_price != null) {
+        const fmtP = v => v < 1 ? v.toFixed(3) : v.toFixed(2);  // Espejo guarda floats crudos de yfinance
+        const pnlPct = (h.close_price - h.entry_price) / h.entry_price * 100;
+        const pnlCls = pnlPct >= 0 ? 'history-open' : 'history-close';
+        const pnlSign = pnlPct >= 0 ? '+' : '';
+        hPriceHtml = `<span style="color:var(--text2);font-size:11px;white-space:nowrap">${fmtP(h.entry_price)} → ${fmtP(h.close_price)}</span>
+          <span class="${pnlCls}" style="min-width:56px;text-align:right">${pnlSign}${pnlPct.toFixed(1)}%</span>`;
+      }
       html += `<div class="history-item">
         <span class="${cls}">${label}</span>
         <span style="font-weight:700;min-width:80px">${h.ticker}</span>
         <span style="color:var(--text2)">${hDate || '—'}</span>
         <span class="pcs-pill">${(h.entry_pcs ?? h.exit_pcs) ?? '—'}</span>
+        ${hPriceHtml}
         <span style="font-size:11px;flex:1">${hRationaleHtml}</span>
       </div>`;
     });

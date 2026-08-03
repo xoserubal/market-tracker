@@ -283,7 +283,7 @@ def review_positions(ptf: dict, cands: list[dict], today: str) -> list[dict]:
 
         if motivo:
             ptf.setdefault("history", []).append({
-                **pos, "close_date": today, "close_price": price,
+                **pos, "event": "close", "close_date": today, "close_price": price,
                 "close_reason": motivo,
             })
             cerradas.append({"ticker": tk, "reason": motivo, "close_price": price})
