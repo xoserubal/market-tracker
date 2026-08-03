@@ -33,6 +33,7 @@ ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
 MIRROR_LOG = DATA / "mirror_signals.jsonl"
 RESEARCH_LOG = DATA / "koncorde_signals_history.jsonl"
+FAILED_STATE_PATH = DATA / "koncorde_failed_state.json"
 
 # ── Parameters matching Pine Script defaults ───────────────────────────────
 PVI_NVI_LEN  = 15    # EMA length for PVI/NVI smoothing
@@ -853,6 +854,95 @@ def _log_research_history(koncorde_out: dict[str, dict], today: str) -> None:
         print(f"  koncorde_signals_history.jsonl: {n_logged} ticker(s) logged")
 
 
+# ── Retry of transiently-failed tickers ─────────────────────────────────────
+# yfinance batch downloads occasionally drop a handful of tickers with no
+# real cause (confirmed 2026-08-02: MU/GLEN.L failed in one run, then
+# downloaded fine — individually and in the exact same batch — minutes
+# later; see CLAUDE.md). A same-run retry wouldn't help since the failure
+# isn't deterministic; this waits a real 2h before trying again, wired to a
+# separate GitHub Actions workflow (koncorde-retry.yml) scheduled 2h after
+# each main pipeline run — a genuine 2h delay can't be done inside a single
+# CI job without idling and burning minutes for nothing.
+
+def _load_failed_state() -> dict[str, str]:
+    if FAILED_STATE_PATH.exists():
+        try:
+            return json.loads(FAILED_STATE_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_failed_state(failed: dict[str, str]) -> None:
+    FAILED_STATE_PATH.write_text(
+        json.dumps(failed, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def retry_failed(min_age_hours: float = 2.0) -> None:
+    failed_state = _load_failed_state()
+    if not failed_state:
+        print("Koncorde retry: no tickers pending retry.")
+        return
+
+    now = datetime.now()
+    due = [
+        tk for tk, ts in failed_state.items()
+        if (now - datetime.fromisoformat(ts)).total_seconds() >= min_age_hours * 3600
+    ]
+    if not due:
+        print(f"Koncorde retry: {len(failed_state)} ticker(s) pending but none reached "
+              f"{min_age_hours}h yet.")
+        return
+
+    print(f"Koncorde retry: retrying {len(due)} ticker(s) — {due}")
+    price_data = download_ohlcv(due)
+
+    out_path = DATA / "koncorde_data.json"
+    existing = (
+        json.loads(out_path.read_text(encoding="utf-8"))
+        if out_path.exists() else {"date": None, "tickers": {}}
+    )
+    today = datetime.today().strftime("%Y-%m-%d")
+
+    succeeded, still_failed = [], []
+    for tk in due:
+        df = price_data.get(tk)
+        if df is None or df.empty:
+            still_failed.append(tk)
+            continue
+        try:
+            k = compute_for_ticker(df)
+            k["updated"] = today
+            existing["tickers"][tk] = k
+            succeeded.append(tk)
+        except Exception as e:
+            print(f"  {tk}: retry computation error — {e}")
+            still_failed.append(tk)
+
+    if succeeded:
+        out_path.write_text(
+            json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        print(f"  Retry succeeded for {len(succeeded)}: {succeeded}")
+    if still_failed:
+        print(f"  Still failing after retry: {still_failed}")
+
+    # Drop every retried ticker from the state file regardless of outcome —
+    # succeeded ones are resolved; still-failing ones will be re-added with a
+    # fresh timestamp by the next full run(), which is simpler than tracking
+    # repeat failures here and avoids a stale entry blocking future retries.
+    for tk in due:
+        failed_state.pop(tk, None)
+    _save_failed_state(failed_state)
+
+    # Deliberately not touched here (kept simple, matches the next full run
+    # within <=12h anyway): ai_candidates.json konc_* injection, mirror
+    # signals log, research log. Those are full-universe artifacts and this
+    # retry only ever has a handful of tickers.
+
+
 def run() -> None:
     today = datetime.today().strftime("%Y-%m-%d")
     tickers: set[str] = set(MARKET_TRACKER_TICKERS)
@@ -920,6 +1010,12 @@ def run() -> None:
         show = failed[:10]
         print(f"  Failed: {show}{'…' if len(failed) > 10 else ''}")
 
+    # Persist the failed-ticker list (with a fresh timestamp) so a later,
+    # separately-scheduled run can retry just those — see retry_failed().
+    # Rebuilt from scratch every full run: a ticker that succeeds this time
+    # simply isn't in `failed`, so it drops out of the file on its own.
+    _save_failed_state({tk: datetime.now().isoformat(timespec="seconds") for tk in failed})
+
     _log_mirror_signals(koncorde_out, price_data, today)
     _log_research_history(koncorde_out, today)
 
@@ -949,4 +1045,8 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--retry-failed" in sys.argv:
+        retry_failed()
+    else:
+        run()
