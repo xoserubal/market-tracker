@@ -1,6 +1,6 @@
 {
-  "date": "2026-08-03",
-  "run_id": "2026-08-03_2102",
+  "date": "2026-08-04",
+  "run_id": "2026-08-04_1036",
   "candidates": [
     "TMO",
     "MRK",
@@ -11,8 +11,10 @@
     "LLY",
     "CVS",
     "ABBV",
+    "SEDANA.ST",
     "PAM",
     "III.L",
+    "MLX.AX",
     "KOS",
     "GGAL",
     "WCP.TO",
@@ -25,104 +27,218 @@
     "SYK",
     "TGS",
     "TAL",
-    "CEPU",
-    "PFE",
-    "FCX",
-    "CORZ",
+    "CAT",
     "NUE",
-    "SEDANA.ST",
-    "CAT"
+    "CORZ",
+    "FCX"
   ],
   "models": {
     "x-ai/grok-4.3": {
       "quality_score": 90,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving regime with macro_score 100 supports flow but extreme healthcare_largecap concentration at 58.5% and multiple distribution_warning readings block new entries.",
+        "market_read": "Bull Maduro regime with improving macro delta supports selective healthcare and Argentina exposure but extreme healthcare concentration at 94% warrants caution.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
       "watch": [
         {
-          "ticker": "TAL",
-          "reason": "dems 16 and ret_10d_vs_spy 15.07 show early daily momentum but spike_flag true and extension_risk high with distribution_warning prevent selection.",
-          "watch_trigger": "spike_flag false and dems sustained above 14 with outperform_d10 >=6 on next update"
+          "ticker": "MLX.AX",
+          "reason": "PCS 69.5 with rot_score 8 and 3-week streak but high extension risk and commodities theme outside core mandates.",
+          "watch_trigger": "Extension risk drops to low and rot_score sustains above 8 for two weeks."
+        },
+        {
+          "ticker": "KOS",
+          "reason": "PCS 69.2 with 3-week streak and strong 4w outperformance but high extension risk and distribution_warning on Koncorde 3D.",
+          "watch_trigger": "Koncorde 3D shifts to up and extension risk falls to low."
         },
         {
           "ticker": "GGAL",
-          "reason": "ret_13w_vs_spy 18.49 and rot_score 7 with argentina theme but distribution_warning and streak_weeks 1 leave signal incomplete.",
-          "watch_trigger": "streak_weeks reaches 3 with rot_score >=8 and no distribution on 3D"
+          "reason": "PCS 69 with Argentina diversification but streak only 1 week and distribution_warning on Koncorde.",
+          "watch_trigger": "Streak_weeks reaches 3 and Koncorde alignment improves to bullish_aligned."
         },
         {
-          "ticker": "FCX",
-          "reason": "PCS 62.2 with rot_score 8 and rs_outperform but already open in CAVA_MACRO and MIMO_SHADOW; extension_risk low yet theme_concentration high.",
-          "watch_trigger": "pcs >=65 with streak_weeks >=2 and rot_score >=8 while not already open"
+          "ticker": "DHR",
+          "reason": "PCS 68.5 in healthcare_largecap but dems 3 and spike_flag limit near-term conviction.",
+          "watch_trigger": "Dems rises above 10 with momentum_accel true and streak_weeks reaches 2."
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "PCS 68.2 with distribution_warning on Koncorde 3D and weak dems 4.",
+          "watch_trigger": "Koncorde 3D moves to up and ret_4w_vs_spy turns positive."
+        },
+        {
+          "ticker": "BBAR",
+          "reason": "PCS 68.2 in Argentina theme but streak 0 weeks and distribution_warning across timeframes.",
+          "watch_trigger": "Streak_weeks reaches 2 and Koncorde alignment clears distribution_warning."
+        },
+        {
+          "ticker": "UNH",
+          "reason": "PCS 67.8 with distribution_warning and dems 3 showing weak daily momentum.",
+          "watch_trigger": "Dems exceeds 8 and streak_weeks reaches 2."
+        },
+        {
+          "ticker": "JNJ",
+          "reason": "PCS 67.8 with distribution_warning on Koncorde 3D and dems 6.",
+          "watch_trigger": "Koncorde 3D shifts from distribution and ret_4w_vs_spy exceeds 5%."
+        },
+        {
+          "ticker": "CVE",
+          "reason": "PCS 66.5 with high extension risk and spike_flag despite 3-week streak.",
+          "watch_trigger": "Extension risk falls to low and dems rises above 10."
+        },
+        {
+          "ticker": "SYK",
+          "reason": "PCS 66.5 with distribution_warning on Koncorde 3D and dems 5.",
+          "watch_trigger": "Koncorde 3D moves to up and rot_score reaches 7."
+        },
+        {
+          "ticker": "TGS",
+          "reason": "PCS 66.2 with medium extension risk and spike_flag in Argentina theme.",
+          "watch_trigger": "Extension risk drops to low and streak_weeks reaches 3."
+        },
+        {
+          "ticker": "TAL",
+          "reason": "PCS 65.5 with extreme extension risk and dems 19 but China_em theme outside core focus.",
+          "watch_trigger": "Extension risk falls to medium or lower with sustained outperform_d10 above 6."
         },
         {
           "ticker": "NUE",
-          "reason": "PCS 62.8 with ret_4w_vs_spy 17.303 and rot_score 7 but already open; spike_flag true and extension_risk high limit new conviction.",
-          "watch_trigger": "pcs >=68 with outperform_d10 >=7 and no spike_flag while not already open"
+          "reason": "PCS 62.8 meets MACRO min but dems=9 below 10, spike_flag true, extension high and rot only 7 with 3-week streak.",
+          "watch_trigger": "dems rise above 13 with spike resolved and outperform_d10 >=6 on multi-day basis"
+        },
+        {
+          "ticker": "FCX",
+          "reason": "PCS 62.2 meets MACRO min but dems=7, streak_weeks=1 and rot=8 insufficient for EARLY_ROTATION or MACRO entry.",
+          "watch_trigger": "streak_weeks reaches 3+ with rot_score >=8 and dems >=10"
+        }
+      ],
+      "rejected": []
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 93,
+      "decision_summary": {
+        "market_read": "Macro score 100 with Bull Maduro Improving regime indicates strong bullish conditions across sectors.",
+        "risk_posture": "aggressive",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [
+        {
+          "ticker": "MRK",
+          "reason": "Already open with PCS 83.2, rot=8 on 6-week streak and bullish-aligned Koncorde, but healthcare concentration is high.",
+          "watch_trigger": "Not applicable as position is held; monitor for exit signals if weekly streak breaks or rot falls below 5."
+        },
+        {
+          "ticker": "OSCR",
+          "reason": "Open position with PCS 80.2 and 13-week outperformance of 64.9%, but distribution_warning on Koncorde and dems=12 suggest caution.",
+          "watch_trigger": "Watch for konc_alignment to shift from distribution_warning to bullish_aligned, or dems to rise above 14 without spike."
+        },
+        {
+          "ticker": "YPF",
+          "reason": "Held with PCS 76.0, rot=8 on 3-week streak and 16.7% 4w outperformance, but konc_3d_state distribution flags potential pullback.",
+          "watch_trigger": "Watch for konc_3d_state to move from distribution to up, confirming structural accumulation."
+        },
+        {
+          "ticker": "SLS",
+          "reason": "Open with PCS 75.8 but rot=5 and streak_weeks=0, signal IGNORAR indicates weak recent momentum despite high 13w outperformance.",
+          "watch_trigger": "Watch for streak_weeks to turn positive and rot to rise above 6, signaling renewed weekly leadership."
+        },
+        {
+          "ticker": "HUM",
+          "reason": "Held with PCS 75.8 and strong 13w outperformance, but rot=5 and streak_weeks=0 show weekly momentum stalled.",
+          "watch_trigger": "Watch for streak_weeks to resume above 1 and rot to improve above 6."
+        },
+        {
+          "ticker": "LLY",
+          "reason": "Open with PCS 72.2, rot=5 and streak_weeks=0, with distribution_warning on Koncorde 3D suggesting weakness.",
+          "watch_trigger": "Watch for konc_3d_state to shift from distribution to up, and weekly streak to initiate."
+        },
+        {
+          "ticker": "CVS",
+          "reason": "Held with PCS 71.8, rot=5 and streak_weeks=0, but mixed Koncorde alignment and weak daily momentum at dems=4.",
+          "watch_trigger": "Watch for dems to rise above 10 and konc_alignment to become fully bullish."
+        },
+        {
+          "ticker": "ABBV",
+          "reason": "Open with PCS 71.8, rot=5 and streak_weeks=0, konc_3d_state distribution contradicts bullish_pending_3d_confirmation.",
+          "watch_trigger": "Watch for konc_3d_state to turn up and weekly streak to establish above 1 week."
+        },
+        {
+          "ticker": "SEDANA.ST",
+          "reason": "Held with PCS 70.5, dems=18 strong but 13w outperformance negative at -9.25%, indicating longer-term weakness.",
+          "watch_trigger": "Watch for 13w outperformance to turn positive, confirming trend reversal."
+        },
+        {
+          "ticker": "PAM",
+          "reason": "Open with PCS 70.2, rot=8 on 2-week streak, but spike_flag true and dems=8 below strong threshold.",
+          "watch_trigger": "Watch for dems to rise above 14 without spike, and extension_risk to decrease."
+        },
+        {
+          "ticker": "III.L",
+          "reason": "Held with PCS 69.8, dems=11 good but only 1-week streak and medium extension risk.",
+          "watch_trigger": "Watch for streak_weeks to extend above 2 and extension_risk to fall to low."
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "Open with PCS 68.5, 3-week streak and low extension risk, but konc_alignment distribution_warning despite 3D and weekly up.",
+          "watch_trigger": "Watch for konc_alignment to resolve to bullish_aligned."
+        },
+        {
+          "ticker": "NUE",
+          "reason": "Held with PCS 62.8 below min entry 68.0, but rot=7 and 3-week streak show weekly strength; dems=9 moderate.",
+          "watch_trigger": "Watch for PCS to rise above 68.0 to justify potential addition."
+        },
+        {
+          "ticker": "TMO",
+          "reason": "PCS 83.5 high with rot=8 and 3-week streak, but healthcare_largecap theme has high concentration and konc_alignment distribution_warning.",
+          "watch_trigger": "Watch for konc_alignment to improve from distribution_warning and theme diversification opportunity."
+        },
+        {
+          "ticker": "KOS",
+          "reason": "PCS 69.2 with rot=7 and 3-week streak, but extension_risk high and konc_alignment distribution_warning flags caution.",
+          "watch_trigger": "Watch for extension_risk to decrease to medium or low, and konc_alignment to shift bullish."
+        },
+        {
+          "ticker": "MLX.AX",
+          "reason": "PCS 69.5 with rot=8 and 3-week streak, commodities_metals theme offers diversification, but dems=10 in WATCH territory and extension_risk high.",
+          "watch_trigger": "Watch for dems to rise above 14 and extension_risk to decrease."
+        },
+        {
+          "ticker": "FCX",
+          "reason": "PCS 62.2 below min entry 68.0, but rot=8 and low extension risk with bullish_pending_3d_confirmation Koncorde.",
+          "watch_trigger": "Watch for PCS to rise above 68.0 and weekly streak to establish above 1 week."
         }
       ],
       "rejected": [
         {
+          "ticker": "GGAL",
+          "reason": "Koncorde alignment distribution_warning with only 1-week streak and rot=7, insufficient weekly momentum for entry in high-concentration argentina theme.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
           "ticker": "DHR",
-          "reason": "ret_13w_vs_spy only 4.97 and dems 4 with distribution on daily and 3D indicate weak flow despite pcs 68.5.",
+          "reason": "PCS 68.5 with rot=5 and streak_weeks=0, signal IGNORAR indicates weak relative strength and flow in healthcare_largecap.",
           "rejection_category": "weak_flow"
         },
         {
           "ticker": "VRTX",
-          "reason": "ret_4w_vs_spy -4.37 and dems 4 with distribution_warning on 3D show insufficient near-term confirmation.",
-          "rejection_category": "insufficient_conviction"
+          "reason": "PCS 68.2 with rot=5 and streak_weeks=0, konc_alignment distribution_warning and weak daily momentum at dems=4.",
+          "rejection_category": "weak_relative_strength"
         },
         {
           "ticker": "BBAR",
-          "reason": "ret_4w_vs_spy -2.34 and dems 4 with distribution on daily and 3D reflect weak momentum.",
-          "rejection_category": "weak_relative_strength"
+          "reason": "PCS 68.2 with rot=5 and streak_weeks=0, konc_alignment distribution_warning and insufficient acceleration in argentina theme.",
+          "rejection_category": "insufficient_conviction"
         },
         {
           "ticker": "UNH",
-          "reason": "ret_4w_vs_spy -3.02 and dems 3 with distribution_warning indicate insufficient conviction.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "JNJ",
-          "reason": "ret_13w_vs_spy 7.96 and dems 6 with streak_weeks 0 and distribution on 3D provide no edge.",
+          "reason": "PCS 67.8 with rot=5 and streak_weeks=0, konc_alignment distribution_warning and low dems=3 indicate poor near-term momentum.",
           "rejection_category": "weak_flow"
         },
         {
-          "ticker": "CVE",
-          "reason": "ret_13w_vs_spy -0.39 and dems 5 with spike_flag true and extension_risk medium reflect weak trend.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "SYK",
-          "reason": "ret_13w_vs_spy -0.59 and dems 7 with distribution on 3D show limited acceleration.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "TGS",
-          "reason": "ret_13w_vs_spy 0.11 and dems 6 with distribution on 3D and high theme concentration risk.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "CEPU",
-          "reason": "ret_4w_vs_spy 5.07 and dems 7 but distribution_warning on daily and 3D with high argentina concentration.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "PFE",
-          "reason": "ret_13w_vs_spy -7.33 and dems 5 with distribution_warning indicate declining relative strength.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "KOS",
-          "reason": "ret_13w_vs_spy -16.88 and extension_risk high with spike_flag true and distribution on 3D.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "SEDANA.ST",
-          "reason": "PCS crossed down to 64.5 with signal IGNORAR and streak_weeks 0; already open position showing deterioration.",
+          "ticker": "JNJ",
+          "reason": "PCS 67.8 with rot=5 and streak_weeks=0, despite bullish_pending_3d_confirmation Koncorde, weekly momentum is weak.",
           "rejection_category": "insufficient_conviction"
         }
       ]
