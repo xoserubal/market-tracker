@@ -1,0 +1,55 @@
+{
+  "ticker": "SE",
+  "date": "2026-06-25",
+  "timestamp": "2026-06-25T19:26:13",
+  "type": "audit",
+  "audit_date": "2026-06-25",
+  "compare_portfolio": null,
+  "models": [
+    "anthropic/claude-sonnet-4-6"
+  ],
+  "model_decisions": [
+    {
+      "model_id": "x-ai/grok-4.3",
+      "decision": "REJECT",
+      "quality_score": 89,
+      "details": {
+        "ticker": "SE",
+        "reason": "PCS 69.5 below CONFIRMED_FLOW_LEADERS threshold with only 1-week streak.",
+        "rejection_category": "insufficient_conviction"
+      }
+    },
+    {
+      "model_id": "xiaomi/mimo-v2.5-pro",
+      "decision": "SELECT",
+      "quality_score": 98,
+      "details": {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "early_rotation",
+        "confidence": "medium",
+        "reason_short": "Daily momentum score 15 with no spike and low extension risk in low-concentration theme",
+        "reason_full": "Sea Limited exhibits a daily early momentum score of 15 with no spike flag and low extension risk, indicating clean multi-day institutional flow. Its china_em theme has low portfolio concentration risk at 8% weight, offering diversification from high-risk themes already at 30-38% weights. The 7.69% 4-week outperformance and 5.89% 13-week lead confirm emerging strength without overextension.",
+        "comparative_edge": "Selected over CVS (PCS=83.5, streak_weeks=8) which has higher weekly streak but dems=8 with spike_flag=true and extension_risk=medium, while SE's dems=15 and zero spike provide superior near-term momentum and cleaner entry.",
+        "key_supporting_factors": [
+          "Daily momentum score of 15 is among the highest in the candidate set with no spike confirmation.",
+          "Extension risk is low with zero extension points, minimizing chase risk.",
+          "Theme concentration in china_em is low at 8% portfolio weight, aiding diversification.",
+          "Outperform_d10=6 confirms multi-day breadth without single-session anomalies."
+        ],
+        "key_risks_or_contradictions": [
+          "Weekly streak is only 1 week, shorter than CVS's 8 weeks, making the signal less mature.",
+          "Ret_13w_vs_spy of 5.89% is modest compared to leaders like NBIS at 113%, indicating relative strength is emerging but not dominant.",
+          "Macro regime could shift if monthly deterioration accelerates, impacting emerging market stocks."
+        ]
+      }
+    }
+  ],
+  "results": [
+    {
+      "model": "anthropic/claude-sonnet-4-6",
+      "success": false,
+      "error": "'ascii' codec can't encode character '\\u2014' in position 13: ordinal not in range(128)"
+    }
+  ]
+}

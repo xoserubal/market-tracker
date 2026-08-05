@@ -914,6 +914,30 @@ def _save_test_result(
     })
 
 
+def _todays_shadow_signatures(today: str) -> set[tuple]:
+    """(model, ticker, portfolio, pcs) ya logueados hoy — evita re-loguear una
+    re-ejecucion identica del mismo dia (p.ej. varias corridas manuales de test)
+    como si fueran observaciones de mercado independientes."""
+    sigs: set[tuple] = set()
+    if not SHADOW_LOG.exists():
+        return sigs
+    try:
+        with SHADOW_LOG.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                if d.get("date") == today:
+                    sigs.add((d.get("model"), d.get("ticker"), d.get("portfolio"), d.get("pcs")))
+    except Exception:
+        pass
+    return sigs
+
+
 def _log_shadow_picks(
     model: str,
     data: dict,
@@ -927,9 +951,14 @@ def _log_shadow_picks(
     today = str(date.today())
     valid_for_tracking = is_valid_run and not forced_run
     cand_snapshot = cand_snapshot or {}
+    seen_today = _todays_shadow_signatures(today)
     for s in data.get("selected", []):
         t = s.get("ticker", "")
         pcs_val = (cand_pcs.get(t) if isinstance(cand_pcs, dict) else None) or s.get("pcs")
+        sig = (model, t, s.get("portfolio"), pcs_val)
+        if sig in seen_today:
+            continue
+        seen_today.add(sig)
         cand = cand_snapshot.get(t, {})
         _append_jsonl(SHADOW_LOG, {
             "date":         today,

@@ -49,18 +49,37 @@ Esto reduce drásticamente el riesgo de alucinación y decisiones caprichosas.
 
 ## PCS — Pick Conviction Score
 
-Calculado en `scripts/pcs_calculator.py`. Componentes (máx 100 pts):
+Calculado en `scripts/pcs_calculator.py`. Informe exhaustivo (fórmulas exactas,
+verificación de techos, primera evidencia empírica de poder de ranking) en
+`wiki/ASESOR_EXTERNO_PCS_INFORME.md` (2026-08-05) — este resumen es solo el
+recordatorio corto.
 
-| Componente | Máx | Descripción |
+Componentes — **techo real, no el "0-100" nominal** (verificado 2026-08-05
+trazando cada rama del código + confirmado empíricamente contra
+`ai_candidates.json`; la tabla anterior de este archivo tenía los techos mal
+— ni coincidía con los comentarios de cabecera del código ni con el máximo
+real alcanzable):
+
+| Componente | Techo real | Descripción |
 |------------|-----|-------------|
-| A — macro_permission | 15 | MacroScore y régimen |
-| B — theme_flow | 22 | Flujo del tema sectorial |
-| C — individual_rs | 23 | Relative strength individual |
-| D — individual_flow | 18.5 | Flujo técnico (MACD, RSI, OBV) |
-| E — early_acceleration | 7 | DEMS y señales diarias |
-| F — data_quality | 3.5 | Calidad y completitud de datos |
+| A — macro_permission | 14.0 | MacroScore y régimen — idéntico para todos los tickers de una misma corrida |
+| B — theme_flow | 24.0 | Flujo del tema sectorial |
+| C — individual_rs | 23.0 | Relative strength individual |
+| D — individual_flow | 20.0 | Flujo técnico (MACD, RSI, OBV) |
+| E — early_acceleration | 9.0 | DEMS y señales diarias |
+| F — data_quality | 5.0 | Calidad y completitud de datos |
+| **Suma (techo real del PCS)** | **95.0** | no 100 |
 
-**Riesgo conocido:** algunos componentes (ret_4w, rot_score, streak_weeks) están correlacionados. Pendiente análisis de doble conteo (ver roadmap semana 7).
+**Riesgos conocidos:**
+- **Doble conteo** entre componentes (`ret_4w_vs_spy`, `rot_score`,
+  `streak_weeks` correlacionados entre sí, entrando en C/B/D/E por caminos
+  distintos). Pendiente análisis formal (ver roadmap semana 7).
+- **El PCS no ordena resultados por encima del umbral de cartera** (hallazgo
+  2026-08-05, ver diagnóstico CFL más abajo): correlación global PCS↔ret_1m
+  = **-0.007** sobre 136 picks de las 5 carteras combinadas, signo
+  inconsistente cartera por cartera. Funciona como puerta de elegibilidad,
+  no como ranking — no verificado hasta este análisis, siempre fue un
+  supuesto implícito del diseño.
 
 ---
 
@@ -1080,6 +1099,155 @@ añadiendo `"event": "close"` en los dos puntos donde falta (`cava_portfolio.py
 → review_positions()`, `mirror_portfolio.py` → cierre por trailing stop). No
 verificado todavía en producción (ninguna posición de ninguna de las dos
 carteras ha cerrado desde el fix).
+
+---
+
+## Diagnóstico CONFIRMED_FLOW_LEADERS — fixes + shadow logging (implementado 2026-08-05)
+
+El usuario preguntó cómo evaluar el rendimiento de las carteras de AI Picks
+Lab. Al mirar `shadow_picks.jsonl` se encontraron dos problemas de datos antes
+de poder responder con confianza: 9 posiciones "zombi" de mayo cerradas de
+golpe el 2026-06-10 (el cierre de posiciones no existía hasta el 2026-06-09,
+ver sección "Cierre de posiciones" — no reflejan decisiones del modelo) y,
+al indagar más, **26+ filas realmente duplicadas** (mismo modelo, ticker,
+fecha y PCS) causadas por re-ejecuciones manuales del mismo día. Con eso
+limpio, CONFIRMED_FLOW_LEADERS (CFL) mostró underperformance real y
+consistente (alpha vs SPY -5%, no explicado por el mercado) y un patrón claro:
+el retorno a 1 semana predice fuertemente el de 1 mes (corr +0.72, solo 2/30
+picks negativos a 1 semana recuperan a 1 mes) en las 4 carteras, no solo CFL.
+Diagnóstico completo, datos crudos y metodología en
+`wiki/ASESOR_EXTERNO_CFL_DIAGNOSTICO.md`.
+
+El usuario revisó ese diagnóstico y aprobó un plan acotado — arreglar la causa
+raíz de los duplicados, e instrumentar (no operar) la hipótesis de salida a 1
+semana antes de considerar activar nada real:
+
+### P0 — fix del bug de duplicados (en la fuente, no solo en el análisis)
+
+`_log_shadow_picks()` (`paper_trading.py`) — nueva función
+`_todays_shadow_signatures(today)` que lee las filas ya escritas hoy en
+`shadow_picks.jsonl` y construye el set de `(model, ticker, portfolio, pcs)`
+ya vistos; antes de escribir cada selección se comprueba esa firma y se
+descarta si es idéntica. **Deliberadamente no deduplica por fecha+ticker sin
+más** — si el mismo modelo reevalúa el mismo ticker el mismo día con un PCS
+distinto (información nueva real), se loguea igual; solo se descarta la
+repetición exacta. No toca duplicados ya escritos en el histórico (ver abajo).
+
+`compare_vs_baselines.py` gana `dedup_same_day_reruns()`, aplicado nada más
+cargar `shadow_picks.jsonl` en `run_analysis()`: colapsa `(model, ticker,
+portfolio, date)` a la primera ocurrencia cronológica del día. Limpia tanto el
+histórico ya escrito antes del fix de arriba como cualquier duplicado futuro
+que se cuele por otra vía. `build_run_groups()` ya deduplicaba por `(ticker,
+portfolio)` pero solo **dentro de un mismo `run_id`** — no servía contra el
+caso real encontrado (6 `run_id` distintos el mismo día, 10:13 a 11:00,
+claramente ejecuciones manuales de prueba). Verificado en producción:
+`--no-fetch` sobre los datos reales reporta "dropped 32 same-day rerun
+duplicates (246 raw -> 214 unique market events)".
+
+### P1 — `scripts/cfl_followthrough_shadow.py` (Step 10f, shadow-only)
+
+Evalúa cada posición abierta de CFL una sola vez, en cuanto cumple ~5 sesiones
+(`RET_1W_TRADING_DAYS`) desde la entrada — dedup por `position_id =
+f"{ticker}__{entry_date}"` contra lo ya logueado, así que una posición nunca
+se re-evalúa. **Nunca toca `ai_picks.json`** — no cierra nada, solo escribe a
+`docs/data/cfl_followthrough_shadow.jsonl`.
+
+Cuatro reglas evaluadas por posición: `ret_1w_negative` (la única validada en
+el diagnóstico — es la que decide `shadow_decision`), `ret_1w_below_minus3`,
+`ret_1w_vs_spy_below_minus2`, `atr_adjusted_breach` (pérdida > 1× el ATR% de
+entrada — `None` si no hay ATR de entrada disponible). También registra
+`mfe_1w`/`mae_1w` (máximo favorable/adverso en la primera semana),
+`entry_extension_risk` (buscado primero en `shadow_picks.jsonl` en vivo, si no
+en el reconstruido de P2) y `current_pcs`/`current_rot` desde
+`ai_candidates.json`. `entry_rot` queda `None` — no se captura hoy en el
+momento de la entrada en ningún sitio estructurado (solo aparece en texto
+libre dentro de `rationale`); no se intentó parsear ese texto por ser frágil.
+
+Verificado contra la única posición CFL abierta ahora mismo (TMO, entrada
+2026-07-25): `ret_1w=+1.02% -> WOULD_HOLD`. Segunda ejecución inmediata
+confirma dedup ("All open CFL positions already evaluated").
+
+### P2 — `scripts/reconstruct_extension_risk_historical.py` (Step 10e)
+
+`extension_risk` es un campo en fase de observación desde 2026-05-16, pero un
+bug de lookup en `_log_shadow_picks` (arreglado 2026-07-02, ver sección
+"Koncorde Plus v2") lo dejó a `null` en ~96% de los picks históricos — justo
+la variable necesaria para separar "se entró tarde" de "se eligió mal" en el
+diagnóstico de CFL. Este script lo reconstruye por ticker+fecha de entrada,
+**usando solo barras con fecha ≤ entry_date** (sin look-ahead), y reutiliza
+`pcs_calculator.compute_extension_risk()` **importada directamente** (no
+reimplementada) para que la puntuación no pueda desincronizarse — mismo
+criterio que motivó centralizar `HARD_RULES` en `ai_shared.py`.
+
+Campos nuevos que no existían en el cálculo en vivo (pedidos explícitamente
+para este diagnóstico): `atr_pct`, `atr_percentile_126d`,
+`bb_width_percentile_126d`, `days_since_20d_high_breakout`,
+`days_since_55d_high_breakout`. Salida en
+`docs/data/extension_risk_reconstructed.jsonl`, idempotente (dedup por
+ticker+fecha, `--force` para recomputar).
+
+**Bug real encontrado en la primera pasada:** `atr_percentile_126d` salía
+idéntico para todas las fechas del mismo ticker — la función de percentil
+recibía la serie de ATR completa (hasta hoy) en vez de recortada hasta
+`entry_date`, es decir, look-ahead real colándose en un script diseñado
+explícitamente para evitarlo. `bb_width_percentile_126d` sí estaba bien
+recortada desde el principio (`.iloc[:pos+1]`) — sirvió de contraste para
+detectar que ATR no lo estaba. Corregido antes de escribir ningún dato real.
+
+**Validado contra 4 picks que ya tenían `extension_risk` calculado en vivo**
+(post-fix 2026-07-02): coincidencia exacta en las 4, incluidos los puntos
+(`AFM.V`, `LLY`, `ROOT`, `SE`) — no solo el nivel de riesgo.
+
+**Primer resultado real sobre CFL** (185 ticker-fecha reconstruidos; n
+pequeño, no concluyente): `extreme` sale claramente peor que el resto
+(ret_1m medio -16% a -18%, 0% de aciertos, n=4-5), pero `low`/`medium`/`high`
+no forman una escalera limpia — no hay evidencia todavía de que "entrar
+extendido" sea la explicación principal del underperformance de CFL, solo de
+que el extremo superior lo es. Pregunta abierta, no resuelta por este cambio.
+
+### P3 — `scripts/cfl_reentry_cooldown_shadow.py` (Step 10g, shadow-only)
+
+Pregunta: si CFL reentra repetidamente en los mismos nombres (ASPI 11 veces,
+SASK.V 11 veces — ver diagnóstico §3.6), ¿qué pasaría si un ticker que acaba
+de fallar follow-through a 1 semana (`ret_1w<0`) quedara bloqueado para
+reselección 18 sesiones (punto medio del rango 15-20 pedido)?
+
+**A diferencia de P1/P2, este script reconstruye su salida entera cada vez**
+en lugar de acumular con append — documentado explícitamente en el docstring
+del script: el veredicto de cooldown de un pick depende de si los picks
+*anteriores* de ese ticker fallaron, y `ret_1w` de esos picks anteriores llega
+de forma asíncrona vía `update_performance.py` días después de loguearse el
+pick. Un log append-only habría congelado el veredicto de cada pick con la
+información parcial que existía el día en que se evaluó por primera vez.
+Reconstruir es barato (cálculo puro sobre un jsonl local pequeño, sin red), así
+que ese trade-off sale gratis.
+
+Corre enteramente retroactivo sobre `shadow_picks.jsonl` (con el mismo dedup
+de P0 y la misma exclusión del bloque zombi que el diagnóstico) — no necesita
+descargar precios nuevos porque `ret_1w`/`ret_1m` ya están ahí. Resultado real
+sobre las 18 selecciones activas limpias de CFL: solo 2 habrían sido
+bloqueadas por el cooldown (SASK.V, URI) — muestra demasiado pequeña para
+saber si el cooldown habría ayudado.
+
+### Pipeline
+
+Los tres scripts nuevos corren como Steps 10e/10f/10g en
+`.github/workflows/market-update.yml`, después de Step 10b
+(`update_performance.py`, para que `ret_1w`/`ret_1m` estén frescos) y antes de
+Step 11 (Telegram). Los tres con `continue-on-error: true` — son observación
+pura, un fallo no debe tumbar el resto del pipeline. `git add docs/data/` en
+el step de commit ya es recursivo, así que los tres archivos de salida nuevos
+se commitean sin tocar el workflow más allá de añadir los steps.
+
+### Explícitamente fuera de alcance (por ahora)
+
+No se activó ningún stop real, no se subió el umbral de PCS, no se cambió el
+sizing, no se declaró CFL "invalidada", no se añadió ninguna HARD_RULE nueva.
+Criterio acordado con el usuario para promover cualquiera de estas reglas
+shadow a real: ~100-150 eventos independientes, al menos 2 regímenes de
+mercado distintos, validación fuera de muestra, y mejora de expected value sin
+cortar demasiados ganadores futuros. Con n=18-48 y un solo régimen de 3 meses,
+ninguna de las reglas de este cambio cumple ese criterio todavía.
 
 ---
 

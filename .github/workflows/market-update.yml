@@ -152,6 +152,21 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      - name: Run pipeline - Step 10e backfill extension_risk (historical, no look-ahead)
+        run: python scripts/reconstruct_extension_risk_historical.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      - name: Run pipeline - Step 10f CFL 1-week follow-through (shadow only)
+        run: python scripts/cfl_followthrough_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      - name: Run pipeline - Step 10g CFL re-entry cooldown (shadow only)
+        run: python scripts/cfl_reentry_cooldown_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 11 Telegram notifications
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

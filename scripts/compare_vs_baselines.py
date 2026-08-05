@@ -181,19 +181,27 @@ def build_run_groups(picks: list[dict]) -> dict[str, list[dict]]:
     """
     Group picks by run_id when available, else by date.
     Only includes active_model=True picks.
-    Deduplicates by (ticker, portfolio) within each run.
+    Deduplicates by market_event_id = (ticker, portfolio) across the whole
+    calendar day, not just within a single run_id: several runs on the same
+    day (manual re-runs, pipeline retries — see shadow_picks dedup fix in
+    paper_trading.py) observe the same market state, so a repeated pick is
+    the same event, not an independent one. The first chronological occurrence
+    of (date, ticker, portfolio) wins; later same-day repeats are dropped
+    (their run_key's group may end up empty, which downstream code already
+    handles by skipping runs with no ret_1m data).
     """
     groups: dict[str, list[dict]] = defaultdict(list)
-    seen: dict[str, set] = defaultdict(set)
+    seen_today: dict[str, set] = defaultdict(set)   # date -> {(ticker, portfolio)}
 
-    for p in picks:
+    for p in sorted(picks, key=lambda p: (p.get("date") or "", p.get("run_id") or "")):
         if not p.get("active_model"):
             continue
         run_key = p.get("run_id") or p.get("date", "unknown")
-        dedup_key = (p.get("ticker"), p.get("portfolio"))
-        if dedup_key in seen[run_key]:
+        pick_date = p.get("date", "unknown")
+        market_event_id = (p.get("ticker"), p.get("portfolio"))
+        if market_event_id in seen_today[pick_date]:
             continue
-        seen[run_key].add(dedup_key)
+        seen_today[pick_date].add(market_event_id)
         groups[run_key].append(p)
 
     return dict(groups)
@@ -438,11 +446,33 @@ def _fill_exit_returns(
     return exit_sims
 
 
+def dedup_same_day_reruns(picks: list[dict]) -> list[dict]:
+    """
+    Collapse repeated (model, ticker, portfolio, date) rows to their first
+    chronological occurrence — several runs on the same calendar day (manual
+    re-runs, pipeline retries) log the same market event multiple times, which
+    would otherwise inflate every aggregate stat below (ai_ret_1m, spike_flag,
+    extension_risk...). See dedup guard added at write-time in
+    paper_trading.py::_log_shadow_picks — this covers historical rows logged
+    before that fix existed.
+    """
+    seen: set[tuple] = set()
+    out: list[dict] = []
+    for p in sorted(picks, key=lambda p: (p.get("date") or "", p.get("run_id") or "")):
+        key = (p.get("model"), p.get("ticker"), p.get("portfolio"), p.get("date"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(p)
+    return out
+
+
 # -- Main analysis ---------------------------------------------------------------
 
 def run_analysis(no_fetch: bool = False, save_cache: bool = False) -> dict:
     print("Loading data...")
-    picks     = load_jsonl(SHADOW_PICKS)
+    picks_raw = load_jsonl(SHADOW_PICKS)
+    picks     = dedup_same_day_reruns(picks_raw)
     baselines = load_jsonl(BASELINES_LOG)
     payloads  = load_payloads()
 
@@ -450,6 +480,9 @@ def run_analysis(no_fetch: bool = False, save_cache: bool = False) -> dict:
         print("ERROR: shadow_picks.jsonl is empty.")
         sys.exit(1)
 
+    if len(picks) < len(picks_raw):
+        print(f"  dropped {len(picks_raw) - len(picks)} same-day rerun duplicates "
+              f"({len(picks_raw)} raw -> {len(picks)} unique market events)")
     print(f"  {len(picks)} picks, {len(baselines)} baselines, "
           f"{len(payloads)} payloads")
 
