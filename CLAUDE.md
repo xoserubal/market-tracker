@@ -1251,6 +1251,149 @@ ninguna de las reglas de este cambio cumple ese criterio todavía.
 
 ---
 
+## Ranking Score + PCS reframing — plan revisado y preregistro firmado (2026-08-06)
+
+El usuario propuso un plan de implementación grande (PCS reframing + Ranking
+Score shadow + cartera experimental `RANKING_SHADOW_EXPERIMENTAL`) para
+atacar el hallazgo del diagnóstico CFL: el PCS no ordena rendimiento por
+encima del umbral (corr global PCS↔ret_1m = -0.007, ver sección "Diagnóstico
+CONFIRMED_FLOW_LEADERS" más arriba). Antes de arrancar, se revisó el plan
+contra el estado real del repo — varias de sus asunciones ya estaban
+resueltas o eran verificables directamente:
+
+- **P0 (dedup) ya estaba hecho.** El plan lo pedía como paso previo
+  obligatorio; se implementó el 2026-08-05 (ver sección CFL). El -0.007 que
+  cita el plan como motivación ya es la cifra post-dedup.
+- **La pregunta abierta del plan sobre si es viable retropoblar
+  `pcs_components` históricos tiene respuesta: sí.** `pcs_calculator.py` ya
+  calcula y persiste `pcs_components` (A-F) en `ai_candidates.json` en cada
+  run, y ese archivo se commitea 2×/día desde 2026-05-08 (174 commits). Se
+  reconstruye con `git show <commit>:docs/data/ai_candidates.json` en vez de
+  recalcular — es el valor real del momento de la decisión.
+- **Cobertura verificada con datos reales, no asumida** (159 picks
+  2026-05-09→07-07, deduplicados): `extension_risk` 100% (ya reconstruido),
+  `rot_score` reconstruible al 100% vía git-history (presente desde el
+  primer commit), `theme_breadth` reconstruible por el mismo método,
+  `konc_3d_state`/`konc_w_state` con techo real de solo ~15% incluso con
+  reconstrucción — Koncorde no existía como feature en `ai_candidates.json`
+  antes de 2026-06-30 (confirmado en git history), no es un gap de logging
+  recuperable. Cobertura en candidatos **en vivo** (hoy): 100% en todos los
+  campos — el gate de cobertura del plan no bloquea Fase 2, solo acota lo
+  que Fase 1 puede analizar retrospectivamente.
+
+**Decisiones tomadas con el usuario antes de firmar el preregistro:**
+1. Recortar el peso documental del plan original (informes de 20-30 páginas,
+   preregistro extenso) manteniendo el mismo rigor estadístico — preregistro
+   de ~2 páginas, informes de Fase 1/3 de 3-5/5-8 páginas en vez de 10-15/20-30.
+2. **Fusionar el Koncorde Research Log** (recordatorio `koncorde_research_log_revision`,
+   agendado para 2026-08-18) dentro de la Fase 1 del Ranking Score en vez de
+   mantenerlo como review independiente — mismo dataset, misma metodología,
+   evitaba duplicar trabajo y arriesgaba veredictos contradictorios sobre el
+   mismo dato. Koncorde no tiene camino de promoción independiente; su
+   promoción a componente operativo va acoplada a la del Ranking Score.
+   Recordatorio cancelado en `docs/data/reminders.json`, sustituido por
+   `ranking_score_fase1_analisis` (2026-09-03).
+3. Dado el hallazgo de cobertura (~15% de techo para Koncorde en el dataset
+   histórico vs 100% para el resto), Koncorde se evalúa en Fase 1 en una
+   **subsección separada** con su propia n e IC95%, nunca mezclada en las
+   mismas tablas que componentes con historial completo desde 2026-05-08.
+   Clasificación provisional; si entra en el Ranking Score shadow, peso
+   inicial conservador dentro del bucket Flow Institucional.
+
+**Preregistro firmado:** `wiki/PREREGISTRO_RANKING_SCORE_V0.md` — lista
+congelada de componentes/pesos, reglas de `RANKING_SHADOW_EXPERIMENTAL`,
+7 baselines shadow, criterios de promoción a piloto/productivo, criterios de
+descarte anticipado, checklist de registro de cartera nueva (dashboard/
+Telegram/evento `close`) para no repetir el bug ya visto dos veces con
+`CAVA_MACRO` y `MIRROR_ESPEJO`.
+
+**Estado:** preregistro firmado. Fase 0.2/0.3/0.4 (campos PCS + persistencia +
+retropoblación) implementada 2026-08-07 — ver detalle abajo. Pendiente de
+Fase 0: los dos scripts de reconstrucción vía git-history para
+`rot_score_delta`/`theme_breadth` (necesarios antes de Fase 1, no antes de
+poder usar los campos PCS ya implementados).
+
+### Fase 0.2/0.3/0.4 — campos PCS reframing + persistencia + retropoblación (implementado 2026-08-07)
+
+Aditivo puro sobre `pcs_calculator.py` — no cambia la fórmula del PCS, los
+6 componentes A-F ni la elegibilidad. Definiciones tomadas literalmente del
+plan de implementación original (pegado por el usuario 2026-08-06, texto
+completo recuperado y usado como fuente de verdad en vez de inferir):
+
+```
+pcs_raw        = pcs (alias, mismo valor, claridad semántica en datasets con varias variantes pcs_*)
+pcs_ex_macro   = pcs_raw - component_A   (aísla la parte que sí varía entre tickers en la misma corrida)
+pcs_ceiling    = 95.0 constante          (techo real, ver wiki/ASESOR_EXTERNO_PCS_INFORME.md §5)
+pcs_normalized = (pcs_raw / pcs_ceiling) × 100   — SOLO display/análisis, nunca decisiones
+component_A..F          = mismo valor que pcs_components (alias top-level, más cómodo para análisis tabular)
+component_A..F_ceiling  = 14.0 / 24.0 / 23.0 / 20.0 / 9.0 / 5.0 (constantes, del mismo informe)
+```
+
+**Persistencia (0.3) — en los 4 sitios que documentan una decisión** (no solo
+`ai_candidates.json`):
+- `docs/data/ai_candidates.json` — automático, campos añadidos a `compute_pcs()`.
+- `docs/data/ai_model_payloads/YYYY-MM-DD.json` — vía `compact_candidate()` en
+  `scripts/ai_shared.py` (compartido con `build_eval_bundle.py`, que hereda el
+  cambio sin tocarlo — mismo motivo por el que existe ese archivo compartido).
+- `docs/data/shadow_picks.jsonl` — vía `_log_shadow_picks()`, valor en el
+  momento de la selección.
+- `docs/data/ai_picks.json` — vía `update_portfolio()`, con prefijo `entry_`
+  (`entry_pcs_raw`, `entry_pcs_ex_macro`, ...) siguiendo la convención ya
+  existente (`entry_price`, `entry_pcs`, `entry_signal`) — se añadió un
+  parámetro `cand_snapshot` nuevo a `update_portfolio()` (antes solo recibía
+  `cand_pcs`, un mapa ticker→pcs) y se pasó en ambos call sites (cartera
+  activa y carteras shadow).
+- `docs/data/model_tests/YYYY-MM-DD_{model}.json` — **no aplica** (verificado):
+  ese archivo guarda la respuesta cruda del modelo + metadata de validación,
+  nunca el desglose de PCS del candidato, así que no hay nada que persistir ahí.
+
+**Fuera de alcance deliberado:** `cava_portfolio.py` y `mirror_portfolio.py`
+tienen su propia lógica de apertura de posición (no pasan por
+`update_portfolio()`) y no ganaron estos campos — no estaban mencionados en
+el plan original, y Cava/Espejo no usan el PCS de la misma manera (Espejo no
+usa PCS en absoluto; Cava lo usa solo como puerta binaria ≥62). Si más
+adelante se necesitan ahí, es un cambio aparte.
+
+**Retropoblación histórica (0.4)** — el plan dejaba esto como pregunta abierta
+("¿es viable?"). Respuesta verificada: **sí, 100% viable**, porque
+`pcs_components` (desglose A-F) lleva en `docs/data/ai_candidates.json` desde
+el primer commit (2026-05-08, confirmado vía `git log --follow`) con el mismo
+esquema de claves sin cambios. A diferencia de `extension_risk` (que necesitó
+recomputar desde OHLCV con una fórmula proxy) o Koncorde (que no existía como
+feature antes de 2026-06-30), aquí el valor histórico real ya está commiteado
+— no hace falta aproximar nada, solo **leerlo** de la snapshot correcta.
+
+Script nuevo: `scripts/reconstruct_pcs_components_historical.py`. Para cada
+tupla (ticker, fecha, pcs) de `shadow_picks.jsonl`, busca entre los commits de
+`ai_candidates.json` del mismo día natural (el pipeline corre 1-3×/día, así
+que puede haber varias snapshots por fecha) el que tenga exactamente ese `pcs`
+para ese ticker — el cruce por valor de PCS desambigua entre corridas AM/PM
+del mismo día sin ambigüedad. Si no hay match exacto el mismo día, amplía a
+±1 día (cubre picks logueados cerca de la medianoche UTC). Sin match exacto en
+ningún commit: la fila queda `reconstructed: false` — nunca se aproxima ni se
+inventa. Salida: `docs/data/pcs_components_reconstructed.jsonl` (mismo patrón
+que `extension_risk_reconstructed.jsonl`: append-only, dedup por
+ticker+fecha+pcs, `--force` para recomputar, `--dry-run` para previsualizar,
+`--report` para ver cobertura).
+
+**Resultado real (190 picks únicos en `shadow_picks.jsonl`, 2026-05-08 →
+2026-08-06):** 189/190 reconstruidos (99.5%) — 187 con match exacto el mismo
+día, 2 (`SASK.V`, `VGZ`, 2026-06-20) con match en el día anterior, 1 sin
+match (`CLS`, 2026-06-24 — el propio registro en `shadow_picks.jsonl` no
+tenía `pcs` logueado, no es un fallo de esta reconstrucción). Verificado
+cruzando manualmente una fila reconstruida (`AFM.V`, 2026-07-04) contra
+`git show <commit>:docs/data/ai_candidates.json` del commit real — coincidencia
+exacta en pcs_components y en la suma A-F = pcs.
+
+**No se implementó en este cambio** (parte de la lista "trabajo pendiente"
+del preregistro §0, no de la Fase 0.2-0.4 original): los scripts de
+reconstrucción de `rot_score_delta` y `theme_breadth` vía git-history —
+necesarios antes de Fase 1, pero conceptualmente distintos (dependen de
+definir la ventana de comparación y la agrupación por tema) y no bloquean el
+uso de los campos PCS ya implementados aquí.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

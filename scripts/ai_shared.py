@@ -55,6 +55,25 @@ def compact_candidate(c: dict, conc: dict | None = None) -> dict:
         "is_early":       c.get("is_early", False),
         "flags":          (c.get("flags") or [])[:5],
         "pcs_components": c.get("pcs_components"),
+        # Fase 0 — PCS reframing (Ranking Score plan, 2026-08-06). Persisted
+        # here too so the entry-time value survives in ai_model_payloads/
+        # snapshots, not just in ai_candidates.json (see CLAUDE.md).
+        "pcs_raw":             c.get("pcs_raw"),
+        "pcs_ex_macro":        c.get("pcs_ex_macro"),
+        "pcs_ceiling":         c.get("pcs_ceiling"),
+        "pcs_normalized":      c.get("pcs_normalized"),
+        "component_A":         c.get("component_A"),
+        "component_B":         c.get("component_B"),
+        "component_C":         c.get("component_C"),
+        "component_D":         c.get("component_D"),
+        "component_E":         c.get("component_E"),
+        "component_F":         c.get("component_F"),
+        "component_A_ceiling": c.get("component_A_ceiling"),
+        "component_B_ceiling": c.get("component_B_ceiling"),
+        "component_C_ceiling": c.get("component_C_ceiling"),
+        "component_D_ceiling": c.get("component_D_ceiling"),
+        "component_E_ceiling": c.get("component_E_ceiling"),
+        "component_F_ceiling": c.get("component_F_ceiling"),
         # Daily signals — populated only when pcs_calculator fetched prices
         "dems":           ds.get("daily_early_momentum_score"),
         "ret_5d_vs_spy":  ds.get("ret_5d_vs_spy"),

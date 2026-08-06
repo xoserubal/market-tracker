@@ -995,6 +995,24 @@ def _log_shadow_picks(
             "konc_alignment":             cand.get("konc_alignment"),
             "konc_3d_bar_date":           cand.get("konc_3d_bar_date"),
             "konc_w_bar_date":            cand.get("konc_w_bar_date"),
+            # Fase 0 — PCS reframing (Ranking Score plan, 2026-08-06). Value
+            # at time of selection — do not recompute later, see CLAUDE.md.
+            "pcs_raw":             cand.get("pcs_raw"),
+            "pcs_ex_macro":        cand.get("pcs_ex_macro"),
+            "pcs_ceiling":         cand.get("pcs_ceiling"),
+            "pcs_normalized":      cand.get("pcs_normalized"),
+            "component_A":         cand.get("component_A"),
+            "component_B":         cand.get("component_B"),
+            "component_C":         cand.get("component_C"),
+            "component_D":         cand.get("component_D"),
+            "component_E":         cand.get("component_E"),
+            "component_F":         cand.get("component_F"),
+            "component_A_ceiling": cand.get("component_A_ceiling"),
+            "component_B_ceiling": cand.get("component_B_ceiling"),
+            "component_C_ceiling": cand.get("component_C_ceiling"),
+            "component_D_ceiling": cand.get("component_D_ceiling"),
+            "component_E_ceiling": cand.get("component_E_ceiling"),
+            "component_F_ceiling": cand.get("component_F_ceiling"),
             "entry_price":  None,   # filled by a separate price-fetch step
             "ret_1d":  None, "ret_3d":  None, "ret_1w":  None,
             "ret_2w":  None, "ret_1m":  None, "ret_3m":  None,
@@ -1131,11 +1149,13 @@ def update_portfolio(
     data: dict,
     cand_pcs: dict | None = None,
     allowed_portfolios: frozenset | None = None,
+    cand_snapshot: dict[str, dict] | None = None,
 ) -> tuple[dict, dict]:
     today      = str(date.today())
     portfolios = picks.setdefault("portfolios", {})
     changes: dict[str, list] = {"opened": [], "closed": []}
     _valid = allowed_portfolios if allowed_portfolios is not None else VALID_PORTFOLIOS
+    cand_snapshot = cand_snapshot or {}
 
     # Process EXIT decisions from open_picks_review
     for review in data.get("open_picks_review", []):
@@ -1179,12 +1199,31 @@ def update_portfolio(
             continue
 
         pcs_val = (cand_pcs.get(t) if cand_pcs else None) or s.get("pcs")
+        cand    = cand_snapshot.get(t, {})
         new_pos = {
             "ticker":                  t,
             "entry_date":              today,
             "entry_price":             _get_entry_price(t),
             "entry_pcs":               pcs_val,
             "entry_signal":            s.get("signal_type"),
+            # Fase 0 — PCS reframing (Ranking Score plan, 2026-08-06). Value
+            # at entry_date — do not recompute later, see CLAUDE.md.
+            "entry_pcs_raw":             cand.get("pcs_raw"),
+            "entry_pcs_ex_macro":        cand.get("pcs_ex_macro"),
+            "entry_pcs_ceiling":         cand.get("pcs_ceiling"),
+            "entry_pcs_normalized":      cand.get("pcs_normalized"),
+            "entry_component_A":         cand.get("component_A"),
+            "entry_component_B":         cand.get("component_B"),
+            "entry_component_C":         cand.get("component_C"),
+            "entry_component_D":         cand.get("component_D"),
+            "entry_component_E":         cand.get("component_E"),
+            "entry_component_F":         cand.get("component_F"),
+            "entry_component_A_ceiling": cand.get("component_A_ceiling"),
+            "entry_component_B_ceiling": cand.get("component_B_ceiling"),
+            "entry_component_C_ceiling": cand.get("component_C_ceiling"),
+            "entry_component_D_ceiling": cand.get("component_D_ceiling"),
+            "entry_component_E_ceiling": cand.get("component_E_ceiling"),
+            "entry_component_F_ceiling": cand.get("component_F_ceiling"),
             "size_pct":                _size_from_conviction(
                                            s.get("confidence", "medium"),
                                            PORTFOLIOS[ptf_id]["size_range"],
@@ -1568,7 +1607,7 @@ def run(force: bool = False, apply: bool = False) -> None:
             if force and not apply:
                 print(f"  [{model_used}] ACTIVE -> picks NOT applied (forced run without --apply)")
             else:
-                picks, changes = update_portfolio(picks, data, cand_pcs)
+                picks, changes = update_portfolio(picks, data, cand_pcs, cand_snapshot=cand_snapshot)
                 active_updated = True
                 n_sel = len(data.get("selected", []))
                 print(f"  [{model_used}] ACTIVE -> {n_sel} picks applied to portfolio")
@@ -1585,7 +1624,8 @@ def run(force: bool = False, apply: bool = False) -> None:
                 print(f"  [{model_used}] SHADOW {shadow_ptf_id} -> {n_sel} picks NOT applied (forced run without --apply)")
             else:
                 picks, changes = update_portfolio(picks, data, cand_pcs,
-                                                  allowed_portfolios=VALID_SHADOW_PORTFOLIOS)
+                                                  allowed_portfolios=VALID_SHADOW_PORTFOLIOS,
+                                                  cand_snapshot=cand_snapshot)
                 shadow_updated = True
                 n_sel = len(data.get("selected", []))
                 print(f"  [{model_used}] SHADOW {shadow_ptf_id} -> {n_sel} picks applied")

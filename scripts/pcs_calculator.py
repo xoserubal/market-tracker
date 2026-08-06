@@ -16,6 +16,19 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
 
+# Real ceilings (Fase 0, plan Ranking Score 2026-08-06) — verified by tracing
+# every branch of score_a..score_f, not the aspirational "0-100" from the code
+# header comments. See wiki/ASESOR_EXTERNO_PCS_INFORME.md §5.
+PCS_CEILING = 95.0
+COMPONENT_CEILINGS = {
+    "A": 14.0,
+    "B": 24.0,
+    "C": 23.0,
+    "D": 20.0,
+    "E":  9.0,
+    "F":  5.0,
+}
+
 
 def _load(name: str) -> dict:
     p = DATA / name
@@ -504,6 +517,16 @@ def compute_pcs(
     pcs      = round(a + b + c + d + e + f, 1)
     eligible = meta.get("tradable", True) and f > 0
 
+    # Fase 0 (plan Ranking Score 2026-08-06): pcs_raw is pcs under a clearer
+    # name for datasets that carry multiple pcs_* variants side by side.
+    # pcs_ex_macro isolates the part of the score that varies between tickers
+    # in the same run — component A (macro permission) is identical for all
+    # of them, so it carries zero discriminating power within a single run.
+    # pcs_normalized is display/analysis only — NEVER use it for decisions.
+    pcs_raw        = pcs
+    pcs_ex_macro   = round(pcs_raw - a, 1)
+    pcs_normalized = round((pcs_raw / PCS_CEILING) * 100, 1)
+
     raw  = cand_idx.get(ticker) or rot_idx.get(ticker) or {}
     comp = raw.get("components") or {}
 
@@ -530,6 +553,24 @@ def compute_pcs(
             "E_early_acceleration":  round(e, 1),
             "F_data_quality":        round(f, 1),
         },
+        # Fase 0 — PCS reframing (Ranking Score plan, 2026-08-06). Additive
+        # fields, do not replace pcs/pcs_components above. See CLAUDE.md.
+        "pcs_raw":            pcs_raw,
+        "pcs_ex_macro":       pcs_ex_macro,
+        "pcs_ceiling":        PCS_CEILING,
+        "pcs_normalized":     pcs_normalized,
+        "component_A":        round(a, 1),
+        "component_B":        round(b, 1),
+        "component_C":        round(c, 1),
+        "component_D":        round(d, 1),
+        "component_E":        round(e, 1),
+        "component_F":        round(f, 1),
+        "component_A_ceiling": COMPONENT_CEILINGS["A"],
+        "component_B_ceiling": COMPONENT_CEILINGS["B"],
+        "component_C_ceiling": COMPONENT_CEILINGS["C"],
+        "component_D_ceiling": COMPONENT_CEILINGS["D"],
+        "component_E_ceiling": COMPONENT_CEILINGS["E"],
+        "component_F_ceiling": COMPONENT_CEILINGS["F"],
         "flags":         fa + fb + fc + fd + fe + ff,
         "rot_score":     raw.get("rot_score"),
         "signal":        raw.get("signal"),
