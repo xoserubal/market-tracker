@@ -1035,20 +1035,32 @@ medido y no una impresión.
 
 ### PENDIENTE para retomar
 
-1. **Verificar que el secret `CAVA_ENGINE_TOKEN` está en GitHub Actions.** El
-   paquete se instala en Step 3 del workflow desde
-   `xoserubal/cava-decision-engine@v1.1.0`. Está en el `.env` local, pero **no
-   se ha confirmado que exista también como secret del repositorio** — si falta,
-   el paso fallará (con `continue-on-error`, así que en silencio) y la cartera
-   no operará en el pipeline. Mismo patrón que el incidente del token de
-   Telegram vacío (ver sección correspondiente).
-2. **El primer run del pipeline con esto dentro no se ha visto.** Todo lo
-   ejecutado hasta ahora es local. Conviene mirar la pestaña Actions tras el
-   primer pase programado.
-3. **`entry_price` de las 10 posiciones iniciales queda a `null`** hasta el
-   siguiente pase: se abrieron un lunes antes del cierre y `update_performance`
-   necesita una sesión cerrada. Es autocorregible, pero conviene comprobar que
-   se rellena.
+1. ~~Verificar que el secret `CAVA_ENGINE_TOKEN` está en GitHub Actions.~~
+   **Confirmado y arreglado 2026-08-07.** No estaba — `gh secret list` no lo
+   listaba, y los logs de **todas** las corridas del pipeline desde el
+   2026-08-03 (~18 corridas, 2×/día) mostraban `CAVA_TOKEN: ` vacío →
+   `fatal: Authentication failed` en el `pip install` → `cava_portfolio.py
+   --apply` fallando con `No module named 'cava_engine'`. Ambos pasos tienen
+   `continue-on-error: true`, así que el pipeline entero se marcaba
+   "success" en la pestaña Actions — el fallo llevaba 4 días siendo
+   invisible ahí, mismo patrón exacto que el incidente del token de Telegram
+   vacío (ver sección correspondiente). La cartera llevaba esos 4 días
+   congelada con las 10 posiciones originales del único `--apply` manual,
+   sin ninguna revisión ni entrada nueva. El usuario añadió el secret;
+   verificado que autentica (`git ls-remote` contra el repo privado en
+   local) y disparado un `workflow_dispatch` manual para confirmar
+   end-to-end en CI real: `pip install` completó, `cava_portfolio.py
+   --apply` corrió — 5 salidas mecánicas (`pcs < 62`, suelo absoluto:
+   III.L/OSCR/YPF/PAM/KOS) + 5 entradas nuevas (URI/GS/PLTR/SE/DHR) — y
+   Telegram notificó los 5 cierres, confirmando en producción por primera
+   vez el fix de `"event":"close"` de más abajo (que llevaba desde el
+   2026-08-03 sin verificar por falta de cierres reales).
+2. ~~El primer run del pipeline con esto dentro no se ha visto.~~ Visto
+   arriba — era el mismo problema del punto 1.
+3. **`entry_price` de las 5 posiciones nuevas queda a `null`** hasta el
+   siguiente pase (mismo patrón ya documentado: entran antes del cierre,
+   `update_performance` necesita una sesión cerrada) — autocorregible, no
+   requiere seguimiento activo.
 4. **Prueba 1B** (circuito completo sobre los 76 payloads de may-ago 2026) — sin
    hacer. Es comprobación de fontanería, no de rentabilidad: ese periodo es
    uniformemente alcista.
@@ -1057,7 +1069,9 @@ medido y no una impresión.
    fuera del repo (verificado). El `Homepage` del `pyproject.toml` sigue
    apuntando a `cava-ai/decision-engine`, que no existe — despistó una vez ya.
 6. La validación real sigue siendo el **forward testing en modo sombra**, no el
-   backtest. Empezó el 2026-08-03.
+   backtest. Empezó el 2026-08-03, pero de facto no operó hasta el
+   2026-08-07 por el punto 1 — el reloj de "cuántas semanas de forward
+   testing llevamos" debería contarse desde aquí, no desde el 2026-08-03.
 
 **Bug encontrado y corregido (2026-08-03): CAVA_MACRO no aparecía en el dashboard.**
 `ai_picks.json` ya tenía las 10 posiciones reales del primer `--apply`, pero
@@ -1096,9 +1110,12 @@ un cierre así se queda sin avisar para siempre, no solo hasta el siguiente run.
 exige `event==="close"`, solo trata distinto a `event==="open"` — comentario
 explícito en el código sobre por qué, ya pensado para Espejo). Arreglado
 añadiendo `"event": "close"` en los dos puntos donde falta (`cava_portfolio.py
-→ review_positions()`, `mirror_portfolio.py` → cierre por trailing stop). No
-verificado todavía en producción (ninguna posición de ninguna de las dos
-carteras ha cerrado desde el fix).
+→ review_positions()`, `mirror_portfolio.py` → cierre por trailing stop).
+**Verificado en producción 2026-08-07** (ver punto 1 de "PENDIENTE para
+retomar" más arriba): los primeros 5 cierres reales de CAVA_MACRO
+dispararon aviso de Telegram correctamente (`notify_telegram.py` reportó
+"5 close(s) not yet notified" → "OK"). MIRROR_ESPEJO sigue sin verificar —
+no ha cerrado ninguna posición todavía.
 
 ---
 
@@ -1390,7 +1407,65 @@ del preregistro §0, no de la Fase 0.2-0.4 original): los scripts de
 reconstrucción de `rot_score_delta` y `theme_breadth` vía git-history —
 necesarios antes de Fase 1, pero conceptualmente distintos (dependen de
 definir la ventana de comparación y la agrupación por tema) y no bloquean el
-uso de los campos PCS ya implementados aquí.
+uso de los campos PCS ya implementados aquí. **Implementados el 2026-08-07,
+ver siguiente sección — con esto Fase 0 del preregistro queda completa.**
+
+### Fase 0 — cierre: reconstrucción de rot_score_delta y theme_breadth (implementado 2026-08-07)
+
+Los dos scripts que quedaban pendientes de §0 del preregistro
+(`wiki/PREREGISTRO_RANKING_SCORE_V0.md`), mismo patrón de
+`reconstruct_pcs_components_historical.py` — **importan `list_commits()`,
+`candidates_at_commit()` y `find_match()` de ese script en vez de
+reimplementarlos**, para que la lógica de desambiguación AM/PM por `pcs`
+exacto no pueda desincronizarse entre los tres.
+
+**`scripts/reconstruct_rot_score_delta_historical.py`** — `rot_score_delta_4w`
+por ticker+fecha: `rot_score` del snapshot de entrada menos `rot_score` del
+snapshot más cercano a `entry_date - 28 días naturales` (ventana de búsqueda
+±5 días alrededor de ese objetivo, prefiriendo el día más cercano; sin match
+en esa ventana → `null`, nunca aproximado). Salida:
+`docs/data/rot_score_delta_reconstructed.jsonl`.
+
+**`scripts/reconstruct_theme_breadth_historical.py`** — `theme_breadth` por
+ticker+fecha: nº de candidatos `eligible=true` con el mismo `theme` en el
+snapshot del día de entrada (ambos campos ya viven en cada candidato de
+`ai_candidates.json`, es un lookup directo, no un recálculo). También guarda
+`theme_total` (elegibles + no elegibles) de contexto. Salida:
+`docs/data/theme_breadth_reconstructed.jsonl`.
+
+Ambos con las mismas flags que el resto de la familia de scripts de
+reconstrucción (`--force`, `--dry-run`, `--report`), dedup por
+ticker+fecha+pcs, idempotentes.
+
+**Resultado real (190 picks únicos en `shadow_picks.jsonl`):**
+`theme_breadth` 189/190 reconstruido (el único hueco es `CLS` 2026-06-24, la
+misma fila sin `pcs` logueado que ya dejaba sin reconstruir a
+`pcs_components_reconstructed.jsonl` — no es un fallo de este script).
+`rot_score_delta_4w` 106/190 (56%) — los 84 sin reconstruir se concentran casi
+todos en picks de las primeras ~4 semanas del sistema (2026-05-08 →
+~2026-06-05), donde "28 días antes" cae fuera del propio arranque del
+historial de git — un límite real de los datos, no un bug de la ventana de
+búsqueda (verificado: el resto de huecos sueltos fuera de ese rango son
+tickers que esa semana no estaban en el snapshot cercano, p. ej. por rotar
+fuera del universo de 91 candidatos, y quedan `null` correctamente en vez de
+aproximarse).
+
+**Con esto, Fase 0 del preregistro queda completa.** Próximo paso: Fase 1
+(informe descriptivo de 3-5 páginas sobre estos componentes + PCS reframing +
+Koncorde en subsección separada), agendada para 2026-09-03
+(`ranking_score_fase1_analisis` en `docs/data/reminders.json`).
+
+**Nota 2026-08-07 (revertido):** se llegó a adelantar e implementar Fase 1
+completa el mismo día (script + informe + resultados) a petición puntual del
+usuario, pero se revirtió tras aclarar el motivo de la fecha 2026-09-03: no
+era una dependencia de código sino dar tiempo a que maduraran datos —
+heredado del recordatorio `koncorde_research_log_revision` (2026-07-21,
+"revisión prevista en 4-8 semanas"), fusionado en esta Fase 1 el 2026-08-06.
+El intento adelantado (n=48) ya mostraba el problema: `rot_score_delta_4w`
+solo tenía n=14 y Koncorde n=5 (la mitad de esa muestra era el mismo evento
+de mercado contado dos veces), justo la falta de potencia estadística que la
+fecha de septiembre estaba pensada para evitar. Se recupera el plan
+original: Fase 1 espera a 2026-09-03.
 
 ---
 
@@ -1483,9 +1558,86 @@ El sistema ahora puede cerrar posiciones mediante `open_picks_review` en la resp
 
 ### Semana 7 (≈2026-07-01)
 - `scripts/review_open_picks.py`: Open Pick Review Engine separado del New Pick Engine. Evalúa posiciones abiertas → HOLD/ADD/REDUCE/EXIT con análisis más profundo. Guarda en `ai_picks_review.jsonl`
-- Validación numérica automática: cruzar números citados en reason_full contra el payload, detectar discrepancias >10%
-- Campo `rejection_primary_reason` en el schema de respuesta del modelo
-- Análisis de correlación entre componentes PCS (A-F) y rendimiento posterior (ret_1m)
+- ✅ Validación numérica automática: implementada 2026-08-07, ver sección abajo.
+- ~~Campo `rejection_primary_reason`~~ — descartado 2026-08-07: ya existe `rejection_category` (HARD_RULE, enum en `ai_shared.py → VALID_REJECT_CATS`) cubriendo el mismo propósito. Añadir un segundo campo con un enum solapado habría reproducido justo el tipo de deriva que `ai_shared.py` se creó para evitar (`HARD_RULES` duplicadas entre `paper_trading.py`/`build_eval_bundle.py`). Decisión del usuario: no duplicar.
+- Análisis de correlación entre componentes PCS (A-F) y rendimiento posterior (ret_1m) — cubierto por la iniciativa Ranking Score (ver sección "Ranking Score + PCS reframing"), no se duplica aquí.
+
+---
+
+## Validación numérica automática (implementado 2026-08-07)
+
+Roadmap "Semana 7". Detecta cuando el modelo cita en su razonamiento un
+número (PCS, rot_score, streak_weeks, ret_4w/13w_vs_spy, dist_52w_high,
+dems, streak_days, ret_5d/10d_vs_spy, outperform_d10) que no coincide con
+el valor real que tenía delante en el payload de ese run.
+
+**Implementado como `soft_warning` (`r.warn`), no como `HARD_RULE` (`r.add`)
+— desviación deliberada de lo que pedía el roadmap literal ("añádelas como
+violaciones").** Motivo: `is_valid_run = v.schema_valid and
+v.hard_rule_violations == 0`, y `is_valid_run=False` hace que
+`update_portfolio()` no se llame **para todo el run**, incluida la cartera
+ACTIVA real. Un match por regex de keyword+número es un heurístico, no una
+certeza — convertirlo en violación dura habría podido bloquear selecciones
+reales de la cartera en vivo por un falso positivo del validador. Cada
+otro check añadido incrementalmente a `validate_model_response()`
+(`extension_risk_not_acknowledged`, `KONC_3D_*_WARNING`,
+`open_picks_review_missing`, `hold_below_floor`) ya sigue este mismo patrón
+— ninguno es `r.add()`. Mismo criterio que el resto del proyecto: observar
+primero, endurecer después solo si los datos lo justifican.
+
+**Implementación** (`scripts/paper_trading.py`): `_find_numeric_claims()`
+busca pares keyword+número en el texto (ambos órdenes — "PCS=80" y "79.0
+PCS" — más un patrón específico y estricto para "N-week streak"/"N-day
+streak"), `_nearest_ticker()` decide de qué ticker habla cada número
+(el propio del item por defecto, o un ticker distinto si se nombra en la
+misma cláusula — "MARA (PCS=80)" — pero nunca cruzando a la frase anterior),
+`_is_numeric_discrepancy()` compara contra el valor real del payload
+(>10% relativo Y >0.5 absoluto; `dist_52w_high` se compara por magnitud,
+no por signo, porque el payload lo guarda con signo pero el modelo casi
+siempre lo describe como distancia sin signo — "59.14% por debajo del
+máximo de 52 semanas"). Se aplica a `selected[].{reason_short,reason_full,
+comparative_edge,key_supporting_factors,key_risks_or_contradictions}`,
+`watch[].{reason,watch_trigger}` y `rejected[].reason`.
+
+**Historia real de calibración — 3 iteraciones sobre ~150 respuestas
+históricas reales (`docs/data/model_tests/*.json` + `ai_model_payloads/`),
+no solo tests sintéticos:**
+1. Primera versión (gap de 12-20 caracteres "cualquier cosa menos dígito"
+   en ambas direcciones): **3944 warnings sobre 130 items seleccionados**
+   — a todas luces roto, no "el modelo alucina en casi cada pick". Causa:
+   el gap generoso saltaba por encima de palabras y puntuación para
+   emparejar un keyword con un número de una frase completamente distinta
+   (p. ej. "...+45.3%), high rotation score (8.0)" emparejaba el 45.3 con
+   `rot_score` en vez de con `ret_13w_vs_spy`).
+2. Segunda versión (gaps más cortos, 4/3 caracteres): bajó a 205, pero
+   persistían dos bugs de fondo: `_NUM_RE` capturaba un punto final de
+   frase como si fuera un punto decimal (`"16."` seguido de espacio se
+   comía el punto y dejaba `_GAP_BEFORE` conectar con el keyword de la
+   frase siguiente), y `\s` en las clases de gap incluía `\n` — cruzando
+   directamente el separador `\n` usado a propósito para no mezclar campos
+   distintos (`reason_full` vs `comparative_edge` vs cada item de
+   `key_supporting_factors`).
+3. Tercera versión (regex de número exige dígito tras el punto decimal,
+   gaps con `[ \t]` explícito nunca `\s`, corte de frase en `_nearest_ticker`
+   antes del `.`/`!`/`?`/`\n` más cercano): **135 warnings sobre 130 items**,
+   ratio mucho más creíble. Verificado a mano contra el payload real un caso
+   típico que sobrevivió (SASK.V, 2026-05-12, sonnet-4.6): el modelo escribió
+   literalmente `"dems=6"` en su razonamiento cuando el payload de ese día
+   traía `dems=4` — confirma que el validador ya está detectando alucinaciones
+   reales, no solo ruido de regex.
+
+**Tests de regresión:** `scripts/test_numeric_claims_validation.py` (23
+tests, sin pytest, mismo patrón que `test_cava_mapping.py`) — cada uno
+reproduce uno de los bugs reales encontrados en la calibración de arriba
+(punto decimal de fin de frase, `\n` cruzado por `\s`, atribución a un
+ticker de la frase anterior, tolerancia de signo en `dist_52w_high`, caso
+end-to-end con y sin discrepancia real).
+
+**No implementado a propósito:** promoción a `HARD_RULE`. Si en producción
+la tasa de falsos positivos resulta lo bastante baja tras varias semanas de
+observación (visible en `ai_model_test_summary.jsonl → soft_warnings`, sin
+penalizar `quality_score`), se puede reconsiderar — mismo camino que siguió
+`extension_risk`/Koncorde antes de convertirse en señales con peso real.
 
 ---
 

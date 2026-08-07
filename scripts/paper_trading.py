@@ -631,6 +631,162 @@ def parse_response(raw: str | None) -> tuple[dict | None, bool]:
     return None, False
 
 
+# ── Numeric claim validation ──────────────────────────────────────────────────
+# Semana 7 roadmap item. Implemented as a soft warning (r.warn), not a hard
+# rule (r.add) — every other check added incrementally to this validator
+# (extension_risk_not_acknowledged, KONC_3D_*_WARNING, open_picks_review_missing,
+# hold_below_floor) is a soft warning too, specifically because a hard
+# violation here sets hard_rule_violations>0, which makes is_valid_run False,
+# which skips update_portfolio() for the WHOLE run — including the live
+# ACTIVE portfolio. A regex-based keyword/number match is a heuristic, not a
+# certainty; blocking real trading decisions on it without first measuring
+# its false-positive rate against real runs would be reckless. Observe first,
+# harden later — same pattern as every other signal in this project
+# (extension_risk, Koncorde, etc.) before it became load-bearing.
+
+# field name -> keyword regex. Field names match compact_candidate() keys in
+# ai_shared.py exactly, so a match can be looked up directly in cand_by_ticker.
+NUMERIC_FIELD_KEYWORDS: list[tuple[str, str]] = [
+    ("pcs",             r"\bpcs\b"),
+    ("rot_score",       r"\brot[_\s]?score\b|\brotation\s*score\b"),
+    ("streak_weeks",    r"\bstreak[_\s]?weeks\b|\bweeks?\s*streak\b|\bconsecutive\s*weeks?\b"),
+    ("ret_4w_vs_spy",   r"\bret[_\s]?4w\b|\b4[\s-]?week\b"),
+    ("ret_13w_vs_spy",  r"\bret[_\s]?13w\b|\b13[\s-]?week\b"),
+    ("dist_52w_high",   r"\bdist[_\s]?52w[_\s]?high\b|\b52[\s-]?week\s*high\b|\b52w\s*high\b"),
+    ("dems",            r"\bdems\b|\bdaily\s*early\s*momentum\b"),
+    ("streak_days",     r"\bstreak[_\s]?days\b|\bday\s*streak\b"),
+    ("ret_5d_vs_spy",   r"\bret[_\s]?5d\b|\b5[\s-]?day\b"),
+    ("ret_10d_vs_spy",  r"\bret[_\s]?10d\b|\b10[\s-]?day\b"),
+    ("outperform_d10",  r"\boutperform[_\s]?d10\b"),
+]
+_NUM_RE = r"(-?\d+(?:\.\d+)?)"   # NOT \.?\d* — that let "16." (sentence-
+# ending period, no trailing digit) swallow the period as a bare decimal
+# point, which then let the number-then-keyword direction bridge across a
+# sentence boundary ("...CORZ dems 16. Outperform_d10 9..." misread as
+# "16.Outperform_d10", found during real-data testing below).
+
+# Both directions need to be tight (whitespace/punctuation-only gap, no
+# words), not just short — an early version allowed up to 12-20 chars of
+# "anything but a digit" between keyword and number, which happily skipped
+# over ", strong " or "%), high " and paired a keyword with a completely
+# unrelated number elsewhere in the sentence. Measured against ~150 real
+# historical model responses: that version produced >1000 warnings on 130
+# selected items (would have meant "the model hallucinates numbers on
+# basically every pick", which is not plausible and not what a spot check
+# of the flagged text showed — the regex was wrong, not the model). Tight
+# gaps eliminate that: only "=", ":", "(", "+", whitespace, and (after the
+# number) "%" are allowed to separate a keyword from its value.
+# Horizontal whitespace only ([ \t], never \n) in every gap below — \s also
+# matches \n, which would bridge straight across the "\n" field separator
+# used further down to keep matches from crossing between reason_full/
+# comparative_edge/key_supporting_factors/etc. (found during real-data
+# testing: "...rotation score 7.0\nPCS below 85.0..." matched "7.0" to a PCS
+# mention that was actually in the NEXT field entirely).
+# keyword -> number, e.g. "PCS=80", "PCS (8.0)", "rotation score of 8" — the
+# (?:of|is|at)? is a small whitelisted connector-word exception, not a
+# generic "any word" allowance (that's exactly what caused the original
+# false-positive flood: a loose gap let the match skip over unrelated words
+# to reach an unrelated number further down the sentence).
+_GAP_AFTER  = r"[ \t]*(?:of|is|at)?[ \t]*[:=(+]?[ \t]{0,3}"
+_GAP_BEFORE = r"%?[ \t]{0,3}"       # number -> keyword, e.g. "79.0 PCS", "35% 4-week"
+
+_STREAK_BEFORE = [
+    ("streak_weeks", re.compile(r"\b(-?\d+\.?\d*)[ \t-]*(?:consecutive[ \t]+)?weeks?[ \t]+streak\b", re.I)),
+    ("streak_days",  re.compile(r"\b(-?\d+\.?\d*)[ \t-]*(?:consecutive[ \t]+)?days?[ \t]+streak\b", re.I)),
+]
+
+
+def _find_numeric_claims(text: str) -> list[tuple[str, float, int]]:
+    """[(field, cited_value, char_offset), ...] for every keyword+number
+    pairing in `text`, both orders, tight gaps only. Best-effort, not a full
+    parser — false negatives (missed claims) are the intended failure mode,
+    not false positives (see rationale above)."""
+    out: list[tuple[str, float, int]] = []
+    for field, kw in NUMERIC_FIELD_KEYWORDS:
+        for pat in (
+            rf"(?:{kw}){_GAP_AFTER}{_NUM_RE}",
+            rf"{_NUM_RE}{_GAP_BEFORE}(?:{kw})",
+        ):
+            for m in re.finditer(pat, text, re.IGNORECASE):
+                try:
+                    out.append((field, float(m.group(1)), m.start()))
+                except ValueError:
+                    continue
+    for field, pat in _STREAK_BEFORE:
+        for m in re.finditer(pat, text):
+            try:
+                out.append((field, float(m.group(1)), m.start()))
+            except ValueError:
+                continue
+    return out
+
+
+_SENTENCE_BOUNDARY = re.compile(r"\n|[.!?][ \t]")  # bare \n (the field
+# separator) is always a boundary; ".!?" only count when followed by
+# whitespace, so a decimal point inside "9.0" (always followed by a digit,
+# never whitespace) is never mistaken for one.
+
+
+def _nearest_ticker(text: str, offset: int, own_ticker: str, known_tickers: set[str]) -> str:
+    """Which ticker a number near `offset` is actually about — defaults to
+    own_ticker, unless a *different* known ticker is named earlier in the
+    SAME sentence/clause (handles comparative phrasing like "MARA (PCS=80)").
+    The search window is cut at the nearest preceding sentence boundary —
+    without that, "...CORZ dems 16. Outperform_d10 9..." credited CORZ with
+    a number that was actually a fresh sentence about the item's own ticker
+    (found during real-data testing, see module docstring above)."""
+    window_start = max(0, offset - 40)
+    window = text[window_start:offset]
+    for m in re.finditer(_SENTENCE_BOUNDARY, window):
+        window_start += m.end()
+    window = text[window_start:offset]
+    best: tuple[str, int] | None = None
+    for t in known_tickers:
+        idx = window.rfind(t)
+        if idx == -1:
+            continue
+        end = idx + len(t)
+        if end < len(window) and window[end].isalnum():
+            continue
+        if idx > 0 and window[idx - 1].isalnum():
+            continue
+        if best is None or idx > best[1]:
+            best = (t, idx)
+    return best[0] if best else own_ticker
+
+
+def _is_numeric_discrepancy(cited: float, actual: float, field: str = "") -> bool:
+    """>10% relative AND >0.5 absolute — the absolute floor avoids flagging
+    trivial rounding on small-scale fields (rot_score, streak_weeks, 0-20ish)
+    where a 10%-only rule would be too strict. dist_52w_high is compared by
+    magnitude only: the payload stores it signed (close vs high, so almost
+    always negative), but models routinely phrase it as an unsigned distance
+    ("59.14% below the 52-week high") — a sign-only mismatch there is a
+    phrasing difference, not a hallucination."""
+    if field == "dist_52w_high":
+        cited, actual = abs(cited), abs(actual)
+    diff = abs(cited - actual)
+    if diff <= 0.5:
+        return False
+    return diff / max(abs(actual), 1e-6) > 0.10
+
+
+def _check_numeric_claims(
+    r: "ValidationResult", label: str, own_ticker: str, text: str,
+    cand_by_ticker: dict[str, dict], known_tickers: set[str],
+) -> None:
+    if not text.strip():
+        return
+    for field, cited, offset in _find_numeric_claims(text):
+        subj = _nearest_ticker(text, offset, own_ticker, known_tickers)
+        actual = cand_by_ticker.get(subj, {}).get(field)
+        if actual is None or not isinstance(actual, (int, float)):
+            continue
+        if _is_numeric_discrepancy(cited, float(actual), field):
+            r.warn(f"numeric_hallucination_suspected: {label} {own_ticker} cited "
+                   f"{field}={cited} for {subj} (actual={actual})")
+
+
 # ── Validator ──────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -745,6 +901,30 @@ def validate_model_response(
                 and konc_3d_state == "distribution"):
             r.warn(f"DEMS_EXTREME_KONC_DISTRIBUTION_WARNING: {t} selected with dems={dems}, "
                    f"extension_risk={ext}, konc_3d_state=distribution")
+
+        # Soft warning: numeric claims in the reasoning text vs actual payload
+        # values. Joined with "\n" (not a plain space or " | ") specifically
+        # because the number/keyword regexes above don't cross newlines —
+        # this is what stops a number in one field from pairing with a
+        # keyword in the next field (the failure mode found during testing).
+        _check_numeric_claims(r, "SELECT", t, "\n".join(filter(None, [
+            str(s.get("reason_short", "")),
+            str(s.get("reason_full", "")),
+            str(s.get("comparative_edge", "")),
+            *[str(x) for x in (s.get("key_supporting_factors") or [])],
+            *[str(x) for x in (s.get("key_risks_or_contradictions") or [])],
+        ])), cand_by_ticker, cand_tickers)
+
+    for w in data.get("watch", []):
+        t = w.get("ticker", "")
+        _check_numeric_claims(r, "WATCH", t, "\n".join(filter(None, [
+            str(w.get("reason", "")), str(w.get("watch_trigger", "")),
+        ])), cand_by_ticker, cand_tickers)
+
+    for rj in data.get("rejected", []):
+        t = rj.get("ticker", "")
+        _check_numeric_claims(r, "REJECT", t, str(rj.get("reason", "")),
+                               cand_by_ticker, cand_tickers)
 
     # Soft warnings: active positions not covered in open_picks_review (no penalty, log only)
     active_map = {p.get("ticker"): p for p in payload.get("active_picks_relevant", [])}
