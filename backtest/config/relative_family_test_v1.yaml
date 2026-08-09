@@ -1,0 +1,475 @@
+# ── Relative Flow Family Falsification Test v1 — universo congelado ──────────
+# Ver wiki/PREREGISTRO_RELATIVE_FLOW_FAMILY_TEST_V1.md para el preregistro
+# completo. CONGELADO 2026-08-10 — no añadir ni quitar activos tras ejecutar
+# el test, salvo ticker roto documentado explícitamente aquí mismo.
+#
+# ratio_denominator: todos los ratios son symbol/SPY salvo que se indique otro.
+# tradable_type: ETF | ETN | future_proxy | crypto | index_proxy
+# liquidity_bucket: high | medium | low (asignación cualitativa por AUM/volumen
+#   conocido en el momento de congelar, no recalculado dinámicamente).
+# known_duplicate_of: id de otro activo si es un proxy casi idéntico (verificado
+#   por correlación de retornos >0.995) — excluido del análisis principal.
+# seen_in_exploration: true si el activo ya apareció en la exploración ad-hoc
+#   previa (wiki/ASESOR_EXTERNO_RELATIVE_FLOW_REFUGIO_VS_INDUSTRIAL.md).
+# seen_direction_biased: true si se añadió específicamente porque el usuario
+#   predijo su resultado antes de verlo (PPLT, PALL, DBB).
+
+version: 1
+frozen_date: "2026-08-10"
+ratio_denominator_default: SPY
+
+families:
+  A:
+    name: "Monetary / Store-of-value"
+    subfamilies:
+      A1_precious_metals: "Metales preciosos refugio"
+      A2_crypto_speculative: "Cripto especulativo (reportado separado)"
+      A3_gold_equity_beta: "Beta de mineras de oro (reportado separado)"
+  B:
+    name: "Industrial / Cyclical Commodities"
+    subfamilies:
+      B1_physical_commodities: "Materias primas físicas via ETF/ETN"
+      B2_cyclical_mining_equities: "Equities cíclicas mineras"
+      B3_materials_sector: "Sector materiales amplio"
+      B4_futures_proxy: "Futuros continuos (referencia, fuera del análisis principal)"
+  C:
+    name: "Rates / FX / Duration"
+    note: "Reportada aparte — no entra en el test A vs B de H1."
+  D:
+    name: "Equity / Sector Controls"
+    subfamilies:
+      D1_broad_index: "Indice amplio — funciona en cualquier equity o solo subconjuntos"
+      D2_sector: "Sectorial — funciona indistinto por sector"
+
+assets:
+  # ── Familia A: Monetary / Store-of-value ──────────────────────────────────
+  - id: gld
+    symbol: GLD
+    family: A
+    subfamily: A1_precious_metals
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Oro físico, ETF más líquido de la subfamilia."
+
+  - id: iau
+    symbol: IAU
+    family: A
+    subfamily: A1_precious_metals
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: gld
+    include_in_primary_analysis: false
+    notes: "Correlación con GLD = 0.9998 (verificado 2026-08-10). Duplicado — solo robustez."
+
+  - id: slv
+    symbol: SLV
+    family: A
+    subfamily: A1_precious_metals
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Plata física, ETF más líquido de la subfamilia."
+
+  - id: sivr
+    symbol: SIVR
+    family: A
+    subfamily: A1_precious_metals
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: slv
+    include_in_primary_analysis: false
+    notes: "Correlación con SLV = 0.9996 (verificado 2026-08-10). Duplicado — solo robustez."
+
+  - id: btc
+    symbol: BTC-USD
+    family: A
+    subfamily: A2_crypto_speculative
+    tradable_type: crypto
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Reportar también agregado sin A2 para ver sensibilidad del resultado a incluir cripto."
+
+  - id: eth
+    symbol: ETH-USD
+    family: A
+    subfamily: A2_crypto_speculative
+    tradable_type: crypto
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "bh_ret propio negativo en la exploración (-26.4%) — caso de 'evitar pérdida', no 'capturar subida'."
+
+  - id: gdxj
+    symbol: GDXJ
+    family: A
+    subfamily: A3_gold_equity_beta
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Mineras junior de oro — beta operativa sobre el oro físico."
+
+  - id: gdx
+    symbol: GDX
+    family: A
+    subfamily: A3_gold_equity_beta
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Único activo de la familia A que salió negativo en la exploración (Δ TAE -6.3)."
+
+  # ── Familia B: Industrial / Cyclical Commodities ──────────────────────────
+  - id: cper
+    symbol: CPER
+    family: B
+    subfamily: B1_physical_commodities
+    tradable_type: ETN
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Cobre tradable via ETN. HG=F (futuro continuo) reportado aparte en B4."
+
+  - id: dbb
+    symbol: DBB
+    family: B
+    subfamily: B1_physical_commodities
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: true
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Añadido tras predicción explícita del usuario de que saldría mal — marcar con asterisco."
+
+  - id: pplt
+    symbol: PPLT
+    family: B
+    subfamily: B1_physical_commodities
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: true
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Añadido tras predicción explícita del usuario de que saldría mal — marcar con asterisco."
+
+  - id: pall
+    symbol: PALL
+    family: B
+    subfamily: B1_physical_commodities
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: true
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Añadido tras predicción explícita del usuario de que saldría mal — marcar con asterisco."
+
+  - id: xme
+    symbol: XME
+    family: B
+    subfamily: B2_cyclical_mining_equities
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Parte del universo original de 45 ratios (sector_snapshot)."
+
+  - id: copx
+    symbol: COPX
+    family: B
+    subfamily: B2_cyclical_mining_equities
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Mineras de cobre — equity cíclica, no la materia prima física."
+
+  - id: slx
+    symbol: SLX
+    family: B
+    subfamily: B2_cyclical_mining_equities
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Acero — volumen bajo, vigilar calidad de datos."
+
+  - id: pick
+    symbol: PICK
+    family: B
+    subfamily: B2_cyclical_mining_equities
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Mineras diversificadas globales."
+
+  - id: xlb
+    symbol: XLB
+    family: B
+    subfamily: B3_materials_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: true
+    notes: "Parte del universo original de 45 ratios (sector_snapshot)."
+
+  - id: hgf
+    symbol: HG=F
+    family: B
+    subfamily: B4_futures_proxy
+    tradable_type: future_proxy
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+    notes: "Futuro continuo de cobre. Reportado aparte, no en el resultado principal."
+
+  - id: plf
+    symbol: PL=F
+    family: B
+    subfamily: B4_futures_proxy
+    tradable_type: future_proxy
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+    notes: "Futuro continuo de platino — verificar calidad de datos (mercado thin)."
+
+  - id: paf
+    symbol: PA=F
+    family: B
+    subfamily: B4_futures_proxy
+    tradable_type: future_proxy
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+    notes: "Futuro continuo de paladio — verificar calidad de datos (mercado thin)."
+
+  # ── Familia C: Rates / FX / Duration (aparte, no entra en test A vs B) ────
+  - id: tlt
+    symbol: TLT
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+    notes: "Parte del universo original de 45 ratios."
+
+  - id: ief
+    symbol: IEF
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: edv
+    symbol: EDV
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: tip
+    symbol: TIP
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: uup
+    symbol: UUP
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: dxy
+    symbol: DX-Y.NYB
+    family: C
+    subfamily: null
+    tradable_type: index_proxy
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: fxy
+    symbol: FXY
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: medium
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: fxf
+    symbol: FXF
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: false
+    seen_direction_biased: false
+    liquidity_bucket: low
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: bil
+    symbol: BIL
+    family: C
+    subfamily: null
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  # ── Familia D: Equity / Sector Controls ───────────────────────────────────
+  - id: qqq
+    symbol: QQQ
+    family: D
+    subfamily: D1_broad_index
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: iwm
+    symbol: IWM
+    family: D
+    subfamily: D1_broad_index
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: xlf
+    symbol: XLF
+    family: D
+    subfamily: D2_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: xlk
+    symbol: XLK
+    family: D
+    subfamily: D2_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: xle
+    symbol: XLE
+    family: D
+    subfamily: D2_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: xlu
+    symbol: XLU
+    family: D
+    subfamily: D2_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: xly
+    symbol: XLY
+    family: D
+    subfamily: D2_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false
+
+  - id: xlp
+    symbol: XLP
+    family: D
+    subfamily: D2_sector
+    tradable_type: ETF
+    seen_in_exploration: true
+    seen_direction_biased: false
+    liquidity_bucket: high
+    known_duplicate_of: null
+    include_in_primary_analysis: false

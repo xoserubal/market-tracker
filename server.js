@@ -195,19 +195,62 @@ function calcOBV(closes, volumes) {
 }
 
 // ── Yahoo Finance proxy ──────────────────────────────────────────────────
+async function fetchYahooChartRaw(symbol, range, interval) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}&includePrePost=false`;
+  const r = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "Accept": "application/json",
+    },
+  });
+  if (!r.ok) return { ok: false, status: r.status, result: null };
+  const data = await r.json();
+  return { ok: true, status: 200, result: data?.chart?.result?.[0] ?? null };
+}
+
+// Combina el rango pedido (largo, para históricos/medias) con uno corto
+// (5d) y añade cualquier cierre del corto que sea MÁS RECIENTE que el
+// último punto del largo. Necesario porque la caché de rango largo de la
+// API de gráficos de Yahoo puede tener un hueco reciente que el rango corto
+// no tiene — visto en vivo con ^MOVE el 2026-08-09: range=3y se quedaba
+// clavado en 2026-07-17 mientras range=5d ya traía el cierre real del
+// 2026-08-07 (72.03, confirmado también en Yahoo web/Investing.com). Sin
+// esto, `/api/quote` y `/api/history` heredan ese hueco de Yahoo en
+// silencio — el símbolo simplemente parece "sin actualizar" cuando el dato
+// sí existe, solo que en otro rango de la misma API.
+async function fetchYahooChartFresh(symbol, range, interval) {
+  const long = await fetchYahooChartRaw(symbol, range, interval);
+  if (!long.ok || !long.result) return long;
+  const result = long.result;
+  const timestamps = result.timestamp ?? [];
+  const q = result.indicators?.quote?.[0] ?? {};
+  q.close ??= []; q.volume ??= []; q.high ??= []; q.low ??= [];
+  const lastLongTs = timestamps.length ? timestamps[timestamps.length - 1] : 0;
+
+  if (range !== "5d") {
+    try {
+      const short = await fetchYahooChartRaw(symbol, "5d", interval);
+      if (short.ok && short.result) {
+        const sTs = short.result.timestamp ?? [];
+        const sq = short.result.indicators?.quote?.[0] ?? {};
+        for (let i = 0; i < sTs.length; i++) {
+          if (sq.close?.[i] == null || sTs[i] <= lastLongTs) continue;
+          timestamps.push(sTs[i]);
+          q.close.push(sq.close[i]);
+          q.volume.push(sq.volume?.[i] ?? null);
+          q.high.push(sq.high?.[i] ?? null);
+          q.low.push(sq.low?.[i] ?? null);
+        }
+      }
+    } catch { /* el rango corto es un extra — si falla, seguimos con el largo tal cual */ }
+  }
+  return long;
+}
+
 app.get("/api/quote/:symbol", async (req, res) => {
-  const sym = encodeURIComponent(req.params.symbol);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=3y&includePrePost=false`;
   try {
-    const r = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-      },
-    });
-    if (!r.ok) return res.status(r.status).json({ error: `Yahoo ${r.status}` });
-    const data = await r.json();
-    const result = data?.chart?.result?.[0];
+    const { ok, status, result } = await fetchYahooChartFresh(req.params.symbol, "3y", "1d");
+    if (!ok) return res.status(status).json({ error: `Yahoo ${status}` });
     if (!result) return res.status(404).json({ error: "No data" });
 
     const closes     = result.indicators?.quote?.[0]?.close ?? [];
@@ -281,21 +324,12 @@ app.get("/api/quote/:symbol", async (req, res) => {
 // ── FRED proxy (single series) ───────────────────────────────────────────
 // Historical Yahoo closes for experimental ratio pages.
 app.get("/api/history/:symbol", async (req, res) => {
-  const sym = encodeURIComponent(req.params.symbol);
   const range = req.query.range || "3y";
   const interval = req.query.interval || "1d";
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}&includePrePost=false`;
 
   try {
-    const r = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-      },
-    });
-    if (!r.ok) return res.status(r.status).json({ error: `Yahoo ${r.status}` });
-    const data = await r.json();
-    const result = data?.chart?.result?.[0];
+    const { ok, status, result } = await fetchYahooChartFresh(req.params.symbol, range, interval);
+    if (!ok) return res.status(status).json({ error: `Yahoo ${status}` });
     if (!result) return res.status(404).json({ error: "No data" });
 
     const closes = result.indicators?.quote?.[0]?.close ?? [];
@@ -538,6 +572,17 @@ app.get("/api/fear-greed", async (_req, res) => {
 // auction_high_yield + bid_to_cover plus comparisons vs the trailing average
 // of the same tenor, and leave true_tail_bps explicit null rather than
 // mislabeling a proxy as the real tail.
+//
+// 2026-08-10: añadido indirect_pct/dealer_pct/direct_pct (% del total
+// aceptado por cada categoría de bidder) — el mismo endpoint auctions_query
+// ya trae indirect_bidder_accepted/primary_dealer_accepted/
+// direct_bidder_accepted/total_accepted, solo faltaba pedirlos. Indirect
+// bajo + dealer alto = demanda externa débil, los dealers absorbiendo lo
+// que el mercado no quiso — la señal de estrés de demanda más directa que
+// bid-to-cover. Deliberadamente NO se ha metido todavía en
+// auction_stress_proxy (fase de observación, mismo criterio que
+// extension_risk/Koncorde en su día: exponer primero, calibrar un umbral
+// real después de ver datos, no inventarlo ahora).
 let _treasuryAuctionsCache = null;
 let _treasuryAuctionsCacheTs = 0;
 const TREASURY_AUCTIONS_TTL = 6 * 60 * 60 * 1000; // 6h — auctions are weekly/monthly, not intraday
@@ -548,7 +593,8 @@ app.get("/api/treasury-auctions", async (_req, res) => {
     return res.json(_treasuryAuctionsCache);
   }
   try {
-    const fields = "cusip,security_type,security_term,auction_date,high_yield,bid_to_cover_ratio,inflation_index_security";
+    const fields = "cusip,security_type,security_term,auction_date,high_yield,bid_to_cover_ratio,inflation_index_security,"
+      + "indirect_bidder_accepted,primary_dealer_accepted,direct_bidder_accepted,total_accepted";
     const url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query"
       + `?fields=${fields}&filter=security_term:in:(2-Year,10-Year,30-Year)&sort=-auction_date&page[size]=100`;
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
@@ -561,26 +607,50 @@ app.get("/api/treasury-auctions", async (_req, res) => {
     // el mismo bucket "30-Year", corrompiendo el promedio y el stress proxy.
     const rows = (json.data || [])
       .filter(row => row.inflation_index_security !== "Yes")
-      .map(row => ({
-        cusip: row.cusip,
-        security_term: row.security_term,
-        auction_date: row.auction_date,
-        high_yield: numOrNull(row.high_yield),
-        bid_to_cover: numOrNull(row.bid_to_cover_ratio),
-      }));
+      .map(row => {
+        const total = numOrNull(row.total_accepted);
+        const pctOf = v => (v != null && total) ? (v / total) * 100 : null;
+        return {
+          cusip: row.cusip,
+          security_term: row.security_term,
+          auction_date: row.auction_date,
+          high_yield: numOrNull(row.high_yield),
+          bid_to_cover: numOrNull(row.bid_to_cover_ratio),
+          indirect_pct: pctOf(numOrNull(row.indirect_bidder_accepted)),
+          dealer_pct: pctOf(numOrNull(row.primary_dealer_accepted)),
+          direct_pct: pctOf(numOrNull(row.direct_bidder_accepted)),
+        };
+      });
 
+    // sort=-auction_date trae también subastas anunciadas pero aún no
+    // ejecutadas (auction_date en el futuro) — sus campos numéricos vienen
+    // null porque el resultado todavía no existe. Sin filtrar esto, "la más
+    // reciente" para 10Y/30Y podía ser una subasta que ni siquiera ha
+    // pasado, produciendo "insufficient_data" varios días antes de cada
+    // subasta real (encontrado en vivo 2026-08-10: 10Y/30Y anunciadas para
+    // 12-13/8 salían como "última" con todo null, mientras la última
+    // EJECUTADA con datos reales quedaba más atrás en la lista).
+    const todayStr = new Date().toISOString().slice(0, 10);
     const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
     const tenors = {};
     for (const tenor of AUCTION_TENORS) {
-      const tenorRows = rows.filter(row => row.security_term === tenor).slice(0, 8); // latest + trailing window
+      const tenorRows = rows
+        .filter(row => row.security_term === tenor && row.auction_date <= todayStr)
+        .slice(0, 8); // latest + trailing window
       if (!tenorRows.length) { tenors[tenor] = null; continue; }
       const [latest, ...recent] = tenorRows;
-      const avgYield = avg(recent.map(row => row.high_yield).filter(v => v != null));
-      const avgBtc   = avg(recent.map(row => row.bid_to_cover).filter(v => v != null));
+      const avgYield   = avg(recent.map(row => row.high_yield).filter(v => v != null));
+      const avgBtc     = avg(recent.map(row => row.bid_to_cover).filter(v => v != null));
+      const avgIndirect = avg(recent.map(row => row.indirect_pct).filter(v => v != null));
+      const avgDealer   = avg(recent.map(row => row.dealer_pct).filter(v => v != null));
       const high_yield_vs_recent_avg = (latest.high_yield != null && avgYield != null)
         ? +((latest.high_yield - avgYield) * 100).toFixed(1) : null; // bps
       const bid_to_cover_vs_recent_avg = (latest.bid_to_cover != null && avgBtc != null)
         ? +(latest.bid_to_cover - avgBtc).toFixed(2) : null;
+      const indirect_pct_vs_recent_avg = (latest.indirect_pct != null && avgIndirect != null)
+        ? +(latest.indirect_pct - avgIndirect).toFixed(1) : null; // puntos porcentuales
+      const dealer_pct_vs_recent_avg = (latest.dealer_pct != null && avgDealer != null)
+        ? +(latest.dealer_pct - avgDealer).toFixed(1) : null;
 
       let auction_stress_proxy = "insufficient_data";
       if (high_yield_vs_recent_avg != null && bid_to_cover_vs_recent_avg != null) {
@@ -596,6 +666,11 @@ app.get("/api/treasury-auctions", async (_req, res) => {
         bid_to_cover: latest.bid_to_cover,
         high_yield_vs_recent_avg,
         bid_to_cover_vs_recent_avg,
+        indirect_pct: latest.indirect_pct,
+        indirect_pct_vs_recent_avg,
+        dealer_pct: latest.dealer_pct,
+        dealer_pct_vs_recent_avg,
+        direct_pct: latest.direct_pct,
         auction_stress_proxy,
         true_tail_bps: null, // no when-issued yield published by this API
       };
@@ -608,6 +683,99 @@ app.get("/api/treasury-auctions", async (_req, res) => {
   } catch (err) {
     if (_treasuryAuctionsCache) return res.json(_treasuryAuctionsCache); // stale-but-served
     res.status(502).json({ error: err.message });
+  }
+});
+
+// ── CFTC Commitments of Traders — posicionamiento Managed Money ──────────
+// Dataset "Disaggregated Futures Only" (Socrata, publicreporting.cftc.gov,
+// id 72hh-3qpy), semanal (viernes, datos del martes anterior). Managed
+// Money = la categoría que el mercado llama "specs" en comentarios de
+// posicionamiento. Verificado en vivo 2026-08-10 contra la API real:
+// GOLD/SILVER/COPPER- #1 tenían datos frescos (2026-08-04) con el nombre
+// obvio, pero "CRUDE OIL, LIGHT SWEET - NEW YORK MERCANTILE EXCHANGE" (el
+// nombre clásico de WTI) llevaba congelado en 2022-02-01 — CFTC renombró
+// el contrato principal de WTI a "WTI-PHYSICAL - NEW YORK MERCANTILE
+// EXCHANGE" en algún punto intermedio. Usar el nombre viejo habría servido
+// un dato de 4+ años de antigüedad en silencio, mismo patrón que el
+// mislabeling TIPS-vs-nominal ya documentado para /api/treasury-auctions.
+const COT_CONTRACTS = {
+  gold:   "GOLD - COMMODITY EXCHANGE INC.",
+  silver: "SILVER - COMMODITY EXCHANGE INC.",
+  copper: "COPPER- #1 - COMMODITY EXCHANGE INC.",
+  wti:    "WTI-PHYSICAL - NEW YORK MERCANTILE EXCHANGE",
+};
+const _cotCache = {};
+const COT_TTL = 12 * 60 * 60 * 1000; // 12h — el dato es semanal (viernes), no hace falta refrescar más a menudo
+const COT_HISTORY_WEEKS = 170; // ~3.3 años — ventana para el percentil (170 obs, algo de margen sobre 156=3y)
+
+app.get("/api/cot/:contract", async (req, res) => {
+  const key = req.params.contract.toLowerCase();
+  const marketName = COT_CONTRACTS[key];
+  if (!marketName) {
+    return res.status(404).json({ error: `Contrato desconocido: ${key}. Válidos: ${Object.keys(COT_CONTRACTS).join(", ")}` });
+  }
+
+  const cached = _cotCache[key];
+  if (cached && Date.now() - cached.ts < COT_TTL) return res.json(cached.data);
+
+  try {
+    const url = "https://publicreporting.cftc.gov/resource/72hh-3qpy.json"
+      + `?$limit=${COT_HISTORY_WEEKS}&$order=report_date_as_yyyy_mm_dd DESC`
+      + `&market_and_exchange_names=${encodeURIComponent(marketName)}`;
+    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!r.ok) throw new Error(`CFTC respondió ${r.status}`);
+    const rows = await r.json();
+    if (!rows.length) return res.status(404).json({ error: "Sin datos" });
+
+    const num = v => (v == null || v === "") ? null : parseFloat(v);
+    const series = rows.map(row => {
+      const long = num(row.m_money_positions_long_all);
+      const short = num(row.m_money_positions_short_all);
+      return {
+        date: row.report_date_as_yyyy_mm_dd.slice(0, 10),
+        open_interest: num(row.open_interest_all),
+        mm_long: long, mm_short: short,
+        mm_net: (long != null && short != null) ? long - short : null,
+        mm_pct_oi_long: num(row.pct_of_oi_m_money_long_all),
+        mm_pct_oi_short: num(row.pct_of_oi_m_money_short_all),
+      };
+    }).reverse(); // ascendente por fecha, para el sparkline y el cálculo de cambio 1w
+
+    const netSeries = series.map(p => p.mm_net).filter(v => v != null);
+    const latest = series[series.length - 1];
+    const prev = series[series.length - 2];
+    const net_change_1w = (latest?.mm_net != null && prev?.mm_net != null) ? latest.mm_net - prev.mm_net : null;
+
+    // Percentil del neto actual dentro de la ventana disponible (no siempre
+    // llegan los 170 — algunos contratos tienen menos historial en este
+    // dataset; se reporta n_weeks para que quede claro sobre qué ventana
+    // se calculó).
+    let percentile = null;
+    if (latest?.mm_net != null && netSeries.length >= 20) {
+      const belowOrEqual = netSeries.filter(v => v <= latest.mm_net).length;
+      percentile = Math.round((belowOrEqual / netSeries.length) * 100);
+    }
+
+    const result = {
+      contract: key, market_name: marketName,
+      as_of: latest?.date ?? null,
+      mm_net: latest?.mm_net ?? null,
+      mm_long: latest?.mm_long ?? null,
+      mm_short: latest?.mm_short ?? null,
+      open_interest: latest?.open_interest ?? null,
+      mm_pct_oi_long: latest?.mm_pct_oi_long ?? null,
+      mm_pct_oi_short: latest?.mm_pct_oi_short ?? null,
+      net_change_1w,
+      percentile: percentile,
+      n_weeks: netSeries.length,
+      history: series.map(p => ({ date: p.date, mm_net: p.mm_net })),
+    };
+    _cotCache[key] = { ts: Date.now(), data: result };
+    res.json(result);
+  } catch (err) {
+    if (_cotCache[key]) return res.json(_cotCache[key].data); // stale-but-served
+    console.error("cot", key, err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

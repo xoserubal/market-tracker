@@ -48,3 +48,13 @@ signals_history.json
 .claude/
 docs/data/_cava_price_cache.parquet
 docs/data/_baseline_price_cache.json
+docs/data/_relative_flow_price_cache.parquet
+# 45 pares x ~10-27 anios de historia diaria = ~229k filas, ~160MB — muy por
+# encima del limite duro de GitHub (100MB/archivo). Regenerable localmente en
+# ~2-3 min via reconstruct_relative_flow_historical.py (--save-cache la
+# primera vez, --no-fetch despues). Ver wiki/PLAN_RELATIVE_FLOW_LAB_BACKTEST.md.
+docs/data/relative_flow_history_reconstructed.jsonl
+
+# Cache de precios del Relative Flow Family Test — regenerable, ver
+# research/relative_flow_family_test_v1/relative_family_falsification_test.py
+research/relative_flow_family_test_v1/_price_cache.parquet

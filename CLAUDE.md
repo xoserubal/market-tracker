@@ -1469,6 +1469,285 @@ original: Fase 1 espera a 2026-09-03.
 
 ---
 
+## Backtest histórico de Relative Flow Lab — descartado como señal (implementado 2026-08-08)
+
+Plan aprobado el 2026-08-07 (`wiki/PLAN_RELATIVE_FLOW_LAB_BACKTEST.md`) y
+ejecutado completo al día siguiente: reconstruir históricamente el scoring
+de `relative.html` (45 ratios, Score/Leader-Improving-Weakening-Laggard/
+Trend) desde precios reales de yfinance y comprobar si predice alfa vs SPY,
+con la misma disciplina dev/test + preregistro ya usada en Ranking Score
+(`wiki/PREREGISTRO_RANKING_SCORE_V0.md`) para no "jugar con combinaciones"
+sin red de seguridad.
+
+**Ficheros nuevos:**
+- `scripts/relative_flow_lib.py` — puerto vectorizado literal de
+  `alignRatio`/`ret`/`retWindow`/`sma`/`calcRSI`/`buildRow`/`classify`
+  (`relative.html` líneas ~143-219). RSI de Wilder como pase único
+  expandible desde el origen de cada serie — converge al mismo valor que
+  la ventana de 3 años re-sembrada de la página en vivo pasadas ~300
+  barras (memoria exponencial de Wilder).
+- `scripts/test_relative_flow_lib.py` — 47 tests sin pytest, incluido un
+  **chequeo dorado**: las funciones JS reales de `relative.html` ejecutadas
+  en Node contra `/api/history/:symbol` en `server.js` real, comparadas
+  contra la reconstrucción Python. Coincidencia casi exacta en pares sin
+  dividendo relevante en la ventana (`ura_urnm`, `gdxj_gdx`); en `xlk_spy`
+  (yield no trivial) diverge ~0.1-0.35pp en r3m/r6m/score por el ajuste de
+  dividendo (`auto_adjust=True` en la reconstrucción vs sin ajustar en
+  `server.js`) — desviación declarada de antemano en el plan, magnitud
+  confirmada pequeña.
+- `scripts/reconstruct_relative_flow_historical.py` — descarga
+  `period="max"` para los ~47 tickers únicos del registry, reconstruye
+  228.893 filas diarias (45 pares × histórico completo, 1998-2026 según el
+  ETF) con retorno futuro a 5/21/63 sesiones sobre el calendario propio de
+  cada activo (nunca el del ratio alineado). Reconstrucción completa en
+  cada ejecución, no append-only. Salida
+  (`docs/data/relative_flow_history_reconstructed.jsonl`, **163MB — NO
+  commiteada**, por encima del límite duro de 100MB/archivo de GitHub;
+  añadida a `.gitignore` junto con la cache de precios
+  `_relative_flow_price_cache.parquet`; regenerable en ~2-3 min con
+  `--save-cache` la primera vez y `--no-fetch` después).
+- `scripts/analyze_relative_flow_signal.py` — baseline incondicional,
+  correlación (Pearson+Spearman, IC95% vía Fisher z), stats por grupo
+  (label×trend, t-test vs. baseline) y grid search (~200 combinaciones,
+  `label×trend` + `score_min×trend` × 3 horizontes), todo sobre el jsonl ya
+  reconstruido — sin red, barato de re-ejecutar. `--confirm-test` solo
+  evalúa las combinaciones ya congeladas en el preregistro, con aviso
+  explícito en consola — mismo patrón de "barrera de código" que
+  `ranking_score`/`cava_mapping`.
+- `wiki/PREREGISTRO_RELATIVE_FLOW_LAB_V0.md` — GRID congelado, corte
+  dev/test (fecha única, hoy−365 días naturales, no % por par), regla de
+  selección (top-3 por horizonte desde dev, congeladas antes de tocar
+  test) y criterio modesto de "plausible" (mismo signo dev/test, win
+  rate≥55%, n≥20) fijados **antes** de correr el grid search real.
+- `wiki/RELATIVE_FLOW_LAB_HALLAZGOS.md` — informe completo.
+
+**Resultado: el score no predice alfa futuro de forma útil.** Correlación
+pooled score↔alfa indistinguible de cero en 1w/1m/3m (r=-0.009/+0.003/
++0.012, mismo orden de magnitud que el hallazgo PCS↔ret_1m=-0.007 de
+`wiki/ASESOR_EXTERNO_CFL_DIAGNOSTICO.md`). Del grid search en dev, las
+top-3-por-horizonte congeladas (7 combinaciones distintas tras dedup) se
+evaluaron una sola vez en test: **6 de 7 no soportadas** (la mayoría
+invierte el signo entre dev y test), **1 de 7 "plausible"**
+(`label=Leader, trend=Mixed, horizonte 3 meses`: dev mean α=+1.02, test
+mean α=+1.28, win rate=57.1%, n=63) — con ~200 combinaciones probadas sin
+corrección por comparaciones múltiples, 1 superviviente de 7 es
+aproximadamente lo esperable por azar, no una confirmación fuerte. El
+único matiz por `type`: `anticipation` es el único bucket con correlación
+positiva y creciente con el horizonte (r=0.068 a 3m), pero demasiado
+pequeña (r²<0.5%) para ser accionable.
+
+**No se integra nada en `paper_trading.py`, `pcs_calculator.py` ni ninguna
+cartera viva** — alcance de investigación desde el inicio, confirmado por
+los propios resultados. Mismo patrón que el hallazgo de PCS: el score
+funciona como filtro narrativo/interpretativo para lectura humana, no como
+ranking predictivo.
+
+**Continuación 2026-08-10:** una exploración interactiva posterior sobre
+esta misma herramienta (fuera del repo) sugirió una posible señal dentro
+del ruido — ver la sección "Relative Flow Family Falsification Test v1"
+más abajo para el resultado final (hipótesis refutada).
+
+---
+
+## Relative Flow Family Falsification Test v1 — hipótesis refugio/industrial refutada (2026-08-10)
+
+Tras el backtest formal (sección anterior) hubo una exploración interactiva
+adicional, no preregistrada, inspeccionando manualmente la herramienta de
+revisión construida sobre ese backtest (tabla + gráfico + calculadora de
+rentabilidad, mantenida fuera del repo por decisión explícita — ver
+`wiki/ASESOR_EXTERNO_RELATIVE_FLOW_REFUGIO_VS_INDUSTRIAL.md`). Esa
+exploración sugería que la regla "entrada paso-a-Improving / salida
+cualquiera-de-las-dos" batía a comprar-y-mantener en activos refugio/
+monetarios/especulativos (GLD, SLV, GDXJ, BTC, ETH) y perdía sistemáticamente
+en materias primas industriales (cobre, platino, paladio, DBB, XME/GDX),
+medido con Δ TAE (rentabilidad anualizada sobre días con posición abierta).
+
+Se diseñó y ejecutó una prueba preregistrada para intentar refutarlo —
+`wiki/PREREGISTRO_RELATIVE_FLOW_FAMILY_TEST_V1.md`, versión acotada (Capa
+1+2: universo congelado, métrica primaria, placebos básicos, leave-one-out,
+correlación intra-familia, Bonferroni ×4 — sin escalar a costes/1.000
+simulaciones/sub-muestras temporales/forward OOS). Universo de 37 activos
+en 4 familias (`backtest/config/relative_family_test_v1.yaml`), script y
+salidas en `research/relative_flow_family_test_v1/` (fuera de las rutas
+productivas, mismo criterio que el resto de esta exploración).
+
+**Resultado: hipótesis refutada — NOT SUPPORTED.** La corrección
+metodológica central del test (usar `excess_CAGR_calendar` — CAGR de la
+estrategia con cash cuando está fuera, sobre el calendario completo — en
+vez de Δ TAE, que solo anualiza sobre días expuestos) revierte casi por
+completo el hallazgo original: mediana de familia refugio = -25.73,
+mediana de familia industrial = -25.93 — prácticamente empatadas, en la
+dirección contraria a la hipótesis. Mann-Whitney y test de permutación dan
+p≈0.52-0.58 en crudo, p=1.000 tras Bonferroni ×4 (por las 4 hipótesis ya
+probadas informalmente en la exploración previa: retorno propio, sin
+rendimiento intrínseco, tipos/divisa, refugio/industrial). Ninguno de los
+criterios preregistrados de "suggestive" se cumple de forma conjunta.
+
+**Causa mecánica del espejismo original, no un error de cálculo:** oro y
+plata subieron mucho en términos absolutos en el periodo (+77%/+130% de
+buy&hold); la estrategia solo estuvo invertida ~20-25% del tiempo. Δ TAE
+premia comprimir una ganancia en pocos días de exposición sin penalizar el
+coste de oportunidad de estar fuera el resto del tiempo — en un mercado
+alcista amplio y sostenido (casi todos los activos de las 4 familias
+tuvieron `excess_CAGR_calendar` negativo, no solo los industriales), eso
+basta para producir una separación aparente que no sobrevive a una métrica
+que sí cuenta el tiempo fuera del mercado.
+
+**Lo que sí sobrevive, sin ser el hallazgo principal:** el placebo de
+bootstrap por bloques (100 sims, bloques de 20 sesiones) sugiere que el
+timing de la señal no es puro ruido en varios activos concretos
+(percentiles 70-91 en GLD, COPX, PICK, BTC, GDXJ frente a la distribución
+aleatoria) — pero esa estructura no sigue la frontera refugio/industrial
+(aparece y desaparece en ambos lados). La señal invertida funciona
+sustancialmente mejor que la primaria en cobre/platino/paladio/XLE,
+sugiriendo posible dirección invertida en ese subconjunto. Ninguno de los
+dos matices se opera ni se investiga más — cada uno necesitaría su propio
+preregistro, no una reinterpretación de estos datos.
+
+**Sin impacto en el sistema en vivo** — no se toca `paper_trading.py`,
+`pcs_calculator.py`, ninguna cartera ni el motor IA, tal como estaba
+acordado desde el inicio de la exploración. Puerta dura del preregistro
+resuelta como "descartar" — no se escala a la versión completa del test
+(costes × 3, 1.000 simulaciones, sub-muestras temporales, forward OOS): el
+resultado ya es inequívoco con la versión acotada, más rigor no cambiaría
+la conclusión.
+
+---
+
+## Principio: métrica primaria para estrategias con exposición intermitente (2026-08-10)
+
+Derivado directamente del hallazgo anterior. **Ninguna estrategia con
+exposición <50% del calendario debe evaluarse con una métrica anualizada
+solo sobre días expuestos** (Δ TAE, retorno medio por trade × frecuencia,
+o cualquier variante que mida "cuánto se gana estando dentro" sin penalizar
+"cuánto se pierde por no estar dentro"). La métrica primaria debe ser
+`excess_CAGR_calendar`: CAGR de la estrategia (con retorno 0% o proxy de
+cash los días fuera de mercado) menos CAGR de comprar-y-mantener el propio
+activo/benchmark, ambos anualizados sobre el mismo calendario completo de
+la ventana. Métricas exposure-based pueden reportarse como secundarias,
+nunca como base de decisión.
+
+**Por qué:** en un mercado alcista sostenido, cualquier estrategia con baja
+exposición pierde frente a buy&hold por el coste de oportunidad de estar en
+cash, aunque cada operación individual sea rentable — Δ TAE puede mostrar
++50 puntos de "alfa" en una estrategia que en realidad perdió -25 puntos
+frente a simplemente aguantar la posición todo el periodo (caso real, ver
+sección anterior). En un mercado bajista el efecto se invierte y Δ TAE
+tampoco lo captura bien.
+
+**Aplicar retroactivamente** a cualquier análisis futuro de reglas de
+entrada/salida en Relative Flow Lab, a Ranking Score si se plantea con
+exposición intermitente, y a cualquier baseline mecánica shadow calculada
+sobre subconjuntos del universo. Mismo espíritu que el resto de disciplina
+de este proyecto (preregistro antes de mirar datos, placebos con misma
+exposición, baseline mecánica siempre al lado — ver
+`wiki/PREREGISTRO_RANKING_SCORE_V0.md`).
+
+---
+
+## Detalle de subastas (indirect/dealer) + módulo nuevo CoT Positioning (implementado 2026-08-10)
+
+Un asesor externo propuso 4 mejoras sobre el sistema (detalle de subastas,
+posicionamiento CFTC, breadth de mercado propio, componentes diarios de Net
+Liquidity). Antes de implementar nada se verificó cada afirmación contra
+datos reales — dos de las cuatro no eran del todo exactas:
+
+- **Auction Stress (punto 1, correcto):** `indirect_bidder_accepted`,
+  `primary_dealer_accepted` y `direct_bidder_accepted` sí están en el mismo
+  endpoint `auctions_query` de Treasury Fiscal Data que ya usa
+  `/api/treasury-auctions` — solo faltaba pedirlos.
+- **Net Liquidity diario (punto 4, parcialmente incorrecto — no implementado):**
+  RRPONTSYD es diario en FRED (ya se fetchea a diario), pero **WTREGEN
+  (TGA) es semanal**, no diario — verificado contra observaciones reales de
+  FRED (cada 7 días exactos). TGA diario de verdad exigiría cambiar de
+  fuente al Daily Treasury Statement de Treasury FiscalData, no "pedirle
+  más a FRED". Diferido — no se ha tocado nada de Net Liquidity en esta
+  ronda.
+- **Breadth de mercado propio (punto 3): diferido** — requeriría un
+  universo de cientos de acciones (vs. los ~45-90 tickers de cualquier otro
+  módulo del proyecto) y la información ya entra al sistema hoy vía los
+  subcomponentes del Fear & Greed en `sentiment.html`.
+
+### 1. Auction Stress — indirect bidders y dealer takedown (`server.js`)
+
+`/api/treasury-auctions` amplía el `fields` pedido con
+`indirect_bidder_accepted,primary_dealer_accepted,direct_bidder_accepted,total_accepted`
+y calcula `indirect_pct`/`dealer_pct`/`direct_pct` (% del total aceptado) +
+comparación vs. la media de las 8 subastas recientes del mismo tenor —
+mismo patrón que ya existía para `high_yield`/`bid_to_cover`. **No** se ha
+metido todavía en `auction_stress_proxy` (fase de observación, mismo
+criterio que `extension_risk`/Koncorde: exponer primero, calibrar un umbral
+real después de ver datos).
+
+**Bug real encontrado y corregido durante la implementación:** `sort=-auction_date`
+también trae subastas **anunciadas pero no ejecutadas todavía** (fecha en
+el futuro), con todos los campos numéricos en `null` porque el resultado
+aún no existe. Sin filtrar esto, "la más reciente" para 10Y/30Y podía ser
+una subasta que ni siquiera había pasado — produciendo el propio
+"insufficient_data" que motivó la mejora. Arreglado filtrando
+`auction_date <= hoy` antes de elegir la última subasta de cada tenor.
+
+**Verificado contra datos reales (2026-08-10):** 2-Year (29/7): indirect
+56,9% / dealer 33,1% / direct ~0% — típico de una nota corta. 10Y (12/5) y
+30Y (13/5, antes del fix quedaban ocultas tras la subasta anunciada del
+12-13/8): indirect ~52-54% / dealer ~9-10% / direct ~18-19% — reparto
+plausible para deuda larga. 30Y salió `weak_demand` por yield/bid-to-cover
+mientras indirect/dealer apuntaban en sentido contrario (indirect +2,3pp,
+dealer -1,7pp) — confirma en vivo por qué no se ha fusionado todavía con el
+proxy de estrés: las dos lecturas no siempre coinciden.
+
+### 2. CoT Positioning — módulo nuevo (`positioning.html`, `/api/cot/:contract`)
+
+Página nueva, mismo patrón que `sentiment.html`/`duration.html` (React +
+Babel standalone, fetch client-side, export a LLM). Cubre posicionamiento
+semanal de Managed Money ("specs") en Oro, Plata, Cobre y WTI Crude —
+elegidos por ser justo los activos trabajados en la exploración de
+Relative Flow Lab de estos días (ver sección "Relative Flow Family
+Falsification Test v1" más arriba).
+
+**Fuente:** CFTC Commitments of Traders, informe "Disaggregated Futures
+Only" (API pública Socrata, `publicreporting.cftc.gov/resource/72hh-3qpy.json`).
+Semanal (viernes, posiciones del martes anterior) — cache de 12h en
+`/api/cot/:contract`.
+
+**Bug real encontrado antes de integrar (mismo patrón que el mislabeling
+TIPS-vs-nominal de `/api/treasury-auctions`):** el nombre de contrato
+"obvio" para WTI Crude Oil en este dataset — `CRUDE OIL, LIGHT SWEET - NEW
+YORK MERCANTILE EXCHANGE` — lleva **congelado desde 2022-02-01**,
+confirmado contra la API real. CFTC renombró el contrato principal a
+`WTI-PHYSICAL - NEW YORK MERCANTILE EXCHANGE` en algún punto intermedio.
+Usar el nombre viejo habría servido un dato de más de 4 años de antigüedad
+en silencio. Los otros tres (`GOLD - COMMODITY EXCHANGE INC.`,
+`SILVER - COMMODITY EXCHANGE INC.`, `COPPER- #1 - COMMODITY EXCHANGE INC.`)
+sí tenían el nombre esperado, verificado con datos frescos (2026-08-04)
+antes de fijarlos en `COT_CONTRACTS`.
+
+**Cálculo:** `mm_net` = largos − cortos de Managed Money. Percentil sobre
+la ventana de historial disponible en el dataset (~170 semanas, ~3,3 años)
+— umbrales de interpretación (≥90 extremo largo, ≤10 extremo corto)
+fijados a ojo, sin calibrar contra rendimiento futuro (misma fase de
+observación que el resto de features nuevas del proyecto).
+
+**Verificado con datos reales (2026-08-04):** Oro percentil 58 (neutral),
+Plata percentil 32 pese al rally reciente (no está sobre-posicionada,
+contra la intuición inicial), **Cobre percentil 100** (extremo largo real
+— exactamente el tipo de lectura que motivó pedir este módulo), WTI
+percentil 34.
+
+**Nav pill "Positioning" (`#5d4037`)** añadida a las 7 páginas raíz
+existentes (`index.html`, `portfolio.html`, `relative.html`, `cycle.html`,
+`rotacion.html`, `duration.html`, `sentiment.html`), y entrada
+`llm_export_positioning` sumada al array `parts` compartido de exportación
+a LLM en las 8 páginas (ahora 8 entradas).
+
+**Fuera de alcance (explícito):** no se ha fusionado el percentil de
+positioning con ninguna señal existente (extension_risk, auction_stress_proxy,
+Koncorde) — cada una vive observacionalmente hasta que haya evidencia que
+justifique combinarlas. No se toca PCS, rot_score, HARD_RULES ni ninguna
+cartera.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

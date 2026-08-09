@@ -1,9 +1,11 @@
 # Plan — Backtest histórico de Relative Flow Lab como señal
 
-**Estado: plan aprobado por el usuario 2026-08-07, implementación sin empezar.**
+**Estado: implementado completo 2026-08-08 — ver `wiki/RELATIVE_FLOW_LAB_HALLAZGOS.md`
+para el resultado y `CLAUDE.md` (sección "Backtest histórico de Relative
+Flow Lab") para el resumen. Veredicto: el score no predice alfa futuro de
+forma útil — no se integra nada en el sistema en vivo.**
 Copiado aquí desde `~/.claude/plans/humble-jumping-moth.md` (fuera del repo,
-no viaja entre máquinas) para poder retomarlo desde cualquier PC. Al empezar
-a implementar, seguir el "Orden de trabajo" tal cual, paso 1 primero.
+no viaja entre máquinas) para poder retomarlo desde cualquier PC.
 
 ## Contexto
 

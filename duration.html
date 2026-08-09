@@ -418,13 +418,13 @@ function DurationPage() {
     lines.push('- JGB 10Y/30Y y Japan CDS: no disponibles (sin fuente diaria gratuita fiable).');
     lines.push('');
     lines.push('## Auction Stress (Treasury Fiscal Data API, sin yield when-issued → sin tail real)');
-    lines.push('| Tenor | Fecha | High Yield | vs media | Bid-to-Cover | vs media | Proxy estrés | Tail real |');
-    lines.push('|---|---|---:|---:|---:|---:|---|---|');
+    lines.push('| Tenor | Fecha | High Yield | vs media | Bid-to-Cover | vs media | Indirect % | vs media | Dealer % | vs media | Proxy estrés | Tail real |');
+    lines.push('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|');
     AUCTION_TENOR_ORDER.forEach(tenor => {
       const t = auctions?.tenors?.[tenor];
-      if (!t) { lines.push(`| ${tenor} | sin datos | | | | | | |`); return; }
+      if (!t) { lines.push(`| ${tenor} | sin datos | | | | | | | | | | |`); return; }
       const badge = AUCTION_BADGE[t.auction_stress_proxy] || AUCTION_BADGE.insufficient_data;
-      lines.push(`| ${tenor} | ${t.auction_date} | ${fmt(t.auction_high_yield)}% | ${fmtBps(t.high_yield_vs_recent_avg)} | ${fmt(t.bid_to_cover)} | ${t.bid_to_cover_vs_recent_avg ?? '-'} | ${badge.label} | n/d |`);
+      lines.push(`| ${tenor} | ${t.auction_date} | ${fmt(t.auction_high_yield)}% | ${fmtBps(t.high_yield_vs_recent_avg)} | ${fmt(t.bid_to_cover)} | ${t.bid_to_cover_vs_recent_avg ?? '-'} | ${fmt(t.indirect_pct)}% | ${t.indirect_pct_vs_recent_avg != null ? (t.indirect_pct_vs_recent_avg > 0 ? '+' : '') + t.indirect_pct_vs_recent_avg + 'pp' : '-'} | ${fmt(t.dealer_pct)}% | ${t.dealer_pct_vs_recent_avg != null ? (t.dealer_pct_vs_recent_avg > 0 ? '+' : '') + t.dealer_pct_vs_recent_avg + 'pp' : '-'} | ${badge.label} | n/d |`);
     });
     return lines.join('\n');
   };
@@ -452,6 +452,7 @@ function DurationPage() {
       { key: 'llm_export_rotacion',  label: 'Flujos & Rotación' },
       { key: 'llm_export_duration',  label: 'Duration' },
       { key: 'llm_export_sentiment', label: 'Sentiment' },
+      { key: 'llm_export_positioning', label: 'Positioning' },
     ];
     const now = Date.now();
     const found = [], missing = [], stale = [];
@@ -493,6 +494,7 @@ function DurationPage() {
             <a href="/cycle.html" className="nav-link" style={{ color: '#7f0000', borderColor: '#7f0000' }}>Cycle</a>
             <a href="/rotacion.html" className="nav-link" style={{ color: '#e65100', borderColor: '#e65100' }}>Flujos & Rotación</a>
             <a href="/sentiment.html" className="nav-link" style={{ color: '#00695c', borderColor: '#00695c' }}>Sentiment</a>
+            <a href="/positioning.html" className="nav-link" style={{ color: '#5d4037', borderColor: '#5d4037' }}>Positioning</a>
           </div>
           <div className="meta">BOJ/Treasury Supply Thesis — panel observacional, no ejecuta ni recomienda trades automáticamente</div>
         </div>
@@ -628,15 +630,16 @@ function DurationPage() {
       <div className="section-title">3. Auction Stress</div>
       <div className="section-sub">
         Treasury Fiscal Data API no publica yield when-issued → no se puede calcular el tail real (high yield − WI yield). Se muestra un proxy de estrés en su lugar.
+        Indirect % (demanda extranjera/fondos vía dealer intermediario) y Dealer % (cuánto absorben los primary dealers) son observacionales — todavía no alimentan el Proxy estrés, solo se muestran para seguimiento.
       </div>
       <table>
         <thead>
-          <tr><th>Tenor</th><th>Fecha subasta</th><th>High Yield</th><th>vs media reciente</th><th>Bid-to-Cover</th><th>vs media reciente</th><th>Proxy estrés</th><th>Tail real</th></tr>
+          <tr><th>Tenor</th><th>Fecha subasta</th><th>High Yield</th><th>vs media reciente</th><th>Bid-to-Cover</th><th>vs media reciente</th><th>Indirect %</th><th>vs media</th><th>Dealer %</th><th>vs media</th><th>Proxy estrés</th><th>Tail real</th></tr>
         </thead>
         <tbody>
           {AUCTION_TENOR_ORDER.map(tenor => {
             const t = auctions?.tenors?.[tenor];
-            if (!t) return <tr key={tenor}><td>{tenor}</td><td colSpan="7">sin datos</td></tr>;
+            if (!t) return <tr key={tenor}><td>{tenor}</td><td colSpan="11">sin datos</td></tr>;
             const badge = AUCTION_BADGE[t.auction_stress_proxy] || AUCTION_BADGE.insufficient_data;
             return (
               <tr key={tenor}>
@@ -646,6 +649,10 @@ function DurationPage() {
                 <td>{fmtBps(t.high_yield_vs_recent_avg)}</td>
                 <td>{fmt(t.bid_to_cover)}</td>
                 <td>{t.bid_to_cover_vs_recent_avg != null ? (t.bid_to_cover_vs_recent_avg > 0 ? '+' : '') + t.bid_to_cover_vs_recent_avg.toFixed(2) : '—'}</td>
+                <td>{fmt(t.indirect_pct)}%</td>
+                <td>{t.indirect_pct_vs_recent_avg != null ? (t.indirect_pct_vs_recent_avg > 0 ? '+' : '') + t.indirect_pct_vs_recent_avg.toFixed(1) + 'pp' : '—'}</td>
+                <td>{fmt(t.dealer_pct)}%</td>
+                <td>{t.dealer_pct_vs_recent_avg != null ? (t.dealer_pct_vs_recent_avg > 0 ? '+' : '') + t.dealer_pct_vs_recent_avg.toFixed(1) + 'pp' : '—'}</td>
                 <td><span className="badge" style={{ background: badge.bg, color: badge.fg }}>{badge.label}</span></td>
                 <td>n/d</td>
               </tr>
