@@ -85,6 +85,38 @@
       negativeMeaning: "RSP outperforming QQQ signals broader participation and rotation away from mega-cap concentration.",
       primaryUse: "breadth_context", actionability: "medium", enabled: true },
 
+    { id: "tlt_spy", label: "Bonds vs Market", pair: ["TLT", "SPY"],
+      type: "risk_appetite", cluster: "SECTOR ROTATION", signalDirection: "higher_is_risk_off",
+      // Reasignado 2026-08-11 (Fase 1 de código de wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md):
+      // termómetro directo de refugio en duración, mismo nivel que HYG/SPY o XLU/XLY — no
+      // encajaba en sector_snapshot por omisión, no por diseño. countedInMonitor:false porque
+      // no hay evidencia para alterar el denominador /6 del Risk Appetite Monitor ya en
+      // producción — mismo tratamiento (se muestra, no cuenta) que QQQ/RSP, pero vía un flag
+      // explícito en vez de signalDirection:"contextual" (aquí la lectura sí es inequívoca).
+      countedInMonitor: false,
+      primaryQuestion: "Is long-duration Treasury debt beating equities?",
+      positiveMeaning: "TLT outperforming SPY indicates money leaving equities for fixed income — risk-off.",
+      negativeMeaning: "SPY outperforming TLT indicates money leaving bonds for equities — risk-on.",
+      primaryUse: "regime_confirmation", actionability: "medium-low", enabled: true },
+
+    // Fase 2 (2026-08-11, wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md): ratios nuevos de
+    // verdad, no reasignaciones — sí cuentan en el agregado del monitor (denominador
+    // pasa de /6 a /8), a diferencia de TLT/SPY arriba (que preserva un umbral ya
+    // calibrado). Verificados contra Yahoo en vivo el 2026-08-11 antes de integrarlos.
+    { id: "hyg_lqd", label: "High Yield vs Investment Grade", pair: ["HYG", "LQD"],
+      type: "risk_appetite", cluster: "RISK APPETITE", signalDirection: "higher_is_risk_on",
+      primaryQuestion: "Within corporate credit, is the market reaching for yield (high-yield) or staying in quality (investment-grade)?",
+      positiveMeaning: "HYG outperforming LQD suggests credit investors are reaching for yield in lower-quality debt — risk-on within the credit complex, often ahead of equities.",
+      negativeMeaning: "LQD outperforming HYG suggests a flight to quality within credit — a risk-off warning that can show up before it's visible in equities.",
+      primaryUse: "regime_confirmation", actionability: "high", enabled: true },
+
+    { id: "vvix_vix", label: "Vol-of-Vol vs Volatility", pair: ["^VVIX", "^VIX"],
+      type: "risk_appetite", cluster: "RISK APPETITE", signalDirection: "higher_is_risk_off",
+      primaryQuestion: "Is the options market pricing rising uncertainty about future volatility itself, ahead of a spike in realized volatility?",
+      positiveMeaning: "VVIX outperforming VIX suggests the options market is bidding up uncertainty about future volatility — often an early tail-risk warning before VIX itself spikes.",
+      negativeMeaning: "VIX outperforming VVIX suggests volatility concerns are already reflected in spot vol, without an incremental vol-of-vol warning.",
+      primaryUse: "regime_confirmation", actionability: "medium", enabled: true },
+
     // ── ANTICIPATION / INTERNAL CONVICTION ──────────────────────────────────
     { id: "xle_brent", label: "Energy Equities vs Brent", pair: ["XLE", "BZ=F"],
       type: "anticipation", cluster: "ENERGY", signalDirection: "higher_is_bullish",
@@ -185,6 +217,15 @@
       negativeMeaning: "IWF outperforming IWD suggests rotation into growth.",
       primaryUse: "capital_rotation", actionability: "medium", enabled: true },
 
+    { id: "ijs_ijt", label: "Small Cap Value vs Growth", pair: ["IJS", "IJT"],
+      // Fase 2 (2026-08-11): mismo cluster que IWD/IWF, versión small-cap del mismo
+      // eje value/growth — verificado contra Yahoo en vivo antes de integrarlo.
+      type: "rotation", cluster: "STYLE / FACTOR", signalDirection: "contextual",
+      primaryQuestion: "Within small caps, is capital rotating between value and growth styles?",
+      positiveMeaning: "IJS outperforming IJT suggests rotation into small-cap value.",
+      negativeMeaning: "IJT outperforming IJS suggests rotation into small-cap growth.",
+      primaryUse: "capital_rotation", actionability: "medium", enabled: true },
+
     { id: "smh_igv", label: "Semiconductors vs Software", pair: ["SMH", "IGV"],
       type: "rotation", cluster: "SECTOR ROTATION", signalDirection: "contextual",
       primaryQuestion: "Within technology, is capital rotating into hardware/semis or software?",
@@ -212,6 +253,16 @@
       positiveMeaning: "AMR outperforming XME suggests met coal is leading the broader mining/materials complex.",
       negativeMeaning: "XME outperforming AMR suggests met coal is lagging broader mining/materials.",
       primaryUse: "capital_rotation", actionability: "medium-low", enabled: true },
+
+    { id: "xlk_spy", label: "Technology vs Market", pair: ["XLK", "SPY"],
+      type: "rotation", cluster: "SECTOR ROTATION", signalDirection: "higher_is_bullish",
+      // Reasignado 2026-08-11 (Fase 1 de código, wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md):
+      // "promoción visual (ya existe, no se duplica)" — pasa de sector_snapshot (bloque
+      // secundario) a rotation, único display en el bloque Rotation Between Blocks.
+      primaryQuestion: "Is technology beating the broad market?",
+      positiveMeaning: "XLK outperforming SPY indicates flow into growth/tech.",
+      negativeMeaning: "SPY outperforming XLK indicates rotation out of tech.",
+      primaryUse: "capital_rotation", actionability: "medium", enabled: true },
 
     // ── REGIONS / EM LEADERSHIP ───────────────────────────────────────────────
     { id: "eem_urth", label: "Emerging Markets vs World", pair: ["EEM", "URTH"],
@@ -242,14 +293,28 @@
       negativeMeaning: "EEM outperforming EWJ suggests capital favoring emerging markets over Japan.",
       primaryUse: "regional_leadership", actionability: "medium", enabled: true },
 
-    // ── SECTOR RELATIVE SNAPSHOT (secundario) ────────────────────────────────
-    { id: "xlk_spy", label: "Technology vs Market", pair: ["XLK", "SPY"],
-      type: "sector_snapshot", cluster: "SECTOR ROTATION", signalDirection: "higher_is_bullish",
-      primaryQuestion: "Is technology beating the broad market?",
-      positiveMeaning: "XLK outperforming SPY indicates flow into growth/tech.",
-      negativeMeaning: "SPY outperforming XLK indicates rotation out of tech.",
-      primaryUse: "sector_snapshot", actionability: "medium-low", enabled: true },
+    // Fase 2 (2026-08-11): sub-cat "fx_estructural" — señales FX/macro estructurales sin
+    // eje región-vs-región limpio, agrupadas aquí por ser el bucket más cercano de los 5
+    // de la taxonomía (decisión cerrada en wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md).
+    // signalDirection:"contextual" en ambas — el propio proyecto ya trata USDJPY como
+    // direccionalmente ambiguo en duration.html (yields↑+TLT↓+USDJPY↓ puede ser
+    // repatriación limpia, o DXY↑+USDJPY↑ puede ser un shock de yields/dólar genérico
+    // que no confirma la tesis Japón); el mismo criterio se aplica aquí por consistencia.
+    { id: "usdjpy_nikkei", label: "USDJPY vs Nikkei", pair: ["JPY=X", "^N225"],
+      type: "regions", cluster: "REGIONS", signalDirection: "contextual",
+      primaryQuestion: "Is yen weakness moving together with Nikkei strength (the carry-trade-on pattern), or are they decoupling?",
+      positiveMeaning: "USDJPY (yen weakness) rising faster than the Nikkei suggests the yen-carry relationship may be decoupling — a divergence worth cross-checking against the Duration Stress Monitor's BOJ/Treasury supply thesis.",
+      negativeMeaning: "Nikkei strength keeping pace with or outrunning yen weakness suggests the carry-trade-on relationship (weak yen, strong Nikkei) remains intact.",
+      primaryUse: "regional_leadership", actionability: "medium", enabled: true },
 
+    { id: "dxy_gld", label: "Dollar Index vs Gold", pair: ["DX-Y.NYB", "GC=F"],
+      type: "regions", cluster: "REGIONS", signalDirection: "contextual",
+      primaryQuestion: "Is the dollar strengthening against gold structurally, or is gold's safe-haven bid outpacing dollar strength?",
+      positiveMeaning: "The Dollar Index outperforming Gold suggests dollar strength is dominant — often reflects real-rate-driven dollar demand rather than a broad flight to safety.",
+      negativeMeaning: "Gold outperforming the Dollar Index suggests a safe-haven or inflation-hedge bid strong enough to overcome dollar strength.",
+      primaryUse: "regional_leadership", actionability: "medium", enabled: true },
+
+    // ── SECTOR RELATIVE SNAPSHOT (secundario) ────────────────────────────────
     { id: "xlf_spy", label: "Financials vs Market", pair: ["XLF", "SPY"],
       type: "sector_snapshot", cluster: "SECTOR ROTATION", signalDirection: "higher_is_bullish",
       primaryQuestion: "Are financials beating the broad market?",
@@ -318,13 +383,6 @@
       primaryQuestion: "Are utilities beating the broad market?",
       positiveMeaning: "XLU outperforming SPY indicates defensive rotation (yield, low beta).",
       negativeMeaning: "SPY outperforming XLU indicates money leaving utilities toward risk.",
-      primaryUse: "sector_snapshot", actionability: "medium-low", enabled: true },
-
-    { id: "tlt_spy", label: "Bonds vs Market", pair: ["TLT", "SPY"],
-      type: "sector_snapshot", cluster: "SECTOR ROTATION", signalDirection: "higher_is_bullish",
-      primaryQuestion: "Is long-duration Treasury debt beating equities?",
-      positiveMeaning: "TLT outperforming SPY indicates money leaving equities for fixed income — risk-off.",
-      negativeMeaning: "SPY outperforming TLT indicates money leaving bonds for equities — risk-on.",
       primaryUse: "sector_snapshot", actionability: "medium-low", enabled: true },
 
     { id: "gld_spy", label: "Gold vs Market", pair: ["GLD", "SPY"],

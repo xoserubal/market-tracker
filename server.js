@@ -840,6 +840,7 @@ const DEFAULT_STATE = {
   macro_score_history: [],
   rotation_history: {},
   regime_coherence_history: [],
+  relative_flow_history: {},
 };
 
 // ── Stock config YAML (leer / escribir) ──────────────────────────────────

@@ -1748,6 +1748,176 @@ cartera.
 
 ---
 
+## Relative Flow Lab — Optimización v2, Fase 1.2 (tabla firmada) + Fase 1 de código (implementado 2026-08-10/11)
+
+Continuación del rediseño de `relative.html` documentado en "Relative Flow
+Lab v2 — ratio_registry y vista por pregunta" (arriba). Una hoja de
+instrucciones externa ("Relative Flow Lab — Optimización v2") pedía
+reorganizar los 45 ratios del registry en una taxonomía nueva
+(RISK-ON/OFF, ANTICIPACIÓN, ROTACIÓN, REGIONES, BACKGROUND) y añadir varios
+ratios nuevos.
+
+**Fase 1.2 (2026-08-10) — auditoría antes de tocar código.** Se escaneó el
+estado real de `shared/relative-ratio-registry.js` (commit `3d4f30b`,
+congelado en `backtest/config/rfl_current_state_frozen.yaml`) en vez de
+fiarse del inventario de la hoja/asesor externo, y se encontraron 7
+discrepancias reales: `GDXJ/GDX`, `SMH/IGV` e `IWD/IWF` ya existían en
+producción (la hoja los daba por "nuevos"); `XLK/SPY` ya existía, solo le
+faltaba promoción visual; `DXY/GLD` y `FXI/EEM` no existían en absoluto
+(la hoja los daba por existentes); `BTC-USD/GLD` no es el par real, que es
+`BTC-USD/GC=F`. Tabla de reasignación firmada y congelada en
+`wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md` — de las 45 filas, **solo 2 ratios
+cambian realmente de sección** (`TLT/SPY`, `XLK/SPY`); el resto de la
+"nueva taxonomía" confirma el mapeo `type` ya existente sin cambios.
+
+**Fase 1 de código (2026-08-11) — reasignación quirúrgica de 2 ratios +
+infraestructura de persistencia**, alcance explícitamente acotado a lo que
+la tabla firmada dejaba listo para arrancar (los 5 ratios nuevos reales de
+"Fase 2" — `HYG/LQD`, `VVIX/VIX`, `USDJPY/Nikkei`, `DX-Y.NYB/GC=F`,
+`IJS/IJT` — quedan fuera, no se añade ningún ticker nuevo en este cambio):
+
+1. **`shared/relative-ratio-registry.js`:** `tlt_spy` pasa de
+   `type: "sector_snapshot"` a `type: "risk_appetite"`
+   (`signalDirection: "higher_is_risk_off"`) — termómetro directo de
+   refugio en duración, mismo nivel que `HYG/SPY`/`XLU/XLY`, no encajaba en
+   sector_snapshot por omisión. `xlk_spy` pasa de `sector_snapshot` a
+   `rotation` ("promoción visual", ya existía, ahora se muestra una sola
+   vez en su bloque nuevo — sin duplicar). El campo `cluster` (narrativo,
+   usado solo por la Cluster Coherence View secundaria) no se toca en
+   ningún ratio, tal como fija la tabla firmada.
+
+   **Auditabilidad — por qué TLT/SPY no cuenta en el Risk Appetite
+   Monitor:** el monitor (`riskOffCount`/`riskAppetiteCountable` en
+   `relative.html`) contaba hasta ahora 6 de los 7 ratios `risk_appetite`
+   (excluye `QQQ/RSP` por `signalDirection: "contextual"` — sin lectura
+   risk-on/off inequívoca). Mover `TLT/SPY` a `risk_appetite` sin más lo
+   habría sumado al agregado, pasando el denominador de `/6` a `/7` y
+   alterando un umbral que ya lleva semanas en producción, sin ninguna
+   evidencia que lo justifique. Decisión explícita con el usuario: se
+   muestra en la tabla (con lectura direccional real, no "Contextual" —
+   TLT/SPY sí tiene lectura inequívoca, a diferencia de QQQ/RSP) pero
+   **no cuenta** en el agregado. Mecanismo: campo nuevo
+   `countedInMonitor: false` en el registry (no se reutilizó
+   `signalDirection: "contextual"` para esto porque corrompería su
+   semántica — ese valor significa "sin lectura direccional", y aquí sí la
+   hay). `riskOffCount`/`riskAppetiteCountable` en `relative.html` ganan el
+   filtro `m.countedInMonitor !== false`; la columna "Dirección" ya
+   existente en la tabla muestra `· no cuenta` para las filas marcadas así,
+   mismo tratamiento visual que el "Contextual" de `QQQ/RSP`.
+
+2. **`relative.html`:** sin cambios en la lógica de los `QuestionBlock` —
+   al iterar genéricamente sobre `DEFS_BY_TYPE` por `type`, la reasignación
+   del registry basta para reubicar `TLT/SPY` y `XLK/SPY` en su bloque
+   nuevo. Nueva persistencia diaria: `relative_flow_history` en
+   `state.json` (via `/api/state`, hasta ahora sin usar en esta página),
+   un array por cada uno de los 45 ratios con `{date, score, signal,
+   flowChange, type}`, mismo patrón de dedup-por-día y cap de 70 entradas
+   ya usado para `rotation_history` en `rotacion.html`
+   (`rotacion.html:1592-1625`) — reescrito aquí porque cada página del
+   proyecto mantiene su propia copia de estos helpers, sin módulo
+   compartido. **Bloqueante para una futura Fase 2 de lectura dinámica**
+   (deltas/flechas de tendencia, análoga a la ya construida en
+   `rotacion.html`) — en este cambio solo se siembra el dato, no se
+   consume todavía.
+
+3. **`server.js`:** `relative_flow_history: {}` añadido a `DEFAULT_STATE`,
+   junto a `rotation_history: {}`. La ruta `/api/state` (GET/POST) ya era
+   genérica — no necesitó cambios.
+
+**Fuera de alcance (explícito):** los 5 ratios nuevos de Fase 2; cualquier
+UI que lea `relative_flow_history` (deltas, flechas); renombrado de las
+etiquetas de UI existentes (hoy en inglés) a la nomenclatura española de
+la tabla firmada — se trató como gloss conceptual de planificación, no
+como copy pendiente de aplicar.
+
+**Verificado en producción real** (Edge headless vía CDP directo, mismo
+patrón que el resto del proyecto — sin Playwright instalado, servidor
+`node server.js` reiniciado tras el cambio en `server.js`): header del
+Risk Appetite Monitor se mantuvo en `4/6 warnings` (no `/7`) tras la
+reasignación; fila de `TLT/SPY` visible en esa tabla con badge
+Risk-On/Risk-Off/Neutral real (no "Contextual") y marca `· no cuenta`;
+`XLK/SPY` aparece únicamente en el bloque "Rotation Between Blocks" (8
+filas, antes 7) y desapareció de "Sector Relative Snapshot" (14 filas,
+antes 16, sin duplicar en ningún sitio); Cluster Coherence View sigue
+agrupando ambos ratios bajo `SECTOR ROTATION` sin cambios (confirma que
+`cluster` no se tocó); cero errores nuevos de consola. `state.json` quedó
+con `relative_flow_history` poblado para los 45 ratios tras la primera
+carga; una segunda carga el mismo día no duplicó ninguna entrada (dedup
+confirmado). Export a LLM (`buildRelativeMarkdown`/`llm_export_relative`
+en `localStorage`) verificado con contenido real: incluye `TLT/SPY`, la
+marca `no cuenta`, el denominador `4/6 defensive`, y `XLK/SPY` solo en la
+sección de Rotación — sin cambios de código adicionales, al derivarse
+genéricamente de los mismos `DEFS_BY_TYPE`.
+
+---
+
+## Relative Flow Lab — Optimización v2, Fase 2 (5 ratios nuevos) (implementado 2026-08-11)
+
+Continuación directa de la sección anterior. Los 5 ratios que la tabla
+firmada dejaba pendientes (`wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md`,
+sección "Ratios nuevos reales de Fase 2") se añadieron a
+`shared/relative-ratio-registry.js` — registry pasa de 45 a 50 ratios.
+Antes de tocar código se verificó cada ticker nuevo contra `/api/history/`
+en vivo (mismo criterio que `XOP` en la sección "Cluster SECTOR ROTATION"
+o el fix `ARCH→CNR` en Cycle Tracker — no asumir que un ticker resuelve):
+`HYG`, `LQD`, `^VVIX`, `^VIX`, `JPY=X`, `^N225`, `DX-Y.NYB`, `IJS`, `IJT`
+— los 8 con 731-778 barras en 3 años y sin huecos en las últimas 30
+sesiones. Esto también resuelve la duda de "Ratios a evaluar por
+velocidad (Fase 2.2)" que la tabla dejaba abierta para `IJS/IJT` — datos
+limpios, sin bloqueante.
+
+**`hyg_lqd`** (High Yield vs Investment Grade, `HYG`/`LQD`) y **`vvix_vix`**
+(Vol-of-Vol vs Volatility, `^VVIX`/`^VIX`) — ambos `type: risk_appetite`,
+cluster RISK APPETITE. **Decisión explícita con el usuario: sí cuentan en
+el agregado del Risk Appetite Monitor** (denominador pasa de `/6` a `/8`)
+— a diferencia de `TLT/SPY` (Fase 1, arriba), que quedó excluido por ser
+la *reasignación* de un ratio con historial previo bajo otra clasificación.
+Estos dos son ratios genuinamente nuevos sin ese problema de continuidad,
+y el monitor ya había crecido antes sin fricción (de 4 a 6 ratios
+contables en el rediseño de julio) — mismo criterio de expansión normal,
+no una excepción.
+
+**`usdjpy_nikkei`** (`JPY=X`/`^N225`) y **`dxy_gld`** (`DX-Y.NYB`/`GC=F`,
+id mantenido como `dxy_gld` por convención con `copper_gold`/`silver_gold`/
+`btc_gold` aunque el ticker real ya no sea `GLD`) — ambos `type: regions`,
+sub-cat `fx_estructural` por ser el bucket más cercano de los 5 de la
+taxonomía firmada (no hay un bucket "FX" propio). **`signalDirection:
+"contextual"` en ambos**, no `higher_is_bullish` como el resto de
+`regions` — decisión propia de esta sesión, no especificada en la tabla
+firmada: `USDJPY/Nikkei` no es una comparación región-vs-región limpia
+como `EEM/URTH`, y el propio proyecto ya trata USDJPY como
+direccionalmente ambiguo en `duration.html` (yields↑+TLT↓+USDJPY↓ puede
+ser repatriación limpia, o un shock de yields/dólar genérico que no
+confirma la tesis Japón) — mismo criterio aplicado aquí por consistencia,
+y extendido a `DXY/GLD` por construcción análoga (dólar fuerte vs oro
+también es estructuralmente ambiguo: puede ser demanda de dólar por tipos
+reales, no necesariamente vuelo a la seguridad).
+
+**`ijs_ijt`** (Small Cap Value vs Growth, `IJS`/`IJT`) — `type: rotation`,
+cluster STYLE / FACTOR, mismo eje que `IWD/IWF` en su versión small-cap.
+
+**Verificado en producción real** (Edge headless vía CDP, `node
+server.js` reiniciado tras el cambio en el registry): Risk Appetite
+Monitor pasó a 10 filas con header `5/8 warnings` (no `/6` ni un número
+distinto de 8); bloque Regions ganó `USDJPY vs Nikkei` y `Dollar Index vs
+Gold` (6 filas, antes 4); bloque Rotation ganó `Small Cap Value vs Growth`
+(9 filas, antes 8 tras la Fase 1); cluster `STYLE / FACTOR` en la Cluster
+Coherence View muestra ahora `IWD/IWF` e `IJS/IJT` juntos, coherencia
+100% calculada correctamente sobre los 2; cero errores nuevos de consola.
+`state.json` → `relative_flow_history` pasó a 50 claves tras la carga,
+con las 5 nuevas sembradas y las 45 anteriores sin duplicar (mismo día,
+dedup correcto).
+
+**Fuera de alcance (sin cambios respecto a la Fase 1):** `TLT/IEF` y
+`EDV/IEF` (prioridad media en el plan original) siguen pendientes — el
+usuario ya había apuntado que probablemente encajan mejor en
+`duration.html`, evaluar ahí antes de decidir dónde viven. Lectura
+dinámica sobre `relative_flow_history` (deltas/flechas) sigue sin
+empezar — el usuario priorizó explícitamente esta Fase 2 de ratios sobre
+esa fase de lectura al elegir cómo continuar.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

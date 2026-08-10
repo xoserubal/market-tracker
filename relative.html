@@ -399,6 +399,8 @@ function RelativeFlowLab() {
   const [history, setHistory] = React.useState({});
   const [loading, setLoading] = React.useState(new Set());
   const [toast,   setToast]   = React.useState(null);
+  const [appState, setAppState] = React.useState(null);
+  const flowHistorySavedRef = React.useRef(false);
 
   const allTickers = React.useMemo(() =>
     [...new Set(ALL_RATIO_DEFS.flatMap(p => [p.a, p.b]))],
@@ -414,11 +416,14 @@ function RelativeFlowLab() {
   [history]);
 
   const riskOffCount = React.useMemo(() =>
-    riskAppetiteRows.filter(m => m.signal === "risk-off").length,
+    riskAppetiteRows.filter(m => m.signal === "risk-off" && m.countedInMonitor !== false).length,
   [riskAppetiteRows]);
 
+  // countedInMonitor:false (ej. TLT/SPY) se muestra en la tabla con lectura direccional
+  // real, pero no altera el denominador — mismo criterio que signalDirection:"contextual"
+  // (QQQ/RSP), aplicado aquí vía flag explícito porque la lectura de TLT/SPY sí es inequívoca.
   const riskAppetiteCountable = React.useMemo(() =>
-    riskAppetiteRows.filter(m => m.signalDirection !== "contextual").length,
+    riskAppetiteRows.filter(m => m.signalDirection !== "contextual" && m.countedInMonitor !== false).length,
   [riskAppetiteRows]);
 
   // ── Bloques por tipo (Anticipation / Rotation / Regions / Sector Snapshot) ──
@@ -435,6 +440,40 @@ function RelativeFlowLab() {
   [history]);
 
   const flatRows = rowsByGroup.flatMap(g => g.rows).filter(r => !r.error);
+
+  // ── Persistencia diaria (Fase 1 de código, wiki/RFL_CLUSTER_REASSIGNMENT_TABLE.md) ──
+  // Siembra relative_flow_history en state.json — bloqueante para la Fase 2 (lectura
+  // dinámica de deltas, análoga a rotation_history en rotacion.html), no consumida
+  // todavía. Mismo patrón dedup-por-día/cap-70 que rotation_history/macro_score_history.
+  React.useEffect(() => {
+    fetch('/api/state').then(r => r.json()).then(setAppState).catch(() => setAppState({}));
+  }, []);
+
+  React.useEffect(() => {
+    if (flowHistorySavedRef.current) return;
+    if (appState == null) return;
+    if (loading.size > 0 || Object.keys(history).length < allTickers.length) return;
+    if (flatRows.length === 0) return;
+    flowHistorySavedRef.current = true;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const newHistory = { ...(appState.relative_flow_history || {}) };
+    flatRows.forEach(r => {
+      const entry = { date: today, score: r.score, signal: classify(r).label, flowChange: r.flowChange, type: r.type };
+      const hist = newHistory[r.id] || [];
+      const last = hist[hist.length - 1];
+      if (!last || last.date !== today) {
+        hist.push(entry);
+        if (hist.length > 70) hist.splice(0, hist.length - 70); // ~10 semanas, mismo cap que rotation_history
+      } else {
+        hist[hist.length - 1] = entry;
+      }
+      newHistory[r.id] = hist;
+    });
+    const newState = { ...appState, relative_flow_history: newHistory };
+    setAppState(newState);
+    fetch('/api/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newState) }).catch(() => {});
+  }, [appState, loading, history, allTickers, flatRows]);
 
   const rankedRows = React.useMemo(() =>
     [...flatRows].sort((a,b) => (b.score ?? -999) - (a.score ?? -999)),
@@ -497,7 +536,8 @@ function RelativeFlowLab() {
     riskAppetiteRows.forEach(m => {
       const r = m.row;
       const st = riskAppetiteSignalStyle(m.signal, m.signalDirection);
-      lines.push(`| ${m.name} | ${m.a}/${m.b} | ${m.signalDirection} | ${st.label} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} |`);
+      const dir = m.signalDirection + (m.countedInMonitor === false ? " (no cuenta)" : "");
+      lines.push(`| ${m.name} | ${m.a}/${m.b} | ${dir} | ${st.label} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} |`);
     });
     if (earlyFlowRatios.length) {
       lines.push("");
@@ -645,7 +685,7 @@ function RelativeFlowLab() {
                 <tr>
                   <th style={{textAlign:"left"}} data-tip="Nombre del ratio. La columna Dirección indica cómo leer la subida del ratio — no todos suben con lectura risk-on.">Ratio</th>
                   <th>Pair</th>
-                  <th data-tip={"higher_is_risk_on: sube = risk-on\nhigher_is_risk_off: sube = risk-off (ratio invertido)\ncontextual: sin lectura risk-on/off inequívoca, no cuenta en el agregado"}>Dirección</th>
+                  <th data-tip={"higher_is_risk_on: sube = risk-on\nhigher_is_risk_off: sube = risk-off (ratio invertido)\ncontextual: sin lectura risk-on/off inequívoca, no cuenta en el agregado\n'no cuenta': lectura inequívoca pero excluida del denominador (ej. TLT/SPY, ver countedInMonitor)"}>Dirección</th>
                   <th data-tip={"Retorno del ratio en los últimos 5 días."}>1W</th>
                   <th data-tip={"Retorno del ratio en los últimos 21 días.\nBase del señal de régimen."}>1M</th>
                   <th data-tip={"Retorno del ratio en los últimos 63 días."}>3M</th>
@@ -666,7 +706,10 @@ function RelativeFlowLab() {
                         {m.name}
                       </td>
                       <td style={{fontFamily:"Consolas,monospace",fontSize:10,color:"#1a6baa"}}>{m.a}/{m.b}</td>
-                      <td style={{fontSize:9,color:"#8a94a6"}}>{m.signalDirection.replace(/_/g," ")}</td>
+                      <td style={{fontSize:9,color:"#8a94a6"}}>
+                        {m.signalDirection.replace(/_/g," ")}
+                        {m.countedInMonitor === false && <span style={{color:"#b08d3a"}}> · no cuenta</span>}
+                      </td>
                       <td style={{fontFamily:"Consolas,monospace",...c1w}}>{r.error ? "-" : fmtPct(r.r1w)}</td>
                       <td style={{fontFamily:"Consolas,monospace",...c1m}}>{r.error ? "-" : fmtPct(r.r1m)}</td>
                       <td style={{fontFamily:"Consolas,monospace",...c3m}}>{r.error ? "-" : fmtPct(r.r3m)}</td>
