@@ -299,9 +299,10 @@ Gestionados en `docs/data/reminders.json`. El workflow los comprueba cada día y
 
 | Fecha | ID | Contenido |
 |-------|----|-----------|
-| 2026-05-28 | semana3_metricas_horizonte | Prompt para implementar métricas por horizonte + comparativa vs baselines + análisis spike_flag |
-| 2026-07-01 | semana7_motor_avanzado | Prompt para Open Pick Review Engine + validación numérica + rejection_primary_reason + análisis doble conteo PCS |
-| 2026-08-18 | koncorde_research_log_revision | Revisar `koncorde_signals_history.jsonl` (ver "Plan de revisión" en sección "Fix del veto absoluto de `konc_alignment`") — evaluar si los 8+2 campos ingrediente predicen rendimiento; promover a señal operativa solo si los datos lo justifican |
+| 2026-05-28 | semana3_metricas_horizonte | Prompt para implementar métricas por horizonte + comparativa vs baselines + análisis spike_flag — ✅ disparado, ver "Roadmap de mejoras pendientes" |
+| 2026-07-01 | semana7_motor_avanzado | Prompt para Open Pick Review Engine + validación numérica + rejection_primary_reason + análisis doble conteo PCS — ✅ disparado, parcialmente implementado (ver "Roadmap de mejoras pendientes"; `review_open_picks.py` sigue sin construir) |
+| 2026-09-03 | ranking_score_fase1_analisis | Inicio de Fase 1 (análisis exploratorio) del Ranking Score, incluida la evaluación de Koncorde como subsección propia. Sustituye a `koncorde_research_log_revision` (cancelado 2026-08-06, fusionado aquí) |
+| 2026-09-15 | rfl_v2_fase6_instrumentacion_y_calibracion | Revisar `state_ux_instrumentation.json` (uso real de Fase 6) + calibrar contra `relative_flow_history` los umbrales sin calibrar de Fase 4 (coherencia Top 3 In/Out) y Fase 5a (matriz cross-módulos) |
 
 Para añadir un recordatorio: editar `docs/data/reminders.json` directamente (sin tocar código).
 
