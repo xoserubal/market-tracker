@@ -260,6 +260,59 @@ function biasStyle(bias) {
   return { background: "#f0f0f0", color: "#555" };
 }
 
+// ── Lectura dinámica sobre relative_flow_history (RFL v2 Optimización — Fase
+// posterior a la 1.2/1/2, ver CLAUDE.md) ────────────────────────────────────
+// Puerto directo del patrón ya construido en rotacion.html (Flujos & Rotación
+// v2 Fase 2: findHistEntryAtOrBefore/computeRotationDynamics) — mismo criterio
+// "closest at or before N days ago" sin exigir hueco exacto de 7 días, porque
+// esta pestaña tampoco tiene cron propio (recalcula todo en cada carga).
+function findHistEntryAtOrBefore(history, daysAgo) {
+  if (!history || history.length === 0) return null;
+  const target = new Date();
+  target.setDate(target.getDate() - daysAgo);
+  const targetStr = target.toISOString().slice(0, 10);
+  let best = null;
+  for (const e of history) {
+    if (e.date <= targetStr) best = e;
+  }
+  return best;
+}
+
+// Orden de "calidad" de clasificación, análogo a SIGNAL_RANK en rotacion.html — usado
+// solo para decidir UPGRADED/DOWNGRADED, no cambia classify().
+const RATIO_SIGNAL_RANK = { "Leader": 5, "Improving": 4, "Neutral": 3, "Weakening": 2, "Laggard": 1, "No data": 0 };
+
+// Δ score 1W + badge de cambio de clasificación + semanas consecutivas en la clasificación
+// actual. currentSignal debe ser classify(row).label ya calculado (post score), para que el
+// badge compare exactamente lo que el usuario ve.
+function computeRelativeFlowDynamics(history, currentScore, currentSignal) {
+  if (!history || history.length === 0) return { delta1w: null, arrow: "→", badge: null, weeksInSignal: null };
+
+  const ref = findHistEntryAtOrBefore(history, 7);
+  const delta1w = ref && currentScore != null ? +(currentScore - ref.score).toFixed(1) : null;
+  const arrow = delta1w == null ? "→" : delta1w >= 2 ? "↗" : delta1w <= -2 ? "↘" : "→";
+
+  let badge = null;
+  if (ref && ref.signal !== currentSignal) {
+    const curRank = RATIO_SIGNAL_RANK[currentSignal] ?? 0;
+    const refRank = RATIO_SIGNAL_RANK[ref.signal] ?? 0;
+    if (curRank > refRank) badge = "UPGRADED";
+    else if (curRank < refRank) badge = "DOWNGRADED";
+  }
+
+  // Racha de la clasificación actual en días naturales, no en nº de snapshots — mismo
+  // motivo que en rotacion.html: la página solo graba cuando alguien la abre.
+  let streakStart = history[history.length - 1].date;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].signal !== currentSignal) break;
+    streakStart = history[i].date;
+  }
+  const daysInSignal = Math.floor((Date.now() - new Date(streakStart).getTime()) / 86400000);
+  const weeksInSignal = Math.max(1, Math.round(daysInSignal / 7));
+
+  return { delta1w, arrow, badge, weeksInSignal };
+}
+
 // ── Risk Appetite helpers ─────────────────────────────────────────────────
 // Generaliza el antiguo invert:boolean de 4 ratios de Capa 1 a un
 // signalDirection explícito por ratio (registry), sobre las 7 entradas de
@@ -320,7 +373,7 @@ function Spark({ ratio, strong }) {
 }
 
 // ── Question Block (bloques primarios por tipo) ────────────────────────────
-function QuestionBlock({ typeKey, rows }) {
+function QuestionBlock({ typeKey, rows, bootstrapReady }) {
   const meta = RATIO_TYPES[typeKey];
   const sorted = [...rows].sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
   const loaded = sorted.filter(r => !r.error);
@@ -354,6 +407,8 @@ function QuestionBlock({ typeKey, rows }) {
             <th>Pair</th>
             <th data-tip={"Puntuación compuesta de momentum relativo.\nFórmula: (1W×0.5) + (1M×0.7) + (3M×0.25)\n+ ajuste Trend (±2) + ajuste RSI (±0.8–1.5)\n+ ajuste Flow Change (clippeado ±3)."}>Score</th>
             <th data-tip={"Clasificación cualitativa basada en Score:\nLeader ≥ 8 · Improving ≥ 3\nWeakening ≤ -3 · Laggard ≤ -8\nNeutral: entre -3 y +3"}>Signal</th>
+            <th data-tip={"Δ Score vs la lectura más cercana a hace 7 días (relative_flow_history).\n≥+2 → ↗ · entre -1 y +1 → → · ≤-2 → ↘\n'—' hasta la segunda semana de histórico."}>Δ1W</th>
+            <th data-tip={"Semanas consecutivas en la clasificación actual (Signal).\nDías naturales desde que empezó la racha, no nº de veces que se abrió la página."}>Sem.</th>
             <th data-tip={"Aceleración del flujo relativo.\nDiferencia entre retorno relativo últimos 5D vs 5D previos."}>Flow Chg</th>
             <th data-tip={"Retorno del ratio en los últimos 5 días."}>1W</th>
             <th data-tip={"Retorno del ratio en los últimos 21 días."}>1M</th>
@@ -374,7 +429,21 @@ function QuestionBlock({ typeKey, rows }) {
                 <td className="name" data-tip={r.tip}>{r.name}</td>
                 <td className="tickers">{r.a} / {r.b}</td>
                 <td className="num" style={{fontWeight:700,color:r.score>0?"#1a7a1a":r.score<0?"#b71c1c":"#666"}}>{r.error?"-":fmtNum(r.score)}</td>
-                <td><span className="signal" style={{background:sig.bg,color:sig.fg}}>{sig.label}</span></td>
+                <td>
+                  <span className="signal" style={{background:sig.bg,color:sig.fg}}>{sig.label}</span>
+                  {bootstrapReady && r.dyn?.badge && (
+                    <span style={{marginLeft:4,fontSize:8,fontWeight:800,padding:"1px 4px",borderRadius:3,
+                      background:r.dyn.badge==="UPGRADED"?"#e8f5e9":"#ffebee",
+                      color:r.dyn.badge==="UPGRADED"?"#1b5e20":"#b71c1c"}}>
+                      {r.dyn.badge}
+                    </span>
+                  )}
+                </td>
+                <td className="num" style={{color: !bootstrapReady || r.dyn?.delta1w==null ? "#ccc" : r.dyn.delta1w>0 ? "#1a7a1a" : r.dyn.delta1w<0 ? "#b71c1c" : "#666"}}>
+                  {!bootstrapReady || r.dyn?.delta1w==null ? "—" : (r.dyn.delta1w>0?"+":"")+r.dyn.delta1w}
+                  {bootstrapReady && r.dyn?.arrow && r.dyn.arrow !== "→" && <span style={{marginLeft:2}}>{r.dyn.arrow}</span>}
+                </td>
+                <td className="num">{!bootstrapReady || r.dyn?.weeksInSignal==null ? "—" : r.dyn.weeksInSignal}</td>
                 <td className="num" title={`Current 5D: ${fmtPct(r.flowNow)} | Prior 5D: ${fmtPct(r.flowPrev)}`}>
                   <span className="signal" style={{background:flowSig.bg,color:flowSig.fg,minWidth:86}}>{fmtPct(r.flowChange)}</span>
                 </td>
@@ -427,9 +496,31 @@ function RelativeFlowLab() {
   [riskAppetiteRows]);
 
   // ── Bloques por tipo (Anticipation / Rotation / Regions / Sector Snapshot) ──
+  // Cada row gana `dyn` (Δ1W, badge, semanas en clasificación) leído de
+  // relative_flow_history — mismo patrón que row.dyn en rotacion.html.
   const rowsByType = React.useMemo(() => Object.fromEntries(
-    RATIO_TYPE_ORDER.map(t => [t, DEFS_BY_TYPE[t].map(pair => buildRow(pair, history))])
-  ), [history]);
+    RATIO_TYPE_ORDER.map(t => [t, DEFS_BY_TYPE[t].map(pair => {
+      const row = buildRow(pair, history);
+      if (row.error) return row;
+      const dyn = computeRelativeFlowDynamics(appState?.relative_flow_history?.[row.id], row.score, classify(row).label);
+      return { ...row, dyn };
+    })])
+  ), [history, appState]);
+
+  // Bootstrap de relative_flow_history: fecha del primer snapshot guardado y si ya hay al
+  // menos 7 días naturales de histórico. Mismo criterio que rotHistoryBootstrap en
+  // rotacion.html — mientras no esté ready, Δ1W/Sem./badge se muestran como "—", nunca un
+  // delta inventado.
+  const relFlowHistoryBootstrap = React.useMemo(() => {
+    const allDates = Object.values(appState?.relative_flow_history || {})
+      .flat()
+      .map(e => e.date)
+      .sort();
+    if (allDates.length === 0) return { startDate: null, ready: false };
+    const startDate = allDates[0];
+    const daysSinceStart = Math.floor((Date.now() - new Date(startDate).getTime()) / 86400000);
+    return { startDate, ready: daysSinceStart >= 7 };
+  }, [appState]);
 
   // ── Cluster View (secundaria) ──
   const rowsByGroup = React.useMemo(() =>
@@ -555,12 +646,20 @@ function RelativeFlowLab() {
       lines.push("Top Signals:");
       rows.slice(0, 3).forEach((r, i) => lines.push(`${i+1}. ${r.name} (${r.a}/${r.b}) — ${classify(r).label} — ${interpretationFor(r)}`));
       lines.push("");
-      lines.push("| Ratio | Pair | Score | Signal | Flow Chg | 1W | 1M | 3M | RSI | Trend | Interpretation |");
-      lines.push("|---|---:|---:|---|---:|---:|---:|---:|---:|---|---|");
+      lines.push("| Ratio | Pair | Score | Signal | Δ1W | Sem. | Flow Chg | 1W | 1M | 3M | RSI | Trend | Interpretation |");
+      lines.push("|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|");
       rows.forEach(r => {
-        lines.push(`| ${r.name} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label} | ${fmtPct(r.flowChange)} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} | ${interpretationFor(r)} |`);
+        const d1 = relFlowHistoryBootstrap.ready && r.dyn?.delta1w != null ? (r.dyn.delta1w>0?"+":"")+r.dyn.delta1w : "—";
+        const wk = relFlowHistoryBootstrap.ready && r.dyn?.weeksInSignal != null ? r.dyn.weeksInSignal : "—";
+        const badgeStr = relFlowHistoryBootstrap.ready && r.dyn?.badge ? ` [${r.dyn.badge}]` : "";
+        lines.push(`| ${r.name} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label}${badgeStr} | ${d1} | ${wk} | ${fmtPct(r.flowChange)} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} | ${interpretationFor(r)} |`);
       });
     });
+
+    if (!relFlowHistoryBootstrap.ready) {
+      lines.push("");
+      lines.push(`_Métricas históricas (Δ1W, Semanas en clasificación) disponibles a partir de la segunda semana desde ${relFlowHistoryBootstrap.startDate ?? "—"}._`);
+    }
 
     lines.push("");
     lines.push("## Most Extreme Relative Moves");
@@ -763,10 +862,20 @@ function RelativeFlowLab() {
 
       {/* ── Bloques por pregunta (vista primaria) ── */}
       <div className="section-label">📍 Question-Based Views</div>
-      <QuestionBlock typeKey="anticipation" rows={rowsByType.anticipation} />
-      <QuestionBlock typeKey="rotation" rows={rowsByType.rotation} />
-      <QuestionBlock typeKey="regions" rows={rowsByType.regions} />
-      <QuestionBlock typeKey="sector_snapshot" rows={rowsByType.sector_snapshot} />
+      {relFlowHistoryBootstrap.startDate && !relFlowHistoryBootstrap.ready && (
+        <div style={{fontSize:10,color:"#8a94a6",fontStyle:"italic",margin:"-4px 0 8px"}}>
+          Métricas históricas (Δ1W, semanas en clasificación) disponibles a partir de la segunda semana desde {relFlowHistoryBootstrap.startDate}.
+        </div>
+      )}
+      {!relFlowHistoryBootstrap.startDate && (
+        <div style={{fontSize:10,color:"#8a94a6",fontStyle:"italic",margin:"-4px 0 8px"}}>
+          Histórico diario en construcción — las métricas de tendencia (Δ1W, semanas en clasificación) aparecerán tras la primera semana de datos.
+        </div>
+      )}
+      <QuestionBlock typeKey="anticipation" rows={rowsByType.anticipation} bootstrapReady={relFlowHistoryBootstrap.ready} />
+      <QuestionBlock typeKey="rotation" rows={rowsByType.rotation} bootstrapReady={relFlowHistoryBootstrap.ready} />
+      <QuestionBlock typeKey="regions" rows={rowsByType.regions} bootstrapReady={relFlowHistoryBootstrap.ready} />
+      <QuestionBlock typeKey="sector_snapshot" rows={rowsByType.sector_snapshot} bootstrapReady={relFlowHistoryBootstrap.ready} />
 
       {/* ── Most Extreme / Flow Change ── */}
       <div className="panel-grid">

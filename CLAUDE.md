@@ -1918,6 +1918,73 @@ esa fase de lectura al elegir cómo continuar.
 
 ---
 
+## Relative Flow Lab — lectura dinámica sobre `relative_flow_history` (implementado 2026-08-11)
+
+Continuación directa de la sección anterior — el usuario eligió esta fase
+(deltas/flechas de tendencia) sobre completar los ratios `TLT/IEF`/`EDV/IEF`
+pendientes. Puerto directo del patrón ya construido en `rotacion.html`
+(Flujos & Rotación v2, Fase 2: `findHistEntryAtOrBefore`/
+`computeRotationDynamics`/`SIGNAL_RANK`) sobre `relative_flow_history` en
+`state.json`, sembrado desde la Fase 1 de código de RFL v2 pero sin
+consumirse hasta ahora.
+
+**`relative.html`:** `findHistEntryAtOrBefore` (idéntica, "closest at or
+before N days ago", sin exigir hueco exacto de 7 días — esta pestaña
+tampoco tiene cron propio) + `RATIO_SIGNAL_RANK` (`Leader:5 > Improving:4 >
+Neutral:3 > Weakening:2 > Laggard:1`, orden de `classify()`) +
+`computeRelativeFlowDynamics(history, currentScore, currentSignal)` →
+`{delta1w, arrow, badge, weeksInSignal}`, mismos umbrales que rotacion
+(`≥+2`→↗, `≤-2`→↘) porque el score de RFL usa la misma escala que sus
+propios cortes de clasificación (Leader≥8, Improving≥3).
+
+`rowsByType` (consumido por los 4 `QuestionBlock`) gana `row.dyn`, leído de
+`appState.relative_flow_history[row.id]`. Nuevo `relFlowHistoryBootstrap`
+(mismo criterio que `rotHistoryBootstrap`: `ready` solo si han pasado ≥7
+días naturales desde el primer snapshot) gatea todo — antes de eso, Δ1W/
+Sem./badge muestran `—`, nunca un delta inventado, con nota explicativa
+bajo "📍 Question-Based Views".
+
+**Alcance deliberadamente acotado a las 4 tablas por pregunta**
+(anticipation/rotation/regions/sector_snapshot) — no se tocó el Risk
+Appetite Monitor (su clasificación es risk-on/risk-off/neutral, no
+Leader..Laggard; extender `SIGNAL_RANK` ahí habría exigido un esquema de
+orden distinto, no pedido) ni las tablas de Cluster View/Raw Ratio Tables
+(usan `rowsByGroup`, una agrupación paralela por `cluster` que recalcula
+`buildRow` independientemente de `rowsByType` — mismo patrón de
+redundancia ya existente antes de este cambio, no introducido aquí). No se
+implementó el widget separado "Rotaciones detectadas" con nota de cautela
+citando el Family Test v1 que preveía el plan original de 6 fases para su
+propia "Fase 3" — eso queda como pieza distinta, no pedida en este alcance.
+
+**Export a LLM (`buildRelativeMarkdown`):** las 4 tablas por tipo ganan
+columnas `Δ1W`/`Sem.` y el badge se anexa entre corchetes al label de
+Signal (`Leader [UPGRADED]`), mismo patrón que `[UPGRADED]`/`[DOWNGRADED]`
+en el export de `rotacion.html`. Nota de bootstrap añadida al final del
+bloque si `!ready`.
+
+**Verificado en producción real** (Edge headless vía CDP directo, proceso
+aislado por `--user-data-dir` propio y terminado por PID exacto resuelto
+vía `netstat` — no por `taskkill /IM msedge.exe`, lección ya documentada en
+la sección de flechas de Flow Score/ATR%): sintaxis JSX transpila sin
+errores (`@babel/standalone` en Node, instalado en un proyecto npm aparte
+en el scratchpad de la sesión, no en el repo); carga real contra `node
+server.js` sin excepciones nuevas — los 4 `QuestionBlock` muestran las
+columnas `Δ1W`/`Sem.` en el orden esperado, celda de ejemplo con `—`/`—`
+(bootstrap correctamente no listo el mismo día en que se sembró el
+histórico) y el resto de columnas con datos reales; nota de bootstrap
+visible en el DOM. `state.json` → `relative_flow_history` confirmado con
+50 claves, cada una con 2 entradas (`2026-08-10`, `2026-08-11`) tras varias
+cargas de verificación el mismo día — dedup diario correcto, no duplicó
+ninguna entrada de hoy. `localStorage.llm_export_relative` verificado con
+contenido real: incluye las columnas `Δ1W`/`Sem.` y la nota de bootstrap.
+
+**Fuera de alcance:** `TLT/IEF`/`EDV/IEF` (sin cambios, ver sección
+anterior); Fase 4 (Top 3 in/out, reemplaza "Top 5 Flow Change"); Fase 5a/5b
+(matriz cross-módulos con Cycle Tracker + `rotation_history` de
+`rotacion.html`); Fase 6 (instrumentación de uso).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
