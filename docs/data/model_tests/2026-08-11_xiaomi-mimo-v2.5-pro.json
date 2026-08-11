@@ -1,182 +1,156 @@
 {
-  "run_id": "2026-08-11_0850",
+  "run_id": "2026-08-11_2041",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-08-11",
   "summary": {
     "date": "2026-08-11",
-    "run_id": "2026-08-11_0850",
+    "run_id": "2026-08-11_2041",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 31,
-    "input_tokens": 31715,
-    "output_tokens": 10200,
-    "cost_usd": 0.02267,
-    "latency_ms": 166010.0,
+    "candidate_count": 29,
+    "input_tokens": 31949,
+    "output_tokens": 8341,
+    "cost_usd": 0.021154,
+    "latency_ms": 130151.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 100,
-    "selected_count": 1,
-    "watch_count": 5,
-    "rejected_count": 18,
+    "quality_score": 97,
+    "selected_count": 3,
+    "watch_count": 8,
+    "rejected_count": 4,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": []
+    "soft_warnings": [
+      "KONC_3D_BLUE_DOWNTREND_WARNING: OXY selected with konc_3d_blue_down_2_bars=true",
+      "KONC_3D_BLUE_DOWNTREND_WARNING: AFM.V selected with konc_3d_blue_down_2_bars=true",
+      "numeric_hallucination_suspected: WATCH DHR cited streak_weeks=4.0 for DHR (actual=2)"
+    ]
   },
-  "quality_score": 100,
+  "quality_score": 97,
   "response": {
     "date": "2026-08-11",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-08-11_0850",
+    "run_id": "2026-08-11_2041",
     "decision_summary": {
-      "market_read": "Macro improving in Bull Maduro regime with score 85.71 and positive weekly and monthly deltas, supporting risk-on positioning.",
-      "risk_posture": "cautious",
+      "market_read": "Bull Maduro macro regime with strong improving trend supports risk-on positioning in diversifying themes.",
+      "risk_posture": "aggressive",
       "should_select_picks": true
     },
     "selected": [
       {
-        "ticker": "WCP.TO",
+        "ticker": "OXY",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "macro_thematic",
+        "confidence": "high",
+        "reason_short": "Bull-aligned oil gas leader with low concentration and strong institutional flow",
+        "reason_full": "OXY posts PCS 79.5 with fully bull-aligned Koncorde across all timeframes and low extension risk, confirming structural accumulation. The oil_gas theme has low concentration risk at 8% portfolio weight, providing crucial diversification from healthcare (45.5%) and us_cyclical (36%). Weekly metrics show 8.5% 4w outperformance on a 1-week streak with momentum_accel=true, and proxy_compra flag indicates institutional flow.",
+        "comparative_edge": "Selected over KOS (PCS=73.2, distribution_warning) because OXY's Koncorde is bull-aligned vs KOS's distribution_warning, and OXY has higher PCS and no distribution caution.",
+        "key_supporting_factors": [
+          "PCS 79.5 with bull-aligned Koncorde on all timeframes confirms strong structural setup.",
+          "Oil_gas theme at 8% portfolio weight provides diversification from overconcentrated healthcare and cyclical sectors.",
+          "Low extension risk with no overextension flags allows clean entry in a bull market.",
+          "Proxy_compra flag and momentum_accel=true confirm institutional accumulation."
+        ]
+      },
+      {
+        "ticker": "KTOS",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "early_rotation",
+        "confidence": "medium",
+        "reason_short": "Smallcap EM with extreme daily momentum and bull-aligned structure for diversification",
+        "reason_full": "KTOS posts PCS 74.5 with dems=19 (well above 14 threshold) and bull-aligned Koncorde, confirming explosive daily institutional flow. The smallcap_em theme has low concentration risk, providing diversification from overconcentrated sectors. Ret_4w_vs_spy of 27.1% on a 1-week streak shows explosive momentum, but extension risk is high with dist_sma20_atr_extreme and ret_4w_extended acknowledged—the extreme dems score and thematic diversification justify entry despite extension.",
+        "comparative_edge": "Selected over URI (PCS=80.2, dems=6) because KTOS provides diversification into smallcap_em (no current exposure) and has higher dems (19 vs 6), while URI's cyclical theme is already overconcentrated at 36%.",
+        "key_supporting_factors": [
+          "Dems=19 with spike_flag=false confirms robust multi-day institutional flow exceeding the early rotation threshold.",
+          "Smallcap_em theme has low concentration risk, diversifying from healthcare, tech, and cyclical overexposure.",
+          "Bull-aligned Koncorde on all timeframes provides structural confirmation despite high extension risk.",
+          "Outperform_d10=9 confirms nine consecutive trading days of outperformance with broad daily breadth."
+        ]
+      },
+      {
+        "ticker": "AFM.V",
         "portfolio": "MIMO_SHADOW",
         "signal_type": "confirmed_leader",
-        "confidence": "high",
-        "reason_short": "5-week streak with high rot and low theme concentration for diversification.",
-        "reason_full": "WCP.TO posts PCS 82.0 with rotation score 9 and a 5-week unbroken streak delivering +7.9% 4w outperformance vs SPY. Extension risk is low with no overextension flags, and the oil_gas theme has low concentration risk at current portfolio weight of 0%, providing crucial diversification from 45.5% healthcare and 29% tech AI holdings. Koncorde is fully bullish-aligned with strong weekly metrics driving the signal despite dems=4.",
-        "comparative_edge": "Selected over DHR (PCS=83.2, rot=9) because WCP.TO's oil_gas theme has low concentration risk versus DHR's healthcare_largecap which would elevate already-high sector weight to over 50%, and WCP.TO's 5-week streak surpasses DHR's 2 weeks.",
+        "confidence": "medium",
+        "reason_short": "Silver gold miner with strong rotation and bull-aligned structure for thematic diversification",
+        "reason_full": "AFM.V posts PCS 74.5 with rotation score 8 and bull-aligned Koncorde, confirming institutional accumulation. The silver_gold_miners theme has medium concentration risk at 16%, but the individual strength and institutional flow support entry. Ret_4w_vs_spy of 14.5% on a 2-week streak demonstrates building leadership, with extension risk medium acknowledged—the rotation score and thematic diversification justify entry despite the spike_flag.",
+        "comparative_edge": "Selected over LLY (PCS=86.8, healthcare) because AFM.V provides diversification into silver_gold_miners (medium concentration) versus LLY's healthcare which would increase already-high sector weight to over 50%.",
         "key_supporting_factors": [
-          "5-week unbroken streak with rotation score 9 confirms sustained institutional accumulation and leadership.",
-          "Ret_4w_vs_spy of 7.8961% and ret_13w_vs_spy of 3.6032% demonstrate building weekly momentum.",
-          "Oil_gas theme at 0% portfolio concentration risk diversifies from heavy healthcare (45.5%) and tech AI (29%) exposure.",
-          "Extension risk is low with no extension flags, providing a clean entry backdrop in a bullish macro regime."
-        ],
-        "key_risks_or_contradictions": [
-          "Dems score of 4 is below 10, so daily flow data cannot independently drive conviction; weekly metrics must lead the signal.",
-          "Ret_13w_vs_spy of 3.6032% is moderate compared to some peers, indicating slower longer-term momentum.",
-          "Market regime in Bull Maduro may favor cyclical themes, but oil_gas sensitivity to macro shifts requires monitoring."
+          "Rotation score 8 with 2-week streak and 14.5% 4w outperformance shows sustained institutional accumulation.",
+          "Bull-aligned Koncorde on all timeframes provides structural confirmation.",
+          "Silver_gold_miners theme diversifies from healthcare and cyclical overexposure.",
+          "Outperform_d10=5 confirms five consecutive trading days of outperformance."
         ]
       }
     ],
     "watch": [
       {
-        "ticker": "AFM.V",
-        "reason": "Dems=17 (extreme) with spike_flag=false and pcs=74.5 meets early rotation threshold, but extension risk is medium and signal needs confirmation for sustained flow.",
-        "watch_trigger": "If dems remains above 14 without spike, extension_risk decreases to low, and weekly streak extends beyond 2 weeks, consider SELECT for early rotation portfolio."
-      },
-      {
-        "ticker": "KTOS",
-        "reason": "Dems=19 (extreme) with spike_flag=false and pcs=74.5, but extension_risk is high with dist_sma20_atr_extreme and ret_4w_extended, requiring caution despite strong daily momentum.",
-        "watch_trigger": "If extension_risk reduces to medium or lower with sustained outperform_d10 >=6, and weekly streak builds to 3+ weeks, consider SELECT."
-      },
-      {
-        "ticker": "VRTX",
-        "reason": "Dems=13 (in 10-13 range), pcs=76.2 with rot=6 and 2-week streak, but healthcare theme concentration is high at 45.5% portfolio weight.",
-        "watch_trigger": "If healthcare concentration risk decreases below high or dems rises above 14 with spike_flag=false, reevaluate for selection."
+        "ticker": "LLY",
+        "reason": "Strong signal (PCS 86.8, bull-aligned Koncorde) but healthcare concentration already at 45.5%, adding would increase sector risk above 50%.",
+        "watch_trigger": "Reduce healthcare exposure below 40% or see a pullback to better entry with lower extension risk."
       },
       {
         "ticker": "DHR",
-        "reason": "Pcs=83.2 with rot=9 and 2-week streak, but healthcare_largecap theme would elevate already-high sector concentration risk above 50%.",
-        "watch_trigger": "If healthcare concentration decreases significantly or WCP.TO-like diversification opportunity fades, reconsider."
+        "reason": "High PCS 83.2 with bull-aligned Koncorde but healthcare theme concentration risk is high at 45.5%.",
+        "watch_trigger": "Reduce healthcare exposure or see rotation score improve to 10 with sustained 4-week streak."
       },
       {
         "ticker": "URI",
-        "reason": "Pcs=80.2 with rot=8 and 4-week streak, but us_cyclical theme concentration is high at 34% portfolio weight.",
-        "watch_trigger": "If us_cyclical concentration risk reduces or weekly metrics strengthen with dems rising above 10, consider SELECT."
+        "reason": "Strong weekly metrics (PCS 80.2, rot=8, streak=4) but us_cyclical concentration already at 36%.",
+        "watch_trigger": "Reduce cyclical exposure below 30% or see daily momentum (dems) improve above 14."
+      },
+      {
+        "ticker": "AWX",
+        "reason": "High dems=18 with momentum_accel but us_cyclical concentration already at 36%.",
+        "watch_trigger": "Reduce cyclical exposure below 30% or see weekly streak extend to 4 weeks."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "reason": "Strong signal (PCS 76.5, rot=7) but healthcare_special concentration is at 11% and extension risk is high.",
+        "watch_trigger": "See extension risk decrease to medium or pullback to below dist_sma20_atr_high."
+      },
+      {
+        "ticker": "VRTX",
+        "reason": "PCS 76.2 with bull-aligned Koncorde but healthcare_largecap concentration is high at 45.5%.",
+        "watch_trigger": "Reduce healthcare exposure or see dems improve above 14 with sustained outperformance."
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "PCS 76.2 with bull_pending_3d_confirmation but healthcare_largecap concentration is high.",
+        "watch_trigger": "See Koncorde 3D confirm bullish alignment or healthcare exposure decrease."
+      },
+      {
+        "ticker": "HUM",
+        "reason": "PCS 80.2 with bull-aligned Koncorde but healthcare concentration is high and dems=7 is weak.",
+        "watch_trigger": "See dems improve above 10 or healthcare exposure decrease below 40%."
       }
     ],
     "rejected": [
       {
-        "ticker": "TMO",
-        "reason": "Already held in MIMO_SHADOW portfolio as an open position with current_pcs=80.5.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SE",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=79.5 and 3-week streak.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "NUE",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=77.5 and 5-week streak.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "MRK",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=76.2 and 8-week streak.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "FCX",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=75.8 and 3-week streak.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "TECK",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=67.5 and 4-week streak.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "PLTR",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=68.5, extension_risk extreme acknowledged, but weekly metrics strong.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "DPM.TO",
-        "reason": "Already held in MIMO_SHADOW portfolio with current_pcs=63.0 and 4-week streak.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
         "ticker": "SLS",
-        "reason": "Signal is IGNORAR with streak_weeks=0, rot_score=5, and konc_alignment distribution_warning indicating weak momentum.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "Signal is IGNORAR with distribution_warning across Koncorde timeframes and weak rotation score=5.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "OSCR",
-        "reason": "Signal is IGNORAR with streak_weeks=0, rot_score=4, and konc_alignment distribution_warning indicating weak flow.",
+        "reason": "Signal is IGNORAR with distribution_warning and weak rotation score=4 with -11.8% 4w underperformance.",
         "rejection_category": "weak_flow"
       },
       {
-        "ticker": "LLY",
-        "reason": "High pcs=86.8 and rot=8, but healthcare_largecap theme concentration is high at 45.5% portfolio weight, limiting diversification benefit.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SYK",
-        "reason": "High pcs=83.0 and rot=9, but healthcare_largecap theme would add to already-high concentration risk.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Pcs=80.2 but signal VIGILAR, streak_weeks=1, dems=4, and spike_flag=true with extension risk medium indicates insufficient recent momentum.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "OXY",
-        "reason": "Pcs=79.5 but signal VIGILAR, streak_weeks=1, dems=8, spike_flag=true, and extension risk medium with konc_d_state distribution.",
+        "ticker": "KOS",
+        "reason": "Signal is EN_RADAR but Koncorde shows distribution_warning and theme is oil_gas which we already have.",
         "rejection_category": "technical_overextension"
-      },
-      {
-        "ticker": "SEDANA.ST",
-        "reason": "Pcs=76.5 but extension_risk high with dist_sma20_atr_extreme and rsi_extreme, and dems=11 not sufficient to justify entry despite rot=7.",
-        "rejection_category": "technical_overextension"
-      },
-      {
-        "ticker": "JNJ",
-        "reason": "Pcs=76.2 but dems=5, streak_weeks=2, and konc_3d_state distribution with alignment bullish_pending_3d_confirmation indicates weaker structural confirmation.",
-        "rejection_category": "weak_flow"
-      },
-      {
-        "ticker": "GS",
-        "reason": "Pcs=60.0 below the 62 threshold for mandatory watch/reject, but included for completeness: signal IGNORAR with streak_weeks=0 and weak metrics.",
-        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "CAT",
-        "reason": "Pcs=50.0 below 62 threshold: signal IGNORAR with streak_weeks=0, rot_score=3, and konc_alignment distribution_warning.",
+        "reason": "PCS 50.0 below minimum entry threshold of 68.0 and weak relative strength with -14.3% 4w underperformance.",
         "rejection_category": "insufficient_conviction"
       }
     ],
@@ -185,57 +159,57 @@
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=76.2 > pcs_min_entry 68.0, streak_weeks=8 >1, rot_score=7 >2, and weekly momentum strong."
+        "reason": "Current PCS 76.2 above entry threshold, rot=7 with 8-week streak demonstrates sustained leadership."
       },
       {
         "ticker": "NUE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=77.5 >68.0, streak_weeks=5 >1, rot_score=7 >2, with strong 4w outperformance of 18.38%."
+        "reason": "Current PCS 77.5 with rot=7 and 5-week streak, 18.4% 4w outperformance continues to build."
       },
       {
         "ticker": "SE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=79.5 >68.0, streak_weeks=3 >1, rot_score=7 >2, providing china_em diversification."
+        "reason": "Current PCS 79.5 with rot=7 and 3-week streak, china_em theme provides diversification."
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=80.5 >68.0, streak_weeks=5 >1, rot_score=7 >2, with bullish-aligned Koncorde."
-      },
-      {
-        "ticker": "NVDA",
-        "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "Current pcs=55.5 <62 absolute floor, triggering mandatory exit despite streak_weeks=2 >1."
+        "reason": "Current PCS 80.5 with rot=7 and 5-week streak, bullish-aligned Koncorde confirms structural setup."
       },
       {
         "ticker": "TECK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=67.5 <68.0 but streak_weeks=4 >1 and rot_score=6 >2, with bullish-aligned Koncorde."
+        "reason": "Current PCS 67.5 below entry but streak_weeks=4 and rot=6 with bull-aligned Koncorde justifies hold."
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=63.0 <68.0 but streak_weeks=4 >1 and rot_score=7 >2, with strong 4w outperformance of 21.29%."
+        "reason": "Current PCS 63.0 below entry but streak_weeks=4 and rot=7 with 21.3% 4w outperformance justifies hold."
       },
       {
         "ticker": "PLTR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=68.5 >=68.0, streak_weeks=2 >1, rot_score=7 >2, with weekly metrics strong despite extension_risk extreme."
+        "reason": "Current PCS 68.5 above entry threshold with rot=7 and 2-week streak, 35.8% 4w outperformance."
       },
       {
         "ticker": "FCX",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current pcs=75.8 >68.0, streak_weeks=3 >1, rot_score=7 >2, with dems=15 confirming early rotation."
+        "reason": "Current PCS 75.8 with rot=7 and 3-week streak, bullish-aligned Koncorde confirms structural setup."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 82.0 with rot=9 and 5-week streak, oil_gas theme provides diversification."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-08-11\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-11_0850\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro improving in Bull Maduro regime with score 85.71 and positive weekly and monthly deltas, supporting risk-on positioning.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"WCP.TO\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"5-week streak with high rot and low theme concentration for diversification.\",\n      \"reason_full\": \"WCP.TO posts PCS 82.0 with rotation score 9 and a 5-week unbroken streak delivering +7.9% 4w outperformance vs SPY. Extension risk is low with no overextension flags, and the oil_gas theme has low concentration risk at current portfolio weight of 0%, providing crucial diversification from 45.5% healthcare and 29% tech AI holdings. Koncorde is fully bullish-aligned with strong weekly metrics driving the signal despite dems=4.\",\n      \"comparative_edge\": \"Selected over DHR (PCS=83.2, rot=9) because WCP.TO's oil_gas theme has low concentration risk versus DHR's healthcare_largecap which would elevate already-high sector weight to over 50%, and WCP.TO's 5-week streak surpasses DHR's 2 weeks.\",\n      \"key_supporting_factors\": [\n        \"5-week unbroken streak with rotation score 9 confirms sustained institutional accumulation and leadership.\",\n        \"Ret_4w_vs_spy of 7.8961% and ret_13w_vs_spy of 3.6032% demonstrate building weekly momentum.\",\n        \"Oil_gas theme at 0% portfolio concentration risk diversifies from heavy healthcare (45.5%) and tech AI (29%) exposure.\",\n        \"Extension risk is low with no extension flags, providing a clean entry backdrop in a bullish macro regime.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Dems score of 4 is below 10, so daily flow data cannot independently drive conviction; weekly metrics must lead the signal.\",\n      "
+  "raw_response_head": "{\n  \"date\": \"2026-08-11\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-11_2041\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro macro regime with strong improving trend supports risk-on positioning in diversifying themes.\",\n    \"risk_posture\": \"aggressive\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"OXY\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"macro_thematic\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"Bull-aligned oil gas leader with low concentration and strong institutional flow\",\n      \"reason_full\": \"OXY posts PCS 79.5 with fully bull-aligned Koncorde across all timeframes and low extension risk, confirming structural accumulation. The oil_gas theme has low concentration risk at 8% portfolio weight, providing crucial diversification from healthcare (45.5%) and us_cyclical (36%). Weekly metrics show 8.5% 4w outperformance on a 1-week streak with momentum_accel=true, and proxy_compra flag indicates institutional flow.\",\n      \"comparative_edge\": \"Selected over KOS (PCS=73.2, distribution_warning) because OXY's Koncorde is bull-aligned vs KOS's distribution_warning, and OXY has higher PCS and no distribution caution.\",\n      \"key_supporting_factors\": [\"PCS 79.5 with bull-aligned Koncorde on all timeframes confirms strong structural setup.\", \"Oil_gas theme at 8% portfolio weight provides diversification from overconcentrated healthcare and cyclical sectors.\", \"Low extension risk with no overextension flags allows clean entry in a bull market.\", \"Proxy_compra flag and momentum_accel=true confirm institutional accumulation.\"]\n    },\n    {\n      \"ticker\": \"KTOS\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"Smallcap EM with extreme daily momentum and bull-aligned structure for diversification\",\n      \"reason_full\": \"KTOS posts PCS 74.5 with dems=19 (well above 14 threshold) and bull-aligned Koncorde, confirming "
 }
