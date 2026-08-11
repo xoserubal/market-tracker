@@ -1985,6 +1985,278 @@ anterior); Fase 4 (Top 3 in/out, reemplaza "Top 5 Flow Change"); Fase 5a/5b
 
 ---
 
+## Relative Flow Lab — Fase 4: Top 3 Flow In/Out (implementado 2026-08-11)
+
+Reemplaza el panel "Top 5 Flow Change" (ranking crudo por `flowChange`,
+solo positivo) por un panel "Top 3 Flow In/Out": dos listas de 3 (entradas
+más coherentes / salidas más coherentes), con un toggle "Sin filtro" que
+recupera el ranking crudo anterior sin perder esa vista.
+
+**Filtro de coherencia — criterio acordado explícitamente con el usuario**
+antes de implementar, porque el texto original del plan de 6 fases (que
+mencionaba un "filtro de coherencia adaptativo" opcional) nunca se
+commiteó al repo y solo sobrevivía como resumen en memoria, sin la fórmula
+exacta. Mismo principio que ya usa el Early Flow Detector de esta misma
+página (flowChange + RSI + r1m + trend deben confirmarse entre sí, no un
+solo indicador aislado) — evita que un pico de `flowChange` de un único
+día, sin respaldo del score o de la tendencia de medias, aparezca como
+señal de rotación real. Formulación simétrica:
+
+```
+Entrantes: flowChange > 0  AND score >= 0  AND trend !== "Down"
+Salientes: flowChange < 0  AND score <= 0  AND trend !== "Up"
+```
+
+Implementado en `coherentFlowDirection(row)` (`relative.html`). `topFlowIn`/
+`topFlowOut` filtran `flatRows` por esta función y ordenan por `|flowChange|`
+descendente, top 3 cada uno — pueden salir vacíos si ningún ratio cumple
+las tres condiciones ese día (mensaje "Sin candidatos coherentes hoy" en
+vez de forzar 3 filas). El toggle (`flowFilterOff`, estado local del
+componente) alterna entre esta vista filtrada y el `accelerationRows`
+crudo que ya existía (top 5 por `flowChange`, sin ningún filtro) — ambas
+conviven, no se perdió ninguna capacidad.
+
+**Export a LLM (`buildRelativeMarkdown`):** sección `## Top 3 Flow In/Out`
+con las dos subtablas (`### Entrando`/`### Saliendo`) y el criterio de
+coherencia en texto, seguida de `## Top 5 Flow Change (sin filtro)` con el
+ranking crudo — ambas versiones se exportan siempre (a diferencia de la
+UI, el markdown no tiene estado de toggle interactivo).
+
+**Verificado en producción real** (Edge headless vía CDP, PID resuelto por
+`netstat` y terminado exacto): sintaxis JSX transpila sin errores; carga
+real contra `node server.js` sin excepciones nuevas; panel por defecto
+("Sin filtro" visible como opción, filtro activo) mostró 3 entrantes (XME/SPY,
+GLD/SPY, GDX/GLD, todas con score≥0 y trend no-Down) y 3 salientes
+(JPY=X/^N225, HG=F/GC=F, BTC-USD/GC=F, todas con score≤0 y trend no-Up) —
+consistente con el criterio; clic real en el botón (vía CDP, no simulado)
+confirmó el toggle: pasa a "Top 5 Flow Change (sin filtro)" con 5 filas
+(el quinto puesto, XLB/SPY, no habría entrado en la vista filtrada por no
+tener los tres signos alineados) y el botón cambia a "Con filtro". Export
+a LLM verificado con contenido real: ambas secciones presentes, criterio
+de coherencia incluido como texto.
+
+**Fuera de alcance:** Fase 5a/5b (matriz cross-módulos con Cycle Tracker);
+Fase 6 (instrumentación de uso); `TLT/IEF`/`EDV/IEF` (sin cambios).
+
+---
+
+## Relative Flow Lab — Fase 5a: matriz de coherencia cross-módulos (implementado 2026-08-11)
+
+Cruza `relative.html` con Cycle Tracker (`cycle.html`) y Flujos & Rotación
+v2 (`rotacion.html`) — los tres módulos independientes del proyecto que
+leen "hacia dónde se mueve el capital" con horizontes distintos. El texto
+original del plan de 6 fases de RFL v2 (que mencionaba esta matriz) no
+sobrevivió commiteado en ningún sitio; el diseño exacto (estructura de
+tabla, 5 estados de coherencia, lenguaje interpretativo, mapping sectorial
+previo obligatorio) se reconstruyó con el usuario antes de escribir código
+— mismo patrón ya usado para el filtro de Fase 4.
+
+### 1. `wiki/MAPPING_SECTORIAL_CANONICO.md` (nuevo, firmado antes del código)
+
+Precondición explícita pedida por el usuario: sin fijar qué ticker/fase/
+ratio de cada módulo representa el "mismo" sector, la matriz cruzaría
+cosas distintas bajo el mismo nombre y daría falso consenso o falsa
+divergencia. Verificado contra el código real de los tres módulos (no
+asumido): de las 10 fases clásicas de `CYCLE_MAP`, **8 tienen cobertura
+completa en los 3 módulos** (Technology, Capital Goods, Materials, Oil &
+Gas, Staples, Healthcare, Utilities, Financials & Cyclicals — Staples y
+Healthcare se separan en 2 filas porque `rotacion.html`/RFL las tratan
+como sectores independientes aunque compartan fase "Early Bear"); 3 no
+(Transportation — sin ticker en `rotacion.html` `UNIVERSE` ni en el
+registry de RFL; Uranium — sin ticker en `UNIVERSE`; Coal & Steel Inputs —
+sin ETF proxy real ni ratio *_spy en RFL, solo comparaciones stock-vs-stock
+dentro del cluster COAL). Off-cycle themes de `cycle.html` excluidos por
+la misma razón que el propio Cycle Tracker los mantiene fuera de
+`PhaseTimeline`: no responden a "¿dónde estamos en el ciclo?".
+
+### 2. Fuente de cada columna — decisión de implementación explícita
+
+- **Cycle (3M):** NO es el score compuesto del cesto completo de la fase
+  en `cycle.html` (reimplementar `calcPhaseScores` + descargar el
+  histórico de ~90 tickers adicionales que RFL no toca hoy sería
+  desproporcionado para una "matriz mínima"). Se usa el **r3m del mismo
+  ratio `*_spy` de RFL** para el ticker que Cycle Tracker marca
+  `role:"proxy"` en esa fase — mismo instrumento, mismo concepto (alfa a 3
+  meses), sin fetch ni cálculo nuevo. Aproximación declarada, documentada
+  en la UI (tooltip), en el export a LLM y en el wiki — nunca presentada
+  como si fuera literalmente el dato de Cycle Tracker.
+- **Flujos (semanal):** última entrada de `rotation_history[ticker]` en
+  `state.json` (ya sembrado por `rotacion.html` desde su propia Fase 1,
+  `state.json` es compartido entre páginas — no hizo falta ninguna
+  persistencia nueva). Bucketizado con los mismos umbrales que esa página
+  usa para sus propias señales: `score≥5`→Bullish (ACUMULAR),
+  `score<3`→Bearish, 3-4→Neutral (VIGILAR).
+- **RFL (5-10d):** `flowChange` (5D vs 5D previos) del mismo ratio
+  `*_spy` — el campo de horizonte más corto que ya calcula esta página,
+  mismo dato que alimenta el Early Flow Detector y el filtro de la Fase 4.
+
+Umbrales de bucketización (`bucketFromReturn`, `bucketFromFlowChange`,
+`bucketFromRotScore` en `relative.html`) son de primera pasada, sin
+calibrar contra rendimiento posterior — mismo criterio observacional que
+el resto de features nuevas del proyecto.
+
+### 3. Los 5 estados de coherencia (`computeCoherenceState`)
+
+Exigen lectura en **los 3 módulos** para poder ser CONFIRMACIÓN/
+DIVERGENCIA/PARCIAL/NEUTRAL — si falta cualquiera, siempre `NO EVALUABLE`,
+nunca se rellena con un dato inventado (aplica automáticamente a
+Transportation, Uranium y Coal & Steel Inputs, las 3 filas sin cobertura
+completa del mapping):
+```
+CONFIRMACIÓN: los 3 coinciden (3 Bullish o 3 Bearish)
+DIVERGENCIA:  hay al menos un Bullish y un Bearish a la vez
+PARCIAL:      2 coinciden en dirección, el resto no opuesto
+NEUTRAL:      los 3 en Neutral
+NO EVALUABLE: falta lectura en algún módulo
+```
+
+**Lenguaje interpretativo** — mismo vocabulario obligatorio ya usado en el
+registry de divergencias de `rotacion.html` (Fase 4 de Flujos & Rotación
+v2): "sugiere consenso" / "plantea lectura ambigua" / "no garantiza
+continuación de tendencia" — nunca "confirma"/"contradice" en sentido
+conclusivo. Texto fijo bajo la tabla, y en el export a LLM.
+
+### 4. Verificado en producción real
+
+Edge headless vía CDP (PID resuelto por `netstat`, terminado exacto):
+sintaxis JSX transpila sin errores; carga real contra `node server.js` sin
+excepciones nuevas; las 11 filas renderizan correctamente — Transportation
+y Coal & Steel Inputs con las 3 columnas en `—` y `No evaluable`; Uranium
+con Cycle+RFL leídos pero Flujos en `—` → `No evaluable` (confirma que
+exigir los 3 módulos funciona, no solo mayoría); Healthcare y Financials &
+Cyclicals en `Confirmación` (los 3 en Bullish, datos reales del momento);
+el resto en `Parcial`/`Divergencia` según los datos de mercado del día.
+Export a LLM verificado con contenido real: tabla completa + texto de
+lenguaje conservador + referencia al wiki de mapping.
+
+**Fuera de alcance:** Fase 5b tal como se había nombrado en el plan
+original (enriquecer con una "tercera columna" cuando Flujos completara
+sus Fases 1-2) queda absorbida dentro de esta implementación — la columna
+Flujos ya está presente desde el primer commit de la matriz, no como
+fase separada posterior, porque `rotation_history` ya estaba listo desde
+2026-07-30. Fase 6 (instrumentación de uso); `TLT/IEF`/`EDV/IEF` (sin
+cambios); histéresis o suavizado de la matriz (se recalcula en vivo en
+cada carga, igual que el resto de RFL).
+
+---
+
+## Relative Flow Lab — Fase 6: instrumentación de uso (implementado 2026-08-11)
+
+Cierra el plan de 6 fases de RFL v2. El resumen de memoria de esta fase
+("contadores agregados semanales + timestamp de última interacción, sin
+opt-in") describía una estructura (`clusters` con expand/collapse,
+`ratios_opened_detail`, un widget "Rotaciones detectadas") que asume UI que
+**no existe** en `relative.html` — no hay clusters colapsables, no hay
+detalle expandible por ratio, y el widget de rotaciones se descartó
+explícitamente al implementar la lectura dinámica (ver esa sección más
+arriba). Acordado con el usuario tras señalarlo: instrumentar solo lo que
+existe hoy, alcance reducido a propósito ("mejor pequeña y honesta que
+grande con datos ruidosos", palabras del usuario) — mismo principio de "no
+meter infraestructura antes de tener datos que la justifiquen" que rige el
+resto del proyecto.
+
+**Cuatro eventos reales instrumentados:**
+1. `page_load` — cada carga de `relative.html` (da el denominador; sin él,
+   "un botón se usó 15 veces" no dice nada sin saber sobre cuántas cargas).
+2. `button_click / copy_for_llm` — botón "Copy for LLM" ya existente.
+3. `button_click / export_all_to_llm` — botón "🗂️ Exportar TODO a LLM".
+4. `button_click / toggle_unfiltered_top` — toggle "Sin filtro" del panel
+   Top 3 Flow In/Out (Fase 4).
+5. `widget_interaction / cross_module_matrix_hover` y `..._click` — sobre
+   la matriz de coherencia cross-módulos (Fase 5a), el bloque nuevo más
+   complejo del rediseño; medir si se mira es la pregunta que más importa
+   responder de las cinco.
+
+**`server.js`, nuevo endpoint `/api/ux-instrumentation` (GET+POST):** a
+diferencia de `relative_flow_history`/`rotation_history` (patrón GET-
+modifica-POST-objeto-completo, seguro porque una sola pestaña escribe con
+datos ya computados), aquí el **servidor** hace el incremento — el cliente
+solo dispara `{kind, name}` y no necesita leer nada primero. Evita la
+carrera de dos pestañas incrementando el mismo contador a la vez a partir
+de una lectura desactualizada. Semana ISO empezando en lunes
+(`isoWeekStartMonday`), cap de retención 12 semanas (~3 meses, mismo
+espíritu que el cap de 70 entradas/~10 semanas de `rotation_history`).
+Whitelist explícita de nombres válidos (`UX_VALID_BUTTONS`/
+`UX_VALID_WIDGETS`) — un `kind`/`name` no reconocido devuelve 400, nunca se
+escribe una clave arbitraria al archivo.
+
+**`state_ux_instrumentation.json`** (nuevo, mismo directorio raíz que
+`state.json`, añadido a `.gitignore` igual que ese archivo — dato local del
+servidor, no se commitea):
+```json
+{ "weeks": { "2026-08-10": {
+  "week_starting": "2026-08-10", "page_loads": 3,
+  "buttons_clicked": { "toggle_unfiltered_top": 1, "copy_for_llm": 1 },
+  "widget_interactions": { "cross_module_matrix_click": 1, "cross_module_matrix_hover": 1 },
+  "last_interaction": "2026-08-11T14:44:33.548Z"
+}}}
+```
+
+**`relative.html`:** `trackUxEvent(kind, name)` — fire-and-forget POST,
+nunca bloquea ni interrumpe la UI si falla (`.catch(() => {})`). El hover
+de la matriz se cuenta **una sola vez por sesión de página**
+(`xmodHoverTrackedRef`) — mide "¿se mira el panel?", no cada movimiento del
+ratón dentro de él; el clic no se limita (repetición de clics es señal
+igual de válida, incluso podría indicar confusión — el usuario esperando
+que la fila haga algo). `page_load` disparado una vez por montaje
+(`pageLoadTrackedRef`, mismo patrón guard-ref que el resto de efectos
+one-shot de esta página).
+
+**Verificado en producción real:** `server.js` reiniciado (edita una ruta
+`/api/*`, proceso persistente — ver [[project_dev_server_persistent]]);
+sintaxis JSX transpila sin errores; Edge headless vía CDP confirmó los 5
+eventos escribiendo correctamente en `state_ux_instrumentation.json` (clic
+real en el toggle, clic simulado en "Copy for LLM", hover real con evento
+`mouseover` bubbling — el primer intento con `mouseenter`/`bubbles:false`
+no disparó el handler de React, que internamente escucha `mouseover` en la
+raíz y sintetiza `onMouseEnter`; corregido en la verificación, no en el
+código de producción, que usa el `onMouseEnter` estándar de React y
+funciona igual en interacción real de usuario) y clic real en una fila de
+la matriz; endpoint GET devolvió el JSON acumulado correctamente. Archivo
+de prueba borrado tras verificar (gitignored, se regenera solo).
+
+**Con esto, las 6 fases del plan original de RFL v2 quedan completas.**
+
+---
+
+## Cierre TLT/IEF y EDV/IEF — corrección: ya existían en Duration Stress Monitor (2026-08-11)
+
+Las secciones de RFL v2 de arriba (Fase 2, lectura dinámica, Fase 4, Fase
+5a, Fase 6) venían arrastrando `TLT/IEF`/`EDV/IEF` como "pendiente,
+decidir dónde viven" — **error propio, no del usuario**: esos dos ratios ya
+estaban implementados en `duration.html` desde el 2026-07-07 (commit
+`9c2b01c`, sección "Sparklines y Trade Structure Playbook"), como
+`ratioTltIef`/`ratioEdvIef` (precio crudo, no retorno) mostrados vía
+`<Stat label="TLT / IEF">`/`<Stat label="EDV / IEF">` en la sección
+"1. Market Confirmation", con su fila en el export a Markdown. Se citó
+"pendiente" varias veces sin comprobar el código real de `duration.html`
+— se debería haber verificado antes de escribir esa nota la primera vez.
+
+**Decisión del usuario (arquitectura, sin necesidad de refactor):**
+Duration Stress Monitor es la vocación semántica correcta para estos dos
+ratios — "RFL es horizontal (lectura amplia de flujos); Duration Stress
+Monitor es vertical (profundidad en duración). Los ratios intra-duración
+son detalle que aporta a la lectura vertical, no a la horizontal." `TLT/
+SPY` se queda donde está en RFL (cluster RISK APPETITE, sub-categoría
+duración) porque es "duración vs equity" y sí sirve a la lectura
+horizontal — no se mueve.
+
+**Estado real de la profundidad analítica:** ambos `Stat` usan
+`style={C.neutral}` (sin threshold de color) — mismo nivel que sus
+vecinos en la misma sección (`2Y Yield`, `30Y Yield`, spreads, `DFII10`,
+`Breakeven 5Y`): son contexto informativo, no alimentan la state machine
+A/B/C/D de la tesis (que solo usa TLT/10Y/HY/VIX/MOVE). Es el nivel de
+profundidad ya decidido para esa sección desde 2026-07-07, no un hueco
+nuevo — no se ha tocado nada de `duration.html` en esta sesión, solo se
+corrige la documentación.
+
+**No se implementó ningún cambio de código** — no hacía falta. Si en el
+futuro se quiere subir `TLT/IEF`/`EDV/IEF` al mismo nivel que los 5
+indicadores centrales (threshold de color, quizás alimentar la state
+machine), es una decisión aparte, no derivada de este cierre.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

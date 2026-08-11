@@ -922,6 +922,68 @@ app.get("/api/state", (_req, res) => {
   try { res.json(JSON.parse(fs.readFileSync(STATE_FILE, "utf8"))); }
   catch { res.json(DEFAULT_STATE); }
 });
+
+// ── UX instrumentation (RFL v2 — Fase 6, alcance acotado a lo que existe hoy en
+// relative.html: page_loads, 3 botones reales, hover/clic en la matriz cross-módulos
+// de la Fase 5a) ───────────────────────────────────────────────────────────────
+// Escritura silenciosa, sin opt-in, sin modo debug — el cliente solo dispara el
+// evento; el servidor hace el incremento para evitar la carrera de lectura-modifica-
+// escritura que tendría hacerlo en el cliente (patrón distinto a relative_flow_history/
+// rotation_history, que sí son GET-modificar-POST porque los escribe una sola pestaña
+// a la vez con datos ya computados, no un contador compartido).
+const UX_INSTRUMENTATION_FILE = path.join(__dirname, "state_ux_instrumentation.json");
+const UX_VALID_BUTTONS = new Set(["copy_for_llm", "export_all_to_llm", "toggle_unfiltered_top"]);
+const UX_VALID_WIDGETS = new Set(["cross_module_matrix_hover", "cross_module_matrix_click"]);
+const UX_RETENTION_WEEKS = 12; // ~3 meses, mismo espíritu que el cap de 70 entradas (~10 semanas) de rotation_history
+
+function isoWeekStartMonday(d) {
+  const date = new Date(d);
+  const day = date.getUTCDay(); // 0=domingo..6=sábado
+  const diff = (day === 0 ? -6 : 1) - day; // retrocede al lunes de esa semana
+  date.setUTCDate(date.getUTCDate() + diff);
+  date.setUTCHours(0, 0, 0, 0);
+  return date.toISOString().slice(0, 10);
+}
+
+function loadUxInstrumentation() {
+  try { return JSON.parse(fs.readFileSync(UX_INSTRUMENTATION_FILE, "utf8")); }
+  catch { return { weeks: {} }; }
+}
+
+app.get("/api/ux-instrumentation", (_req, res) => {
+  res.json(loadUxInstrumentation());
+});
+
+app.post("/api/ux-instrumentation", express.json(), (req, res) => {
+  try {
+    const { kind, name } = req.body || {};
+    const data = loadUxInstrumentation();
+    if (!data.weeks) data.weeks = {};
+    const weekKey = isoWeekStartMonday(new Date());
+    if (!data.weeks[weekKey]) {
+      data.weeks[weekKey] = { week_starting: weekKey, page_loads: 0, buttons_clicked: {}, widget_interactions: {} };
+    }
+    const wk = data.weeks[weekKey];
+    if (kind === "page_load") {
+      wk.page_loads = (wk.page_loads || 0) + 1;
+    } else if (kind === "button_click" && UX_VALID_BUTTONS.has(name)) {
+      wk.buttons_clicked[name] = (wk.buttons_clicked[name] || 0) + 1;
+    } else if (kind === "widget_interaction" && UX_VALID_WIDGETS.has(name)) {
+      wk.widget_interactions[name] = (wk.widget_interactions[name] || 0) + 1;
+    } else {
+      return res.status(400).json({ error: "invalid event" });
+    }
+    wk.last_interaction = new Date().toISOString();
+
+    const weekKeys = Object.keys(data.weeks).sort();
+    if (weekKeys.length > UX_RETENTION_WEEKS) {
+      weekKeys.slice(0, weekKeys.length - UX_RETENTION_WEEKS).forEach(k => delete data.weeks[k]);
+    }
+
+    fs.writeFileSync(UX_INSTRUMENTATION_FILE, JSON.stringify(data, null, 2));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 app.post("/api/state", express.json(), (req, res) => {
   try { fs.writeFileSync(STATE_FILE, JSON.stringify(req.body, null, 2)); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ error: e.message }); }
