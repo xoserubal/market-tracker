@@ -167,6 +167,11 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      - name: Run pipeline - Step 10h PCS-floor whipsaw monitor (shadow only)
+        run: python scripts/pcs_floor_whipsaw_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 11 Telegram notifications
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

@@ -449,6 +449,37 @@ def parse_response(raw: str) -> dict:
     return json.loads(text)
 
 
+def _resolve_max_tokens(model_id: str, n_open_positions: int) -> int:
+    """Output token budget for the normal-mode call.
+
+    A single-ticker verdict fits comfortably in ~1500 tokens, but
+    --compare-portfolio all asks the model for one verdict+reasoning per open
+    position (28 as of 2026-08-12) on top of that — the fixed 1500 cap was
+    truncating those responses mid-string (confirmed: two consecutive SE
+    runs both cut off mid-JSON-string around token ~1500). Scale with
+    n_open_positions and cap at a per-model ceiling.
+
+    Grok's cap here (16000) is not xAI's true limit — queried OpenRouter's
+    /models/x-ai/grok-4.3/endpoints on 2026-08-12 and both max_completion_tokens
+    and max_prompt_tokens come back null (unreported, context_length=1,000,000),
+    so paper_trading.py's "conservative default: 6144" for grok was never a
+    verified ceiling, just a guess — kept the same shape (per-model cap) but
+    raised it because 6144 was already tight against 28 positions' worth of
+    verdicts (needed ~7660) and the true limit is evidently much higher.
+    """
+    needed = 1500 + 220 * n_open_positions
+    m = model_id.lower()
+    if "haiku" in m:
+        cap = 8192   # Claude Haiku 4.5 native max
+    elif "sonnet" in m:
+        cap = 16000  # Claude Sonnet 4.x native max
+    elif "mimo" in m:
+        cap = 32000  # MiMo-V2.5-Pro: verbose reasoning model
+    else:
+        cap = 16000  # grok / others — no reported ceiling, see docstring
+    return min(needed, cap)
+
+
 # ── Model resolution ───────────────────────────────────────────────────────────
 
 def resolve_models(args_models: list[str] | None, all_models: bool) -> list[str]:
@@ -971,7 +1002,8 @@ def main() -> None:
         short = model_short_name(model_id)
         print(f"\n[{short}] calling...", end="", flush=True)
         try:
-            raw, latency_ms, in_tok, out_tok = call_model(model_id, payload)
+            max_tok = _resolve_max_tokens(model_id, len(open_positions))
+            raw, latency_ms, in_tok, out_tok = call_model(model_id, payload, max_tokens=max_tok)
             result = parse_response(raw)
             print(f" done ({latency_ms / 1000:.1f}s, {in_tok}+{out_tok} tok)")
             print_result(result, model_id, latency_ms)

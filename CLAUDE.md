@@ -2258,6 +2258,82 @@ machine), es una decisión aparte, no derivada de este cierre.
 
 ---
 
+## PCS-floor whipsaw monitor (implementado 2026-08-12)
+
+Origen: al investigar por qué SE (`force_analyze.py`) no fue SELECT en su
+ventana de mejores métricas (PCS 82.2, extension_risk low, 2026-08-05),
+apareció un hallazgo distinto y más concreto al revisar su historial real de
+entradas. Sus dos entradas reales (`CONFIRMED_FLOW_LEADERS` 2026-07-07,
+`MACRO_THEMATIC_BENEFICIARIES` 2026-07-15) se cerraron **ambas exactamente 1
+día después** por la regla `current_pcs < 62` (suelo absoluto, ver sección
+"Cierre de posiciones"), con el precio prácticamente plano (-0.73%, +1.89%).
+Rastreado en el histórico de `ai_candidates.json` (vía git): el caso de CFL
+se explica por un vuelco de un solo componente — `B_theme_flow` (techo 24)
+pasó de 22.0 a 6.0 en una sola sesión y volvió a 18.0 al día siguiente,
+mientras el resto de componentes y el propio precio de SE no se movieron.
+Ruido de un día en el flujo del tema `china_em`, no deterioro del valor.
+
+Escaneando las 30 salidas por suelo de PCS del sistema completo desde junio
+(todas las carteras, no solo CFL), 3 comparten la misma firma —
+cierre en ≤2 días con precio prácticamente plano (SE×2, y **NVDA**, cerrado
+el mismo día 2026-07-16 en `MACRO_THEMATIC_BENEFICIARIES` por el mismo
+motivo). Las otras 27 son deterioro real y consistente (ej. NBIS -15% a
+-16% en 2 días, TDOC -21.6% en 32 días). n=3 es demasiado pequeño para
+tocar la regla de salida — mismo criterio que el resto del proyecto
+(~100-150 eventos independientes, 2+ regímenes, ver
+`wiki/ASESOR_EXTERNO_CFL_DIAGNOSTICO.md`) — así que en vez de dejarlo como
+una anécdota se creó un monitor shadow para acumular el conteo real
+automáticamente.
+
+**Script nuevo: `scripts/pcs_floor_whipsaw_shadow.py`** (Step 10h del
+pipeline, `continue-on-error: true`, después de `cfl_reentry_cooldown_shadow.py`).
+A diferencia de `cfl_followthrough_shadow.py` (que proyecta un "habría
+salido / se habría mantenido" hipotético), esta regla **ya se disparó de
+verdad** — el script solo clasifica, a posteriori, cada cierre por suelo de
+PCS de todas las carteras (no solo CFL — el caso de NVDA fue en
+`MACRO_THEMATIC_BENEFICIARIES`) como `flat_price_whipsaw`
+(`holding_days<=2 AND |price_change_pct|<3.0`, primera pasada sin calibrar,
+mismo criterio que el resto de umbrales nuevos del proyecto) o
+`likely_real_deterioration`, y atribuye el vuelco de PCS al componente (A-F)
+que más se movió entre el día de entrada y el de cierre.
+
+**Reutiliza `list_commits`/`candidates_at_commit`/`find_match` de
+`reconstruct_pcs_components_historical.py`** en vez de reimplementar la
+búsqueda de commit por ticker+fecha+pcs — mismo criterio que motivó
+`ai_shared.py`: que la lógica de "qué commit de `ai_candidates.json`
+corresponde a este ticker en esta fecha" no pueda desincronizarse entre dos
+scripts. El PCS del día de cierre no está guardado como campo estructurado
+en `ai_picks.json` (solo dentro del texto libre de `close_reason`, con al
+menos 8 formatos de redacción distintos observados) — se extrae con un
+regex laxo (`pcs[^0-9]{0,20}?(\d+\.?\d*)`, primer número que aparece cerca
+de la palabra "pcs") en vez de intentar parsear cada formato; validado
+contra los 30 `close_reason` reales del sistema antes de escribir el
+script: 30/30 extracciones correctas.
+
+Lee `docs/data/ai_picks.json → portfolios[].history[]` (todas las carteras),
+filtra cierres cuyo `close_reason` contenga "floor", y escribe
+`docs/data/pcs_floor_whipsaw_shadow.jsonl` (append-only, dedup por
+ticker+portfolio+entry_date+close_date — no por posición, porque un mismo
+ticker puede tener varios ciclos de entrada/salida distintos). Nunca toca
+`ai_picks.json` ni cierra nada real.
+
+**Verificado:** `--dry-run` contra los datos reales de producción reproduce
+exactamente los 3 casos encontrados a mano (SE×2, NVDA) con los mismos
+componentes y deltas (`B_theme_flow 22.0→6.0` para el caso de SE/CFL,
+coincide con el hallazgo manual); segunda ejecución sin `--dry-run` no
+duplicó ninguna fila; `--report` resume 27 `likely_real_deterioration` / 3
+`flat_price_whipsaw` con el componente de mayor vuelco por caso.
+
+**Plan de revisión:** cuando el log acumule más eventos (el pipeline corre
+2×/día, pero las salidas por suelo de PCS son relativamente raras — 30 en
+~3 meses), evaluar si `flat_price_whipsaw` sigue concentrándose en
+`B_theme_flow` o en algún componente concreto, y si el patrón se sostiene
+con n mayor. Solo con evidencia suficiente se plantearía suavizar la regla
+de suelo (ej. exigir 2 lecturas consecutivas por debajo de 62 en vez de 1,
+o excluir el componente más ruidoso del cálculo del suelo) — no antes.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
