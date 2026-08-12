@@ -2334,6 +2334,85 @@ o excluir el componente más ruidoso del cálculo del suelo) — no antes.
 
 ---
 
+## Precursores de rebote tras capitulación v1 — sin señal fiable (2026-08-12)
+
+A raíz de una pregunta del usuario sobre 21 tickers del Portfolio Tracker que
+capitularon y luego rebotaron (localizados con un escaneo puntual sobre 6
+meses de precios yfinance), se exploró si RSI/volumen/forma de vela avisaban
+con antelación — sin grupo de control, ninguno lo hacía de forma clara, el
+único patrón era retrospectivo (vela de cierre fuerte al día *siguiente* del
+suelo, no en el propio día). Para no quedarse con una impresión sobre n=21
+sin comparación, se preregistró y ejecutó una prueba con grupo de control real
+— `wiki/PREREGISTRO_CAPITULACION_PRECURSORES_V1.md`,
+`research/capitulation_precursors_v1/`.
+
+**Dataset:** 590 eventos de capitulación (caída ≥18% en ≤15 sesiones desde un
+máximo de 40 sesiones) en los 112 tickers del portfolio, 5 años de histórico,
+etiquetados por si rebotaron después (≥18% sostenido ≥5 sesiones) o no —
+52% base rate de rebote, split DEV (529, 2021-2026-02) / TEST (61,
+2026-02→07) por fecha única congelada de antemano.
+
+**Resultado — NOT SUPPORTED.** De 9 features candidatas (nivel de RSI,
+cambio de RSI, divergencia alcista, pico de volumen, racha de días bajistas,
+peor caída diaria, expansión de ATR, magnitud y velocidad de la caída) más 7
+reglas compuestas congeladas, solo `rsi14_T0` sobrevivió Bonferroni en DEV
+(p=0.0033, efecto pequeño: mediana 40.9 vs 38.2) — y no replicó en la
+confirmación única de TEST (p=0.27). Ninguna regla de la rejilla batió la
+tasa base en DEV. **Volumen no discrimina en absoluto** (p=0.61) — confirma
+con n=590 lo que la exploración puntual ya insinuaba. Informe completo:
+`wiki/HALLAZGOS_CAPITULACION_PRECURSORES_V1.md`.
+
+Mismo patrón que el resto de exploraciones "descartadas" del proyecto (PCS↔
+rendimiento, Relative Flow Lab↔alfa, Relative Flow Family Test): lo que
+parece un patrón claro en un puñado de casos sin control no sobrevive al
+añadirlo. No se crea ninguna señal shadow ni se toca `paper_trading.py`,
+`koncorde_calculator.py` ni ninguna cartera — el preregistro solo
+contemplaba promover algo si sobrevivía la prueba, y nada lo hizo.
+
+---
+
+## Marca manual de patrón Koncorde predictivo, por timeframe (implementado 2026-08-12)
+
+El usuario observó que en algunas acciones el posicionamiento del azul de
+Koncorde (D/3D/W) sí anticipa históricamente los giros alcistas/bajistas —
+distinto de lo que se puede afirmar en general para todo el universo. Para
+poder acumular evidencia y en su momento diseñar una alerta específica sobre
+esos tickers concretos, se añadió en `portfolio.html` una marca manual por
+timeframe, mismo enfoque de "observar primero" que `extension_risk`/
+`konc_mirror_signal`/`theme_concentration_risk` en su día.
+
+**Tres casillas independientes, no una sola** — una por D (fila principal),
+otra por 3D y otra por W (sus sub-filas), porque el patrón puede confirmarse
+en un timeframe y no en otro. Colocadas justo a la derecha de "Estado" y a
+la izquierda de "MACD" en cada fila/sub-fila, tal como pidió el usuario tras
+ver la primera versión (una sola casilla al final de la fila).
+
+**Persistencia:** campos `koncPatternD`/`koncPatternDDate`,
+`koncPattern3D`/`koncPattern3DDate`, `koncPatternW`/`koncPatternWDate` en
+cada item de `portfolio.json` (mismo mecanismo de autoguardado con debounce
+de notas/shares). Al marcar, guarda la fecha de hoy; al desmarcar, limpia
+ambos campos — así dentro de un año se sabe qué ventana concreta revisar
+para ampliar la validación. Sincronizado en el export a Markdown/LLM como
+`D:✅fecha 3D:✅fecha W:✅fecha` (solo los timeframes marcados).
+
+**Verificado en producción real** (Edge headless vía CDP, `.click()` sobre
+el checkbox — el `Input.dispatchMouseEvent` sintético de CDP no disparaba el
+`onChange` de React sobre un `<input type=checkbox>` nativo en este Edge
+headless, pese a que `elementFromPoint` confirmaba que las coordenadas caían
+exactamente sobre el checkbox; sí funcionó igual que en verificaciones
+anteriores del proyecto con botones — parece un quirk específico de checkbox
+nativos bajo CDP sintético, no del código de la página): las tres casillas
+son independientes (marcar 3D no afecta D ni W), la cabecera queda
+`...Estado | 🔮 | MACD...`, persiste con la fecha correcta y el revert limpia
+ambos campos. Cero errores de consola.
+
+**Fuera de alcance (explícito):** ninguna señal ni alerta todavía — el
+preregistro de una señal operativa espera a tener suficientes tickers
+marcados con fecha, mismo criterio que el resto de features en fase de
+observación del proyecto.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

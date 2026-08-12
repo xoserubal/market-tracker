@@ -1,0 +1,33 @@
+======================================================================
+DEV: 529 events (2021-10-08 -> 2026-02-05), rebound rate = 52.2%
+TEST: 61 events (2026-02-17 -> 2026-07-30), rebound rate = 50.8%
+======================================================================
+
+--- Step 2: feature comparisons on DEV (Bonferroni alpha=0.0056) ---
+{"feature": "rsi14_T0", "n1": 276, "n0": 253, "median_rebound1": 40.865, "median_rebound0": 38.18, "p_value": 0.00328, "rank_biserial_effect": -0.148, "bonferroni_survives": true}
+{"feature": "rsi14_delta_T-5_T0", "n1": 276, "n0": 253, "median_rebound1": -13.685, "median_rebound0": -14.53, "p_value": 0.5909, "rank_biserial_effect": -0.027, "bonferroni_survives": false}
+{"feature": "vol_ratio_max_T-2_T0", "n1": 276, "n0": 253, "median_rebound1": 1.349, "median_rebound0": 1.366, "p_value": 0.6109, "rank_biserial_effect": 0.026, "bonferroni_survives": false}
+{"feature": "down_day_streak_into_trough", "n1": 276, "n0": 253, "median_rebound1": 3.0, "median_rebound0": 3.0, "p_value": 0.56246, "rank_biserial_effect": 0.029, "bonferroni_survives": false}
+{"feature": "worst_single_day_pct_T-5_T0", "n1": 276, "n0": 253, "median_rebound1": -8.975, "median_rebound0": -7.74, "p_value": 0.03372, "rank_biserial_effect": 0.107, "bonferroni_survives": false}
+{"feature": "atr_pct_ratio_vs_avg60", "n1": 276, "n0": 253, "median_rebound1": 1.316, "median_rebound0": 1.27, "p_value": 0.31887, "rank_biserial_effect": -0.05, "bonferroni_survives": false}
+{"feature": "drop_pct", "n1": 276, "n0": 253, "median_rebound1": -22.18, "median_rebound0": -21.38, "p_value": 0.17407, "rank_biserial_effect": 0.068, "bonferroni_survives": false}
+{"feature": "days_peak_to_trough", "n1": 276, "n0": 253, "median_rebound1": 13.0, "median_rebound0": 14.0, "p_value": 0.25128, "rank_biserial_effect": 0.058, "bonferroni_survives": false}
+{"feature": "bullish_divergence", "n_true": 16, "n_false": 289, "rebound_rate_true": 0.438, "rebound_rate_false": 0.488, "p_value": 0.79973, "bonferroni_survives": false}
+
+Survived Bonferroni in DEV: ['rsi14_T0']
+
+--- Step 3: frozen 7-rule grid on DEV ---
+{"rule": "R1_rsi_moderate_30_45", "n_in": 342, "n_out": 187, "rebound_rate_in": 0.52, "rebound_rate_out": 0.524, "lift_pp": -0.4, "p_value": 1.0, "beats_base_rate_dev": false}
+{"rule": "R2_vol_spike_ge_1.5x", "n_in": 217, "n_out": 312, "rebound_rate_in": 0.502, "rebound_rate_out": 0.535, "lift_pp": -3.3, "p_value": 0.47964, "beats_base_rate_dev": false}
+{"rule": "R3_fast_streak_le_1", "n_in": 105, "n_out": 424, "rebound_rate_in": 0.514, "rebound_rate_out": 0.524, "lift_pp": -0.9, "p_value": 0.91325, "beats_base_rate_dev": false}
+{"rule": "R4_bullish_divergence", "n_in": 16, "n_out": 513, "rebound_rate_in": 0.438, "rebound_rate_out": 0.524, "lift_pp": -8.7, "p_value": 0.61353, "beats_base_rate_dev": false}
+{"rule": "R5_atr_expansion_ge_1.3x", "n_in": 262, "n_out": 267, "rebound_rate_in": 0.553, "rebound_rate_out": 0.491, "lift_pp": 6.3, "p_value": 0.1639, "beats_base_rate_dev": false}
+{"rule": "R6_R1_and_R2", "n_in": 138, "n_out": 391, "rebound_rate_in": 0.5, "rebound_rate_out": 0.529, "lift_pp": -2.9, "p_value": 0.55404, "beats_base_rate_dev": false}
+{"rule": "R7_R2_and_R3", "n_in": 39, "n_out": 490, "rebound_rate_in": 0.41, "rebound_rate_out": 0.531, "lift_pp": -12.0, "p_value": 0.18266, "beats_base_rate_dev": false}
+
+Rules beating DEV base rate (p<0.05): NONE
+
+======================================================================
+--- Step 4: ONE-SHOT confirmation on TEST ---
+======================================================================
+TEST feature: {"feature": "rsi14_T0", "n1": 31, "n0": 30, "median_rebound1": 41.07, "median_rebound0": 38.6, "p_value": 0.26976, "rank_biserial_effect": -0.166, "bonferroni_survives": false}

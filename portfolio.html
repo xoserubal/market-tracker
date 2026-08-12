@@ -357,8 +357,8 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}) {
   md += `| ${f(summary.cost)} | ${f(summary.value)} | ${f(summary.pl)} | ${fp(summary.plPct)} | ${f(summary.dailyPL)} |\n\n`;
   portfolio.sections.forEach(sec => {
     md += `## ${sec.name}\n`;
-    md += `| Ticker | Acciones | Coste Avg | Precio | Valor | P&L | P&L% | 1D | 2D | 3D | 1W | 1M | 3M | YTD | 1Y | Vol 1D | Vol 2D | Vol 3D | RSI | MACD | ATR% | Konc D (blue/green/trend) | Konc 3D | Konc W | Flow | Early | Lectura | Notas |\n`;
-    md += `|--------|--------:|----------:|-------:|------:|----:|-----:|---:|---:|---:|---:|---:|---:|---:|---:|-------:|-------:|-------:|----:|:----:|-----:|:---|:---|:---|----:|-----:|:---|:---|\n`;
+    md += `| Ticker | Acciones | Coste Avg | Precio | Valor | P&L | P&L% | 1D | 2D | 3D | 1W | 1M | 3M | YTD | 1Y | Vol 1D | Vol 2D | Vol 3D | RSI | MACD | ATR% | Konc D (blue/green/trend) | Konc 3D | Konc W | Flow | Early | Lectura | Notas | Patrón Konc. (D/3D/W) |\n`;
+    md += `|--------|--------:|----------:|-------:|------:|----:|-----:|---:|---:|---:|---:|---:|---:|---:|---:|-------:|-------:|-------:|----:|:----:|-----:|:---|:---|:---|----:|-----:|:---|:---|:---|\n`;
     sec.items.forEach(item => {
       const p       = prices[item.ticker];
       const value   = p?.price != null ? item.shares * p.price : null;
@@ -372,13 +372,18 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}) {
       const koncW   = p ? `blue ${fmtKonc(p.konc_w_blue,  p.konc_w_blue_delta1)} / green ${fmtKonc(p.konc_w_green,  p.konc_w_green_delta1)} / trend ${fmtKonc(p.konc_w_trend,  p.konc_w_trend_delta1)} (${koncStateLbl(p.konc_w_state)})`  : '—';
       const macd    = p?.macdBull == null ? '—' : p.macdBull ? '▲' : '▼';
       const notes   = (item.notes || '—').replace(/\|/g, '/').replace(/\n/g, ' ');
+      const kpFlag  = (tf, v, d) => v ? `${tf}:✅${d||''}` : null;
+      const koncPattern = [kpFlag('D', item.koncPatternD, item.koncPatternDDate),
+                            kpFlag('3D', item.koncPattern3D, item.koncPattern3DDate),
+                            kpFlag('W', item.koncPatternW, item.koncPatternWDate)]
+                            .filter(Boolean).join(' ') || '—';
       md += `| ${item.ticker} | ${item.shares} | ${f(item.avgCost)} | ${p?.price != null ? f(p.price) : '—'} `
           + `| ${value != null ? f(value) : '—'} | ${pl != null ? f(pl) : '—'} | ${fp(plPct)} `
           + `| ${fr(p?.d1)} | ${fr(p?.d2)} | ${fr(p?.d3)} | ${fr(p?.w1)} | ${fr(p?.m1)} | ${fr(p?.m3)} | ${fr(p?.ytd)} | ${fr(p?.y1)} `
           + `| ${fv(p?.vol1d)} | ${fv(p?.vol2d)} | ${fv(p?.vol3d)} `
           + `| ${p?.rsi != null ? p.rsi : '—'} | ${macd} | ${p?.atrPct != null ? p.atrPct + '%' : '—'} `
           + `| ${koncD} | ${konc3D} | ${koncW} `
-          + `| ${flow != null ? flow.toFixed(1) : '—'} | ${early != null ? early.toFixed(1) : '—'} | ${lectura} | ${notes} |\n`;
+          + `| ${flow != null ? flow.toFixed(1) : '—'} | ${early != null ? early.toFixed(1) : '—'} | ${lectura} | ${notes} | ${koncPattern} |\n`;
     });
     md += '\n';
   });
@@ -676,6 +681,19 @@ function Portfolio() {
     setModal(null);
   };
 
+  // tf: 'D' | '3D' | 'W' — cada timeframe se marca por separado
+  const toggleKoncPattern = (secId, itemId, tf, checked) => {
+    updatePortfolio(p => ({...p, sections:
+      p.sections.map(s => s.id===secId ? {...s, items:
+        s.items.map(i => i.id===itemId ? {
+          ...i,
+          [`koncPattern${tf}`]: checked,
+          [`koncPattern${tf}Date`]: checked ? new Date().toISOString().slice(0,10) : null,
+        } : i)
+      } : s)
+    }));
+  };
+
   // ── AI Picks Lab integration ───────────────────────────────────────────
   const stockTickers = React.useMemo(() => {
     const s = new Set();
@@ -965,6 +983,7 @@ function Portfolio() {
                     <th title="Pececillos — dinero minorista + tendencia (PVI oscilador). ↑↓ = slope">Green</th>
                     <th title="Tendencia compuesta (RSI+MFI+BB+Stoc)/2. ↑↓ = slope">Trend</th>
                     <th title="Estado Koncorde Plus: Acumul. / Alza / Distrib. / Baja">Estado</th>
+                    <th title="Marca manual por timeframe: has comprobado que el posicionamiento del azul de Koncorde en ESTE timeframe (D en la fila principal, 3D y W en sus sub-filas) anticipa los giros alcistas/bajistas de esta acción. Guarda la fecha en que la marcaste, para saber qué periodo revisar más adelante y ampliar la validación.">🔮</th>
                     <th title="MACD histograma (12,26,9) — ▲ alcista / ▼ bajista">MACD</th>
                     <th title="ATR(14) normalizado por precio — volatilidad/fuerza del movimiento">ATR%</th>
                     <th title="Flow Score: momentum + RSI/MACD + ATR + Koncorde + tendencia">Flow</th>
@@ -1107,6 +1126,15 @@ function Portfolio() {
                             {isLoad ? dot : koncStateLbl(p?.konc_d_state)}
                           </td>
                         ); })()}
+                        {/* Patrón Koncorde confirmado manualmente — D */}
+                        <td style={{textAlign:'center'}}>
+                          <input type="checkbox" checked={!!item.koncPatternD}
+                            onChange={e=>toggleKoncPattern(sec.id, item.id, 'D', e.target.checked)}
+                            title={item.koncPatternDDate
+                                ? `Marcado el ${item.koncPatternDDate} — el patrón Koncorde D predice los giros de esta acción`
+                                : 'Marcar si compruebas que el patrón Koncorde D (azul) predice los giros de esta acción'}
+                            style={{cursor:'pointer'}}/>
+                        </td>
                         {/* MACD */}
                         <td style={{textAlign:'center',fontSize:12}}>
                           {isLoad ? dot : p?.macdBull==null ? <span style={{color:'#aaa'}}>—</span>
@@ -1207,6 +1235,15 @@ function Portfolio() {
                             {koncStateLbl(p?.konc_3d_state)}
                           </td>
                         ); })()}
+                        {/* Patrón Koncorde confirmado manualmente — 3D */}
+                        <td style={{textAlign:'center',padding:'1px 4px'}}>
+                          <input type="checkbox" checked={!!item.koncPattern3D}
+                            onChange={e=>toggleKoncPattern(sec.id, item.id, '3D', e.target.checked)}
+                            title={item.koncPattern3DDate
+                                ? `Marcado el ${item.koncPattern3DDate} — el patrón Koncorde 3D predice los giros de esta acción`
+                                : 'Marcar si compruebas que el patrón Koncorde 3D (azul) predice los giros de esta acción'}
+                            style={{cursor:'pointer'}}/>
+                        </td>
                         <td colSpan={6} style={{padding:0}}/>
                       </tr>
                       {/* ── Sub-row W ── */}
@@ -1228,6 +1265,15 @@ function Portfolio() {
                             {koncStateLbl(p?.konc_w_state)}
                           </td>
                         ); })()}
+                        {/* Patrón Koncorde confirmado manualmente — W */}
+                        <td style={{textAlign:'center',padding:'1px 4px'}}>
+                          <input type="checkbox" checked={!!item.koncPatternW}
+                            onChange={e=>toggleKoncPattern(sec.id, item.id, 'W', e.target.checked)}
+                            title={item.koncPatternWDate
+                                ? `Marcado el ${item.koncPatternWDate} — el patrón Koncorde W predice los giros de esta acción`
+                                : 'Marcar si compruebas que el patrón Koncorde W (azul) predice los giros de esta acción'}
+                            style={{cursor:'pointer'}}/>
+                        </td>
                         <td colSpan={6} style={{padding:0}}/>
                       </tr>
                     </React.Fragment>
