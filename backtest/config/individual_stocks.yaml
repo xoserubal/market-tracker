@@ -4,27 +4,9 @@
 # Campos por ticker:
 #   ticker : símbolo Yahoo Finance (obligatorio)
 #   note   : motivo de inclusión — alta beta, small cap, apalancado, etc. (opcional)
-#
-# Criterios de señal (más relajados que rot_temprana_pure):
-#   - Score >= 6/10 durante >= 2 semanas consecutivas
-#   - Sin confirmación de cluster
-#   - La señal "CANDIDATO" aparece cuando el cluster ETF tiene ROT.TEMPRANA activa
-#     y el stock cumple los criterios → entrada con mayor convicción
-#   - Stop sugerido: -10% | Horizonte: 8-13 semanas
-#
-# NOTAS DE TICKERS NO ESTÁNDAR:
-#   - HFGG (investing.com) = HFG.DE en Yahoo Finance (HelloFresh, Xetra)
-#   - SLPL (investing.com) = SLP.L en Yahoo Finance (Sylvania Platinum, LSE)
-#   - BTCCb (investing.com) = BTCC-B.TO en Yahoo Finance (Purpose Bitcoin ETF, TSX)
-#   - R9U2 = Green Thumb Industries en Frankfurt; ya incluido como GTBIF (OTC)
-#   - VFF aparecía duplicado → incluido una sola vez
-#   - VAR (Varian Medical) EXCLUIDO: adquirida por Siemens Healthineers en 2021, cotización retirada
-#   - GSP (iPath GSCI ETN) EXCLUIDO: ETN liquidado en junio 2023
-#   - US500 EXCLUIDO: símbolo CFD de broker, no válido en Yahoo Finance
 
 clusters:
 
-  # ── Sector tecnológico / crecimiento ─────────────────────────────────────────
   Growth:
     - ticker: NVDA
       note: "alta beta, líder semiconductores IA"
@@ -55,7 +37,6 @@ clusters:
     - ticker: EOSE
       note: "Eos Energy Enterprises, baterías zinc-aire grid-scale, small cap almacenamiento"
 
-  # ── Cíclicos / valor ──────────────────────────────────────────────────────────
   Value/Cyclical:
     - ticker: CAT
       note: "industrial puro, cíclico de referencia"
@@ -84,7 +65,6 @@ clusters:
     - ticker: AWX
       note: "Avalon Holdings, gestión residuos industriales Ohio, micro cap cíclico USA"
 
-  # ── Defensivos ────────────────────────────────────────────────────────────────
   Defensive:
     - ticker: COST
       note: "defensivo de calidad, crecimiento secular"
@@ -93,7 +73,6 @@ clusters:
     - ticker: VRTX
       note: "biotech defensivo, menor correlación mercado"
 
-  # ── Materias primas y minería ─────────────────────────────────────────────────
   Commodities:
     - ticker: GOLD
       note: "miner oro (Barrick), leverage 2-3x al precio del oro"
@@ -136,7 +115,6 @@ clusters:
     - ticker: UCO
       note: "ProShares Ultra Bloomberg Crude Oil 2x, ETF apalancado uso táctico"
 
-  # ── Small caps / Mercados emergentes ─────────────────────────────────────────
   Small/EM:
     - ticker: EWZ
       note: "Brasil ETF, beta alta en EM, proxy commodities LatAm"
@@ -147,7 +125,6 @@ clusters:
     - ticker: KTOS
       note: "small cap defensa, alta beta, momentum"
 
-  # ── Criptoactivos y proxies blockchain ───────────────────────────────────────
   Cripto:
     - ticker: MSTR
       note: "MicroStrategy/Strategy, mayor holding BTC corporativo, proxy Bitcoin apalancado"
@@ -158,7 +135,6 @@ clusters:
     - ticker: BTCC-B.TO
       note: "Purpose Bitcoin ETF clase B (CAD no cubierto), TSX, proxy BTC directo"
 
-  # ── Cannabis ──────────────────────────────────────────────────────────────────
   Cannabis:
     - ticker: VFF
       note: "Village Farms International, cannabis + invernaderos tomates, doble exposición"
@@ -175,7 +151,6 @@ clusters:
     - ticker: PLNH
       note: "Planet 13 Holdings, superdispensario Las Vegas, OTCQX, proxy turismo cannabis"
 
-  # ── China y Asia emergente ────────────────────────────────────────────────────
   China/Asia:
     - ticker: JD
       note: "JD.com, e-commerce + logística integrada China, ADR Nasdaq"
@@ -188,7 +163,6 @@ clusters:
     - ticker: TAL
       note: "TAL Education, educación privada China, alta volatilidad regulatoria"
 
-  # ── Argentina ─────────────────────────────────────────────────────────────────
   Argentina:
     - ticker: YPF
       note: "YPF SA, E&P semi-estatal Argentina + Vaca Muerta, ADR NYSE, beta política"
@@ -213,7 +187,6 @@ clusters:
     - ticker: CRESY
       note: "Cresud, agribusiness + real estate comercial Argentina/Brasil, ADR Nasdaq"
 
-  # ── Energía Canada ────────────────────────────────────────────────────────────
   Canada_Energy:
     - ticker: CVE
       note: "Cenovus Energy, oil sands + refinado integrado Canada, NYSE"
@@ -232,7 +205,6 @@ clusters:
     - ticker: LCX.V
       note: "Lycos Energy, heavy oil Mannville stack Alberta, TSX-V, micro cap"
 
-  # ── REITs ─────────────────────────────────────────────────────────────────────
   REITs:
     - ticker: EQR
       note: "Equity Residential, REIT apartamentos urbanos premium USA, sensible a tipos"
@@ -241,7 +213,6 @@ clusters:
     - ticker: RYM.NZ
       note: "Ryman Healthcare, REIT retirement villages Nueva Zelanda+Australia, NZX"
 
-  # ── Salud, biotech y telehealth ───────────────────────────────────────────────
   Salud/Biotech:
     - ticker: TDOC
       note: "Teladoc Health, plataforma telehealth USA, turnaround tras caída >90%"
@@ -256,7 +227,6 @@ clusters:
     - ticker: SEDANA.ST
       note: "Sedana Medical, sedación por inhalación UCI (isoflurano), Nasdaq Stockholm"
 
-  # ── Salud largecap USA ────────────────────────────────────────────────────────
   Salud_Largecap:
     - ticker: LLY
       note: "GLP-1 leader (Mounjaro/Zepbound), Alzheimer pipeline"
@@ -287,14 +257,12 @@ clusters:
     - ticker: PFE
       note: "Post-COVID restructuring, pipeline under scrutiny"
 
-  # ── ETFs de volatilidad y timing macro ───────────────────────────────────────
   Volatilidad/ETFs:
     - ticker: QQQ
       note: "Invesco QQQ, ETF Nasdaq-100, proxy tech USA para timing rotación"
     - ticker: UVXY
       note: "ProShares Ultra VIX Short-Term Futures 2x, hedging táctica de volatilidad"
 
-  # ── Exploradores y mineras junior (plata, oro, cobre, uranio) ────────────────
   Mineras_Juniors:
     - ticker: AAG.V
       note: "Aftermath Silver, exploración plata Perú + Chile, TSX-V junior"
@@ -311,7 +279,6 @@ clusters:
     - ticker: DMX.V
       note: "District Metals, exploración metales base + REE Suecia, TSX-V"
 
-  # ── Acciones europeas ─────────────────────────────────────────────────────────
   Europa:
     - ticker: FDR.MC
       note: "Fluidra, fabricante piscinas residenciales líder Europa+APAC, BME Madrid"
@@ -329,3 +296,7 @@ clusters:
       note: "Acteos, software supply chain optimización Francia, Euronext Paris, micro cap"
     - ticker: VIT-B.ST
       note: "Vitec Software Group clase B, software vertical SaaS niche, Nasdaq Stockholm"
+
+  Portfolio:
+    - ticker: FDR.AX
+      note: "desde Portfolio Tracker"
