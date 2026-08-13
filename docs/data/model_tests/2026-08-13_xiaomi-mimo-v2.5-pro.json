@@ -1,0 +1,255 @@
+{
+  "run_id": "2026-08-13_0910",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-08-13",
+  "summary": {
+    "date": "2026-08-13",
+    "run_id": "2026-08-13_0910",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 32,
+    "input_tokens": 36082,
+    "output_tokens": 12893,
+    "cost_usd": 0.026913,
+    "latency_ms": 384947.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 4,
+    "quality_score": 77,
+    "selected_count": 1,
+    "watch_count": 8,
+    "rejected_count": 9,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [
+      "Duplicate ticker: NBIS",
+      "Duplicate ticker: SMCI",
+      "Duplicate ticker: TECK",
+      "Duplicate ticker: DPM.TO"
+    ],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: SELECT SLS cited pcs=-5.0 for SLS (actual=80.2)",
+      "numeric_hallucination_suspected: WATCH DHR cited dems=8.0 for DHR (actual=4)"
+    ]
+  },
+  "quality_score": 77,
+  "response": {
+    "date": "2026-08-13",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-08-13_0910",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime continues improving with macro score 91.7 and delta_1w +16.67, but the candidate pool is dominated by existing open positions leaving very few fresh entry signals.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "13w outperformance of +120.56% vs SPY is the strongest sustained leadership in the entire candidate set",
+        "reason_full": "SLS posts the highest 13-week outperformance in the candidate set at +120.56% vs SPY on a 2-week streak with rot_score=6, PCS=80.2, and bull-aligned Koncorde across all timeframes. Extension risk is low with no overextension flags despite healthcare_special theme concentration at 29% being acknowledged. The 4-week return of -14.85% reflects consolidation rather than trend breakdown, as the 13-week cumulative outperformance confirms sustained institutional commitment. Entry at -25.88% from 52-week high provides favorable risk-reward in a Bull Maduro macro regime.",
+        "comparative_edge": "Selected over DHR (PCS=83.0, rot=8, dems=4, spike_flag=true) because SLS's 13-week outperformance of +120.56% dwarfs DHR's +19.12%, and SLS carries zero extension risk versus DHR's medium risk with spike_flag, despite DHR's higher PCS and rotation score.",
+        "key_supporting_factors": [
+          "13-week outperformance of +120.56% vs SPY is the highest in the candidate set by a wide margin, confirming exceptional sustained institutional accumulation.",
+          "Bull-aligned Koncorde on daily, 3D, and weekly timeframes with green at 82.62 provides maximum structural confirmation.",
+          "Extension risk is low with zero extension points and no flags, offering the cleanest entry among the top-5 PCS candidates.",
+          "Trading 25.88% below 52-week high provides meaningful upside recovery potential with defined downside."
+        ],
+        "key_risks_or_contradictions": [
+          "Healthcare_special theme concentration at 29% means this adds to an already crowded sector exposure requiring careful monitoring.",
+          "4-week return of -14.85% vs SPY shows recent consolidation and underperformance that must reverse to confirm continued leadership.",
+          "Rotation score of 6 is lower than peers like DHR (8) and DPM.TO (7), indicating the momentum signal is not uniformly strong."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "DHR",
+        "reason": "PCS 83.0 with rotation score 8 and bull-aligned Koncorde is attractive, but dems=4 with spike_flag=true and outperform_d10=4 does not meet the multi-day continuation threshold. Daily momentum needs to recover above dems=8 with spike_flag clearing before entry is justified.",
+        "watch_trigger": "dems rising above 8 with spike_flag=false, or a pullback to support with clean multi-day flow resuming."
+      },
+      {
+        "ticker": "LLY",
+        "reason": "PCS 82.8 with rotation score 8 and strong 13-week outperformance at +18.57%, but extreme extension risk of 7 points (dist_sma20_atr_extreme + spike_flag + rsi_extreme) combined with weekly distribution reading makes fresh entry too risky. Ret_10d_vs_spy of -5.05% confirms recent reversal.",
+        "watch_trigger": "Extension risk dropping to medium or below with spike_flag clearing and weekly distribution resolving."
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "PCS 79.0 with dems=15 and exceptional 13-week outperformance of +39.80% vs SPY, but extreme extension risk of 6 points with spike_flag=true and 3D distribution creates dangerous entry conditions. Both daily and 3D timeframes read distribution.",
+        "watch_trigger": "Extension risk dropping to medium or below with 3D distribution resolving to neutral or up."
+      },
+      {
+        "ticker": "SMCI",
+        "reason": "PCS 78.5 with dems=16 and strong ret_4w of +33.27% vs SPY, but triple distribution warning (daily, 3D, and weekly all in distribution) with extreme extension risk of 7 points makes fresh entry untenable despite the explosive momentum.",
+        "watch_trigger": "Triple distribution resolving with at least two timeframes returning to neutral or up, and extension risk dropping below extreme."
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "Already held at PCS 69.0 with 5-week streak and rotation score 7, but konc_3d_state is distribution with konc_3d_blue at -6.15, creating a bullish_pending_3d_confirmation caution. Watch for 3D confirmation before adding to the position.",
+        "watch_trigger": "Konc_3d_state resolving from distribution to up or neutral, confirming the weekly uptrend on the 3D timeframe."
+      },
+      {
+        "ticker": "TECK",
+        "reason": "Open position with PCS dropped to 63.5 (below 68 entry threshold) but rotation score 6 and 4-week streak keep it above exit floor. Konc_d_state=distribution signals near-term caution. Holding but watching for PCS recovery above 65.",
+        "watch_trigger": "PCS recovering above 65 with konc_d_state resolving from distribution to neutral or up."
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "Open position with PCS dropped to 63.0 (below 68 entry threshold) but rotation score 7, 4-week streak, and outstanding ret_4w_vs_spy of +30.72% keep the position viable. Extension risk high at 5 points with dist_sma20_atr_extreme acknowledged.",
+        "watch_trigger": "PCS recovering above 65 with extension risk dropping to medium or below."
+      },
+      {
+        "ticker": "AWX",
+        "reason": "Rotation score of 10 is the highest in the entire candidate set with dems=12, but spike_flag=true combined with us_cyclical theme concentration at 36% and dist_52w_high of -49.36% makes entry premature. Need spike_flag to clear for cleaner setup.",
+        "watch_trigger": "Spike_flag clearing with dems sustained above 12, or a pullback to support with multi-day flow confirmation."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "OSCR",
+        "reason": "PCS 71.5 with weak rotation score 5 and signal IGNORAR; ret_4w_vs_spy of -7.45% shows active underperformance despite strong healthcare_special theme. Individual flow component of 9.5 is the lowest among PCS 70+ candidates.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "FCX",
+        "reason": "PCS dropped to 62.8 from 71.8 entry, rotation score fell to 5, weekly streak collapsed to 0 weeks, and ret_4w_vs_spy of -14.85% shows deteriorating momentum. Position exiting per exit rules.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "PCS 79.0 with dems=15 but extreme extension risk of 6 points, spike_flag=true, and triple distribution (daily, 3D distribution) with null weekly state makes entry categorically unsafe despite the strong individual momentum.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "SMCI",
+        "reason": "PCS 78.5 with dems=16 but extreme extension risk of 7 points (highest in candidate set) with triple distribution warning across all three timeframes. Ret_10d of +40.44% confirms extreme overextension.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "OXY",
+        "reason": "PCS crashed to 59.0 from 79.5 entry, rotation score dropped to 5, weekly streak collapsed to 0, and ret_4w_vs_spy of only +4.55% with konc_d_state=distribution confirms loss of institutional support.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "AFM.V",
+        "reason": "PCS dropped to 67.0 from 74.5 entry (below 68 threshold), rotation score 7 with 2-week streak is adequate but individual flow component of 15.0 with spike_flag=true and extension_risk=medium shows weakening conviction.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "TECK",
+        "reason": "PCS dropped to 63.5 from 71.5 entry, rotation score fell to 6 with rs_neutral and ret_13w_vs_spy of -4.81%. Theme_flow score of 14 with weak individual RS confirms deteriorating relative strength.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "PCS dropped to 63.0 from 70.0 entry, theme_flow collapsed to 4.0 indicating sector-level outflows from silver_gold_miners despite strong individual ret_4w of +30.72%.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "MAI.L",
+        "reason": "PCS 38.8 with bearish-aligned Koncorde across all timeframes (3D down, daily accumulation, weekly down). Ret_13w_vs_spy of -31.94% confirms sustained institutional distribution with no signs of recovery.",
+        "rejection_category": "weak_relative_strength"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.2 above 68 threshold, rotation score 7, 8-week streak with bull-aligned Koncorde confirms sustained leadership despite recent consolidation."
+      },
+      {
+        "ticker": "NUE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.5 with rotation score 8 and 5-week streak delivering +13.33% 4w outperformance; us_cyclical diversification remains valuable."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 77.2 with rotation score 8 and 3-week streak; ret_4w_vs_spy of +14.47% and china_em diversification justify continued hold."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.5 with rotation score 7 and 5-week streak; ret_13w_vs_spy of +26.50% confirms strong sustained leadership."
+      },
+      {
+        "ticker": "TECK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 63.5 below 68 entry but rotation score 6 and 4-week streak keep above exit floor; watching for PCS recovery above 65."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 63.0 below 68 entry but rotation score 7, 4-week streak, and exceptional +30.72% 4w outperformance sustain viability."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 78.5 with rotation score 8 and 2-week streak; +25.16% 4w outperformance confirms strong momentum despite high extension risk."
+      },
+      {
+        "ticker": "FCX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS dropped to 62.8 (below 68 entry), weekly streak collapsed to 0 weeks, and rotation score 5 signals loss of institutional support."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 69.0 with rotation score 7 and 5-week streak; oil_gas diversification valuable despite 3D distribution caution."
+      },
+      {
+        "ticker": "OXY",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS crashed to 59.0 (below 62 floor), weekly streak collapsed to 0, and rotation score 5 with konc_d_state=distribution confirms position failure."
+      },
+      {
+        "ticker": "KTOS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 68.5 just above 68 entry threshold with dems=18 and +23.98% 4w outperformance; smallcap_em diversification supports continued hold."
+      },
+      {
+        "ticker": "AFM.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS dropped to 67.0 (below 68 entry) with spike_flag=true and weakening individual flow; position losing conviction."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85.2 (highest in candidate set) with rotation score 8 and +24.83% 4w outperformance; bull-aligned Koncorde confirms structural leadership."
+      },
+      {
+        "ticker": "SYK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 83.0 with rotation score 9 (highest weekly metrics) and 2-week streak; low extension risk provides clean hold backdrop."
+      },
+      {
+        "ticker": "CAT",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "Rotation score dropped to 3 (at exit threshold of <=2 is borderline but rot=3 with rs_laggard and -10.94% 13w confirms fundamental deterioration."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-13\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-13_0910\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime continues improving with macro score 91.7 and delta_1w +16.67, but the candidate pool is dominated by existing open positions leaving very few fresh entry signals.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"SLS\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"13w outperformance of +120.56% vs SPY is the strongest sustained leadership in the entire candidate set\",\n      \"reason_full\": \"SLS posts the highest 13-week outperformance in the candidate set at +120.56% vs SPY on a 2-week streak with rot_score=6, PCS=80.2, and bull-aligned Koncorde across all timeframes. Extension risk is low with no overextension flags despite healthcare_special theme concentration at 29% being acknowledged. The 4-week return of -14.85% reflects consolidation rather than trend breakdown, as the 13-week cumulative outperformance confirms sustained institutional commitment. Entry at -25.88% from 52-week high provides favorable risk-reward in a Bull Maduro macro regime.\",\n      \"comparative_edge\": \"Selected over DHR (PCS=83.0, rot=8, dems=4, spike_flag=true) because SLS's 13-week outperformance of +120.56% dwarfs DHR's +19.12%, and SLS carries zero extension risk versus DHR's medium risk with spike_flag, despite DHR's higher PCS and rotation score.\",\n      \"key_supporting_factors\": [\n        \"13-week outperformance of +120.56% vs SPY is the highest in the candidate set by a wide margin, confirming exceptional sustained institutional accumulation.\",\n        \"Bull-aligned Koncorde on daily, 3D, and weekly timeframes with green at 82.62 provides maximum structural confirmation.\",\n        \"Extension risk is low with zero extension points and no flags, offering the cleanest entry among the top-5 P"
+}
