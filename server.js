@@ -130,6 +130,51 @@ function calcMACD(closes) {
   return { macdHist: +hist.toPrecision(4), macdBull: hist >= 0 };
 }
 
+// ── ATLAS Mini (Blai5) — estrechamiento significativo de Bollinger Bands ──
+// Fórmula pública (ProRealCode "Blai5 ATLAS Mini"), verbatim:
+//   dbb    = sqrt((BBupper20 - BBlower20) / BBupper20) * 20
+//   dbbmed = EMA(dbb, 120)
+//   factor = dbbmed * 4/5
+//   atl    = dbb - factor
+//   señal  = atl <= 0   (compresión relevante — no da dirección, solo avisa
+//                        de que puede venir un movimiento brusco)
+// No es alcista/bajista por sí solo — se combina visualmente con MACD (a su
+// izquierda en la tabla) para dirección.
+function calcAtlasMini(closes, period = 20, medLen = 120) {
+  const c = closes.filter(x => x != null);
+  if (c.length < period + medLen) return { atlasSignal: null, atlasDbb: null, atlasAtl: null };
+
+  // Bollinger(20, mult=2) rolling sobre toda la serie -> un dbb por barra.
+  const dbb = [];
+  for (let i = period - 1; i < c.length; i++) {
+    const win  = c.slice(i - period + 1, i + 1);
+    const mean = win.reduce((a, b) => a + b, 0) / period;
+    const variance = win.reduce((a, b) => a + (b - mean) ** 2, 0) / period; // población, no muestral
+    const std   = Math.sqrt(variance);
+    const upper = mean + 2 * std, lower = mean - 2 * std;
+    dbb.push(upper > 0 ? Math.sqrt((upper - lower) / upper) * 20 : null);
+  }
+  const dbbClean = dbb.filter(x => x != null);
+  if (dbbClean.length < medLen) return { atlasSignal: null, atlasDbb: null, atlasAtl: null };
+
+  // EMA(120) de dbb, semilla = SMA de los primeros 120 valores.
+  const k = 2 / (medLen + 1);
+  let e = dbbClean.slice(0, medLen).reduce((a, b) => a + b, 0) / medLen;
+  for (let i = medLen; i < dbbClean.length; i++) e = dbbClean[i] * k + e * (1 - k);
+  const dbbmed = e;
+
+  const factor  = dbbmed * 4 / 5;
+  const lastDbb = dbbClean[dbbClean.length - 1];
+  const atl     = lastDbb - factor;
+
+  return {
+    atlasSignal: atl <= 0,
+    atlasDbb:    +lastDbb.toFixed(2),
+    atlasFactor: +factor.toFixed(2),
+    atlasAtl:    +atl.toFixed(2),
+  };
+}
+
 // ── ATR normalizado (ATR14 / precio × 100) ───────────────────────────────
 function calcATR(closes, highs, lows, period = 14) {
   const n = closes.length;
@@ -292,6 +337,7 @@ app.get("/api/quote/:symbol", async (req, res) => {
       // RSI, MACD, ATR, Koncorde Plus
       rsi: calcRSI(closes.slice(-100)),
       ...calcMACD(closes),
+      ...calcAtlasMini(closes),
       ...calcATR(closes, highs, lows),
       cmf20: calcCMF(closes, highs, lows, volumes, 20),
       ...(getKoncordeData()[req.params.symbol.toUpperCase()] ?? {}),

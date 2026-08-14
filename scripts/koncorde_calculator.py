@@ -51,17 +51,29 @@ HISTORY_DAYS = 820   # ~3.3 years; enough for W indicator warmup
 # ── Math helpers ───────────────────────────────────────────────────────────
 
 def _ema(series: np.ndarray, period: int) -> np.ndarray:
-    """Standard EMA seeded with SMA of first `period` values."""
+    """Standard EMA seeded with SMA of the first `period` consecutive non-NaN
+    values. Seeding from literal position 0 (the old behavior) left the whole
+    output NaN forever whenever the input itself has a warmup longer than
+    `period` — e.g. `trend` (RSI/MFI/BB/Stoch composite) needs ~20-26 bars
+    before its first valid value, so `_ema(trend, 15)` always saw a NaN in
+    `trend[:15]` and returned all-NaN even with 800+ bars of history. Bug
+    found 2026-08-14 while wiring `trend_ma` into the portfolio.html mini
+    chart — it was already computed but silently null in koncorde_data.json."""
     n = len(series)
     out = np.full(n, np.nan)
     if n < period:
         return out
-    k = 2.0 / (period + 1)
-    seed_vals = series[:period]
-    if np.any(np.isnan(seed_vals)):
+    start = None
+    for i in range(n - period + 1):
+        if not np.any(np.isnan(series[i:i + period])):
+            start = i
+            break
+    if start is None:
         return out
-    out[period - 1] = float(np.mean(seed_vals))
-    for i in range(period, n):
+    k = 2.0 / (period + 1)
+    seed_idx = start + period - 1
+    out[seed_idx] = float(np.mean(series[start:seed_idx + 1]))
+    for i in range(seed_idx + 1, n):
         v = series[i]
         out[i] = v * k + out[i - 1] * (1 - k) if not np.isnan(v) else out[i - 1]
     return out
@@ -302,6 +314,17 @@ def _last(arr: np.ndarray):
     return round(v, 2) if not np.isnan(v) else None
 
 
+def _last_n(arr: np.ndarray | None, n: int) -> list[float | None]:
+    """Last up to `n` bars, oldest -> newest, for the portfolio.html mini
+    chart. Each bar is the real value the pipeline already computed for that
+    closed bar (D=session, 3D=3-session block, W=week) — not recomputed from
+    a short window, so it matches the full-history reading."""
+    if arr is None or len(arr) == 0:
+        return []
+    tail = arr[-n:]
+    return [None if np.isnan(v) else round(float(v), 2) for v in tail]
+
+
 def _down_2_bars(arr: np.ndarray) -> bool:
     """True if the last 3 closed bars show strictly decreasing values (persistent deterioration)."""
     if len(arr) < 3:
@@ -396,6 +419,10 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None
         f"{pfx}_blue_delta1", f"{pfx}_blue_slope", f"{pfx}_green_delta1", f"{pfx}_green_slope",
         f"{pfx}_trend_delta1", f"{pfx}_trend_slope", f"{pfx}_bar_date",
     ]}
+    nulls[f"{pfx}_blue_last5"]        = []
+    nulls[f"{pfx}_green_last5"]       = []
+    nulls[f"{pfx}_trend_last5"]       = []
+    nulls[f"{pfx}_trend_ma_last5"]    = []
     nulls[f"{pfx}_blue_down_2_bars"]  = False
     nulls[f"{pfx}_blue_cross_up"]     = False
     nulls[f"{pfx}_accumulation_flag"] = False
@@ -436,6 +463,13 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None
             f"{pfx}_green_slope":        g_s,
             f"{pfx}_trend_delta1":       t_d1,
             f"{pfx}_trend_slope":        t_s,
+            # Last 5 closed bars (oldest->newest) for the portfolio.html mini
+            # chart — real per-bar values from the full-history arrays already
+            # computed above, not a recompute over a short window.
+            f"{pfx}_blue_last5":         _last_n(blue_a, 5),
+            f"{pfx}_green_last5":        _last_n(green_a, 5),
+            f"{pfx}_trend_last5":        _last_n(trend_a, 5),
+            f"{pfx}_trend_ma_last5":     _last_n(tma_a, 5),
             # Deterioration/flags — see hoja sección 1.5/1.7
             f"{pfx}_blue_down_2_bars":   _down_2_bars(blue_a),
             # Fresh negative->positive flip — used by the "espejo" mirror-reversal signal

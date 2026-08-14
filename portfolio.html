@@ -95,6 +95,63 @@ const greenFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?
 const trendFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#555577':n<0?'#774455':'#888'; };
 const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
 
+// ── Koncorde mini chart — últimas 5 sesiones (blue/green/trend/trend_ma) ───
+// Estilo Koncorde clásico, estructura confirmada con el usuario 2026-08-14
+// (fórmula real de ProRealTime/Blai5, verificada línea por línea contra
+// koncorde_calculator.py — coincide exacta):
+//   - 3 ÁREAS con línea propia del mismo dato, cada una SÓLIDA (fillOpacity=1,
+//     no blending) para que la capa de encima oculte de verdad a la de
+//     detrás, no sume color. Orden fondo→frente: verde → ocre (= `trend`
+//     crudo, la "marrón" sin suavizar) → azul (siempre visible por completo).
+//   - LÍNEA ROJA (`trend_ma` = EMA15 de `trend`) suelta, sin área propia —
+//     por eso se pinta la última, encima de todo: al no tener relleno nada
+//     puede taparla, se ve entera en todo el trayecto (tal como la describió
+//     el usuario). Es la señal/media de la montaña marrón (ocre), no un dato
+//     independiente de mano fuerte/débil.
+function KoncMiniChart({ blue, green, trend, trendMa }) {
+  const areaSeries = [
+    { arr: green, line: '#1a7a1a', fill: '#a8d5a2' }, // verde (fondo)
+    { arr: trend, line: null,      fill: '#e0c184' }, // marrón cruda → área ocre (medio), sin línea propia
+    { arr: blue,  line: '#1a5cb0', fill: '#8fb8e6' }, // azul (primer plano)
+  ];
+  const allArrs = [...areaSeries.map(s => s.arr), trendMa];
+  const n = Math.max(0, ...allArrs.map(a => Array.isArray(a) ? a.length : 0));
+  if (n < 2) return <span style={{color:'#ddd',fontSize:9}}>—</span>;
+
+  const W = 58, H = 22, PAD = 2;
+  const vals = allArrs.flatMap(a => (a||[]).filter(v => v != null));
+  vals.push(0);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max - min) || 1;
+  const x = i => PAD + (i / Math.max(n-1,1)) * (W - PAD*2);
+  const y = v => H - PAD - ((v - min) / range) * (H - PAD*2);
+  const baseline = y(0);
+
+  const pointsFor = arr => (arr||[]).map((v,i) => v==null ? null : [x(i), y(v)]).filter(Boolean);
+  const lineFor = pts => pts.map((p,i)=>`${i===0?'M':'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+
+  const areas = areaSeries.map(s => {
+    const pts = pointsFor(s.arr);
+    if (pts.length < 2) return null;
+    const line = lineFor(pts);
+    const area = `${line} L${pts[pts.length-1][0].toFixed(1)},${baseline.toFixed(1)} `
+               + `L${pts[0][0].toFixed(1)},${baseline.toFixed(1)} Z`;
+    return { ...s, line, area };
+  }).filter(Boolean);
+
+  const redPts = pointsFor(trendMa);
+  const redLine = redPts.length >= 2 ? lineFor(redPts) : null;
+
+  return (
+    <svg width={W} height={H} style={{display:'block',margin:'0 auto'}}>
+      <line x1={PAD} y1={baseline} x2={W-PAD} y2={baseline} stroke="#ccc" strokeWidth={0.5} />
+      {areas.map((p,i) => <path key={'a'+i} d={p.area} fill={p.fill} fillOpacity={1} stroke="none" />)}
+      {areas.map((p,i) => p.line && <path key={'l'+i} d={p.line} fill="none" stroke={p.line} strokeWidth={1} />)}
+      {redLine && <path d={redLine} fill="none" stroke="#c0392b" strokeWidth={1} />}
+    </svg>
+  );
+}
+
 // ── Tendencia Flow Score / ATR% vs sesión anterior ──────────────────────────
 // Se apoya en signals_history.json (ya se registraba a diario para Flow Score;
 // atrPct se añade aquí — ver push de entries más abajo). "Sesión anterior" =
@@ -983,8 +1040,10 @@ function Portfolio() {
                     <th title="Pececillos — dinero minorista + tendencia (PVI oscilador). ↑↓ = slope">Green</th>
                     <th title="Tendencia compuesta (RSI+MFI+BB+Stoc)/2. ↑↓ = slope">Trend</th>
                     <th title="Estado Koncorde Plus: Acumul. / Alza / Distrib. / Baja">Estado</th>
+                    <th title="Mini-gráfico Koncorde — últimas 5 sesiones (azul/verde/tendencia-EMA15). Área+línea, misma escala que el 0.">📈</th>
                     <th title="Marca manual por timeframe: has comprobado que el posicionamiento del azul de Koncorde en ESTE timeframe (D en la fila principal, 3D y W en sus sub-filas) anticipa los giros alcistas/bajistas de esta acción. Guarda la fecha en que la marcaste, para saber qué periodo revisar más adelante y ampliar la validación.">🔮</th>
                     <th title="MACD histograma (12,26,9) — ▲ alcista / ▼ bajista">MACD</th>
+                    <th title="ATLAS Mini (Blai5): estrechamiento significativo de Bollinger Bands(20). dbb=sqrt((BBup-BBlow)/BBup)×20, señal si dbb ≤ EMA(dbb,120)×0.8. No da dirección, solo avisa de posible movimiento brusco próximo — combinar con MACD.">ATLAS</th>
                     <th title="ATR(14) normalizado por precio — volatilidad/fuerza del movimiento">ATR%</th>
                     <th title="Flow Score: momentum + RSI/MACD + ATR + Koncorde + tendencia">Flow</th>
                     <th title="Early Flow Detector: giro Koncorde + compresión ATR + posición 52W + RSI zona + momentum modesto">Early</th>
@@ -1126,6 +1185,10 @@ function Portfolio() {
                             {isLoad ? dot : koncStateLbl(p?.konc_d_state)}
                           </td>
                         ); })()}
+                        {/* Mini-gráfico Koncorde — D */}
+                        <td style={{textAlign:'center'}}>
+                          {isLoad ? null : <KoncMiniChart blue={p?.konc_d_blue_last5} green={p?.konc_d_green_last5} trend={p?.konc_d_trend_last5} trendMa={p?.konc_d_trend_ma_last5} />}
+                        </td>
                         {/* Patrón Koncorde confirmado manualmente — D */}
                         <td style={{textAlign:'center'}}>
                           <input type="checkbox" checked={!!item.koncPatternD}
@@ -1140,6 +1203,13 @@ function Portfolio() {
                           {isLoad ? dot : p?.macdBull==null ? <span style={{color:'#aaa'}}>—</span>
                             : p.macdBull ? <span style={{color:'#1a7a1a'}}>▲</span>
                                          : <span style={{color:'#c0392b'}}>▼</span>}
+                        </td>
+                        {/* ATLAS Mini — estrechamiento de Bollinger, no da dirección */}
+                        <td style={{textAlign:'center',fontSize:11}}
+                          title={p?.atlasDbb!=null ? `dbb=${p.atlasDbb} · umbral=${p.atlasFactor} · atl=${p.atlasAtl}` : undefined}>
+                          {isLoad ? dot : p?.atlasSignal==null ? <span style={{color:'#aaa'}}>—</span>
+                            : p.atlasSignal ? <span style={{color:'#a9720f',fontWeight:700}}>●</span>
+                                            : <span style={{color:'#ddd'}}>·</span>}
                         </td>
                         {/* ATR% */}
                         {(() => {
@@ -1235,6 +1305,10 @@ function Portfolio() {
                             {koncStateLbl(p?.konc_3d_state)}
                           </td>
                         ); })()}
+                        {/* Mini-gráfico Koncorde — 3D */}
+                        <td style={{textAlign:'center',padding:'1px 4px'}}>
+                          <KoncMiniChart blue={p?.konc_3d_blue_last5} green={p?.konc_3d_green_last5} trend={p?.konc_3d_trend_last5} trendMa={p?.konc_3d_trend_ma_last5} />
+                        </td>
                         {/* Patrón Koncorde confirmado manualmente — 3D */}
                         <td style={{textAlign:'center',padding:'1px 4px'}}>
                           <input type="checkbox" checked={!!item.koncPattern3D}
@@ -1244,7 +1318,7 @@ function Portfolio() {
                                 : 'Marcar si compruebas que el patrón Koncorde 3D (azul) predice los giros de esta acción'}
                             style={{cursor:'pointer'}}/>
                         </td>
-                        <td colSpan={6} style={{padding:0}}/>
+                        <td colSpan={7} style={{padding:0}}/>
                       </tr>
                       {/* ── Sub-row W ── */}
                       <tr style={{background:subBg2}}>
@@ -1265,6 +1339,10 @@ function Portfolio() {
                             {koncStateLbl(p?.konc_w_state)}
                           </td>
                         ); })()}
+                        {/* Mini-gráfico Koncorde — W */}
+                        <td style={{textAlign:'center',padding:'1px 4px'}}>
+                          <KoncMiniChart blue={p?.konc_w_blue_last5} green={p?.konc_w_green_last5} trend={p?.konc_w_trend_last5} trendMa={p?.konc_w_trend_ma_last5} />
+                        </td>
                         {/* Patrón Koncorde confirmado manualmente — W */}
                         <td style={{textAlign:'center',padding:'1px 4px'}}>
                           <input type="checkbox" checked={!!item.koncPatternW}
@@ -1274,7 +1352,7 @@ function Portfolio() {
                                 : 'Marcar si compruebas que el patrón Koncorde W (azul) predice los giros de esta acción'}
                             style={{cursor:'pointer'}}/>
                         </td>
-                        <td colSpan={6} style={{padding:0}}/>
+                        <td colSpan={7} style={{padding:0}}/>
                       </tr>
                     </React.Fragment>
                   );

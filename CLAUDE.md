@@ -2413,6 +2413,179 @@ observación del proyecto.
 
 ---
 
+## Mini-gráfico Koncorde por fila — últimas 5 sesiones (implementado 2026-08-14)
+
+El usuario pidió una representación visual (estilo Koncorde clásico) de las
+últimas 5 sesiones por fila en `portfolio.html`, para detectar patrones a
+simple vista sin leer los números. Antes de construirlo se auditó qué
+calcula realmente `koncorde_calculator.py`: solo `blue`/`green` estaban
+expuestos; no existía ninguna "línea roja". El usuario pidió implementarla
+también, y acabó pasando la fórmula real de ProRealTime/Blai5 para
+verificarla — el diseño final tardó 3 rondas de corrección visual contra
+capturas reales suyas (JD) antes de quedar bien; se documenta solo el
+resultado final + los hallazgos de fondo, no cada iteración intermedia.
+
+### Las 4 series reales (`_calc_koncorde_plus()`, `scripts/koncorde_calculator.py`)
+
+| Serie | Fórmula | Rol visual |
+|---|---|---|
+| `blue` | NVI acumulado → EMA(15) → oscilador normalizado (min-max, ventana 90) | Área azul, primer plano — "tiburones" |
+| `green` | `trend + osc_pos` (PVI-based, mismo tratamiento que blue) | Área verde, fondo — "pececillos" |
+| `trend` | `(RSI14 + MFI14 + BollOsc25 + Stoch21,3/3) / 2`, todo sobre `ohlc4` | Área ocre — la "marrón" cruda, sin suavizar |
+| `trend_ma` | `EMA(trend, 15)` | Línea roja suelta — señal/media de la marrón, **sin área propia** |
+
+Verificado línea por línea contra la fórmula que pasó el usuario (RSI14 y
+Stochastic21,3 sobre `TotalPrice`=`ohlc4`, MFI14, BollOsc25 con mult=2,
+composición `(rsi+mfi+bollosc+stoc/3)/2`, EMA15 final): coincide exacta con
+el código — no hizo falta cambiar ninguna fórmula, solo exponer `trend`
+(que ya se calculaba pero no se guardaba en ningún `_last5`) y corregir un
+bug real en `_ema()`.
+
+**Bug real encontrado — `trend_ma` ya estaba calculado pero siempre salía
+`null`.** `_ema()` sembraba con los primeros `period` valores **literales**
+del array (`series[:period]`) en vez de los primeros `period` valores
+**no-NaN**: como `trend` tarda ~20-26 barras en tener su primer valor válido
+(warmup de RSI/MFI/BB/Stoch, más largo que `MA_TREND_LEN=15`), la ventana
+semilla siempre pillaba algún NaN y la función devolvía NaN para siempre —
+incluso con los 820 días de histórico del pipeline. Confirmado con datos
+reales antes del fix: `konc_d_trend_ma` era `null` en el 100% de
+`koncorde_data.json`. Fix: busca la primera ventana de `period` valores
+consecutivos sin NaN en vez de asumir que empieza en el índice 0. Los otros
+dos llamadores de `_ema()` (`pvi_ema`, `nvi_ema`) no tienen warmup propio,
+así que el fix no les cambia el comportamiento.
+
+**Arrays de 5 sesiones** (`_last_n()`, nuevo helper): `konc_{tf}_blue_last5`,
+`konc_{tf}_green_last5`, `konc_{tf}_trend_last5`, `konc_{tf}_trend_ma_last5`
+por timeframe — la cola de 5 de los arrays completos que
+`_calc_koncorde_plus()` ya calculaba internamente, no un recálculo sobre una
+ventana corta. Como el array D/3D/W ya representa barras reales no
+solapadas (D=sesión, 3D=bloque de 3 sesiones, W=semana — ver sección
+"Koncorde Plus v2" más arriba), la cola de 5 son 5 barras cerradas reales de
+ese timeframe, no 5 ejecuciones del pipeline. `server.js` no necesitó ningún
+cambio: `getKoncordeData()` ya expone el objeto completo del ticker vía
+spread (`...(getKoncordeData()[symbol] ?? {})` en `/api/quote/:symbol`), así
+que los campos nuevos llegan solos.
+
+### `KoncMiniChart` (`portfolio.html`) — estructura final
+
+SVG inline, mismo patrón `Spark` que el resto de páginas del proyecto (cada
+una con su propia copia, sin módulo compartido). **3 áreas con línea propia
+del mismo dato** (verde/ocre/azul) + **1 línea roja suelta sin área propia**
+(`trend_ma`, la señal/media de la ocre — no un dato independiente de mano
+fuerte/débil):
+
+- **Z-order (fondo→frente), determinado por el orden del array `areaSeries`**
+  (SVG pinta en orden de aparición): verde → ocre (`trend` crudo) → azul.
+  Azul siempre visible por completo, nunca tapado. La roja se pinta la
+  última de todas (encima incluso del azul) — al no tener relleno, nada
+  puede taparla, se ve entera en todo el trayecto.
+- **Rellenos SÓLIDOS (`fillOpacity={1}`), no semi-transparentes.** Con
+  opacidad baja las áreas superpuestas suman color (blending); con opacidad
+  completa la capa de encima oculta de verdad a la de detrás (occlusion) —
+  así se ve el Koncorde real: donde la ocre cubre al verde, el verde no
+  transparenta, solo se ve la porción que sobresale por encima.
+- Colores: línea/área azul `#1a5cb0`/`#8fb8e6`, línea/área verde
+  `#1a7a1a`/`#a8d5a2`, área ocre `#e0c184` (sin línea propia), línea roja
+  `#c0392b` (sin área). Escala Y compartida entre las 4 series, incluyendo
+  siempre el 0 en el rango para que la línea base sea comparable entre
+  tickers.
+
+**Colocación:** una celda nueva (📈) entre "Estado" y la casilla de patrón
+manual (🔮), en las 3 filas — D (principal) y las sub-filas 3D/W — a
+petición explícita del usuario tras preguntarle (la alternativa "solo D" se
+descartó). El widget separado "Ranking de Setups" no lleva gráfico — mismo
+criterio que ya se aplicó ahí para el checkbox de patrón manual: ese widget
+es secundario, el pedido era sobre la tabla principal.
+
+**Verificado con datos reales, en dos pasadas completas del pipeline
+(`py -3 scripts/koncorde_calculator.py`, en local) sobre los 198 tickers del
+universo real** (candidatos + portfolio + posiciones abiertas) — necesario
+porque la caché de 10 min de `server.js` sirve lo que haya en disco, y sin
+correr el pipeline ningún ticker tiene `_last5` real: 196/198 computados
+ambas veces (2 fallos — `ASMI`, `TSND.V`, ambos posiblemente deslistados,
+sin relación con este cambio). Capturada la tabla real vía Edge headless
+(CDP directo — `puppeteer.connect({browserURL})` a una instancia lanzada a
+mano con `--remote-debugging-port`, más fiable en este entorno que
+`puppeteer.launch()`, que fallaba al spawnear el proceso) tras cada cambio
+de diseño — la versión final confirma visualmente verde asomando por
+encima de la ocre, roja recorriendo el borde superior de la ocre, y azul
+como banda fina siempre visible en la base, coherente con las capturas
+ProRealTime de JD que pasó el usuario. Cero errores de consola (solo un 404
+de recurso no relacionado). `docs/data/koncorde_data.json`, `ai_candidates.json`,
+`koncorde_failed_state.json` y `koncorde_signals_history.jsonl` quedan
+modificados/actualizados de verdad en el árbol de trabajo (no revertidos
+esta vez), pendientes de que el usuario los revise y decida si commitear.
+
+**Fuera de alcance:** ninguna señal ni alerta basada en el gráfico —
+puramente visual/observacional, mismo criterio que el resto de features
+nuevas del proyecto.
+
+---
+
+## ATLAS Mini (Blai5) — estrechamiento de Bollinger Bands, junto al MACD (implementado 2026-08-14)
+
+Indicador nuevo, columna a la derecha de MACD en `portfolio.html`, mismo día
+que el mini-gráfico Koncorde. El usuario pasó la fórmula pública
+(ProRealCode "Blai5 ATLAS Mini"): detecta estrechamientos matemáticamente
+significativos de Bollinger Bands(20), que suelen preceder a movimientos
+bruscos — **sin dar dirección**, solo avisa de compresión. Por eso vive junto
+al MACD: MACD aporta el sesgo direccional que ATLAS no da por sí solo.
+
+```
+dbb    = sqrt((BBupper20(close) − BBlower20(close)) / BBupper20(close)) × 20
+dbbmed = EMA(dbb, 120)
+factor = dbbmed × 4/5
+atl    = dbb − factor
+señal  = atl ≤ 0   (compresión relevante)
+```
+
+**Decisión de arquitectura — JS en `server.js`, no Python en
+`koncorde_calculator.py`.** A diferencia del mini-gráfico Koncorde (que sí
+vive en el pipeline Python porque necesita OHLCV+volumen de 194 tickers y
+persistencia batch), ATLAS solo necesita `close` — exactamente el mismo dato
+que ya usa `calcMACD()`, que **ya vive en `server.js`**, calculado en vivo
+en cada `/api/quote/:symbol` sobre los `closes` de 3 años que esa ruta ya
+descarga (de sobra para el warmup real: 20 barras para el primer `dbb` +
+120 para el `EMA` = ~140, muy por debajo de las ~750 sesiones de 3 años).
+Mismo patrón que `calcMACD`/`calcATR`/`calcCMF`/`calcOBV`, todas ya en ese
+archivo — se evitó introducir una quinta fuente de verdad. `calcAtlasMini()`
+añadida junto a esas funciones, enganchada con `...calcAtlasMini(closes)`
+justo después de `...calcMACD(closes)` en la respuesta de `/api/quote/:symbol`.
+
+**Columna ticker-level, no por timeframe D/3D/W** — mismo criterio que MACD
+(que tampoco se repite en las sub-filas 3D/W, solo vive en la fila
+principal). El `colSpan` de relleno de las sub-filas pasó de `6` a `7` para
+seguir cubriendo la columna nueva (MACD+ATLAS+ATR%+Flow+Early+Notas+Acciones).
+
+**Glifo — 🗜️ descartado tras verlo en pantalla.** El emoji de compresión no
+renderiza en el Edge usado para verificar (sale un glifo de reemplazo/tofu,
+no el emoji real) — soporte de emoji poco fiable entre plataformas para ese
+carácter concreto (U+1F5DC). Sustituido por `●` (compresión, color ocre
+`#a9720f`) / `·` (sin señal, gris claro) — mismo lenguaje visual que los
+▲/▼ de MACD, glifos ASCII/Unicode básicos con soporte universal.
+
+**Tooltip:** `dbb=X · umbral=Y · atl=Z` en el `title` del `<td>`, para poder
+ver los números crudos sin añadir otra columna.
+
+**Verificado con datos reales:** función probada con curl contra un
+servidor temporal (`server.verify.js`, copia de un solo uso en el puerto
+3099 — necesario porque el `server.js` real corre en la terminal del
+usuario y no se quería reiniciar sin avisar; borrada al terminar) sobre 11
+tickers reales del portfolio — valores planeados coherentes (ej. JD:
+dbb=7.75, atl=1.54, sin señal; `DMX.V`: dbb=7.57, atl=-0.39, señal activa;
+`FXPO.L`: dbb=0, atl=-5.72, caso extremo de banda plana, también señal
+activa). Capturado en pantalla vía Edge headless (CDP directo) contra ese
+mismo servidor temporal, con y sin señal — glifo correcto, tooltip correcto,
+cero errores de consola relevantes tras el cambio de emoji a `●`/`·`.
+
+**Fuera de alcance:** ATLAS no se combina automáticamente con MACD en una
+señal compuesta (ej. "compresión + MACD alcista = posible ruptura al alza")
+— se deja que el usuario lea ambas columnas juntas visualmente, mismo
+criterio de observación-antes-que-automatización del resto del proyecto.
+No se ha tocado el pipeline Python ni ninguna cartera.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
