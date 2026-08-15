@@ -93,6 +93,12 @@ const koncStateStyle = s => ({'accumulation':{bg:'#dbeafe',fg:'#1e40af'},'up':{b
 const blueFg   = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a5cb0':n<0?'#7b8ea0':'#888'; };
 const greenFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?'#c0392b':'#888'; };
 const trendFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#555577':n<0?'#774455':'#888'; };
+// ── Insider Activity (Form4API) helpers ─────────────────────────────────
+const fmtMoney = v => { const n=toN(v); if(n==null) return '—'; const a=Math.abs(n), s=n<0?'-':''; if(a>=1e6) return `${s}$${(a/1e6).toFixed(1)}M`; if(a>=1e3) return `${s}$${(a/1e3).toFixed(0)}k`; return `${s}$${Math.round(a)}`; };
+const INSIDER_SCORE_STYLE = {0:{bg:'#f3f4f6',fg:'#9ca3af'},1:{bg:'#fee2e2',fg:'#b91c1c'},2:{bg:'#f3f4f6',fg:'#6b7280'},3:{bg:'#dcfce7',fg:'#15803d'},4:{bg:'#86efac',fg:'#14532d'},5:{bg:'#22c55e',fg:'#052e16'}};
+const INSIDER_CONTEXT_LBL = {strong_confirmation:'Confirmación fuerte',moderate_confirmation:'Confirmación moderada',neutral:'Neutral',warning:'⚠ Warning',ignored_selling:'Venta 10b5-1 (ignorada)',not_evaluable:'No evaluable'};
+const INSIDER_CONTEXT_STYLE = {strong_confirmation:{bg:'#22c55e',fg:'#052e16'},moderate_confirmation:{bg:'#dcfce7',fg:'#15803d'},neutral:{bg:'#f3f4f6',fg:'#6b7280'},warning:{bg:'#fee2e2',fg:'#b91c1c'},ignored_selling:{bg:'#f3f4f6',fg:'#9ca3af'},not_evaluable:{bg:'',fg:'#ccc'}};
+const INSIDER_COVERAGE_LBL = {covered:'✓ Cubierto',unsupported_non_us_or_no_data:'No cubierto (no-US)',error:'Error'};
 const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
 
 // ── Koncorde mini chart — últimas 5 sesiones (blue/green/trend/trend_ma) ───
@@ -403,7 +409,7 @@ function UniverseModal({ ticker, onDone, onClose }) {
 }
 
 // ── Portfolio markdown export ─────────────────────────────────────────────
-function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}) {
+function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, insiderRanking = []) {
   const date = new Date().toLocaleDateString('es-ES');
   const f    = v => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fp   = v => v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
@@ -444,6 +450,24 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}) {
     });
     md += '\n';
   });
+  if (insiderRanking.length > 0) {
+    md += `## INSIDER ACTIVITY (Form4API — confirmación contextual, no señal de trading)\n`;
+    md += `| Ticker | Trigger | 0-3M neto | 3-6M neto | 6-9M neto | 9-12M neto | Compradores | Flags | Score | Konc+Insider | Cobertura | Consultado |\n`;
+    md += `|--------|---------|----------:|----------:|----------:|-----------:|------------:|-------|------:|:-------------|:----------|:-----------|\n`;
+    const fm = v => v == null ? '—' : `$${Math.round(v)}`;
+    insiderRanking.forEach(r => {
+      const covered = r.coverage_status === 'covered';
+      md += `| ${r.ticker} | ${r.fetch_priority}: ${(r.fetch_trigger_reasons || []).join('/')} `
+          + `| ${covered ? fm(r.windows?.['0_3m']?.net_open_market_value) : '—'} `
+          + `| ${covered ? fm(r.windows?.['3_6m']?.net_open_market_value) : '—'} `
+          + `| ${covered ? fm(r.windows?.['6_9m']?.net_open_market_value) : '—'} `
+          + `| ${covered ? fm(r.windows?.['9_12m']?.net_open_market_value) : '—'} `
+          + `| ${covered ? (r.windows?.['0_3m']?.unique_buyers ?? 0) : '—'} `
+          + `| ${(r.flags || []).join(', ') || '—'} | ${r.insider_activity_score ?? '—'} `
+          + `| ${r.koncorde_insider_context ?? '—'} | ${r.coverage_status ?? '—'} | ${r.last_fetch ?? '—'} |\n`;
+    });
+    md += '\n';
+  }
   return md;
 }
 
@@ -630,17 +654,29 @@ function Portfolio() {
       const earlyFlow = computeEarlyFlowScore(p, prevSnapshot[item.ticker] ?? null);
       if (earlyFlow == null && flowScore == null) return;
       seen.set(item.ticker, { ticker: item.ticker, flowScore, earlyFlow,
-        konc_3d_state: p.konc_3d_state ?? null, rsi: p.rsi ?? null,
+        konc_w_state: p.konc_w_state ?? null, rsi: p.rsi ?? null,
         w1: p.w1 ?? null, m1: p.m1 ?? null,
         konc_mirror_signal: p.konc_mirror_signal ?? null });
     }));
     return [...seen.values()].sort((a, b) => (b.earlyFlow ?? -99) - (a.earlyFlow ?? -99));
   }, [portfolio, prices, prevSnapshot]);
 
+  // ── Insider Activity (Form4API) — confirmation layer, not a signal ─────
+  const insiderRanking = React.useMemo(() => {
+    const seen = new Map();
+    portfolio.sections.forEach(sec => sec.items.forEach(item => {
+      if (seen.has(item.ticker)) return;
+      const ins = prices[item.ticker]?.insider;
+      if (!ins) return;
+      seen.set(item.ticker, { ticker: item.ticker, ...ins });
+    }));
+    return [...seen.values()].sort((a, b) => (b.insider_activity_score ?? -1) - (a.insider_activity_score ?? -1));
+  }, [portfolio, prices]);
+
   // ── LLM export ─────────────────────────────────────────────────────────
   const copyForLLM = () => {
     if (!Object.keys(prices).length) { showToast('⚠️ Espera a que carguen los datos'); return; }
-    const md = buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot);
+    const md = buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot, insiderRanking);
     navigator.clipboard.writeText(md)
       .then(() => showToast('✅ Copiado — pégalo en Claude, ChatGPT o cualquier LLM'))
       .catch(() => showToast('❌ Error al copiar'));
@@ -906,7 +942,7 @@ function Portfolio() {
                   <th data-tip={"Detecta setups antes de que el momentum sea evidente.\nComponentes: giro Koncorde D + alineación 3D/W\n+ compresión ATR + posición 52W + RSI en zona + momentum modesto.\nBonus: 3D/W alcistas +1 c/u · W bajista contraría D -1\nGiro 3D (down→acum) +1 extra.\nFuerte ≥ 7 · Interesante ≥ 4 · Sin setup < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Early Flow</th>
                   <th data-tip={"Momentum actual. Fórmula:\n(1W×0.6 + 1M×0.4)×2 + ajuste RSI\n+ ajuste MACD + ajuste ATR%\n+ Koncorde D + Koncorde W×0.5 + tendencia 52W.\nW alcista suma hasta +1 · W bajista resta hasta -1.\nLider ≥ 8 · Transicion ≥ 4 · Debil < 4"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flow Score</th>
                   <th data-tip={"Interpretación combinada Early Flow × Flow Score.\nEjemplos:\nEarly≥7 + Flow≥8 → Activación potente\nEarly≥7 + Flow<4 → Setup temprano\nEarly<4 + Flow≥8 → Tendencia madura (tarde)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Lectura</th>
-                  <th data-tip={"Koncorde Plus 3D (OskarGallard):\nAlza: blue≥0, green≥0\nAcumul.: blue≥0, green<0 (institucional acumula)\nDistrib.: blue<0, green>0\nBaja: blue<0, green<0"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc 3D</th>
+                  <th data-tip={"Koncorde Plus Semanal (OskarGallard):\nAlza: blue≥0, green≥0\nAcumul.: blue≥0, green<0 (institucional acumula)\nDistrib.: blue<0, green>0\nBaja: blue<0, green<0"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc W</th>
                   <th data-tip={"RSI(14) Wilder.\n>65: sobrecomprado · <35: sobrevendido\nZona ideal de entrada: 45–58\n(RSI en zona = +2 en Early Flow)"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>RSI</th>
                   <th data-tip={"Retorno de los últimos 5 días de trading.\nEn Early Flow se valora positivo pero modesto\n(0–4%) como señal de acumulación sin sobreextensión."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1W</th>
                   <th data-tip={"Retorno de los últimos 21 días de trading.\nEn Early Flow se valora neutro a ligeramente positivo\n(−5% a +5%) — confirma consolidación."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>1M</th>
@@ -918,7 +954,7 @@ function Portfolio() {
                   const flowCls   = classifyFlow(r.flowScore);
                   const earlySt   = earlyCls ? EARLY_STYLE[earlyCls] : null;
                   const flowSt    = flowCls  ? FLOW_STYLE[flowCls]   : null;
-                  const konSt     = koncStateStyle(r.konc_3d_state);
+                  const konSt     = koncStateStyle(r.konc_w_state);
                   const reading   = (r.earlyFlow != null && r.flowScore != null)
                     ? matrixReading(r.earlyFlow, r.flowScore) : null;
                   const mirrorSt  = r.konc_mirror_signal === 'mirror_reversal_confirmed'
@@ -945,9 +981,9 @@ function Portfolio() {
                         {reading ?? '—'}
                       </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontWeight:600,fontSize:10,
-                        background: r.konc_3d_state ? konSt.bg : '', color: r.konc_3d_state ? konSt.fg : '#aaa',
+                        background: r.konc_w_state ? konSt.bg : '', color: r.konc_w_state ? konSt.fg : '#aaa',
                         whiteSpace:'nowrap'}}>
-                        {koncStateLbl(r.konc_3d_state)}
+                        {koncStateLbl(r.konc_w_state)}
                       </td>
                       <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',
                         background:rsiBg(r.rsi),color:rsiFg(r.rsi)}}>
@@ -961,6 +997,71 @@ function Portfolio() {
                         background:r.m1!=null?retBg(r.m1):'',color:r.m1!=null?retFg(r.m1):'#aaa'}}>
                         {r.m1 != null ? fmtRet(r.m1) : '—'}
                       </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Insider Activity (Form4API) ───────────────────────────────── */}
+      {insiderRanking.length > 0 && (
+        <div style={{marginBottom:16,border:'1px solid #e0e0e0',borderRadius:6,overflow:'hidden'}}>
+          <div style={{padding:'5px 12px',background:'#354f73',color:'white',
+            fontSize:10,fontWeight:700,letterSpacing:'.5px',textTransform:'uppercase'}}
+            data-tip={"Actividad de insiders (Form4API / SEC Form 4) para tickers que YA tienen una señal técnica\n(acumulación Koncorde D/3D/W, posición abierta o PCS≥75).\n\nEs una capa de CONFIRMACIÓN CONTEXTUAL, no una señal de compra/venta automática.\nSolo cubre tickers listados en EE.UU. — sufijos .TO/.V/.AX/.L/.DE/etc. no tienen cobertura."}>
+            Insider Activity — confirmación contextual (no señal de trading)
+          </div>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+              <thead className="rank-thead">
+                <tr style={{background:'#f0f4f8'}}>
+                  <th style={{padding:'4px 10px',textAlign:'left',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Ticker</th>
+                  <th data-tip={"Por qué se consultó Form4API para este ticker (Koncorde en acumulación, posición abierta, PCS≥75, watchlist…)."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Trigger</th>
+                  <th data-tip={"Compras/ventas open-market discrecionales (código P/S, excluye derivatives, grants, options, 10b5-1) en los últimos 0-3 meses. Neto = compras − ventas discrecionales (las ventas 10b5-1 no penalizan)."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>0-3M (compra/venta/neto)</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>3-6M neto</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>6-9M neto</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>9-12M neto</th>
+                  <th data-tip={"Nº de insiders distintos que compraron en mercado abierto (0-3M)."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Compradores</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Flags</th>
+                  <th data-tip={"0-5, primera pasada sin calibrar contra rendimiento posterior.\n0=sin datos · 1=ventas discrecionales netas · 2=neutral · 3=compra aislada · 4=compras netas claras · 5=cluster buying"} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Score</th>
+                  <th data-tip={"Cruce Koncorde (D/3D/W accumulation) × actividad insider real. No es un veredicto de compra/venta."} style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Konc + Insider</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Cobertura</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Consultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {insiderRanking.map((r, i) => {
+                  const w3   = r.windows?.['0_3m'] ?? {};
+                  const scoreSt   = INSIDER_SCORE_STYLE[r.insider_activity_score ?? 0];
+                  const ctxSt     = INSIDER_CONTEXT_STYLE[r.koncorde_insider_context] ?? INSIDER_CONTEXT_STYLE.not_evaluable;
+                  const covLbl    = INSIDER_COVERAGE_LBL[r.coverage_status] ?? r.coverage_status ?? '—';
+                  return (
+                    <tr key={r.ticker} style={{background: i%2===0 ? 'white' : '#fafafa',
+                      borderBottom:'1px solid #f0f0f0'}}>
+                      <td style={{padding:'4px 10px',fontWeight:700,color:'#1a6baa',fontFamily:'monospace'}}>{r.ticker}</td>
+                      <td style={{padding:'4px 10px',fontSize:9,color:'#888'}} title={(r.fetch_trigger_reasons||[]).join(', ')}>
+                        {r.fetch_priority}: {(r.fetch_trigger_reasons||[])[0] ?? '—'}{(r.fetch_trigger_reasons||[]).length>1 ? ` +${r.fetch_trigger_reasons.length-1}` : ''}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',fontSize:10}}>
+                        {r.coverage_status==='covered' ? `${fmtMoney(w3.open_market_buy_value)} / ${fmtMoney(w3.open_market_sell_value)} / ` : '—'}
+                        {r.coverage_status==='covered' && <b style={{color: (w3.net_open_market_value??0)>0?'#15803d':(w3.net_open_market_value??0)<0?'#b91c1c':'#888'}}>{fmtMoney(w3.net_open_market_value)}</b>}
+                      </td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',fontSize:10}}>{r.coverage_status==='covered' ? fmtMoney(r.windows?.['3_6m']?.net_open_market_value) : '—'}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',fontSize:10}}>{r.coverage_status==='covered' ? fmtMoney(r.windows?.['6_9m']?.net_open_market_value) : '—'}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace',fontSize:10}}>{r.coverage_status==='covered' ? fmtMoney(r.windows?.['9_12m']?.net_open_market_value) : '—'}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontFamily:'monospace'}}>{r.coverage_status==='covered' ? (w3.unique_buyers ?? 0) : '—'}</td>
+                      <td style={{padding:'4px 10px',fontSize:9,color:'#555'}}>{(r.flags||[]).join(', ') || '—'}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontWeight:700,fontFamily:'monospace',
+                        background:scoreSt.bg,color:scoreSt.fg}}>{r.insider_activity_score ?? '—'}</td>
+                      <td style={{padding:'4px 10px',textAlign:'center',fontWeight:600,fontSize:10,
+                        background:ctxSt.bg,color:ctxSt.fg,whiteSpace:'nowrap'}}>
+                        {INSIDER_CONTEXT_LBL[r.koncorde_insider_context] ?? '—'}
+                      </td>
+                      <td style={{padding:'4px 10px',fontSize:10,color:r.coverage_status==='covered'?'#15803d':'#999',whiteSpace:'nowrap'}}>{covLbl}</td>
+                      <td style={{padding:'4px 10px',fontSize:9,color:'#999',whiteSpace:'nowrap'}}>{r.last_fetch ?? '—'}</td>
                     </tr>
                   );
                 })}

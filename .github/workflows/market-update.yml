@@ -121,6 +121,20 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Piloto — Portfolio Tracker únicamente, no toca AI Picks Lab. Solo por
+      # la mañana a propósito (decisión del usuario 2026-08-16): la actividad
+      # insider (SEC Form 4) no cambia varias veces al día, así que una
+      # consulta diaria basta y evita duplicar cuota del plan gratuito de
+      # Form4API entre los dos runs del pipeline. Ver scripts/update_insider_activity.py
+      # para el resto de decisiones de alcance (universo, prioridades, caché).
+      - name: Run pipeline - Step 9f Insider Activity (Form4API) — solo por la mañana
+        if: steps.time_check.outputs.is_morning == 'true'
+        env:
+          FORM4API_KEY: ${{ secrets.FORM4API_KEY }}
+        run: python scripts/update_insider_activity.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 10 paper trading (AI picks)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

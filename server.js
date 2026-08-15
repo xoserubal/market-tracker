@@ -101,6 +101,32 @@ function getKoncordeData() {
   return {};
 }
 
+// ── Insider Activity (Form4API) — pre-computed by Python ────────────────
+// Pre-computed by scripts/update_insider_activity.py (morning-only step in
+// the pipeline). Same 10-min cache pattern as getKoncordeData() above.
+// Pilot phase, Portfolio Tracker only — see that script's module docstring
+// for scope decisions (open_position/watchlist definitions, why the AI
+// Picks Lab candidate universe isn't queried here).
+let _insiderActivityCache = null;
+let _insiderActivityCacheTs = 0;
+function getInsiderActivityData() {
+  if (Date.now() - _insiderActivityCacheTs < 10 * 60 * 1000 && _insiderActivityCache) {
+    return _insiderActivityCache;
+  }
+  const p = path.join(__dirname, "docs", "data", "insider_activity_snapshot.json");
+  try {
+    if (fs.existsSync(p)) {
+      const data = JSON.parse(fs.readFileSync(p, "utf8"));
+      _insiderActivityCache = data.tickers || {};
+      _insiderActivityCacheTs = Date.now();
+      return _insiderActivityCache;
+    }
+  } catch (e) {
+    console.warn("insider_activity_snapshot.json read error:", e.message);
+  }
+  return {};
+}
+
 // ── MACD (12, 26, 9) ─────────────────────────────────────────────────────
 function calcMACD(closes) {
   const c = closes.filter(x => x != null);
@@ -341,6 +367,7 @@ app.get("/api/quote/:symbol", async (req, res) => {
       ...calcATR(closes, highs, lows),
       cmf20: calcCMF(closes, highs, lows, volumes, 20),
       ...(getKoncordeData()[req.params.symbol.toUpperCase()] ?? {}),
+      insider: getInsiderActivityData()[req.params.symbol.toUpperCase()] ?? null,
       // ── v2: SMAs, OBV, volumen, anti-extensión ──
       sma20:  calcSMA(closes, 20)  ? +calcSMA(closes, 20).toPrecision(6)  : null,
       sma50:  calcSMA(closes, 50)  ? +calcSMA(closes, 50).toPrecision(6)  : null,

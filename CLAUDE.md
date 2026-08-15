@@ -2586,6 +2586,261 @@ No se ha tocado el pipeline Python ni ninguna cartera.
 
 ---
 
+## Insider Activity (Form4API) — piloto, capa de confirmación contextual (implementado 2026-08-16)
+
+Nueva integración con [Form4API](https://www.form4api.com) (SEC Form 4 / EDGAR)
+para mostrar compras/ventas de insiders junto a las señales técnicas ya
+existentes. **No es una señal de compra/venta automática** — es una capa de
+confirmación contextual, mismo criterio "observar primero" que
+`extension_risk`/Koncorde/`konc_mirror_signal` en su día. `insider_activity_score`
+no entra en PCS, no entra en `rot_score`, no cambia carteras, no dispara
+órdenes.
+
+### Alcance — decidido explícitamente con el usuario antes de implementar
+
+El proyecto tiene dos sistemas de posiciones independientes (AI Picks Lab vs
+Portfolio Tracker). Se decidió con el usuario 2026-08-16:
+- **Universo: solo Portfolio Tracker (`portfolio.json`)**, NO la cartera de
+  candidatos del AI Picks Lab (`ai_candidates.json`/`ai_picks.json`).
+- **Dashboard: `portfolio.html`**, junto al Ranking de Setups.
+- **Pipeline: sí, pero solo el run de la mañana** (Step 9f, gateado con el
+  mismo `steps.time_check.outputs.is_morning` que ya usa Mirror Espejo) — la
+  actividad insider (SEC Form 4) no cambia varias veces al día, así que una
+  consulta diaria basta y evita duplicar cuota del plan gratuito entre los
+  dos runs del pipeline.
+
+**Definiciones operativas que el plan original dejaba ambiguas** (documentadas
+en el docstring de `scripts/update_insider_activity.py`, no solo aquí):
+`portfolio.json` no distingue "posición real" de "watchlist" con datos de
+verdad — los 112 tickers actuales tienen `shares:0` en todas las secciones,
+incluida "Cartera" (es una lista curada, no un feed sincronizado con el
+broker). `is_open_position` (sección `"Cartera"` O `shares>0`) se definió
+igual, pero **ya no es un trigger de cola por sí solo** — corregido
+2026-08-16 a petición del usuario tras ver el primer `--dry-run` real: por
+sí solo metía 99/112 tickers en la cola (casi todo "Cartera") solo por estar
+en el portfolio, sin ninguna señal real detrás. Ahora `is_open_position`
+solo se usa para la cadencia de caché (refresco cada 2 días en vez de 7/10
+una vez que el ticker YA entró en cola por algún otro motivo) — un ticker
+que simplemente está en "Cartera" sin ninguna señal de Koncorde/PCS ya no
+gasta ninguna request. Verificado: la cola bajó de 99 a 89 tickers tras el
+cambio (los 10 que salieron eran exactamente los que solo calificaban por
+`open_position`, sin ningún otro trigger).
+
+**`watchlist principal` (P3) eliminado por completo** — mismo día, misma
+petición del usuario: era `sección literal "Watchlist"`, ya no dispara nada
+(la sección en sí no se toca, solo deja de ser motivo para consultar
+Form4API). Verificado: la cola se mantuvo en 89/112 tras quitarlo — ningún
+ticker calificaba *solo* por estar en Watchlist, todos los de esa sección
+que seguían en cola lo hacían ya por Koncorde/PCS.
+
+**`PCS >= 75` (P3) eliminado por completo** — mismo día, misma petición del
+usuario. Con esto desaparece la categoría P3 entera y el script deja de
+leer `ai_candidates.json` (`load_candidates_by_ticker()`, `CANDIDATES_PATH`
+y el parámetro `candidates` de `build_insider_request_queue()` se
+eliminaron del código, no solo se desactivaron). Verificado: la cola bajó de
+89 a 86 tickers — los 3 que salieron (`NBIS`, `LLY`, `HUM`) eran justo los
+que solo calificaban por `pcs_ge_75`, sin ninguna señal de Koncorde.
+
+**Criterio único — solo estado `accumulation` literal (4ª y última vuelta de
+recorte, mismo día).** El usuario preguntó si los 86 eran "los que tienen
+acumulación en Koncorde hoy" — no lo eran: solo 7/86 tenían de verdad algún
+timeframe (D/3D/W) en estado `accumulation` en ese momento; los otros 79
+entraban solo por dos criterios más laxos de P2
+(`konc_d_blue_positive_days_6_ge4`/`konc_d_blue_up_count_6_ge4` — azul
+subiendo, que también se da en estado `up` sin ser `accumulation`). A
+petición del usuario ("vamos a dejarlo solo para los 7, ese criterio"),
+`build_insider_request_queue()` se redujo a una sola comprobación:
+¿`konc_w_state`, `konc_3d_state` o `konc_d_state` es literalmente
+`"accumulation"` hoy? Se eliminaron también `konc_alignment_accumulation_setup`
+y las 3 transiciones frescas (`konc_{w,3d,d}_new_transition_to_accumulation`)
+por ser redundantes con la comprobación directa de estado — una transición
+fresca a `accumulation` implica que el estado actual YA es `accumulation`,
+así que no se pierde ningún ticker al quitarlas, solo el detalle de "es
+nuevo hoy o ya llevaba tiempo". El helper `_transitioned_to_accumulation()`/
+`_konc_state()` quedó sin uso y se eliminó del código.
+
+**Estado final de la cola:** dos niveles, ambos leyendo directamente
+`konc_{d,3d,w}_state` de `docs/data/koncorde_data.json`, sin ningún otro
+campo derivado:
+- **P1** = `konc_w_state=="accumulation"` O `konc_3d_state=="accumulation"`
+  (semanal/3D — la lectura menos ruidosa, ver "Koncorde Plus en el payload
+  del modelo" más arriba).
+- **P2** = `konc_d_state=="accumulation"` (diario — más ruidoso, prioridad
+  más baja a propósito, no eliminado).
+
+Verificado: 7/112 tickers en cola (`VNOM`, `TGS`, `TSLA`, `ISRG` en P1;
+`JD`, `CRESY`, `UNH` en P2), coincide exactamente con el recuento manual
+que motivó el cambio.
+
+### Presupuesto de 20 requests/minuto — ya cubierto, no requirió cambios
+
+El usuario preguntó qué pasaría si algún día hicieran falta más de 20
+requests en un momento dado (el límite real del plan gratuito es 20/min,
+`MAX_FORM4API_REQUESTS_PER_MINUTE` ya estaba fijado en 15 por margen). La
+clase `RateLimiter` ya existente en el script cubre esto — no fue necesario
+ningún cambio de código. Antes de cada llamada HTTP real
+(`fetch_form4api_transactions`), `rate_limiter.wait_if_needed()` calcula
+cuántas requests van en los últimos 60s y **duerme** el tiempo necesario en
+vez de fallar o exceder el límite; `rate_limiter.record()` registra cada
+llamada real después de hacerla. Con la paginación (hasta 3 páginas/ticker)
+y ahora solo 7 tickers en cola, el peor caso son 21 requests — cabría en
+poco más de un minuto de espera, muy por debajo del timeout de 60 min del
+job de GitHub Actions.
+
+Verificado con una prueba de lógica pura (reloj simulado, sin llamadas
+reales ni esperas de verdad): 21 peticiones simuladas nunca superaron 15 en
+ninguna ventana deslizante de 60s, y el limitador durmió (`time.sleep`)
+en vez de lanzar un error al alcanzar el tope — confirma que el mecanismo
+ya presente resuelve el escenario planteado.
+
+`is_open_position` sigue en los metadatos del universo (`load_universe()`) y
+sigue afectando la cadencia de refresco de caché (2 días en vez de 7/10),
+pero no gatea la entrada a la cola. Ningún otro campo de `portfolio.json`
+(sección, PCS, watchlist) participa ya en la decisión de a quién consultar.
+
+### Verificación de la API real antes de escribir código
+
+Documentación pública consultada dos veces de forma independiente antes de
+implementar (mismo hábito que el resto del proyecto: no fiarse de un único
+resumen). **Las dos consultas dieron nombres de campo distintos para el mismo
+flag** (`isTenPercentOwner` vs `is10PctOwner`, `directOrIndirect` vs
+`directIndirect`) — señal de que ninguna de las dos fuentes es
+100% fiable sin contraste contra la API real. `normalize_transaction()` lee
+ambas variantes con un `_pick()` defensivo y **siempre** guarda el `raw`
+completo sin recortar — el primer response real de la sesión imprime sus
+claves por consola (`[diagnostic] first live transaction raw fields: ...`)
+para poder confirmar/corregir contra la API de verdad en el primer piloto
+real, en vez de confiar ciegamente en la documentación.
+
+Endpoint real: `GET https://api.form4api.com/v1/transactions` (header
+`X-Api-Key`), filtros `ticker`/`from`/`to`/`per_page`/`page` — los filtros
+`significant`/`exclude_10b5`/`min_value` son Pro+, no disponibles en el plan
+gratuito, así que la clasificación P/S vs derivatives/10b5-1 se hace
+localmente sobre la respuesta cruda (`classify_transaction()`), tal como
+pedía el plan original.
+
+### Mapeo de tickers — Form4API es EE.UU. únicamente (SEC EDGAR)
+
+Verificado contra el universo real de `portfolio.json`: 34/112 tickers
+llevan sufijo Yahoo de bolsa extranjera (`.TO`, `.V`, `.AX`, `.L`, `.DE`,
+`.AS`, `.MI`, `.F`, `.ST`) — se marcan `unsupported_non_us_or_no_data`
+**sin gastar ninguna request** (`map_ticker_to_form4api()` corta antes de
+llamar a la API). El mapeo guion→punto para tickers de doble clase
+(`BRK-B`→`BRK.B`) es una suposición sin verificar — no existe ningún ticker
+así en el universo actual para contrastar contra un ejemplo real; si falla,
+la propia API devuelve unsupported/sin-datos y `coverage_status` lo refleja,
+en vez de fabricar un falso positivo en silencio.
+
+### Ventanas, clasificación y score
+
+Una sola consulta de ~12-15 meses por ticker (no 4 consultas de 3 meses),
+agregada localmente en 4 ventanas (`0_3m`/`3_6m`/`6_9m`/`9_12m`). Paginación
+capada a 3 páginas/ticker (300 filas) como salvaguarda de presupuesto.
+
+`net_open_market_value` = compras discrecionales − ventas discrecionales
+**(las ventas 10b5-1 planificadas NO restan)** — decisión explícita, es la
+traducción literal de "las ventas 10b5-1 no deben penalizar igual" del plan
+original a una fórmula concreta, que el plan no daba.
+
+`insider_activity_score` (0-5) y `koncorde_insider_context`
+(`strong_confirmation`/`moderate_confirmation`/`neutral`/`warning`/
+`ignored_selling`/`not_evaluable`) son cascadas if/elif de una sola pasada,
+documentadas en el propio código — primera versión sin calibrar contra
+rendimiento posterior, mismo criterio de observación que el resto de scores
+nuevos del proyecto.
+
+### Presupuesto y caché
+
+```
+MAX_FORM4API_REQUESTS_PER_DAY   = 400   (plan gratuito: 500/día)
+FORM4API_SAFETY_STOP            = 450   (circuit breaker duro)
+MAX_FORM4API_REQUESTS_PER_MINUTE = 15   (plan gratuito: 20/min)
+```
+
+Caché por ticker vía `last_fetch` en `insider_activity_snapshot.json`:
+posiciones abiertas cada 2 días, resto de P1 cada 7 días, P2/P3 cada 10 días.
+Log de auditoría completo (`docs/data/form4api_usage_log.jsonl`) con una fila
+por ticker considerado cada día, incluidos los `skipped_cached`/
+`skipped_limit`/`unsupported` — no solo las peticiones reales.
+
+### Ficheros
+
+| Fichero | Qué hace |
+|---|---|
+| `scripts/update_insider_activity.py` | Script principal — cola de prioridad, fetch, normalización, agregación, snapshot |
+| `docs/data/insider_activity_snapshot.json` | Estado actual por ticker (reescrito cada run) |
+| `docs/data/insider_activity_transactions.jsonl` | Transacciones normalizadas, raw incluido, dedup por accession+code+fecha+shares+precio |
+| `docs/data/form4api_usage_log.jsonl` | Auditoría de cuota — una fila por ticker considerado/día |
+| `docs/analysis/insider_activity_pilot_report.md` | Generado con `--pilot-report`, responde las 9 preguntas del piloto |
+
+CLI: `--dry-run` (sin llamadas), `--max-requests N`, `--force`,
+`--tickers A,B,C`, `--priority P1|P2|P3`, `--report` (resumen consola),
+`--pilot-report` (informe markdown).
+
+### Dashboard (`portfolio.html`) y export a LLM
+
+Bloque nuevo "Insider Activity — confirmación contextual (no señal de
+trading)" entre el Ranking de Setups y las secciones de cartera, alimentado
+vía `p.insider` en la respuesta ya existente de `/api/quote/:symbol`
+(`server.js` gana `getInsiderActivityData()`, mismo patrón de caché de 10 min
+que `getKoncordeData()`). `buildPortfolioMarkdown()` gana una sección
+`## INSIDER ACTIVITY` a juego con el resto de exports a LLM del proyecto.
+
+**Verificado con datos reales (dashboard, sin API):** `--dry-run` inicial
+contra el universo real disparó 99/112 tickers (la mayoría por
+`open_position`, ver corrección de prioridad más abajo). Bloque de dashboard
+verificado end-to-end con Edge headless (CDP directo) contra un snapshot
+fabricado con 3 casos representativos (compra con cluster buying, venta
+discrecional pesada, ticker no-US) inyectado temporalmente en
+`docs/data/insider_activity_snapshot.json` y borrado tras la verificación —
+las 3 filas, columnas, colores y badges renderizan correctamente, orden por
+score descendente correcto, cero errores de consola. Ruta `/api/quote/:symbol`
+confirmada sirviendo `insider: null` cuando no hay snapshot. Sintaxis JSX
+transpila sin errores (`@babel/core`).
+
+**Verificado en vivo contra la API real (2026-08-16, tras añadir `FORM4API_KEY`
+al `.env`):** `py -3 scripts/update_insider_activity.py --tickers HIMS --force
+--max-requests 5` — 294 transacciones reales descargadas (3 páginas, tope de
+paginación activado correctamente para un ticker con mucho volumen de
+insiders), 3/400 requests consumidas. El diagnóstico de campos confirmó los
+nombres reales (`is10PctOwner`, `directIndirect`, sin campo `value` — solo
+`totalValue`), todos ya cubiertos por el `_pick()` defensivo sin necesidad de
+tocar código. Clasificación correcta: un grant RSU (código `A`, derivative)
+quedó excluido del cálculo de compra/venta; una compra discrecional de un
+director sí contó (`director_purchase`, `net_buying_last_3m`,
+`insider_activity_score=4`). Cruce con Koncorde correcto: HIMS estaba en
+`distribution`/`distribution`/`up` (D/3D/W) → `koncorde_insider_context=neutral`,
+no forzó una confirmación falsa. Caché verificada: una segunda llamada al
+mismo ticker el mismo día no gastó ninguna request (`skipped_cached`).
+Dedup de transacciones verificado (294 filas, 294 claves únicas). `--report`
+y `--pilot-report` verificados generando salida coherente con el snapshot real.
+
+**Corrección de prioridad (2026-08-16, mismo día, a petición del usuario):**
+tras ver el `--dry-run` real disparando 99/112 tickers, el usuario pidió que
+"posiciones abiertas" dejara de ser un trigger de cola por sí solo — ver
+`is_open_position` más arriba. Verificado: la cola bajó a 89/112 tras el
+cambio, y los 10 tickers que salieron eran exactamente los que solo
+calificaban por estar en "Cartera" sin ninguna señal de Koncorde/PCS detrás.
+
+### Pendiente del lado del usuario
+
+Nada bloqueante — `FORM4API_KEY` ya está en `.env` local y verificado contra
+la API real. Queda añadir el mismo secret a GitHub Secrets antes del próximo
+run matutino en CI — sin él, el Step 9f fallará con `continue-on-error: true`
+(pipeline en verde en la pestaña Actions aunque este paso no corra, mismo
+patrón de fallo silencioso ya vivido con `TELEGRAM_BOT_TOKEN` y
+`CAVA_ENGINE_TOKEN`) — conviene revisar el log del Step 9f manualmente tras
+el primer run en CI, no solo el check verde.
+
+### Fuera de alcance (explícito)
+
+Universo de AI Picks Lab (`ai_candidates.json`), cualquier hard rule o
+cambio de PCS/rot_score/carteras, `candidate_ranking_score_shadow`/
+`EarlyFlow`/RFL como triggers (fuentes de datos no disponibles todavía,
+ver arriba).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
