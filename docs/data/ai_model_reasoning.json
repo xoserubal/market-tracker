@@ -1,44 +1,44 @@
 {
   "date": "2026-08-16",
-  "run_id": "2026-08-16_0824",
+  "run_id": "2026-08-16_2017",
   "candidates": [
     "SLS",
     "NUE",
+    "URI",
     "SEDANA.ST",
     "TMO",
-    "URI",
+    "WCP.TO",
     "AWX",
     "OSCR",
-    "HUM",
     "SE",
     "III.L",
     "DHR",
-    "VRTX",
     "MRK",
     "LLY",
-    "GOLD",
+    "HUM",
+    "TK",
     "FCX",
-    "SYK",
-    "WCP.TO",
     "NBIS",
+    "AFM.V",
+    "VRTX",
     "PLTR",
     "PFE",
+    "GOLD",
     "RCAT",
-    "JNJ",
-    "TK",
+    "VLE.TO",
+    "SYK",
     "KTOS",
-    "UNH",
-    "DPM.TO",
-    "ASM.AS",
     "MAI.L",
     "CAT",
-    "AFM.V"
+    "ASM.AS",
+    "DPM.TO",
+    "UNH"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 91,
+      "quality_score": 93,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving regime with extreme healthcare and tech concentration risks dominating signals.",
+        "market_read": "Bull Maduro Improving regime supports selective rotation into diversified themes but high healthcare and cyclical concentrations warrant caution.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
@@ -46,143 +46,183 @@
       "watch": [
         {
           "ticker": "SLS",
-          "reason": "PCS 86.2 meets HIGH_CONVICTION but healthcare_special concentration already 37% and Koncorde 3D distribution require confirmation.",
-          "watch_trigger": "Koncorde 3D shifts to up with rot_score sustained above 8 and theme weight below 30%"
+          "reason": "PCS 86.2 leads set with strong 13w outperformance but spike_flag and medium extension plus pending 3D confirmation require multi-day follow-through.",
+          "watch_trigger": "outperform_d10 >=6 and no further extension points"
+        },
+        {
+          "ticker": "NUE",
+          "reason": "PCS 85.2 with 5-week streak and low extension but daily distribution state signals near-term caution despite strong weekly metrics.",
+          "watch_trigger": "konc_d_state turns up with dems >=10"
         },
         {
           "ticker": "URI",
-          "reason": "PCS 84.2 strong for CONFIRMED but distribution_warning on Koncorde alignment and us_cyclical already 36% weight.",
-          "watch_trigger": "Koncorde alignment improves to bullish_aligned with streak_weeks reaching 4"
+          "reason": "PCS 85.2 with 4-week streak but 3D distribution and low dems limit conviction for new entry.",
+          "watch_trigger": "3D state turns up with outperform_d10 >=6"
+        },
+        {
+          "ticker": "SEDANA.ST",
+          "reason": "PCS 85.2 with strong rot but extreme extension risk from multiple flags requires confirmation of continuation.",
+          "watch_trigger": "extension_points drop below 4 with streak_weeks >=3"
+        },
+        {
+          "ticker": "TMO",
+          "reason": "PCS 85.0 with 5-week streak but dems only 4 and distribution on daily limit daily momentum support.",
+          "watch_trigger": "dems >=10 with momentum_accel true"
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "PCS 82.0 with rot 9 and 5-week streak in low-concentration theme but mixed Koncorde alignment needs weekly confirmation.",
+          "watch_trigger": "konc_alignment improves to bullish_aligned with streak_weeks >=6"
         },
         {
           "ticker": "AWX",
-          "reason": "PCS 81.8 and rot_score 10 attractive but spike_flag and us_cyclical overconcentration prevent entry.",
-          "watch_trigger": "Spike resolves with outperform_d10 above 8 and cyclical weight drops below 30%"
+          "reason": "PCS 81.8 with rot 10 but spike_flag and medium extension plus 3D distribution require multi-day breadth.",
+          "watch_trigger": "outperform_d10 >=6 without additional extension points"
         },
         {
           "ticker": "OSCR",
-          "reason": "PCS 81.8 and dems 13 but healthcare_special already 37% and extension low yet concentration blocks.",
-          "watch_trigger": "Healthcare_special weight falls below 25% with continued streak_weeks above 3"
+          "reason": "PCS 81.8 with strong 13w outperformance but signal VIGILAR and 1-week streak need weekly follow-through.",
+          "watch_trigger": "signal upgrades to EN_RADAR with streak_weeks >=3"
         },
         {
-          "ticker": "HUM",
-          "reason": "PCS 81.0 but healthcare_largecap at 73.5% extreme and dems only 5 with spike_flag.",
-          "watch_trigger": "Healthcare_largecap exposure declines below 60% and dems rises above 10 without spike"
+          "ticker": "SE",
+          "reason": "PCS 80.2 with 3-week streak but distribution_warning across timeframes and high extension limit entry.",
+          "watch_trigger": "konc_alignment shifts to bullish_aligned with extension_points <=2"
         },
         {
           "ticker": "III.L",
-          "reason": "PCS 80.2 with 29.76% 13w outperformance but europa only 10.5% and dems 3 too weak for CONFIRMED.",
-          "watch_trigger": "Dems reaches 10+ with streak_weeks sustained at 4 and europa weight under 15%"
+          "reason": "PCS 80.2 with 3-week streak and 29.8% 13w outperformance but dems only 3 requires weekly metrics to lead.",
+          "watch_trigger": "dems >=10 with streak_weeks >=4"
         },
         {
           "ticker": "DHR",
-          "reason": "PCS 79.0 but healthcare_largecap already 73.5% and current_pcs 79.0 below prior entry levels.",
-          "watch_trigger": "Healthcare_largecap weight reduces below 60% with rot_score above 8"
+          "reason": "PCS 79.0 with 2-week streak but negative 4w outperformance and daily distribution signal caution.",
+          "watch_trigger": "ret_4w_vs_spy turns positive with rot_score >=8"
         },
         {
-          "ticker": "VRTX",
-          "reason": "PCS 78.8 for CONFIRMED but distribution_warning on Koncorde and healthcare_largecap extreme.",
-          "watch_trigger": "Koncorde alignment shifts from distribution_warning and streak_weeks reaches 4"
+          "ticker": "MRK",
+          "reason": "PCS 78.8 with 8-week streak but already high healthcare concentration and dems 12 needs diversification check.",
+          "watch_trigger": "theme_concentration_risk drops below high"
         },
         {
-          "ticker": "GOLD",
-          "reason": "PCS 78.2 but silver_gold_miners only 13.5% yet dems 5 and spike_flag limit conviction.",
-          "watch_trigger": "Dems above 10 without spike and silver_gold_miners weight under 20%"
+          "ticker": "LLY",
+          "reason": "PCS 78.2 with 2-week streak but already open position and high healthcare weight limit new adds.",
+          "watch_trigger": "theme_exposure risk moderates below high"
         },
         {
-          "ticker": "FCX",
-          "reason": "PCS 77.2 and dems 6 but us_cyclical already 36% and current open position in same theme.",
-          "watch_trigger": "Us_cyclical weight falls below 25% with dems sustained above 10"
-        },
-        {
-          "ticker": "SYK",
-          "reason": "PCS 77.0 but healthcare_largecap 73.5% and dems 5 limit new entry.",
-          "watch_trigger": "Healthcare_largecap exposure drops below 60% with rot_score above 8"
-        },
-        {
-          "ticker": "NBIS",
-          "reason": "PCS 75.0 and dems 15 but us_tech_ai already 34% and extreme extension with Koncorde distribution.",
-          "watch_trigger": "Us_tech_ai weight below 25% and extension_risk reduces to low"
-        },
-        {
-          "ticker": "PFE",
-          "reason": "PCS 74.5 but healthcare_largecap extreme and dems 7 with spike_flag.",
-          "watch_trigger": "Healthcare_largecap weight below 60% and dems above 10 without spike"
-        },
-        {
-          "ticker": "RCAT",
-          "reason": "PCS 73.0 with dems 15 but defense_space new theme yet high extension and Koncorde distribution_warning.",
-          "watch_trigger": "Extension_risk falls to low and Koncorde 3D shifts to up"
-        },
-        {
-          "ticker": "JNJ",
-          "reason": "PCS 73.0 but healthcare_largecap 73.5% and dems 3 too weak.",
-          "watch_trigger": "Healthcare_largecap weight below 60% and dems above 10"
+          "ticker": "HUM",
+          "reason": "PCS 78.2 with spike_flag and medium extension plus dems only 6 limit conviction.",
+          "watch_trigger": "dems >=10 without spike_flag"
         },
         {
           "ticker": "TK",
-          "reason": "PCS 72.5 and dems 14 but us_cyclical already 36% and medium extension.",
-          "watch_trigger": "Us_cyclical weight below 25% and extension_risk to low"
+          "reason": "PCS 77.5 with 3-week streak but medium extension and high cyclical concentration require monitoring.",
+          "watch_trigger": "extension_points drop to 0 with outperform_d10 >=6"
+        },
+        {
+          "ticker": "FCX",
+          "reason": "PCS 77.2 with 3-week streak but medium extension and high cyclical weight need confirmation.",
+          "watch_trigger": "extension_risk turns low with streak_weeks >=4"
+        },
+        {
+          "ticker": "NBIS",
+          "reason": "PCS 75.0 with extreme extension and distribution states across timeframes limit entry.",
+          "watch_trigger": "extension_points <=3 and konc_alignment improves"
+        },
+        {
+          "ticker": "AFM.V",
+          "reason": "PCS 75.0 with rot 9 but 3D distribution and medium concentration require follow-through.",
+          "watch_trigger": "konc_3d_state turns up with streak_weeks >=3"
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "PCS 74.8 with 2-week streak but distribution states and spike_flag limit conviction.",
+          "watch_trigger": "konc_alignment shifts to bullish_aligned"
+        },
+        {
+          "ticker": "PLTR",
+          "reason": "PCS 74.5 with 2-week streak but already open and extreme extension plus daily distribution caution.",
+          "watch_trigger": "extension_risk turns low with streak_weeks >=3"
+        },
+        {
+          "ticker": "PFE",
+          "reason": "PCS 74.5 with 1-week streak and medium extension limit new entry conviction.",
+          "watch_trigger": "streak_weeks >=3 with no extension flags"
+        },
+        {
+          "ticker": "GOLD",
+          "reason": "PCS 74.2 with 1-week streak and spike_flag plus medium extension require breadth confirmation.",
+          "watch_trigger": "outperform_d10 >=6 without spike_flag"
+        },
+        {
+          "ticker": "RCAT",
+          "reason": "PCS 73.0 with high extension and distribution_warning across timeframes limit entry.",
+          "watch_trigger": "extension_points <=2 and konc_alignment improves"
+        },
+        {
+          "ticker": "VLE.TO",
+          "reason": "PCS 73.0 with 1-week streak and spike_flag plus medium extension require follow-through.",
+          "watch_trigger": "streak_weeks >=3 with no spike_flag"
+        },
+        {
+          "ticker": "SYK",
+          "reason": "PCS 73.0 with 2-week streak but already open and high healthcare concentration limit adds.",
+          "watch_trigger": "theme_concentration_risk moderates"
         },
         {
           "ticker": "KTOS",
-          "reason": "PCS 72.5 with dems 13 but smallcap_em only 5.5% yet high extension and Koncorde distribution_warning.",
-          "watch_trigger": "Extension_risk to low and Koncorde alignment improves beyond distribution_warning"
-        },
-        {
-          "ticker": "DPM.TO",
-          "reason": "PCS 63.0 with 4-week streak and 27.7% 13w outperformance but extreme extension risk and spike_flag require confirmation of continuation.",
-          "watch_trigger": "Dems rise above 12 with no new spike and extension_risk drops to medium or lower"
+          "reason": "PCS 72.5 and dems 13 near threshold with rot_score 6 and bullish Koncorde alignment but extension high limits conviction.",
+          "watch_trigger": "dems rising above 14 with no spike and extension_risk dropping to medium"
         }
       ],
       "rejected": [
         {
-          "ticker": "AFM.V",
-          "reason": "PCS 72.0 but dems only 8 below early rotation threshold and low 5d outperformance fail to confirm momentum strength.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "DPM.TO",
+          "reason": "PCS 70.8 but dems only 9, extreme extension risk 6 pts with spike_flag true and rot_score 9 cannot overcome near-term reversal signals.",
+          "rejection_category": "technical_overextension"
         }
       ]
     },
     "xiaomi/mimo-v2.5-pro": {
       "quality_score": 89,
       "decision_summary": {
-        "market_read": "Bull Maduro improving regime supports existing longs, but healthcare concentration at 73.5% largecap plus 37% special creates severe single-sector risk that blocks new entries into that theme.",
+        "market_read": "Bull Maduro regime with improving macro trend but extreme sector concentration in healthcare and tech AI limits diversification opportunities.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
       "watch": [
         {
-          "ticker": "AWX",
-          "reason": "Rot_score=10 is the highest in the entire candidate set with strong individual flow (component_D=19.8) and bullish_pending_3d_confirmation on Koncorde, but only a 1-week streak, dems=12 below the 14 early-rotation threshold, spike_flag=true, and us_cyclical already holds 36% portfolio weight with high concentration risk.",
-          "watch_trigger": "A 3-week confirmed streak with dems rising above 14 and spike_flag resolving would justify entry despite cyclical concentration."
+          "ticker": "OSCR",
+          "reason": "Strong weekly metrics (37.5% 13w outperformance, rot=7) with bullish-aligned Koncorde, but healthcare_special theme at 37% portfolio weight creates extreme sector concentration. Only 1-week streak insufficient for MIMO entry without broader portfolio rebalancing.",
+          "watch_trigger": "Reduce healthcare concentration below 30% OR build streak_weeks to 4+ while maintaining ret_4w positive."
         },
         {
-          "ticker": "OSCR",
-          "reason": "Ret_13w_vs_spy of 37.48% ranks 3rd among all candidates with bullish-aligned Koncorde and no spike, but only a 1-week streak is too early for confirmed leadership, dems=13 falls in the prefer-WATCH range, and healthcare_special at 37% concentration limits conviction for adding another position in that theme.",
-          "watch_trigger": "A 3-week streak building on the 37.48% 13w base with dems sustaining above 14 would trigger SELECT consideration."
+          "ticker": "DHR",
+          "reason": "Good weekly leadership (19.3% 13w outperformance, rot=7) with bullish-aligned Koncorde, but healthcare_largecap at 73.5% portfolio weight is extreme. Negative recent momentum (-4.7% 4w) suggests near-term weakness despite strong longer-term trend.",
+          "watch_trigger": "Healthcare_largecap concentration below 60% AND ret_4w_vs_spy turns positive with streak extension to 3+ weeks."
+        },
+        {
+          "ticker": "HUM",
+          "reason": "Strong 13w outperformance of 25.4% with bullish-aligned Koncorde, but healthcare_largecap at 73.5% concentration is prohibitive. Spike_flag with only dems=6 lacks daily momentum confirmation for a new entry.",
+          "watch_trigger": "Healthcare concentration below 60% AND dems rises above 14 with spike_flag false."
         }
       ],
       "rejected": [
         {
           "ticker": "URI",
-          "reason": "Konc_alignment is distribution_warning with both daily and weekly timeframes in distribution state (konc_3d_blue=-7.21) despite PCS 84.2. The deteriorating structural picture across multiple timeframes outweighs the strong 17.15% 13w return, and us_cyclical at 36% concentration adds no diversification value.",
-          "rejection_category": "weak_flow"
+          "reason": "us_cyclical theme at 36% concentration already overweight with two positions (NUE, FCX). Weekly metrics strong (4-week streak, rot=8) but konc_3d_state=distribution warns of institutional selling on the primary timeframe.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "HUM",
-          "reason": "Dems=5 is weak with spike_flag=true and medium extension risk (2 pts), healthcare_largecap already holds 73.5% portfolio weight across 9 positions making additional allocation reckless, and konc_d_state=distribution undermines the bullish-aligned 3D structure.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "DHR",
-          "reason": "Dems=4 is below 10 meaning daily flow data cannot support conviction, konc_d_state=distribution signals tactical weakness, and healthcare_largecap at 73.5% concentration with 9 existing positions makes any additional healthcare entry a concentration hazard despite the 19.26% 13w return.",
-          "rejection_category": "weak_flow"
+          "ticker": "AWX",
+          "reason": "us_cyclical theme at 36% concentration already overweight. Rotation score of 10 is highest among candidates but 4w outperformance of only 1.5% is weak compared to NUE's 10.7%, making it an inferior cyclical allocation.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "LLY",
-          "reason": "Konc_alignment is distribution_warning across all three timeframes (3D, daily, weekly all in distribution), dems=4 provides no daily momentum support, rot_score=6 is the lowest among PCS 78+ candidates, and healthcare_largecap at 73.5% makes this unactionable regardless of signal quality.",
-          "rejection_category": "weak_relative_strength"
+          "reason": "Koncorde alignment shows distribution_warning across all timeframes (3D, daily, weekly all in distribution). Healthcare_largecap at 73.5% concentration is extreme, and -2.3% 4w outperformance indicates recent underperformance.",
+          "rejection_category": "technical_overextension"
         }
       ]
     }
