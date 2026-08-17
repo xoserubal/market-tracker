@@ -260,6 +260,17 @@ También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_po
 | `/check` | `/check TICKER` | Precio actual Yahoo Finance (15 min delay) + sección, shares, avgCost y P&L si la posición tiene datos de coste. |
 | `/add` | `/add TICKER [notas opcionales]` | Añade el ticker a la sección 'Watchlist' de portfolio.json. Crea la sección si no existe. Rechaza duplicados. |
 | `/remove` | `/remove TICKER` | Elimina el ticker de cualquier sección del portfolio. |
+| `/picks` | `/picks` | Muestra las posiciones abiertas del AI Picks Lab con precio actual. |
+| `/gainers` | `/gainers` | Top 5 tickers del portfolio con mayor subida en el día. |
+| `/losers` | `/losers` | Top 5 tickers del portfolio con mayor caída en el día. |
+| `/macro` | `/macro` | MacroScore actual, régimen y tendencia del pipeline. |
+| `/alert` | `/alert TICKER PRECIO` | Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO. |
+| `/alerts` | `/alerts` | Lista tus alertas de precio activas. |
+| `/delalert` | `/delalert TICKER` | Elimina la alerta de precio de un ticker. |
+| `/kalert` | `/kalert TICKER TIMEFRAME CONDICION  |  /kalert <texto libre>` | Crea una alerta sobre una condición de Koncorde (blue/green/estado, en D/3D/W). Acepta sintaxis exacta o una petición en lenguaje natural (se interpreta con IA). También se puede crear mandando una nota de voz al bot. |
+| `/kalerts` | `/kalerts` | Lista tus alertas de Koncorde activas. |
+| `/delkalert` | `/delkalert TICKER` | Elimina la(s) alerta(s) de Koncorde de un ticker. |
+| `/help` | `/help` | Muestra este mensaje de ayuda. |
 
 ### Flujo de datos (write commands)
 
@@ -2838,6 +2849,164 @@ Universo de AI Picks Lab (`ai_candidates.json`), cualquier hard rule o
 cambio de PCS/rot_score/carteras, `candidate_ranking_score_shadow`/
 `EarlyFlow`/RFL como triggers (fuentes de datos no disponibles todavía,
 ver arriba).
+
+---
+
+## Alertas Koncorde personalizadas — texto y voz vía Telegram (implementado 2026-08-17)
+
+Origen: el usuario vio en `portfolio.html` que CRESY tenía compra de insiders
+y, al mirar el detalle, Koncorde azul positivo en diario (débil) pero no en
+3D ni W. Pidió poder programar una alerta específica ("avisar cuando CRESY
+tenga señal azul en Koncorde positiva en semanal"), creable desde el propio
+bot de Telegram, en texto o por nota de voz.
+
+**Se construyó reutilizando la infraestructura de alertas de precio ya
+existente en `telegram_portfolio_bot.py`** (`/alert TICKER PRECIO` →
+`bot_alerts.json` → chequeo periódico → aviso + auto-borrado), en vez de
+crear un sistema paralelo — mismo bot que ya corre en continuo en Railway
+(hay `Procfile`, `USE_GITHUB_API` cuando `RAILWAY_ENVIRONMENT` está
+presente) y también 2×/día vía pipeline (`--once`, Step 12).
+
+### Almacenamiento — fichero separado, no mezclado con las alertas de precio
+
+`docs/data/koncorde_bot_alerts.json` (nuevo), no `bot_alerts.json`.
+**Deliberado, no un descuido:** `check_alerts()`/`cmd_alert_delete()`/
+`cmd_alerts_list()` ya existentes iteran `_load_alerts()` asumiendo que cada
+entrada tiene `target`/`direction` numéricos — si una alerta Koncorde
+(`ticker`/`timeframe`/`condition`) hubiera entrado en esa misma lista,
+`check_alerts()` la habría leído como alerta de precio con
+`target=0, direction="above"` y disparado un aviso falso en el primer
+chequeo (cualquier precio real es ≥0), borrándola además por el mismo
+mecanismo de auto-limpieza. Fichero separado con sus propias
+`_load_konc_alerts()`/`_save_konc_alerts()` (mismo patrón dual GitHub-API/
+archivo-local que el resto de loaders del bot) — cero cambios en el camino
+de las alertas de precio, cero riesgo para una función ya en producción.
+
+### Vocabulario de condición — cerrado, en módulo compartido
+
+`scripts/koncorde_alert_conditions.py` — mismo criterio que
+`ai_shared.py`/`cava_mapping.py`: un enum cerrado que tanto el parser NL
+(bot) como el evaluador (pipeline) importan, para que no puedan
+desincronizarse en qué significa cada condición. 7 condiciones sobre los 3
+timeframes (`d`/`3d`/`w`) que `koncorde_calculator.py` ya calcula:
+`blue_positive`, `blue_negative`, `blue_cross_up`, `green_positive`,
+`green_negative`, `state_accumulation`, `state_distribution`
+(`evaluate()` lee directo `konc_{tf}_blue`/`_green`/`_blue_cross_up`/
+`_accumulation_flag`/`_distribution_flag` de `koncorde_data.json` — sin
+recalcular nada). Un campo ausente devuelve `None`, nunca `False` — evita
+que a un ticker sin dato para ese timeframe se le dé por incumplida la
+condición.
+
+### Creación — sintaxis exacta o lenguaje natural (texto o voz)
+
+`/kalert TICKER TIMEFRAME CONDICION` (ej. `/kalert CRESY w blue_positive`)
+se parsea sin IA (`_parse_koncorde_alert_strict`, 3 tokens exactos). Si no
+encaja, cae a `_parse_koncorde_alert_nl()`: una llamada barata a Haiku vía
+OpenRouter (reutilizando `call_model`/`parse_response` de
+`paper_trading.py` — mismo patrón de reutilización que `mirror_portfolio.py`
+con `call_model`), con el prompt restringido al enum de
+`koncorde_alert_conditions.py` y obligado a devolver
+`{"error": "..."}` en vez de adivinar cuando el ticker/timeframe/condición
+no queden claros — nunca se guarda una alerta con un campo inventado.
+Confirmación siempre explícita en texto (`"✅ Alerta creada: CRESY — ..."`)
+para poder detectar un mal-parseo al momento con `/delkalert`.
+
+**Voz:** cualquier nota de voz enviada al bot se trata como intento de
+`/kalert` (única función que usa voz en v1). `_download_telegram_file()`
+(`getFile` + descarga del `.ogg`) → `_transcribe_voice_groq()`
+(`api.groq.com/openai/v1/audio/transcriptions`, `whisper-large-v3-turbo`,
+`language="es"` fijo — el proyecto y el usuario son hispanohablantes) → el
+texto transcrito entra por el mismo `cmd_kalert()` que el texto escrito, sin
+lógica duplicada. El bot siempre repite lo que entendió transcrito antes de
+parsear, para poder pillar un error de transcripción a simple vista.
+
+Ambos requieren secrets nuevos que **no** estaban en `.env`/GitHub
+Secrets/Railway: `OPENROUTER_API_KEY` (para el parser NL — sí existe ya en
+GitHub Secrets para `paper_trading.py`, pero hay que confirmarlo también en
+las variables de entorno de Railway) y `GROQ_API_KEY` (nuevo, para
+transcripción — proveedor elegido con el usuario por precio/velocidad).
+Sin ellos el bot degrada con avisos explícitos en vez de fallar en
+silencio: `_parse_koncorde_alert_nl()`/`_transcribe_voice_groq()` devuelven
+`None` si falta la clave, y `handle_voice_message()` responde
+"No puedo transcribir notas de voz todavía" en vez de no hacer nada.
+
+### Evaluación — paso del pipeline, no el polling de precio del bot
+
+Koncorde solo cambia cuando corre `koncorde_calculator.py` (2×/día +
+reintento a las 2h) — comprobarlo en el polling continuo del bot (~2.5 min)
+no aportaría nada. Script nuevo `scripts/check_koncorde_alerts.py`, Step 9c2
+del pipeline (`continue-on-error: true`), justo después de Step 9c
+(Koncorde shadow exits): lee `koncorde_bot_alerts.json` +
+`koncorde_data.json`, evalúa cada alerta con
+`koncorde_alert_conditions.evaluate()`, y para las que se cumplen, avisa
+por Telegram y las borra — **un solo disparo, igual que las alertas de
+precio** (no hay re-armado automático; si el usuario quiere volver a
+vigilar la misma condición, crea la alerta de nuevo). Mismo patrón
+"fail loud" que `duration_monitor.py`: si hay algo que disparar pero faltan
+`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, `sys.exit(1)` en vez de callar —
+visible en la pestaña Actions aunque el step tenga `continue-on-error`.
+
+**Bug real encontrado en la propia verificación (antes de dar el cambio por
+bueno):** los mensajes con emoji (`🔮`) crashean `print()` en consola
+Windows (cp1252) — mismo incidente ya documentado y arreglado una vez en
+`duration_monitor.py`. Aplicado el mismo fix (`sys.stdout`/`stderr`
+`.reconfigure(encoding="utf-8", errors="replace")`) tanto en
+`check_koncorde_alerts.py` como, preventivamente, en
+`telegram_portfolio_bot.py` (que ahora también puede imprimir mensajes de
+error de la IA en consola).
+
+**Verificado sin gastar ninguna llamada a API real (primera pasada):**
+`evaluate()` contra el snapshot real de `koncorde_data.json` reproduce
+exactamente el caso que motivó el cambio — CRESY: D `blue_positive=True`
+(azul débil pero positivo), 3D `blue_positive=False`, W `blue_positive=False`
+(ambos en distribución), tal como lo describió el usuario. Flujo completo
+probado en un sandbox con ficheros temporales: crear 2 alertas Koncorde
+para el mismo ticker con condiciones distintas (coexisten), `/kalerts` las
+lista, `/delkalert` borra ambas, `check_koncorde_alerts.py` dispara solo la
+condición verdadera (D) y deja intacta la falsa (W) y la de un ticker sin
+datos — confirmado que `bot_alerts.json` (precio) nunca se toca.
+
+**Verificación en producción (2026-08-17, tras añadir `GROQ_API_KEY` a
+GitHub Secrets y Railway):**
+
+- **Bug real encontrado y corregido:** `KONC_PARSE_MODEL` usaba el alias de
+  Haiku de `force_analyze.py` (`anthropic/claude-haiku-4-5-20251001`), que
+  OpenRouter rechaza hoy con `400 not a valid model ID` — habría hecho que
+  el parser NL fallara silenciosamente en producción (degradando siempre a
+  "no he podido entender la alerta"). Corregido al slug que sí usa
+  `paper_trading.py`/`MODEL_PRICING` (`anthropic/claude-haiku-4.5`),
+  confirmado con una llamada real. Con el fix, 2/3 peticiones NL de prueba
+  parsearon correctamente (incluida la frase original del usuario sobre
+  CRESY); la tercera ("...entre en acumulación en 3 dias") la rechazó el
+  modelo por ambigüedad entre "timeframe 3D" y "dentro de 3 días" —esperado
+  y no un fallo: el parser nunca adivina, y la sintaxis exacta
+  (`/kalert NVDA 3d state_accumulation`) sigue disponible como vía segura.
+- **Circuito completo probado con Telegram real** (no simulado): creada una
+  alerta real (`CRESY d blue_positive`, sintaxis exacta) → mensaje real
+  "✅ Alerta creada" enviado → `check_koncorde_alerts.py` ejecutado contra
+  el snapshot real de Koncorde → condición evaluada `True` → mensaje real
+  "🔮 Alerta Koncorde" enviado → alerta autoeliminada
+  (`koncorde_bot_alerts.json` quedó en `[]`). Confirma la cadena completa
+  creación→persistencia→evaluación→notificación→autoborrado con las
+  credenciales de producción.
+- **Pendiente de confirmar por el usuario, no verificable desde aquí:** que
+  ambos Telegram realmente llegaron (no hay forma de leer el chat desde el
+  entorno de desarrollo), y la transcripción de voz real vía Groq —  no hay
+  `GROQ_API_KEY` en el `.env` local, así que esa llamada concreta no se ha
+  probado end-to-end todavía; queda confirmarla enviando una nota de voz
+  real al bot (Railway ya tiene la clave) o añadiendo la clave también al
+  `.env` local para una prueba aquí mismo.
+
+### Fuera de alcance (explícito)
+
+Condiciones sobre otros indicadores (MACD, ATLAS Mini, RSI, insider
+activity) — el vocabulario cerrado cubre solo Koncorde blue/green/estado
+por timeframe, ampliable si hace falta. Re-armado automático tras
+dispararse (alertas de un solo uso, igual que las de precio). Confirmación
+interactiva antes de guardar una alerta mal-parseada (se confía en que el
+usuario revise el mensaje de confirmación y use `/delkalert` si hace
+falta). Cualquier cambio a PCS/rot_score/carteras — esto es una utilidad
+del bot, no toca el motor de picks.
 
 ---
 

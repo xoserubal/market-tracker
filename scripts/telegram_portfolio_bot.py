@@ -21,6 +21,7 @@ so it survives across GitHub Actions runs.
 from __future__ import annotations
 
 import base64
+import html
 import json
 import os
 import re
@@ -32,6 +33,24 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
+# Some console prints can carry emoji (e.g. echoed LLM/transcription errors);
+# Windows consoles default to cp1252 and crash on print() otherwise. Same fix
+# already applied in duration_monitor.py / check_koncorde_alerts.py.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+sys.path.insert(0, str(Path(__file__).parent))
+from koncorde_alert_conditions import (
+    CONDITIONS as KONC_CONDITIONS,
+    TIMEFRAME_LABELS as KONC_TIMEFRAME_LABELS,
+    VALID_TIMEFRAMES as KONC_VALID_TIMEFRAMES,
+    describe as describe_koncorde_condition,
+)
+from paper_trading import call_model, parse_response  # lazy-imports openai internally
+
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
@@ -40,6 +59,9 @@ STATE_FILE     = ROOT / "docs" / "data" / "telegram_bot_state.json"
 CLAUDE_MD      = ROOT / "CLAUDE.md"
 WATCHLIST_ID   = "watchlist"
 WATCHLIST_NAME = "Watchlist"
+
+KONC_PARSE_MODEL = "anthropic/claude-haiku-4.5"
+GROQ_TRANSCRIBE_MODEL = "whisper-large-v3-turbo"
 
 DOCS_START = "<!-- BOT_DOCS_START -->"
 DOCS_END   = "<!-- BOT_DOCS_END -->"
@@ -55,6 +77,14 @@ _STATE_PATH       = "docs/data/telegram_bot_state.json"
 _ALERTS_PATH      = "docs/data/bot_alerts.json"
 _PICKS_PATH       = "docs/data/ai_picks.json"
 _CANDIDATES_PATH  = "docs/data/ai_candidates.json"
+_KONC_DATA_PATH   = "docs/data/koncorde_data.json"
+# Deliberately a SEPARATE file from _ALERTS_PATH (price alerts): check_alerts()/
+# cmd_alert_delete()/cmd_alerts_list() below iterate _load_alerts() assuming every
+# entry has target/direction — mixing Koncorde alerts into that list would make
+# check_alerts() misread a Koncorde entry as a price alert with target=0 and fire
+# a bogus notification on the very first check. Full isolation, zero risk to the
+# existing (live) price-alert feature.
+_KONC_ALERTS_PATH = "docs/data/koncorde_bot_alerts.json"
 
 ALERTS_CHECK_EVERY = 5   # check price alerts every N polling cycles (~2.5 min)
 
@@ -142,6 +172,21 @@ COMMANDS = [
         "cmd":   "/delalert",
         "usage": "/delalert TICKER",
         "desc":  "Elimina la alerta de precio de un ticker.",
+    },
+    {
+        "cmd":   "/kalert",
+        "usage": "/kalert TICKER TIMEFRAME CONDICION  |  /kalert <texto libre>",
+        "desc":  "Crea una alerta sobre una condición de Koncorde (blue/green/estado, en D/3D/W). Acepta sintaxis exacta o una petición en lenguaje natural (se interpreta con IA). También se puede crear mandando una nota de voz al bot.",
+    },
+    {
+        "cmd":   "/kalerts",
+        "usage": "/kalerts",
+        "desc":  "Lista tus alertas de Koncorde activas.",
+    },
+    {
+        "cmd":   "/delkalert",
+        "usage": "/delkalert TICKER",
+        "desc":  "Elimina la(s) alerta(s) de Koncorde de un ticker.",
     },
     {
         "cmd":   "/help",
@@ -339,6 +384,49 @@ def _save_alerts(alerts: list) -> None:
     alerts_file.write_text(json.dumps(alerts, indent=2), encoding="utf-8")
 
 
+def _load_konc_alerts() -> list:
+    if USE_GITHUB_API:
+        try:
+            data, sha = _gh_read(_KONC_ALERTS_PATH)
+            _sha_cache[_KONC_ALERTS_PATH] = sha
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+    alerts_file = ROOT / "docs" / "data" / "koncorde_bot_alerts.json"
+    try:
+        if alerts_file.exists():
+            return json.loads(alerts_file.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return []
+
+
+def _save_konc_alerts(alerts: list) -> None:
+    if USE_GITHUB_API:
+        try:
+            if _KONC_ALERTS_PATH not in _sha_cache:
+                try:
+                    _, sha = _gh_read(_KONC_ALERTS_PATH)
+                    _sha_cache[_KONC_ALERTS_PATH] = sha
+                except Exception:
+                    _sha_cache[_KONC_ALERTS_PATH] = ""
+            sha = _sha_cache.get(_KONC_ALERTS_PATH, "")
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{_KONC_ALERTS_PATH}"
+            content_b64 = base64.b64encode(json.dumps(alerts, indent=2).encode()).decode()
+            payload: dict = {"message": "bot: update koncorde alerts", "content": content_b64}
+            if sha:
+                payload["sha"] = sha
+            r = requests.put(url, json=payload,
+                             headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=15)
+            r.raise_for_status()
+            _sha_cache[_KONC_ALERTS_PATH] = r.json()["content"]["sha"]
+        except Exception as exc:
+            print(f"GitHub koncorde alerts write failed: {exc}")
+        return
+    alerts_file = ROOT / "docs" / "data" / "koncorde_bot_alerts.json"
+    alerts_file.write_text(json.dumps(alerts, indent=2), encoding="utf-8")
+
+
 def _load_picks() -> dict:
     if USE_GITHUB_API:
         try:
@@ -367,6 +455,24 @@ def _load_macro() -> dict:
         if candidates_file.exists():
             data = json.loads(candidates_file.read_text(encoding="utf-8"))
             return data.get("macro_context", {})
+    except Exception:
+        pass
+    return {}
+
+
+def _load_koncorde_data() -> dict:
+    """Ticker -> konc_* fields, from the latest koncorde_calculator.py snapshot."""
+    if USE_GITHUB_API:
+        try:
+            data, _ = _gh_read(_KONC_DATA_PATH)
+            return data.get("tickers", {}) if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    konc_file = ROOT / "docs" / "data" / "koncorde_data.json"
+    try:
+        if konc_file.exists():
+            data = json.loads(konc_file.read_text(encoding="utf-8"))
+            return data.get("tickers", {})
     except Exception:
         pass
     return {}
@@ -706,6 +812,218 @@ def cmd_alert_delete(token: str, chat_id: str, ticker: str) -> None:
         _send(token, chat_id, f"No hay alerta activa para <b>{ticker}</b>.")
 
 
+_TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
+
+
+def _parse_koncorde_alert_strict(args_text: str) -> dict | None:
+    """Exact 3-token form: TICKER TIMEFRAME CONDITION. No LLM call needed."""
+    tokens = args_text.split()
+    if len(tokens) != 3:
+        return None
+    ticker, tf, cond = tokens[0].upper(), tokens[1].lower(), tokens[2].lower()
+    if tf not in KONC_VALID_TIMEFRAMES or cond not in KONC_CONDITIONS:
+        return None
+    if not _TICKER_RE.match(ticker):
+        return None
+    return {"ticker": ticker, "timeframe": tf, "condition": cond}
+
+
+def _parse_koncorde_alert_nl(text: str) -> dict | None:
+    """Free-text (or voice-transcribed) request -> {ticker, timeframe, condition}.
+
+    Uses a cheap OpenRouter call (Haiku) constrained to the closed condition
+    vocabulary in koncorde_alert_conditions.py. Returns None (never guesses)
+    if OPENROUTER_API_KEY is missing, the call fails, or the model can't
+    determine all three fields with confidence.
+    """
+    if not os.environ.get("OPENROUTER_API_KEY", ""):
+        return None
+
+    cond_lines = "\n".join(f'  "{k}" — {v}' for k, v in KONC_CONDITIONS.items())
+    system = (
+        "Extraes una alerta sobre el indicador Koncorde a partir de una petición en "
+        "español (texto libre, a veces transcrita de una nota de voz). Responde SOLO "
+        "con JSON compacto, sin markdown ni explicación.\n\n"
+        "Campos a extraer:\n"
+        '- "ticker": símbolo bursátil tal cual se menciona, en mayúsculas (ej. CRESY, '
+        "AAPL, GLEN.L). No inventes un ticker si no hay uno reconocible.\n"
+        f'- "timeframe": uno de {list(KONC_VALID_TIMEFRAMES)!r} — "d"=diario, "3d"=3 días, '
+        '"w"=semanal/"gráfico semanal". Si no queda claro cuál quiere, no lo adivines.\n'
+        f'- "condition": exactamente uno de estos ids (no inventes otros):\n{cond_lines}\n'
+        '  Ejemplos de mapeo: "señal azul positiva"/"blue en positivo" -> blue_positive; '
+        '"blue cruza a positivo"/"cruce alcista" -> blue_cross_up; '
+        '"acumulación"/"acumulando" -> state_accumulation; '
+        '"distribución"/"distribuyendo" -> state_distribution.\n\n'
+        'Si tienes los 3 campos con confianza, responde exactamente:\n'
+        '{"ticker": "...", "timeframe": "...", "condition": "..."}\n'
+        'Si falta o es ambiguo cualquiera de los 3, responde exactamente:\n'
+        '{"error": "razón breve en español"}'
+    )
+    try:
+        raw, _, _, _ = call_model(KONC_PARSE_MODEL, system, text, max_tokens=300)
+    except Exception as exc:
+        print(f"Koncorde NL parse call failed: {exc}")
+        return None
+
+    data, ok = parse_response(raw)
+    if not ok or not isinstance(data, dict) or "error" in data:
+        if isinstance(data, dict) and "error" in data:
+            print(f"Koncorde NL parse: model reported {data['error']!r}")
+        return None
+
+    ticker = str(data.get("ticker", "")).strip().upper()
+    tf     = str(data.get("timeframe", "")).strip().lower()
+    cond   = str(data.get("condition", "")).strip().lower()
+    if not ticker or tf not in KONC_VALID_TIMEFRAMES or cond not in KONC_CONDITIONS:
+        return None
+    if not _TICKER_RE.match(ticker):
+        return None
+    return {"ticker": ticker, "timeframe": tf, "condition": cond}
+
+
+def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframe: str,
+                    condition: str, raw_request: str) -> None:
+    ticker = ticker.upper()
+    konc_universe = _load_koncorde_data()
+    known = ticker in konc_universe
+
+    alerts = _load_konc_alerts()
+    alerts = [
+        a for a in alerts
+        if not (a.get("ticker") == ticker and a.get("timeframe") == timeframe
+                and a.get("condition") == condition)
+    ]
+    alerts.append({
+        "ticker":      ticker,
+        "timeframe":   timeframe,
+        "condition":   condition,
+        "raw_request": raw_request.strip(),
+        "created":     str(date.today()),
+    })
+    _save_konc_alerts(alerts)
+
+    desc = describe_koncorde_condition(ticker, timeframe, condition)
+    note = (
+        "" if known else
+        "\n⚠️ No tengo datos de Koncorde para ese ticker todavía — la alerta "
+        "se evaluará en cuanto los haya en el próximo run del pipeline."
+    )
+    _send(token, chat_id,
+          f"✅ Alerta creada: <b>{desc}</b>.\nTe aviso por Telegram cuando se cumpla "
+          f"(una sola vez, se borra sola al dispararse).{note}")
+
+
+def cmd_kalerts_list(token: str, chat_id: str) -> None:
+    alerts = _load_konc_alerts()
+    if not alerts:
+        _send(token, chat_id, "No tienes alertas de Koncorde activas.")
+        return
+    lines = ["<b>Alertas de Koncorde activas:</b>", ""]
+    for a in alerts:
+        desc = describe_koncorde_condition(
+            a.get("ticker", "?"), a.get("timeframe", "?"), a.get("condition", "?")
+        )
+        lines.append(f"🔮 {desc}  <i>({a.get('created', '')})</i>")
+    _send(token, chat_id, "\n".join(lines))
+
+
+def cmd_kalert_delete(token: str, chat_id: str, ticker: str) -> None:
+    ticker = ticker.upper()
+    alerts = _load_konc_alerts()
+    before = len(alerts)
+    alerts = [a for a in alerts if a.get("ticker") != ticker]
+    if len(alerts) < before:
+        _save_konc_alerts(alerts)
+        n = before - len(alerts)
+        _send(token, chat_id, f"{n} alerta(s) de Koncorde de <b>{ticker}</b> eliminada(s).")
+    else:
+        _send(token, chat_id, f"No hay alerta de Koncorde activa para <b>{ticker}</b>.")
+
+
+def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
+    args_text = args_text.strip()
+    if not args_text:
+        _send(token, chat_id,
+              "Uso: <code>/kalert TICKER TIMEFRAME CONDICION</code>  "
+              "(ej: <code>/kalert CRESY w blue_positive</code>)\n"
+              "O en lenguaje natural: <code>/kalert avisa cuando CRESY tenga la señal "
+              "azul de koncorde positiva en el gráfico semanal</code>\n"
+              "También puedes mandar una nota de voz.")
+        return
+
+    parsed = _parse_koncorde_alert_strict(args_text)
+    if parsed is None:
+        parsed = _parse_koncorde_alert_nl(args_text)
+    if parsed is None:
+        _send(token, chat_id,
+              "No he podido entender la alerta. Prueba con la sintaxis exacta:\n"
+              "<code>/kalert TICKER TIMEFRAME CONDICION</code>\n"
+              f"TIMEFRAME: {', '.join(KONC_VALID_TIMEFRAMES)}\n"
+              f"CONDICION: {', '.join(KONC_CONDITIONS)}")
+        return
+
+    cmd_kalert_set(token, chat_id, parsed["ticker"], parsed["timeframe"],
+                    parsed["condition"], raw_request=args_text)
+
+
+# ── Voice messages (Koncorde alert creation only, v1) ─────────────────────
+
+def _download_telegram_file(token: str, file_id: str) -> bytes | None:
+    try:
+        r = requests.get(f"https://api.telegram.org/bot{token}/getFile",
+                          params={"file_id": file_id}, timeout=15)
+        r.raise_for_status()
+        file_path = r.json()["result"]["file_path"]
+        r2 = requests.get(f"https://api.telegram.org/file/bot{token}/{file_path}", timeout=30)
+        r2.raise_for_status()
+        return r2.content
+    except Exception as exc:
+        print(f"Telegram file download failed: {exc}")
+        return None
+
+
+def _transcribe_voice_groq(audio_bytes: bytes) -> str | None:
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        return None
+    try:
+        r = requests.post(
+            "https://api.groq.com/openai/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            files={"file": ("voice.ogg", audio_bytes, "audio/ogg")},
+            data={"model": GROQ_TRANSCRIBE_MODEL, "language": "es"},
+            timeout=30,
+        )
+        if not r.ok:
+            print(f"Groq transcription error {r.status_code}: {r.text[:200]}")
+            return None
+        text = (r.json().get("text") or "").strip()
+        return text or None
+    except Exception as exc:
+        print(f"Groq transcription failed: {exc}")
+        return None
+
+
+def handle_voice_message(token: str, chat_id: str, file_id: str) -> None:
+    """Voice notes are interpreted as Koncorde alert requests — the only
+    voice-driven feature in v1. Text commands remain unaffected."""
+    if not os.environ.get("GROQ_API_KEY", ""):
+        _send(token, chat_id,
+              "No puedo transcribir notas de voz todavía (falta configurar el servicio "
+              "de voz). Usa /kalert por texto mientras tanto.")
+        return
+    audio = _download_telegram_file(token, file_id)
+    if audio is None:
+        _send(token, chat_id, "No pude descargar la nota de voz.")
+        return
+    text = _transcribe_voice_groq(audio)
+    if not text:
+        _send(token, chat_id, "No pude transcribir la nota de voz.")
+        return
+    _send(token, chat_id, f"🎙️ Entendido: <i>{html.escape(text)}</i>")
+    cmd_kalert(token, chat_id, text)
+
+
 def check_alerts(token: str, chat_id: str) -> None:
     alerts = _load_alerts()
     if not alerts:
@@ -795,6 +1113,16 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
             cmd_alert_delete(token, chat_id, args[0])
         else:
             _send(token, chat_id, "Uso: /delalert TICKER")
+    elif cmd == "kalert":
+        rest = text.strip().split(maxsplit=1)
+        cmd_kalert(token, chat_id, rest[1] if len(rest) > 1 else "")
+    elif cmd == "kalerts":
+        cmd_kalerts_list(token, chat_id)
+    elif cmd == "delkalert":
+        if args:
+            cmd_kalert_delete(token, chat_id, args[0])
+        else:
+            _send(token, chat_id, "Uso: /delkalert TICKER")
     return False
 
 
@@ -816,12 +1144,17 @@ def run_once(token: str, chat_id: str) -> None:
         uid       = update.get("update_id")
         msg       = update.get("message", {})
         text      = msg.get("text", "")
+        voice     = msg.get("voice")
         from_chat = str(msg.get("chat", {}).get("id", ""))
 
         if from_chat == chat_id and text.startswith("/"):
             print(f"  Processing: {text.strip()}")
             dispatch(token, chat_id, text, portfolio)
             portfolio = _load_portfolio()
+            processed += 1
+        elif from_chat == chat_id and voice:
+            print("  Processing: [voice note]")
+            handle_voice_message(token, chat_id, voice["file_id"])
             processed += 1
 
         if uid is not None:
@@ -847,12 +1180,16 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
                 uid       = update.get("update_id")
                 msg       = update.get("message", {})
                 text      = msg.get("text", "")
+                voice     = msg.get("voice")
                 from_chat = str(msg.get("chat", {}).get("id", ""))
 
                 if from_chat == chat_id and text.startswith("/"):
                     print(f"[{date.today()}] {text.strip()}")
                     dispatch(token, chat_id, text, portfolio)
                     portfolio = _load_portfolio()
+                elif from_chat == chat_id and voice:
+                    print(f"[{date.today()}] [voice note]")
+                    handle_voice_message(token, chat_id, voice["file_id"])
 
                 if uid is not None:
                     state["offset"] = uid + 1
