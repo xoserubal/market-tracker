@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-16",
+  "last_updated": "2026-08-17",
   "portfolios": {
     "HIGH_CONVICTION": {
       "positions": [
@@ -5418,7 +5418,7 @@
           "entry_price": 788.5999755859375,
           "entry_signal": "mirror_reversal_daily_only",
           "size_pct": 5.0,
-          "high_water_mark": 909.4000244140625,
+          "high_water_mark": 919.2000122070312,
           "reason": "Blue D cruzó fuertemente a +64.14 con green -18.57; 3D blue ya +10.81 y trend +13.88, giro parece sólido pese a daily_only.",
           "konc_d_blue_at_entry": 64.14,
           "konc_d_green_at_entry": -18.57,
@@ -6030,42 +6030,42 @@
     }
   },
   "last_ai_review": {
-    "date": "2026-08-16",
-    "market_read": "Bull Maduro regime with improving macro trend but extreme sector concentration in healthcare and tech AI limits diversification opportunities.",
+    "date": "2026-08-17",
+    "market_read": "Bull Maduro regime at 75.0 with improving monthly delta (+8.75) supports risk-on positioning, but extreme portfolio concentration in healthcare (73.5% largecap + 37% special) and cyclical (36%) limits new entries.",
     "risk_posture": "cautious",
     "should_select": false,
     "watch": [
       {
+        "ticker": "URI",
+        "reason": "PCS 84.2 with rot=8 and 5-week streak (currently open as Grok position), but Koncorde 3D reads distribution (blue -12.98 vs green 113.69), dems=7 is below 10 making daily momentum unusable, and us_cyclical theme already holds 36% portfolio weight.",
+        "watch_trigger": "SELECT if Koncorde 3D blue crosses above green confirming accumulation, or if cyclical concentration drops below 25% through other exits."
+      },
+      {
+        "ticker": "AWX",
+        "reason": "Rot=10 is the highest in the entire candidate set with dems=12 and momentum_accel=true, but spike_flag=true raises single-session reversal risk, extension_risk is medium with 2 pts, and us_cyclical at 36% concentration limits conviction.",
+        "watch_trigger": "SELECT if spike_flag clears on a multi-day follow-through (outperform_d10 >= 6 without spike) and either dems reaches 14+ or cyclical concentration moderates."
+      },
+      {
         "ticker": "OSCR",
-        "reason": "Strong weekly metrics (37.5% 13w outperformance, rot=7) with bullish-aligned Koncorde, but healthcare_special theme at 37% portfolio weight creates extreme sector concentration. Only 1-week streak insufficient for MIMO entry without broader portfolio rebalancing.",
-        "watch_trigger": "Reduce healthcare concentration below 30% OR build streak_weeks to 4+ while maintaining ret_4w positive."
-      },
-      {
-        "ticker": "DHR",
-        "reason": "Good weekly leadership (19.3% 13w outperformance, rot=7) with bullish-aligned Koncorde, but healthcare_largecap at 73.5% portfolio weight is extreme. Negative recent momentum (-4.7% 4w) suggests near-term weakness despite strong longer-term trend.",
-        "watch_trigger": "Healthcare_largecap concentration below 60% AND ret_4w_vs_spy turns positive with streak extension to 3+ weeks."
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Strong 13w outperformance of 25.4% with bullish-aligned Koncorde, but healthcare_largecap at 73.5% concentration is prohibitive. Spike_flag with only dems=6 lacks daily momentum confirmation for a new entry.",
-        "watch_trigger": "Healthcare concentration below 60% AND dems rises above 14 with spike_flag false."
+        "reason": "PCS 81.8 with fully bullish-aligned Koncorde and zero extension risk, but dems=13 falls just short of the 14 early rotation threshold, only a 1-week streak limits weekly confirmation, and healthcare_special at 37% combined with healthcare_largecap at 73.5% makes broad healthcare exposure extreme.",
+        "watch_trigger": "SELECT if dems reaches 14+ with spike_flag=false, or streak extends to 3+ weeks with sustained ret_4w outperformance above 10%."
       }
     ],
     "rejected": [
       {
-        "ticker": "URI",
-        "reason": "us_cyclical theme at 36% concentration already overweight with two positions (NUE, FCX). Weekly metrics strong (4-week streak, rot=8) but konc_3d_state=distribution warns of institutional selling on the primary timeframe.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "AWX",
-        "reason": "us_cyclical theme at 36% concentration already overweight. Rotation score of 10 is highest among candidates but 4w outperformance of only 1.5% is weak compared to NUE's 10.7%, making it an inferior cyclical allocation.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "DHR",
+        "reason": "Dems=4 is far below the 10 threshold for usable daily momentum, konc_d_state=distribution weakens the setup, ret_4w_vs_spy=-4.66% confirms active recent underperformance on a 2-week streak, and healthcare_largecap already holds 73.5% portfolio weight making weak signals untenable.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "LLY",
-        "reason": "Koncorde alignment shows distribution_warning across all timeframes (3D, daily, weekly all in distribution). Healthcare_largecap at 73.5% concentration is extreme, and -2.3% 4w outperformance indicates recent underperformance.",
+        "reason": "Koncorde alignment reads distribution_warning across all timeframes with dems=4 and ret_4w_vs_spy=-2.33% showing recent weekly underperformance. Healthcare_largecap at 73.5% concentration with distribution warning eliminates any margin for entry.",
         "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Dems=5 below 10 with spike_flag=true and medium extension risk (2 pts); ret_4w_vs_spy=-2.75% shows active recent weekly underperformance. Healthcare_largecap at 73.5% portfolio weight with only a 1-week streak provides insufficient weekly confirmation.",
+        "rejection_category": "insufficient_conviction"
       }
     ]
   }
