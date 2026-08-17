@@ -971,6 +971,12 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
 
     parsed = _parse_koncorde_alert_strict(args_text)
     if parsed is None:
+        if not os.environ.get("OPENROUTER_API_KEY", ""):
+            _send(token, chat_id,
+                  "No puedo interpretar lenguaje natural todavía (falta configurar "
+                  "OPENROUTER_API_KEY en este servicio). Usa la sintaxis exacta:\n"
+                  "<code>/kalert TICKER TIMEFRAME CONDICION</code>")
+            return
         parsed = _parse_koncorde_alert_nl(args_text)
     if parsed is None:
         _send(token, chat_id,
