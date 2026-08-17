@@ -5722,7 +5722,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 135.83999633789062
+          "high_water_mark": 135.97000122070312
         },
         {
           "ticker": "SLS",
@@ -5745,7 +5745,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 12.779999732971191
+          "high_water_mark": 13.0
         },
         {
           "ticker": "URI",
@@ -5768,7 +5768,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 1162.8399658203125
+          "high_water_mark": 1164.8199462890625
         },
         {
           "ticker": "PLTR",
@@ -6031,41 +6031,91 @@
   },
   "last_ai_review": {
     "date": "2026-08-17",
-    "market_read": "Bull Maduro regime at 75.0 with improving monthly delta (+8.75) supports risk-on positioning, but extreme portfolio concentration in healthcare (73.5% largecap + 37% special) and cyclical (36%) limits new entries.",
+    "market_read": "Macro score at maximum 100.0 with Bull Maduro Improving regime and +25.0 delta weekly confirms strong risk-on environment, but healthcare concentration at 73.5% of portfolio is extreme and no new candidate offers both high PCS and a non-healthcare theme with clean multi-timeframe confirmation.",
     "risk_posture": "cautious",
     "should_select": false,
     "watch": [
       {
         "ticker": "URI",
-        "reason": "PCS 84.2 with rot=8 and 5-week streak (currently open as Grok position), but Koncorde 3D reads distribution (blue -12.98 vs green 113.69), dems=7 is below 10 making daily momentum unusable, and us_cyclical theme already holds 36% portfolio weight.",
-        "watch_trigger": "SELECT if Koncorde 3D blue crosses above green confirming accumulation, or if cyclical concentration drops below 25% through other exits."
-      },
-      {
-        "ticker": "AWX",
-        "reason": "Rot=10 is the highest in the entire candidate set with dems=12 and momentum_accel=true, but spike_flag=true raises single-session reversal risk, extension_risk is medium with 2 pts, and us_cyclical at 36% concentration limits conviction.",
-        "watch_trigger": "SELECT if spike_flag clears on a multi-day follow-through (outperform_d10 >= 6 without spike) and either dems reaches 14+ or cyclical concentration moderates."
+        "reason": "PCS 85.2 with rot_score=8, 4-week streak, and +14.76% 13w outperformance in us_cyclical, but konc_3d_state=distribution with blue at -12.98 and daily spike_flag=true introduce timing risk; already held by Grok so no urgency to duplicate entry before 3D confirms accumulation.",
+        "watch_trigger": "Select if konc_3d_state transitions from distribution to 'up' with blue turning positive while PCS remains above 70, or if streak_weeks extends to 6+ confirming sustained cyclical leadership independent of daily noise."
       },
       {
         "ticker": "OSCR",
-        "reason": "PCS 81.8 with fully bullish-aligned Koncorde and zero extension risk, but dems=13 falls just short of the 14 early rotation threshold, only a 1-week streak limits weekly confirmation, and healthcare_special at 37% combined with healthcare_largecap at 73.5% makes broad healthcare exposure extreme.",
-        "watch_trigger": "SELECT if dems reaches 14+ with spike_flag=false, or streak extends to 3+ weeks with sustained ret_4w outperformance above 10%."
+        "reason": "PCS 81.8 with rot_score=7, +37.48% 13w outperformance, dems=13 near threshold, and bullish-aligned Koncorde across all timeframes, but healthcare_special theme would push already-extreme 73.5% healthcare weight higher; only 1-week streak is too thin for confirmed_leader entry.",
+        "watch_trigger": "Select if streak_weeks extends to 3+ confirming sustained healthcare leadership AND theme concentration risk drops below high, or if portfolio healthcare weight is reduced through exits creating room for this strong signal."
+      },
+      {
+        "ticker": "DHR",
+        "reason": "PCS 79.0 with 5-week streak and +19.26% 13w outperformance, but konc_d_state=distribution and ret_4w_vs_spy is -4.66% showing recent underperformance within the weekly uptrend; adding another healthcare name at 73.5% sector weight amplifies concentration risk without recent momentum support.",
+        "watch_trigger": "Select if ret_4w_vs_spy turns positive (above +2%) while streak_weeks extends to 6+ and konc_d_state transitions to accumulation or up, confirming the weekly uptrend is reaccelerating on the daily timeframe."
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "PCS 73.5 with rot_score=8 and 3-week streak in commodities_metals providing thematic diversification, but spike_flag=true and extension_risk=high with 4 extension points suggest recent gains may be concentrated in fewer sessions; PCS is moderate at 73.5 versus top candidates at 85+.",
+        "watch_trigger": "Select if spike_flag clears and extension_risk drops to medium or below while PCS remains above 70, or if ret_4w_vs_spy accelerates above +15% with momentum_accel confirming sustained institutional flow."
+      },
+      {
+        "ticker": "GRSL.V",
+        "reason": "PCS 64.5 with rot_score just jumped from 6 to 8 in silver_gold_miners, providing low-concentration thematic exposure, but PCS is below the 68.0 MIMO_SHADOW entry threshold and the rotation jump is a single data point needing confirmation across multiple weeks.",
+        "watch_trigger": "Select if PCS crosses above 68.0 while rot_score sustains at 8+ for two consecutive weeks and konc_3d_state remains up, confirming the rotation jump reflects genuine institutional accumulation rather than a short-lived spike."
       }
     ],
     "rejected": [
       {
-        "ticker": "DHR",
-        "reason": "Dems=4 is far below the 10 threshold for usable daily momentum, konc_d_state=distribution weakens the setup, ret_4w_vs_spy=-4.66% confirms active recent underperformance on a 2-week streak, and healthcare_largecap already holds 73.5% portfolio weight making weak signals untenable.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
         "ticker": "LLY",
-        "reason": "Koncorde alignment reads distribution_warning across all timeframes with dems=4 and ret_4w_vs_spy=-2.33% showing recent weekly underperformance. Healthcare_largecap at 73.5% concentration with distribution warning eliminates any margin for entry.",
-        "rejection_category": "technical_overextension"
+        "reason": "Koncorde alignment is distribution_warning across all three timeframes (D=up, 3D=distribution, W=distribution) with PCS 78.2 and ret_4w_vs_spy of -2.33%; all Koncorde timeframes except daily are warning of distribution, making entry unjustifiable despite the healthcare theme strength.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "HUM",
-        "reason": "Dems=5 below 10 with spike_flag=true and medium extension risk (2 pts); ret_4w_vs_spy=-2.75% shows active recent weekly underperformance. Healthcare_largecap at 73.5% portfolio weight with only a 1-week streak provides insufficient weekly confirmation.",
+        "reason": "PCS 78.2 is below MIMO_SHADOW threshold of 82.0 for high-confidence entries, combined with konc_d_state=distribution, only 1-week streak, and ret_4w_vs_spy of -2.75% showing recent momentum decay; healthcare already at 73.5% concentration makes this entry doubly unjustifiable.",
         "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "ABBV",
+        "reason": "PCS 67.8 is below MIMO_SHADOW minimum entry threshold of 68.0, falling below the floor for any portfolio selection regardless of other metrics; the ticker is declining from 71.8 previous week showing deteriorating composite strength.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "NEM",
+        "reason": "PCS 64.5 is below the absolute floor of 62.0 for consideration, and the ticker is crossing down from 68.5 previous week showing accelerating deterioration in composite signal strength; no rotation or flow data overrides the insufficient PCS.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "TECK",
+        "reason": "PCS 63.2 has dropped below the 68.0 entry threshold, crossing down from 67.2 previous week and now below the absolute floor consideration area; the declining trajectory from 67.2 to 63.2 confirms weakening composite strength with no reversal signal.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SASK.V",
+        "reason": "PCS 57.0 is well below the 62.0 minimum threshold for any consideration; despite rot_score jumping from 6 to 8, the absolute PCS level makes this ineligible for selection in any portfolio context.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "VIST",
+        "reason": "PCS 52.8 is far below the 62.0 minimum threshold; despite signal upgrading from IGNORAR to VIGILAR, the absolute PCS level remains insufficient for any portfolio consideration.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "ASM.AS",
+        "reason": "PCS 60.0 is below the 62.0 minimum threshold despite daily dems=16 and outperform_d10=9 being strong; the individual RS component of 11 and weak theme flow of 11 drag PCS below eligibility, and ret_4w_vs_spy of -6.62% confirms weak recent performance.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "CAT",
+        "reason": "PCS 59.5 is below the 62.0 minimum threshold with individual RS component of just 3.0 (rs_laggard flag), ret_4w_vs_spy of -5.58%, and ret_13w_vs_spy of -10.78%; despite strong theme flow of 24, the individual weakness makes this ineligible.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "MAI.L",
+        "reason": "PCS 51.8 is far below the 62.0 minimum threshold with konc_alignment=bearish_aligned across all timeframes, rot_score=2, ret_4w_vs_spy=-8.93%, and ret_13w_vs_spy=-29.98%; this is the weakest candidate in the entire set with no redeeming signal strength.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 55.8 is below the 62.0 minimum threshold with konc_alignment=distribution_warning, rot_score=3, ret_4w_vs_spy=-8.53%, and ret_13w_vs_spy=-2.80%; despite healthcare theme strength, the individual weakness and bearish Koncorde structure make this clearly insufficient.",
+        "rejection_category": "weak_relative_strength"
       }
     ]
   }
