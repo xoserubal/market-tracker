@@ -401,7 +401,11 @@ def _load_konc_alerts() -> list:
     return []
 
 
-def _save_konc_alerts(alerts: list) -> None:
+def _save_konc_alerts(alerts: list) -> bool:
+    """Returns True on confirmed success — callers must not claim success to
+    the user without checking this (previously cmd_kalert_set/cmd_kalert_delete
+    always sent a success message regardless, so a GitHub API failure looked
+    identical to a real save and left the user with no way to know)."""
     if USE_GITHUB_API:
         try:
             if _KONC_ALERTS_PATH not in _sha_cache:
@@ -420,11 +424,17 @@ def _save_konc_alerts(alerts: list) -> None:
                              headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=15)
             r.raise_for_status()
             _sha_cache[_KONC_ALERTS_PATH] = r.json()["content"]["sha"]
+            return True
         except Exception as exc:
             print(f"GitHub koncorde alerts write failed: {exc}")
-        return
+            return False
     alerts_file = ROOT / "docs" / "data" / "koncorde_bot_alerts.json"
-    alerts_file.write_text(json.dumps(alerts, indent=2), encoding="utf-8")
+    try:
+        alerts_file.write_text(json.dumps(alerts, indent=2), encoding="utf-8")
+        return True
+    except Exception as exc:
+        print(f"Local koncorde alerts write failed: {exc}")
+        return False
 
 
 def _load_picks() -> dict:
@@ -900,7 +910,11 @@ def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframe: str,
         "raw_request": raw_request.strip(),
         "created":     str(date.today()),
     })
-    _save_konc_alerts(alerts)
+    if not _save_konc_alerts(alerts):
+        _send(token, chat_id,
+              "⚠️ No pude guardar la alerta (fallo al escribir en GitHub). "
+              "Prueba de nuevo en un momento; si persiste, revisa los logs del bot.")
+        return
 
     desc = describe_koncorde_condition(ticker, timeframe, condition)
     note = (
@@ -933,7 +947,11 @@ def cmd_kalert_delete(token: str, chat_id: str, ticker: str) -> None:
     before = len(alerts)
     alerts = [a for a in alerts if a.get("ticker") != ticker]
     if len(alerts) < before:
-        _save_konc_alerts(alerts)
+        if not _save_konc_alerts(alerts):
+            _send(token, chat_id,
+                  "⚠️ No pude guardar el cambio (fallo al escribir en GitHub). "
+                  "Prueba de nuevo en un momento.")
+            return
         n = before - len(alerts)
         _send(token, chat_id, f"{n} alerta(s) de Koncorde de <b>{ticker}</b> eliminada(s).")
     else:
@@ -968,18 +986,25 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
 
 # ── Voice messages (Koncorde alert creation only, v1) ─────────────────────
 
-def _download_telegram_file(token: str, file_id: str) -> bytes | None:
+def _download_telegram_file(token: str, file_id: str) -> tuple[bytes | None, str | None]:
+    """Returns (bytes, None) on success, (None, error_detail) on failure —
+    the caller surfaces error_detail to the user instead of a bare generic
+    message, so a real cause (file too big, timeout, ...) doesn't require
+    pulling Railway logs to diagnose."""
     try:
         r = requests.get(f"https://api.telegram.org/bot{token}/getFile",
                           params={"file_id": file_id}, timeout=15)
-        r.raise_for_status()
+        if not r.ok:
+            detail = r.text[:200]
+            print(f"Telegram getFile failed {r.status_code}: {detail}")
+            return None, f"getFile {r.status_code}: {detail}"
         file_path = r.json()["result"]["file_path"]
         r2 = requests.get(f"https://api.telegram.org/file/bot{token}/{file_path}", timeout=30)
         r2.raise_for_status()
-        return r2.content
+        return r2.content, None
     except Exception as exc:
         print(f"Telegram file download failed: {exc}")
-        return None
+        return None, str(exc)
 
 
 def _transcribe_voice_groq(audio_bytes: bytes) -> str | None:
@@ -1012,9 +1037,9 @@ def handle_voice_message(token: str, chat_id: str, file_id: str) -> None:
               "No puedo transcribir notas de voz todavía (falta configurar el servicio "
               "de voz). Usa /kalert por texto mientras tanto.")
         return
-    audio = _download_telegram_file(token, file_id)
+    audio, error_detail = _download_telegram_file(token, file_id)
     if audio is None:
-        _send(token, chat_id, "No pude descargar la nota de voz.")
+        _send(token, chat_id, f"No pude descargar la nota de voz.\n<code>{html.escape(error_detail or 'error desconocido')}</code>")
         return
     text = _transcribe_voice_groq(audio)
     if not text:
