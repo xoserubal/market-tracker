@@ -3002,11 +3002,123 @@ GitHub Secrets y Railway):**
 Condiciones sobre otros indicadores (MACD, ATLAS Mini, RSI, insider
 activity) — el vocabulario cerrado cubre solo Koncorde blue/green/estado
 por timeframe, ampliable si hace falta. Re-armado automático tras
-dispararse (alertas de un solo uso, igual que las de precio). Confirmación
-interactiva antes de guardar una alerta mal-parseada (se confía en que el
-usuario revise el mensaje de confirmación y use `/delkalert` si hace
-falta). Cualquier cambio a PCS/rot_score/carteras — esto es una utilidad
-del bot, no toca el motor de picks.
+dispararse (alertas de un solo uso, igual que las de precio). Cualquier
+cambio a PCS/rot_score/carteras — esto es una utilidad del bot, no toca el
+motor de picks.
+
+**Nota 2026-08-18:** la confirmación interactiva antes de guardar una
+alerta mal-parseada, listada aquí originalmente como "fuera de alcance",
+sí se implementó — ver sección siguiente ("Fixes de producción...").
+
+---
+
+## Fixes de producción + confirmación de ticker + multi-timeframo — Alertas Koncorde (implementado 2026-08-18)
+
+El día después de lanzar las alertas Koncorde (sección anterior), varias
+sesiones de depuración en vivo con el usuario encontraron 4 problemas
+reales de producción, todos en `scripts/telegram_portfolio_bot.py`.
+
+### 1. Fallos silenciosos — mismo patrón ya visto con los tokens de Telegram/Cava
+
+`cmd_kalert_set()`/`cmd_kalert_delete()` enviaban "✅ Alerta creada"/"eliminada"
+**incondicionalmente**, sin comprobar si `_save_konc_alerts()` (escritura vía
+GitHub API en Railway) había fallado de verdad — el usuario podía recibir
+confirmación de éxito sobre una alerta que nunca se guardó. `_save_konc_alerts()`
+ahora devuelve `bool` y ambos comandos avisan explícitamente si el guardado falla.
+
+`_download_telegram_file()` (paso previo a transcribir una nota de voz)
+envolvía cualquier excepción en un `"No pude descargar la nota de voz."`
+genérico, sin exponer la causa real — obligaba a mirar logs de Railway
+(a los que el usuario no siempre tiene acceso a mano) para saber si era un
+timeout, un fallo de la API de Telegram, etc. Ahora devuelve
+`(bytes|None, error_detail|None)` y el mensaje al usuario incluye el detalle
+del error directamente en el chat.
+
+`_parse_koncorde_alert_nl()` devolvía `None` en silencio si faltaba
+`OPENROUTER_API_KEY`, indistinguible de "el modelo no entendió la petición"
+— `cmd_kalert()` comprueba ahora la env var por separado antes de llamar al
+parser NL y da un mensaje específico ("falta configurar OPENROUTER_API_KEY")
+en vez del genérico "no he podido entender la alerta".
+
+**Hallazgo de diagnóstico, no bug:** en la investigación se confirmó que
+Railway sí corre en continuo y sí escribe correctamente vía GitHub API
+(commits `bot: update state` recurrentes) — el problema real en cada caso
+fue la falta de visibilidad del error, no que el mecanismo estuviera roto.
+
+### 2. Ticker inferido del nombre de la empresa, con confirmación
+
+El prompt original de `_parse_koncorde_alert_nl()` decía explícitamente "no
+inventes un ticker si no hay uno reconocible" — con esto, decir el nombre de
+la empresa en vez del símbolo (ej. "Loma" en lugar de "LOMA", el ticker real
+de Loma Negra) hacía que el modelo rechazase la petición entera. Demasiado
+rígido para lenguaje natural/voz, donde la gente dice nombres, no símbolos.
+
+Cambio: el modelo puede ahora proponer un ticker inferido con su
+conocimiento general (`"Loma"->LOMA`, `"Apple"->AAPL`, `"banco Galicia"->GGAL`),
+marcado `"ticker_guessed": true`. `cmd_kalert()` **no crea la alerta
+directamente** en ese caso — la deja pendiente
+(`_pending_ticker_confirmation`, dict en memoria por `chat_id`, sin
+persistir a GitHub) y pide confirmación.
+
+**Primera versión (descartada el mismo día, feedback del usuario):** pedía
+reescribir el comando completo en sintaxis exacta para confirmar — "un
+rollo" según el usuario, sobre todo viniendo de una nota de voz. Sustituido
+por: responder **"ok"** (o vale/sí/confirmo/correcto) confirma la propuesta
+tal cual; escribir directamente un ticker distinto la corrige manteniendo
+el mismo timeframe/condición ya parseados — sin repetir nada.
+
+Ventana de confirmación: 15 minutos, en memoria únicamente (no en
+`state.json`/GitHub) — bot de un solo usuario, y si Railway se reinicia a
+mitad de una confirmación pendiente, el coste es simplemente volver a mandar
+la petición original, igual que cualquier otro reinicio transitorio. No
+justifica la complejidad de persistirlo.
+
+Un mensaje de texto plano sin confirmación pendiente activa, o que no
+coincide con "ok"/ticker, se ignora tal cual (comportamiento previo, sin
+cambios) — no se ha añadido gestión general de conversación al bot, solo
+esta única ventana de confirmación acotada.
+
+### 3. Alertas en varios timeframes con semántica OR
+
+Petición real que motivó esto: *"avisar si banco de Galicia... pasa a azul
+positivo o bien en la vela diaria o bien en la vela semanal"* — el schema
+solo admitía un timeframe por alerta, así que el parser NL rechazaba la
+petición completa con "timeframe ambiguo: solicita 'd' o 'w', pero no
+especifica cuál es prioritario" (correcto según su instrucción de entonces,
+pero la petición del usuario no era ambigua — pedía ambos con un OR).
+
+Solución **sin tocar el evaluador** (`koncorde_alert_conditions.py`,
+`check_koncorde_alerts.py` siguen operando sobre un timeframe por fila, sin
+cambios): tanto la sintaxis exacta (`/kalert GGAL d,w blue_positive`, lista
+separada por comas) como el parser NL (campo `"timeframes"`, ahora siempre
+una lista) devuelven varios timeframes, y `cmd_kalert_set()` crea **una fila
+independiente por cada uno** en `koncorde_bot_alerts.json`. Como cada fila
+ya se evaluaba y autoeliminaba de forma independiente, esto da la semántica
+OR pedida (avisa con la que se cumpla primero, las demás siguen activas)
+sin ninguna lógica nueva de evaluación multi-timeframe.
+
+### Verificado
+
+Los 4 cambios probados con las peticiones reales que fallaron en producción
+(`_parse_koncorde_alert_nl()` llamado en vivo contra OpenRouter, no
+mockeado): "Loma" → propone `LOMA` con `ticker_guessed=True`; "banco de
+Galicia... diario o semanal" → `GGAL`, `timeframes=['d','w']`,
+`ticker_guessed=True`. Flujo de confirmación completo probado con
+`_send`/`_load_konc_alerts`/`_save_konc_alerts` redirigidos a un directorio
+temporal (sin tocar datos reales ni gastar llamadas a Telegram): "ok" crea
+las 2 filas (`GGAL`/`d` y `GGAL`/`w`) con un único mensaje combinado;
+responder con otro ticker corrige manteniendo timeframe/condición; un
+mensaje no relacionado no consume la confirmación pendiente; una
+confirmación con más de 15 minutos expira y se ignora. Confirmado además en
+producción real (no solo local) que las alertas de IRS y LOMA de sesiones
+anteriores del mismo día quedaron correctamente guardadas vía GitHub API.
+
+### Fuera de alcance (explícito)
+
+Persistir `_pending_ticker_confirmation` fuera de memoria. Multi-ticker o
+multi-condición en una sola petición (solo multi-*timeframe*, que era lo
+pedido). Deshacer la propuesta de ticker si el usuario no responde nada
+(expira sola a los 15 min, no hay mensaje de "se ha cancelado").
 
 ---
 
