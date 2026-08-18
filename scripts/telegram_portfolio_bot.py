@@ -160,8 +160,8 @@ COMMANDS = [
     },
     {
         "cmd":   "/alert",
-        "usage": "/alert TICKER PRECIO",
-        "desc":  "Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO.",
+        "usage": "/alert TICKER PRECIO [(nota opcional)]",
+        "desc":  "Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO. La nota entre paréntesis es opcional y se muestra en /alerts y en el aviso.",
     },
     {
         "cmd":   "/alerts",
@@ -777,8 +777,9 @@ def cmd_macro(token: str, chat_id: str) -> None:
     _send(token, chat_id, "\n".join(lines))
 
 
-def cmd_alert_set(token: str, chat_id: str, ticker: str, target: float) -> None:
+def cmd_alert_set(token: str, chat_id: str, ticker: str, target: float, note: str = "") -> None:
     ticker  = ticker.upper()
+    note    = note.strip()
     alerts  = _load_alerts()
     quote   = _get_quote(ticker)
     current = quote["price"] if quote else None
@@ -790,12 +791,14 @@ def cmd_alert_set(token: str, chat_id: str, ticker: str, target: float) -> None:
         "target":    target,
         "direction": direction,
         "created":   str(date.today()),
+        "note":      note,
     })
     _save_alerts(alerts)
 
     dir_str = "suba a" if direction == "above" else "baje a"
     curr_str = f" (ahora {current})" if current else ""
-    _send(token, chat_id, f"Alerta activada: te aviso cuando <b>{ticker}</b> {dir_str} <b>{target}</b>{curr_str}.")
+    note_str = f"\n<i>Nota: {html.escape(note)}</i>" if note else ""
+    _send(token, chat_id, f"Alerta activada: te aviso cuando <b>{ticker}</b> {dir_str} <b>{target}</b>{curr_str}.{note_str}")
 
 
 def cmd_alerts_list(token: str, chat_id: str) -> None:
@@ -806,7 +809,8 @@ def cmd_alerts_list(token: str, chat_id: str) -> None:
     lines = ["<b>Alertas activas:</b>", ""]
     for a in alerts:
         dir_str = "↑" if a.get("direction") == "above" else "↓"
-        lines.append(f"{dir_str} <b>{a['ticker']}</b> @ {a['target']}  <i>({a.get('created','')})</i>")
+        note_str = f" — {html.escape(a['note'])}" if a.get("note") else ""
+        lines.append(f"{dir_str} <b>{a['ticker']}</b> @ {a['target']}  <i>({a.get('created','')})</i>{note_str}")
     _send(token, chat_id, "\n".join(lines))
 
 
@@ -1181,7 +1185,9 @@ def check_alerts(token: str, chat_id: str) -> None:
                     (direction == "below" and price <= target)
         if triggered:
             dir_str = "subió a" if direction == "above" else "bajó a"
-            _send(token, chat_id, f"🔔 <b>Alerta: {ticker}</b> {dir_str} <b>{price}</b> (objetivo: {target})")
+            note = a.get("note", "").strip()
+            note_str = f"\n<i>Nota: {html.escape(note)}</i>" if note else ""
+            _send(token, chat_id, f"🔔 <b>Alerta: {ticker}</b> {dir_str} <b>{price}</b> (objetivo: {target}){note_str}")
             fired.append(ticker)
 
     if fired:
@@ -1238,13 +1244,20 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
     elif cmd == "macro":
         cmd_macro(token, chat_id)
     elif cmd == "alert":
-        if len(args) >= 2:
+        rest = text.strip().split(maxsplit=1)
+        rest_text = rest[1] if len(rest) > 1 else ""
+        note_match = re.search(r"\(([^)]*)\)", rest_text)
+        note = note_match.group(1).strip() if note_match else ""
+        rest_clean = (rest_text[:note_match.start()] + rest_text[note_match.end():]) if note_match else rest_text
+        clean_args = rest_clean.split()
+        usage = "Uso: /alert TICKER PRECIO [(nota opcional)]  (ej: /alert AAPL 200 (breakout esperado))"
+        if len(clean_args) >= 2:
             try:
-                cmd_alert_set(token, chat_id, args[0], float(args[1]))
+                cmd_alert_set(token, chat_id, clean_args[0], float(clean_args[1]), note)
             except ValueError:
-                _send(token, chat_id, "Uso: /alert TICKER PRECIO  (ej: /alert AAPL 200)")
+                _send(token, chat_id, usage)
         else:
-            _send(token, chat_id, "Uso: /alert TICKER PRECIO  (ej: /alert AAPL 200)")
+            _send(token, chat_id, usage)
     elif cmd == "alerts":
         cmd_alerts_list(token, chat_id)
     elif cmd == "delalert":

@@ -264,7 +264,7 @@ También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_po
 | `/gainers` | `/gainers` | Top 5 tickers del portfolio con mayor subida en el día. |
 | `/losers` | `/losers` | Top 5 tickers del portfolio con mayor caída en el día. |
 | `/macro` | `/macro` | MacroScore actual, régimen y tendencia del pipeline. |
-| `/alert` | `/alert TICKER PRECIO` | Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO. |
+| `/alert` | `/alert TICKER PRECIO [(nota opcional)]` | Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO. La nota entre paréntesis es opcional y se muestra en /alerts y en el aviso. |
 | `/alerts` | `/alerts` | Lista tus alertas de precio activas. |
 | `/delalert` | `/delalert TICKER` | Elimina la alerta de precio de un ticker. |
 | `/kalert` | `/kalert TICKER TIMEFRAME CONDICION  |  /kalert <texto libre>` | Crea una alerta sobre una condición de Koncorde (blue/green/estado, en D/3D/W). Acepta sintaxis exacta o una petición en lenguaje natural (se interpreta con IA). También se puede crear mandando una nota de voz al bot. |
@@ -3119,6 +3119,55 @@ Persistir `_pending_ticker_confirmation` fuera de memoria. Multi-ticker o
 multi-condición en una sola petición (solo multi-*timeframe*, que era lo
 pedido). Deshacer la propuesta de ticker si el usuario no responde nada
 (expira sola a los 15 min, no hay mensaje de "se ha cancelado").
+
+---
+
+## GEX (dealer gamma exposure) — piloto, no integrado (2026-08-18)
+
+Origen: un análisis externo sobre `duration.html` señaló que evaluar la
+fuerza de un "desanclaje" de tipos requiere saber el posicionamiento de
+gamma de los dealers (largo vs corto), dato que el proyecto no tenía.
+Acordado con el usuario: montar un piloto DIY antes de decidir si
+incorporarlo. Piloto completo en `research/gex_monitor_pilot/` (script +
+`HALLAZGOS.md` con el detalle de la verificación).
+
+**Qué se construyó:** `gex_pilot.py` descarga la cadena de opciones real de
+`^SPX` vía yfinance (verificado: 53 vencimientos con OI/IV reales, no solo
+disponible para ETFs) y calcula Net GEX con la convención estándar de la
+mayoría de explicadores públicos (dealers asumidos largos en calls/cortos
+en puts que compran los clientes): `GEX = Gamma_BlackScholes × OI × 100 ×
+Spot² × 0.01`, `Net = Σcalls − Σputs`, más el nivel de "gamma flip"
+(zero-gamma) por barrido de spot hipotético.
+
+**Verificación — resultado matizado, no un simple sí/no:** el primer
+contraste (Net GEX del piloto vs una cifra pública de flashalpha.com)
+mostró signo opuesto, lo que en un primer momento pareció indicar un fallo
+de metodología. Al mirar el nivel de gamma flip en vez de solo el signo, el
+piloto (7746.7) y el externo (7739) coincidían casi exactamente (~0.1%) —
+el signo distinto se explicaba por un movimiento real de SPX cruzando esa
+zona entre los dos momentos comparados (7785→7745→7701 en 3 sesiones), no
+por un error de cálculo. Pero, al intentar recontrastar el spot que citaba
+la página externa contra el histórico intradía real de Yahoo para esa misma
+franja horaria, aparecía un desajuste de ~30 puntos que ninguna barra real
+del día explicaba — no se pudo confirmar que esa fuente "gratis" sirviera
+datos realmente frescos al consultarla de forma automatizada, así que
+tampoco sirvió como benchmark limpio.
+
+**Conclusión — no integrado, no por un bug sino por falta de forma de
+verificarlo:** el cálculo corre correctamente sobre datos reales y el flip
+level es plausible, pero (1) no se encontró ninguna fuente gratuita
+verificablemente en vivo contra la que contrastar signo/magnitud con
+confianza, y (2) la convención "toda la OI de puts es venta de dealers" es
+una aproximación — el dato que la resolvería de verdad (desglose
+customer/firm/market-maker de la OCC) es de pago (Cboe Options Open-Close
+Volume Summary, DataShop). A diferencia del proxy de MOVE en
+`duration.html` (calibrado contra 5 años de histórico real) o
+`calcAtlasMini`/`calcCMF` (fórmulas deterministas sin ambigüedad), aquí no
+hay forma barata de saber si el número de un día cualquiera es correcto —
+mismo principio del proyecto: no mostrar un número al usuario sin poder
+verificarlo. No se toca `duration.html`, `positioning.html` ni ninguna
+cartera. El script queda en `research/` como base de cálculo reutilizable
+si en el futuro aparece una fuente con desglose real de posicionamiento.
 
 ---
 
