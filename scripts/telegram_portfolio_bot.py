@@ -839,12 +839,18 @@ def _parse_koncorde_alert_strict(args_text: str) -> dict | None:
 
 
 def _parse_koncorde_alert_nl(text: str) -> dict | None:
-    """Free-text (or voice-transcribed) request -> {ticker, timeframe, condition}.
+    """Free-text (or voice-transcribed) request -> {ticker, timeframe, condition,
+    ticker_guessed}. ticker_guessed=True means the model had to infer the symbol
+    from a company/asset name rather than the user stating the ticker literally
+    (e.g. "Loma" -> LOMA) — the caller must NOT create the alert directly in that
+    case, only propose it for confirmation via the exact-syntax command. This is
+    the deliberate middle ground between never-guess (too rigid for voice) and
+    silently trusting a guessed symbol (risk of alerting on the wrong ticker).
 
     Uses a cheap OpenRouter call (Haiku) constrained to the closed condition
-    vocabulary in koncorde_alert_conditions.py. Returns None (never guesses)
-    if OPENROUTER_API_KEY is missing, the call fails, or the model can't
-    determine all three fields with confidence.
+    vocabulary in koncorde_alert_conditions.py. Returns None (never guesses
+    timeframe/condition) if OPENROUTER_API_KEY is missing, the call fails, or
+    the model can't determine all three fields with confidence.
     """
     if not os.environ.get("OPENROUTER_API_KEY", ""):
         return None
@@ -855,8 +861,13 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         "español (texto libre, a veces transcrita de una nota de voz). Responde SOLO "
         "con JSON compacto, sin markdown ni explicación.\n\n"
         "Campos a extraer:\n"
-        '- "ticker": símbolo bursátil tal cual se menciona, en mayúsculas (ej. CRESY, '
-        "AAPL, GLEN.L). No inventes un ticker si no hay uno reconocible.\n"
+        '- "ticker": símbolo bursátil en mayúsculas. Si el usuario ya dice el símbolo '
+        'tal cual (ej. "CRESY", "AAPL", "GLEN.L"), úsalo directamente y pon '
+        '"ticker_guessed": false. Si el usuario menciona el nombre de la empresa/activo '
+        'en vez del símbolo (ej. "Loma", "Apple", "el banco Galicia"), puedes usar tu '
+        'conocimiento general para proponer el ticker más probable (ej. "Loma"->LOMA, '
+        '"Apple"->AAPL, "banco Galicia"->GGAL) y poner "ticker_guessed": true. Si no hay '
+        'ningún candidato razonable, no inventes nada — responde con error (ver abajo).\n'
         f'- "timeframe": uno de {list(KONC_VALID_TIMEFRAMES)!r} — "d"=diario, "3d"=3 días, '
         '"w"=semanal/"gráfico semanal". Si no queda claro cuál quiere, no lo adivines.\n'
         f'- "condition": exactamente uno de estos ids (no inventes otros):\n{cond_lines}\n'
@@ -865,8 +876,9 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         '"acumulación"/"acumulando" -> state_accumulation; '
         '"distribución"/"distribuyendo" -> state_distribution.\n\n'
         'Si tienes los 3 campos con confianza, responde exactamente:\n'
-        '{"ticker": "...", "timeframe": "...", "condition": "..."}\n'
-        'Si falta o es ambiguo cualquiera de los 3, responde exactamente:\n'
+        '{"ticker": "...", "ticker_guessed": true|false, "timeframe": "...", "condition": "..."}\n'
+        'Si falta o es ambiguo timeframe/condition, o el ticker/nombre no es reconocible '
+        'en absoluto, responde exactamente:\n'
         '{"error": "razón breve en español"}'
     )
     try:
@@ -888,7 +900,12 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         return None
     if not _TICKER_RE.match(ticker):
         return None
-    return {"ticker": ticker, "timeframe": tf, "condition": cond}
+    return {
+        "ticker": ticker,
+        "timeframe": tf,
+        "condition": cond,
+        "ticker_guessed": bool(data.get("ticker_guessed", False)),
+    }
 
 
 def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframe: str,
@@ -984,6 +1001,16 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
               "<code>/kalert TICKER TIMEFRAME CONDICION</code>\n"
               f"TIMEFRAME: {', '.join(KONC_VALID_TIMEFRAMES)}\n"
               f"CONDICION: {', '.join(KONC_CONDITIONS)}")
+        return
+
+    if parsed.get("ticker_guessed"):
+        exact = f"/kalert {parsed['ticker']} {parsed['timeframe']} {parsed['condition']}"
+        desc  = describe_koncorde_condition(parsed["ticker"], parsed["timeframe"], parsed["condition"])
+        _send(token, chat_id,
+              f"He entendido que quieres: <b>{desc}</b>.\n"
+              f"El ticker <b>{parsed['ticker']}</b> lo he deducido del nombre, no lo has dicho "
+              "tal cual — para no crear una alerta sobre el símbolo equivocado, confírmalo "
+              f"enviando exactamente:\n<code>{exact}</code>")
         return
 
     cmd_kalert_set(token, chat_id, parsed["ticker"], parsed["timeframe"],
