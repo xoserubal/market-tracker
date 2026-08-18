@@ -826,22 +826,30 @@ _TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
 
 
 def _parse_koncorde_alert_strict(args_text: str) -> dict | None:
-    """Exact 3-token form: TICKER TIMEFRAME CONDITION. No LLM call needed."""
+    """Exact 3-token form: TICKER TIMEFRAME CONDITION. No LLM call needed.
+    TIMEFRAME accepts a comma-separated list (e.g. "d,w") to alert on any of
+    several timeframes — each becomes its own independent alert row, so
+    whichever fires first fires (OR semantics) without any evaluator changes."""
     tokens = args_text.split()
     if len(tokens) != 3:
         return None
-    ticker, tf, cond = tokens[0].upper(), tokens[1].lower(), tokens[2].lower()
-    if tf not in KONC_VALID_TIMEFRAMES or cond not in KONC_CONDITIONS:
+    ticker, tf_raw, cond = tokens[0].upper(), tokens[1].lower(), tokens[2].lower()
+    tfs = [t for t in dict.fromkeys(tf_raw.split(","))]  # dedupe, keep order
+    if not tfs or any(tf not in KONC_VALID_TIMEFRAMES for tf in tfs) or cond not in KONC_CONDITIONS:
         return None
     if not _TICKER_RE.match(ticker):
         return None
-    return {"ticker": ticker, "timeframe": tf, "condition": cond}
+    return {"ticker": ticker, "timeframes": tfs, "condition": cond}
 
 
 def _parse_koncorde_alert_nl(text: str) -> dict | None:
-    """Free-text (or voice-transcribed) request -> {ticker, timeframe, condition,
-    ticker_guessed}. ticker_guessed=True means the model had to infer the symbol
-    from a company/asset name rather than the user stating the ticker literally
+    """Free-text (or voice-transcribed) request -> {ticker, timeframes, condition,
+    ticker_guessed}. timeframes is always a list — a request naming several
+    timeframes with "or" semantics ("o bien diario o bien semanal") becomes one
+    entry per timeframe, later saved as independent alert rows (whichever fires
+    first fires) rather than requiring any real multi-timeframe evaluator logic.
+    ticker_guessed=True means the model had to infer the symbol from a
+    company/asset name rather than the user stating the ticker literally
     (e.g. "Loma" -> LOMA) — the caller must NOT create the alert directly in that
     case, only propose it for confirmation via the exact-syntax command. This is
     the deliberate middle ground between never-guess (too rigid for voice) and
@@ -849,8 +857,8 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
 
     Uses a cheap OpenRouter call (Haiku) constrained to the closed condition
     vocabulary in koncorde_alert_conditions.py. Returns None (never guesses
-    timeframe/condition) if OPENROUTER_API_KEY is missing, the call fails, or
-    the model can't determine all three fields with confidence.
+    condition) if OPENROUTER_API_KEY is missing, the call fails, or the model
+    can't determine ticker/timeframes/condition with confidence.
     """
     if not os.environ.get("OPENROUTER_API_KEY", ""):
         return None
@@ -868,16 +876,21 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         'conocimiento general para proponer el ticker más probable (ej. "Loma"->LOMA, '
         '"Apple"->AAPL, "banco Galicia"->GGAL) y poner "ticker_guessed": true. Si no hay '
         'ningún candidato razonable, no inventes nada — responde con error (ver abajo).\n'
-        f'- "timeframe": uno de {list(KONC_VALID_TIMEFRAMES)!r} — "d"=diario, "3d"=3 días, '
-        '"w"=semanal/"gráfico semanal". Si no queda claro cuál quiere, no lo adivines.\n'
+        f'- "timeframes": lista con uno o más de {list(KONC_VALID_TIMEFRAMES)!r} — '
+        '"d"=diario, "3d"=3 días, "w"=semanal/"gráfico semanal". Si el usuario pide la '
+        'condición en varios timeframes a la vez con sentido de "o bien uno o bien otro" '
+        '(ej. "en diario o en semanal", "en cualquiera de las dos"), incluye todos los que '
+        'mencione en la lista — se crea una alerta independiente por cada uno, así avisa '
+        'con el primero que se cumpla. Si no queda claro qué timeframe(s) quiere, no lo '
+        'adivines.\n'
         f'- "condition": exactamente uno de estos ids (no inventes otros):\n{cond_lines}\n'
         '  Ejemplos de mapeo: "señal azul positiva"/"blue en positivo" -> blue_positive; '
         '"blue cruza a positivo"/"cruce alcista" -> blue_cross_up; '
         '"acumulación"/"acumulando" -> state_accumulation; '
         '"distribución"/"distribuyendo" -> state_distribution.\n\n'
         'Si tienes los 3 campos con confianza, responde exactamente:\n'
-        '{"ticker": "...", "ticker_guessed": true|false, "timeframe": "...", "condition": "..."}\n'
-        'Si falta o es ambiguo timeframe/condition, o el ticker/nombre no es reconocible '
+        '{"ticker": "...", "ticker_guessed": true|false, "timeframes": ["..."], "condition": "..."}\n'
+        'Si falta o es ambiguo timeframes/condition, o el ticker/nombre no es reconocible '
         'en absoluto, responde exactamente:\n'
         '{"error": "razón breve en español"}'
     )
@@ -894,54 +907,68 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         return None
 
     ticker = str(data.get("ticker", "")).strip().upper()
-    tf     = str(data.get("timeframe", "")).strip().lower()
-    cond   = str(data.get("condition", "")).strip().lower()
-    if not ticker or tf not in KONC_VALID_TIMEFRAMES or cond not in KONC_CONDITIONS:
+    tfs_raw = data.get("timeframes", [])
+    tfs = list(dict.fromkeys(str(t).strip().lower() for t in tfs_raw)) if isinstance(tfs_raw, list) else []
+    cond = str(data.get("condition", "")).strip().lower()
+    if not ticker or not tfs or any(tf not in KONC_VALID_TIMEFRAMES for tf in tfs) or cond not in KONC_CONDITIONS:
         return None
     if not _TICKER_RE.match(ticker):
         return None
     return {
         "ticker": ticker,
-        "timeframe": tf,
+        "timeframes": tfs,
         "condition": cond,
         "ticker_guessed": bool(data.get("ticker_guessed", False)),
     }
 
 
-def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframe: str,
+def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframes: list[str],
                     condition: str, raw_request: str) -> None:
+    """Creates one independent alert row per timeframe in `timeframes` — a
+    request for "diario o semanal" becomes 2 separate rows, so whichever
+    fires first fires (OR semantics) without any multi-timeframe evaluator
+    logic; each keeps working on its own even after the other one deletes
+    itself on firing."""
     ticker = ticker.upper()
     konc_universe = _load_koncorde_data()
     known = ticker in konc_universe
 
     alerts = _load_konc_alerts()
-    alerts = [
-        a for a in alerts
-        if not (a.get("ticker") == ticker and a.get("timeframe") == timeframe
-                and a.get("condition") == condition)
-    ]
-    alerts.append({
-        "ticker":      ticker,
-        "timeframe":   timeframe,
-        "condition":   condition,
-        "raw_request": raw_request.strip(),
-        "created":     str(date.today()),
-    })
+    for tf in timeframes:
+        alerts = [
+            a for a in alerts
+            if not (a.get("ticker") == ticker and a.get("timeframe") == tf
+                    and a.get("condition") == condition)
+        ]
+        alerts.append({
+            "ticker":      ticker,
+            "timeframe":   tf,
+            "condition":   condition,
+            "raw_request": raw_request.strip(),
+            "created":     str(date.today()),
+        })
     if not _save_konc_alerts(alerts):
         _send(token, chat_id,
               "⚠️ No pude guardar la alerta (fallo al escribir en GitHub). "
               "Prueba de nuevo en un momento; si persiste, revisa los logs del bot.")
         return
 
-    desc = describe_koncorde_condition(ticker, timeframe, condition)
     note = (
         "" if known else
         "\n⚠️ No tengo datos de Koncorde para ese ticker todavía — la alerta "
         "se evaluará en cuanto los haya en el próximo run del pipeline."
     )
-    _send(token, chat_id,
-          f"✅ Alerta creada: <b>{desc}</b>.\nTe aviso por Telegram cuando se cumpla "
-          f"(una sola vez, se borra sola al dispararse).{note}")
+    if len(timeframes) == 1:
+        desc = describe_koncorde_condition(ticker, timeframes[0], condition)
+        _send(token, chat_id,
+              f"✅ Alerta creada: <b>{desc}</b>.\nTe aviso por Telegram cuando se cumpla "
+              f"(una sola vez, se borra sola al dispararse).{note}")
+    else:
+        lines = [describe_koncorde_condition(ticker, tf, condition) for tf in timeframes]
+        bullets = "\n".join(f"• {d}" for d in lines)
+        _send(token, chat_id,
+              f"✅ {len(timeframes)} alertas creadas (aviso con la que se cumpla primero):\n"
+              f"{bullets}\nCada una se borra sola al dispararse; las demás siguen activas.{note}")
 
 
 def cmd_kalerts_list(token: str, chat_id: str) -> None:
@@ -980,7 +1007,9 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
     if not args_text:
         _send(token, chat_id,
               "Uso: <code>/kalert TICKER TIMEFRAME CONDICION</code>  "
-              "(ej: <code>/kalert CRESY w blue_positive</code>)\n"
+              "(ej: <code>/kalert CRESY w blue_positive</code>, o "
+              "<code>/kalert CRESY d,w blue_positive</code> para avisar con el primero "
+              "de varios timeframes que se cumpla)\n"
               "O en lenguaje natural: <code>/kalert avisa cuando CRESY tenga la señal "
               "azul de koncorde positiva en el gráfico semanal</code>\n"
               "También puedes mandar una nota de voz.")
@@ -1004,10 +1033,10 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
         return
 
     if parsed.get("ticker_guessed"):
-        desc = describe_koncorde_condition(parsed["ticker"], parsed["timeframe"], parsed["condition"])
+        desc = _describe_multi(parsed["ticker"], parsed["timeframes"], parsed["condition"])
         _pending_ticker_confirmation[chat_id] = {
             "ticker":      parsed["ticker"],
-            "timeframe":   parsed["timeframe"],
+            "timeframes":  parsed["timeframes"],
             "condition":   parsed["condition"],
             "raw_request": args_text,
             "proposed_at": time.time(),
@@ -1019,8 +1048,19 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
               "correcto si me he equivocado.")
         return
 
-    cmd_kalert_set(token, chat_id, parsed["ticker"], parsed["timeframe"],
+    cmd_kalert_set(token, chat_id, parsed["ticker"], parsed["timeframes"],
                     parsed["condition"], raw_request=args_text)
+
+
+def _describe_multi(ticker: str, timeframes: list[str], condition: str) -> str:
+    """Human-readable summary for one or several timeframes of the same
+    ticker+condition — shared between the pending-confirmation prompt in
+    cmd_kalert() and the success message in cmd_kalert_set()."""
+    if len(timeframes) == 1:
+        return describe_koncorde_condition(ticker, timeframes[0], condition)
+    tf_labels = " o ".join(KONC_TIMEFRAME_LABELS.get(tf, tf) for tf in timeframes)
+    cond_label = KONC_CONDITIONS.get(condition, condition)
+    return f"{ticker} — {cond_label} en {tf_labels}"
 
 
 # In-memory only (chat_id -> proposal) — a Railway redeploy mid-confirmation just
@@ -1047,12 +1087,12 @@ def handle_plain_text(token: str, chat_id: str, text: str) -> bool:
     lowered  = stripped.lower()
     if lowered in ("ok", "okay", "vale", "si", "sí", "confirmo", "correcto"):
         del _pending_ticker_confirmation[chat_id]
-        cmd_kalert_set(token, chat_id, pending["ticker"], pending["timeframe"],
+        cmd_kalert_set(token, chat_id, pending["ticker"], pending["timeframes"],
                         pending["condition"], raw_request=pending["raw_request"])
         return True
     if _TICKER_RE.match(stripped.upper()) and " " not in stripped:
         del _pending_ticker_confirmation[chat_id]
-        cmd_kalert_set(token, chat_id, stripped, pending["timeframe"],
+        cmd_kalert_set(token, chat_id, stripped, pending["timeframes"],
                         pending["condition"], raw_request=pending["raw_request"])
         return True
     return False
