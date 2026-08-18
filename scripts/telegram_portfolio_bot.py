@@ -1004,17 +1004,58 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
         return
 
     if parsed.get("ticker_guessed"):
-        exact = f"/kalert {parsed['ticker']} {parsed['timeframe']} {parsed['condition']}"
-        desc  = describe_koncorde_condition(parsed["ticker"], parsed["timeframe"], parsed["condition"])
+        desc = describe_koncorde_condition(parsed["ticker"], parsed["timeframe"], parsed["condition"])
+        _pending_ticker_confirmation[chat_id] = {
+            "ticker":      parsed["ticker"],
+            "timeframe":   parsed["timeframe"],
+            "condition":   parsed["condition"],
+            "raw_request": args_text,
+            "proposed_at": time.time(),
+        }
         _send(token, chat_id,
               f"He entendido que quieres: <b>{desc}</b>.\n"
               f"El ticker <b>{parsed['ticker']}</b> lo he deducido del nombre, no lo has dicho "
-              "tal cual — para no crear una alerta sobre el símbolo equivocado, confírmalo "
-              f"enviando exactamente:\n<code>{exact}</code>")
+              "tal cual. Responde <b>ok</b> para confirmarlo, o escribe directamente el ticker "
+              "correcto si me he equivocado.")
         return
 
     cmd_kalert_set(token, chat_id, parsed["ticker"], parsed["timeframe"],
                     parsed["condition"], raw_request=args_text)
+
+
+# In-memory only (chat_id -> proposal) — a Railway redeploy mid-confirmation just
+# means the user re-sends the original request, no worse than any other transient
+# bot restart. Persisting this to GitHub would be overkill for a single-user,
+# short-lived (few minutes) confirmation window.
+_pending_ticker_confirmation: dict[str, dict] = {}
+_KONC_CONFIRM_TIMEOUT_SECONDS = 15 * 60
+
+
+def handle_plain_text(token: str, chat_id: str, text: str) -> bool:
+    """Handles a non-command, non-empty text message as a reply to a pending
+    ticker-guess confirmation (see cmd_kalert). Returns True if it consumed
+    the message, False if the caller should ignore it as usual (no pending
+    confirmation, or it expired)."""
+    pending = _pending_ticker_confirmation.get(chat_id)
+    if pending is None:
+        return False
+    if time.time() - pending["proposed_at"] > _KONC_CONFIRM_TIMEOUT_SECONDS:
+        del _pending_ticker_confirmation[chat_id]
+        return False
+
+    stripped = text.strip()
+    lowered  = stripped.lower()
+    if lowered in ("ok", "okay", "vale", "si", "sí", "confirmo", "correcto"):
+        del _pending_ticker_confirmation[chat_id]
+        cmd_kalert_set(token, chat_id, pending["ticker"], pending["timeframe"],
+                        pending["condition"], raw_request=pending["raw_request"])
+        return True
+    if _TICKER_RE.match(stripped.upper()) and " " not in stripped:
+        del _pending_ticker_confirmation[chat_id]
+        cmd_kalert_set(token, chat_id, stripped, pending["timeframe"],
+                        pending["condition"], raw_request=pending["raw_request"])
+        return True
+    return False
 
 
 # ── Voice messages (Koncorde alert creation only, v1) ─────────────────────
@@ -1214,6 +1255,10 @@ def run_once(token: str, chat_id: str) -> None:
             print("  Processing: [voice note]")
             handle_voice_message(token, chat_id, voice["file_id"])
             processed += 1
+        elif from_chat == chat_id and text.strip():
+            if handle_plain_text(token, chat_id, text):
+                print(f"  Processing: {text.strip()} [ticker confirmation reply]")
+                processed += 1
 
         if uid is not None:
             state["offset"] = uid + 1
@@ -1248,6 +1293,9 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
                 elif from_chat == chat_id and voice:
                     print(f"[{date.today()}] [voice note]")
                     handle_voice_message(token, chat_id, voice["file_id"])
+                elif from_chat == chat_id and text.strip():
+                    if handle_plain_text(token, chat_id, text):
+                        print(f"[{date.today()}] {text.strip()} [ticker confirmation reply]")
 
                 if uid is not None:
                     state["offset"] = uid + 1
