@@ -3276,6 +3276,60 @@ que el resto de features nuevas del proyecto.
 
 ---
 
+## Botón "Exportar histórico" — Portfolio Tracker (implementado 2026-08-20)
+
+Continuación directa de la captura diaria completa (sección anterior). Con
+`portfolio_daily_snapshot.jsonl` ya acumulando datos, el usuario pidió un
+botón separado (no integrado en "Copiar para LLM"/"Exportar TODO a LLM",
+que solo exportan el snapshot de HOY) para exportar el histórico de uno o
+varios tickers en un rango de fechas — pensado para pegarlo en un LLM
+externo y pedirle un backtest/estudio ad-hoc.
+
+**Dos decisiones confirmadas con el usuario antes de implementar** (ambas
+más amplias que la propuesta inicial): exportar los **121 campos crudos**
+tal cual están en el jsonl (no una tabla curada como el resto de exports)
+y permitir **selección múltiple/todos los tickers**, no solo uno.
+
+**`server.js` — dos endpoints nuevos**, filtrado server-side (no se manda
+el jsonl completo al navegador — ese archivo solo crece):
+`GET /api/portfolio-history/meta` (lista de tickers + rango de fechas
+disponible, para poblar el modal) y `GET /api/portfolio-history?tickers=A,B&from=...&to=...`
+(`tickers` vacío = todos). Pre-filtro por regex sobre la línea cruda antes
+de `JSON.parse` — evita parsear filas que no van a coincidir cuando el
+archivo crezca a decenas de MB.
+
+**`portfolio.html` — `HistoryExportModal`**, mismo patrón que
+`PositionModal`/`UniverseModal` (añadido al discriminador `modal?.type`
+existente). Checkbox "Todos los tickers" + grid de checkboxes individual,
+2 inputs de fecha (rango disponible real como min/max), y **dos acciones**
+en vez de una: "Copiar" (clipboard, como el resto de exports) y "Descargar
+.md" — añadida la segunda a propósito porque combinar todos los campos
+crudos + todos los tickers puede generar un export grande (verificado: 110
+tickers × 1 día = 587 KB de markdown) que crecerá con el rango de fechas;
+"Descargar" no tiene el límite práctico que sí puede tener pegar un bloque
+enorme en el portapapeles/chat de un LLM.
+
+**Formato:** no es una tabla markdown de 121 columnas (ilegible) — un
+`## TICKER (N días)` por ticker con un bloque ` ```json ` conteniendo el
+array de filas crudas, ordenadas por fecha. Mantiene el "estilo" del resto
+de exports (headers markdown, cabecera con metadata) sin sacrificar
+completitud de datos.
+
+**Verificado en producción real** (Edge headless vía CDP, servidor
+reiniciado tras los cambios en `server.js`): los dos endpoints probados
+con curl contra datos reales (`meta` devuelve 110 tickers + rango
+2026-08-20→2026-08-20; filtro por 2 tickers devuelve exactamente esas 2
+filas con 121 campos cada una; rango sin datos devuelve `count:0`; sin
+filtros devuelve todo). Flujo de UI completo probado con Puppeteer
+conectado por CDP: botón abre el modal, `meta` carga y puebla las fechas
+por defecto, desmarcar "Todos" revela la grid de tickers, seleccionar uno
+y pulsar "Copiar" genera el markdown real (interceptando
+`navigator.clipboard.writeText`) y muestra el toast correcto — cero errores
+de consola. Exportación "todos los tickers, hoy" verificada aparte (587 KB,
+formato correcto, sin errores).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

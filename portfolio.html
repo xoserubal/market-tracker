@@ -408,6 +408,138 @@ function UniverseModal({ ticker, onDone, onClose }) {
   );
 }
 
+// ── HistoryExportModal ───────────────────────────────────────────────────
+// Exporta el histórico crudo de docs/data/portfolio_daily_snapshot.jsonl
+// (Step 9g del pipeline — ver CLAUDE.md) filtrado por ticker(s) + rango de
+// fechas. A diferencia de "Copiar para LLM" (snapshot de HOY, columnas
+// curadas), aquí se piden todos los campos crudos capturados cada día tal
+// cual — pensado para backtesting/estudio, no para lectura rápida.
+function HistoryExportModal({ onClose, showToast }) {
+  const [meta, setMeta] = React.useState(null);
+  const [allTickers, setAllTickers] = React.useState(true);
+  const [selected, setSelected] = React.useState(new Set());
+  const [from, setFrom] = React.useState('');
+  const [to, setTo] = React.useState('');
+  const [busy, setBusy] = React.useState(null); // 'copy' | 'download' | null
+
+  React.useEffect(() => {
+    fetch('/api/portfolio-history/meta')
+      .then(r => r.json())
+      .then(d => { setMeta(d); setFrom(d.minDate || ''); setTo(d.maxDate || ''); })
+      .catch(() => showToast('❌ No se pudo leer el histórico'));
+  }, []);
+
+  const toggleTicker = t => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(t) ? next.delete(t) : next.add(t);
+    return next;
+  });
+
+  const fetchRows = async () => {
+    const params = new URLSearchParams();
+    if (!allTickers) params.set('tickers', [...selected].join(','));
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const r = await fetch('/api/portfolio-history?' + params.toString());
+    const d = await r.json();
+    return d.rows || [];
+  };
+
+  const buildMarkdown = rows => {
+    const byTicker = {};
+    rows.forEach(r => (byTicker[r.ticker] ??= []).push(r));
+    const tickerList = Object.keys(byTicker).sort();
+    tickerList.forEach(t => byTicker[t].sort((a, b) => a.date.localeCompare(b.date)));
+    let md = `# Portfolio Tracker — Export histórico\n\n`;
+    md += `**Tickers:** ${allTickers ? `todos (${tickerList.length})` : (tickerList.join(', ') || '—')}\n`;
+    md += `**Rango:** ${from || meta?.minDate || '—'} → ${to || meta?.maxDate || '—'}\n`;
+    md += `**Filas totales:** ${rows.length}\n\n`;
+    md += `Cada bloque contiene un array JSON con TODOS los campos crudos capturados ese día para ese ticker (precio, retornos, RSI, MACD, ATLAS Mini, ATR%, CMF, Koncorde D/3D/W completo, insider activity, SMAs, OBV, Flow Score, Early Flow Score).\n\n`;
+    tickerList.forEach(t => {
+      md += `## ${t} (${byTicker[t].length} días)\n\`\`\`json\n${JSON.stringify(byTicker[t], null, 2)}\n\`\`\`\n\n`;
+    });
+    return md;
+  };
+
+  const run = async action => {
+    if (!allTickers && selected.size === 0) { showToast('⚠️ Elige al menos un ticker, o marca "Todos"'); return; }
+    setBusy(action);
+    try {
+      const rows = await fetchRows();
+      if (!rows.length) { showToast('⚠️ Sin datos para ese filtro'); setBusy(null); return; }
+      const md = buildMarkdown(rows);
+      if (action === 'copy') {
+        await navigator.clipboard.writeText(md);
+        showToast(`✅ Copiado — ${rows.length} filas`);
+      } else {
+        const blob = new Blob([md], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `portfolio_history_${from || 'inicio'}_${to || 'hoy'}.md`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`✅ Descargado — ${rows.length} filas`);
+      }
+    } catch (e) { showToast('❌ Error: ' + e.message); }
+    setBusy(null);
+  };
+
+  return (
+    <div className="overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal" style={{width:540}}>
+        <h3>📅 Exportar histórico a LLM</h3>
+        <div className="field">
+          <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer'}}>
+            <input type="checkbox" checked={allTickers} onChange={e=>setAllTickers(e.target.checked)} />
+            Todos los tickers {meta ? `(${meta.tickers.length})` : ''}
+          </label>
+        </div>
+        {!allTickers && (
+          <div className="field">
+            <label>Tickers seleccionados: {selected.size}</label>
+            <div style={{maxHeight:170,overflowY:'auto',border:'1px solid #ddd',borderRadius:3,padding:8,
+              display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,background:'#fafafa'}}>
+              {(meta?.tickers ?? []).map(t => (
+                <label key={t} style={{fontSize:11,display:'flex',alignItems:'center',gap:4,cursor:'pointer'}}>
+                  <input type="checkbox" checked={selected.has(t)} onChange={()=>toggleTicker(t)} />
+                  {t}
+                </label>
+              ))}
+              {meta && meta.tickers.length===0 && <span style={{fontSize:11,color:'#aaa'}}>Sin tickers en el histórico todavía</span>}
+            </div>
+          </div>
+        )}
+        <div className="row2">
+          <div className="field">
+            <label>Desde</label>
+            <input type="date" value={from} min={meta?.minDate||undefined} max={meta?.maxDate||undefined}
+              onChange={e=>setFrom(e.target.value)} style={{border:'1px solid #ddd',borderRadius:3,padding:'4px 8px',fontSize:12,width:'100%',boxSizing:'border-box'}} />
+          </div>
+          <div className="field">
+            <label>Hasta</label>
+            <input type="date" value={to} min={meta?.minDate||undefined} max={meta?.maxDate||undefined}
+              onChange={e=>setTo(e.target.value)} style={{border:'1px solid #ddd',borderRadius:3,padding:'4px 8px',fontSize:12,width:'100%',boxSizing:'border-box'}} />
+          </div>
+        </div>
+        <p style={{fontSize:11,color:'#888',margin:'6px 0 14px'}}>
+          {meta
+            ? `Histórico disponible: ${meta.minDate ?? '—'} → ${meta.maxDate ?? '—'} (${meta.totalRows} filas totales). Rangos largos + muchos tickers pueden generar un export grande — usa "Descargar" si "Copiar" tarda o el portapapeles se queda corto.`
+            : 'Cargando rango disponible…'}
+        </p>
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:4}}>
+          <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+          <button className="btn btn-secondary" onClick={()=>run('download')} disabled={!!busy}>
+            {busy==='download' ? '…' : '⬇️ Descargar .md'}
+          </button>
+          <button className="btn btn-primary" onClick={()=>run('copy')} disabled={!!busy}>
+            {busy==='copy' ? '…' : '📋 Copiar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Portfolio markdown export ─────────────────────────────────────────────
 function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, insiderRanking = []) {
   const date = new Date().toLocaleDateString('es-ES');
@@ -854,6 +986,9 @@ function Portfolio() {
           }}
           onClose={()=>setModal(null)} />
       )}
+      {modal?.type==='history-export' && (
+        <HistoryExportModal onClose={()=>setModal(null)} showToast={showToast} />
+      )}
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12}}>
@@ -882,6 +1017,10 @@ function Portfolio() {
           <button onClick={copyAllForLLM}
             style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#37474f',color:'white'}}>
             🗂️ Exportar TODO a LLM
+          </button>
+          <button onClick={()=>setModal({type:'history-export'})}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#8d6e2f',color:'white'}}>
+            📅 Exportar histórico
           </button>
           <a href="/api/signals" target="_blank"
             style={{padding:'4px 12px',fontSize:11,border:'1px solid #888',borderRadius:3,

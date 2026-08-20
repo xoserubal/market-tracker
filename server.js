@@ -564,6 +564,62 @@ app.post("/api/signals", express.json(), (req, res) => {
   res.json({ added: toAdd.length });
 });
 
+// ── Portfolio Daily Snapshot — histórico completo por ticker/fecha ───────
+// Lee docs/data/portfolio_daily_snapshot.jsonl (Step 9g del pipeline, ver
+// CLAUDE.md "Captura diaria completa de Portfolio Tracker") filtrado por
+// ticker(s) + rango de fechas, para el botón "Exportar histórico" de
+// portfolio.html. Filtro server-side (no se manda el archivo entero al
+// navegador) porque este jsonl solo crece — a diferencia de signals_history
+// o /api/portfolio, que caben enteros en memoria sin problema.
+// Pre-filtro con regex antes de JSON.parse: evita parsear cada línea
+// cuando solo se piden 1-2 tickers de un archivo que puede llegar a pesar
+// decenas de MB con el tiempo.
+const PORTFOLIO_SNAPSHOT_FILE = path.join(__dirname, "docs", "data", "portfolio_daily_snapshot.jsonl");
+
+function readPortfolioSnapshotLines() {
+  if (!fs.existsSync(PORTFOLIO_SNAPSHOT_FILE)) return [];
+  return fs.readFileSync(PORTFOLIO_SNAPSHOT_FILE, "utf8").split("\n").filter(l => l.trim());
+}
+
+app.get("/api/portfolio-history/meta", (_req, res) => {
+  const lines = readPortfolioSnapshotLines();
+  const tickers = new Set();
+  let minDate = null, maxDate = null;
+  for (const line of lines) {
+    const tM = line.match(/"ticker":"([^"]+)"/);
+    const dM = line.match(/"date":"(\d{4}-\d{2}-\d{2})"/);
+    if (tM) tickers.add(tM[1]);
+    if (dM) {
+      const d = dM[1];
+      if (!minDate || d < minDate) minDate = d;
+      if (!maxDate || d > maxDate) maxDate = d;
+    }
+  }
+  res.json({ tickers: [...tickers].sort(), minDate, maxDate, totalRows: lines.length });
+});
+
+app.get("/api/portfolio-history", (req, res) => {
+  const tickers = (req.query.tickers || "").split(",").map(t => t.trim().toUpperCase()).filter(Boolean);
+  const wantSet = tickers.length ? new Set(tickers) : null;
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || "") ? req.query.from : null;
+  const to   = /^\d{4}-\d{2}-\d{2}$/.test(req.query.to   || "") ? req.query.to   : null;
+
+  const rows = [];
+  for (const line of readPortfolioSnapshotLines()) {
+    const dM = line.match(/"date":"(\d{4}-\d{2}-\d{2})"/);
+    if (!dM) continue;
+    const date = dM[1];
+    if (from && date < from) continue;
+    if (to && date > to) continue;
+    if (wantSet) {
+      const tM = line.match(/"ticker":"([^"]+)"/);
+      if (!tM || !wantSet.has(tM[1].toUpperCase())) continue;
+    }
+    try { rows.push(JSON.parse(line)); } catch { /* línea corrupta — se ignora */ }
+  }
+  res.json({ rows, count: rows.length });
+});
+
 app.get("/api/portfolio", (_req, res) => {
   try {
     const data = fs.existsSync(PORTFOLIO_FILE)
