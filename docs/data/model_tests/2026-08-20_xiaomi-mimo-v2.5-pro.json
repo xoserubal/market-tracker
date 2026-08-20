@@ -1,0 +1,205 @@
+{
+  "run_id": "2026-08-20_0834",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-08-20",
+  "summary": {
+    "date": "2026-08-20",
+    "run_id": "2026-08-20_0834",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 34,
+    "input_tokens": 36800,
+    "output_tokens": 25933,
+    "cost_usd": 0.03857,
+    "latency_ms": 509636.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 1,
+    "quality_score": 87,
+    "selected_count": 1,
+    "watch_count": 6,
+    "rejected_count": 3,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [
+      "Duplicate ticker: URI"
+    ],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: SELECT III.TO cited streak_weeks=4.0 for JNJ (actual=3)"
+    ]
+  },
+  "quality_score": 87,
+  "response": {
+    "date": "2026-08-20",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-08-20_0834",
+    "decision_summary": {
+      "market_read": "Macro score at 91.7 in Bull Maduro Improving with strong 16.7/19.2 weekly-monthly deltas sustaining risk-on regime, but extreme healthcare concentration (65.5% largecap, 37% special) constrains new thematic additions.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "III.TO",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "medium",
+        "reason_short": "PCS 79.5 rot=8 streak=4 35.8% 13w — copper diversifier at 0% weight",
+        "reason_full": "III.TO offers strongest diversification among new candidates at PCS 79.5 in commodities_copper (0% concentration) with rot=8, streak=4, and 35.82% 13w outperformance. Clean weekly leadership with spike_flag=false, extension risk medium acknowledged. Healthcare at 65.5% and cyclical at 31% make this the only high-PCS low-concentration entry available.",
+        "comparative_edge": "Over JNJ (PCS 83.5): copper at 0% concentration vs healthcare 65.5%; 35.8% 13w outperforms JNJ's 14.5% on longer 4-week streak.",
+        "key_supporting_factors": [
+          "Rotation score 8 with 4-week streak delivers 35.82% 13w outperformance vs SPY, top-5 in candidate set.",
+          "Copper theme at 0% concentration provides crucial diversification from healthcare 65.5% and cyclical 31%.",
+          "Spike_flag=false confirms no single-day distortion in the move, supporting gradual accumulation.",
+          "Koncorde 3D and daily both read 'up' confirming multi-timeframe structural support."
+        ],
+        "key_risks_or_contradictions": [
+          "Daily momentum dems=9 below threshold means weekly metrics must lead this selection.",
+          "Mixed Koncorde alignment: weekly in distribution while 3D and daily are up.",
+          "Copper price sensitivity could pressure this position if global demand or macro outlook weakens."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "OSCR",
+        "reason": "PCS 86.2 is the second-highest unheld candidate with rot=8 on 2-week streak and 26.6% 13w outperformance, but dems=13 falls below the 14 threshold and spike_flag=true flags single-day price concentration. Healthcare_special at 37% adds to existing sector weight.",
+        "watch_trigger": "dems >= 14 with spike_flag=false while maintaining streak_weeks >= 2 and healthcare concentration stable."
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "Dems=14 meets the early rotation threshold with spike_flag=false and rot=8 on 3-week streak, but healthcare_largecap already at 65.5% portfolio weight makes adding another position extremely dangerous from a concentration standpoint.",
+        "watch_trigger": "Healthcare sector weight declining below 50% with continued weekly streak confirmation at or above 3 weeks."
+      },
+      {
+        "ticker": "DHR",
+        "reason": "PCS 82.8 with rot=7 and 3-week streak showing 21.8% 13w outperformance confirms weekly leadership, but healthcare_largecap at 65.5% concentration blocks further thematic addition despite decent signal quality.",
+        "watch_trigger": "Healthcare sector weight declining below 50% with dems improving above 10 for daily confirmation."
+      },
+      {
+        "ticker": "LLY",
+        "reason": "PCS 79.2 with 20.4% 13w outperformance on 3-week streak, but konc_3d_state=distribution_warning, spike_flag=true, and healthcare at 65.5% collectively block clean entry confirmation.",
+        "watch_trigger": "konc_3d_state confirming back to 'up' with spike_flag=false, or healthcare concentration declining materially."
+      },
+      {
+        "ticker": "ABBV",
+        "reason": "Dems=15 above threshold with spike_flag=false and extension_risk=low is the cleanest daily signal among candidates, but streak_weeks=1 provides insufficient weekly confirmation and healthcare at 65.5% is extreme concentration.",
+        "watch_trigger": "streak_weeks reaching >= 2 with continuation, ideally combined with healthcare sector weight decreasing below 55%."
+      },
+      {
+        "ticker": "URI",
+        "reason": "PCS 68.8 with rot=6 and 5-week streak showing 15.5% 13w outperformance, but konc alignment shows distribution_warning—the most urgent structural reading—across all timeframes, with dems=4 at weakest daily momentum among PCS 62+ candidates.",
+        "watch_trigger": "konc_3d_state moving out of distribution with dems improving above 10, confirming flow recovery."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "VRTX",
+        "reason": "Extension risk high at 5 points with spike_flag=true and konc_3d in distribution at PCS 80.2; healthcare_largecap at 65.5% prevents adding despite decent rot=6 and 22% 13w outperformance. Risk-reward skewed negative.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "AWX",
+        "reason": "us_cyclical at 31% portfolio concentration already high; despite rot=10, 13w outperformance of only 2.37% with dems=9 below threshold is weak. Already hold NUE and FCX in same theme with superior return profiles.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "URI",
+        "reason": "Dems=4 is the weakest daily momentum score among PCS 62+ candidates combined with konc distribution_warning—the most urgent structural reading—across all timeframes, and us_cyclical at 31% adds concentration risk. Weekly streak may be near exhaustion.",
+        "rejection_category": "weak_flow"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.5 with rot=7 and 8-week streak delivering 17.8% 4w outperformance; strongest weekly trend in portfolio."
+      },
+      {
+        "ticker": "NUE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 64.8 below entry but 6-week streak with rot=6 keeps weekly structure intact; no exit trigger met."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 77.8 with rot=9 and 4-week streak; 9.3% 4w outperformance confirms sustained china_em leadership."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 78.5 with rot=6 on 6-week streak; 14.4% 4w outperformance with bullish-aligned Koncorde."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 70 with rot=7 and 5-week streak; exceptional 38.6% 4w outperformance leads the portfolio on recent momentum."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 75.5 with rot=8 on 3-week streak; 29.3% 4w outperformance remains strong despite tech_ai concentration."
+      },
+      {
+        "ticker": "FCX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.2 with rot=8 and 4-week streak; 7.7% 4w outperformance with bullish-aligned Koncorde structure intact."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 68.5 with 6-week streak and rot=6; 9.6% 4w outperformance in oil_gas with low concentration diversification."
+      },
+      {
+        "ticker": "KTOS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 75 with rot=8 and 2-week streak; 22.8% 4w outperformance in smallcap_em provides unique thematic exposure."
+      },
+      {
+        "ticker": "AFM.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS dropped to 56.5, below the 62 absolute floor; mandatory exit regardless of other metrics."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 84.8 with rot=10 (highest in portfolio) on 3-week streak; 17.1% 4w outperformance justifies holding despite konc distribution_warning."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 87.5 (highest in universe) with rot=8 on 3-week streak; 77.4% 13w outperformance dominates peer set."
+      },
+      {
+        "ticker": "NBIS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 62.8 barely above 62 floor with rot=7 and 2-week streak; 4w outperformance near zero at 0.44% but no exit trigger met."
+      },
+      {
+        "ticker": "III.L",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 71.8 above 68 entry threshold despite broken streak (streak_weeks=0); rot=5 and 8.8% ret_4w support continued monitoring."
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-08-20\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-20_0834\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro score at 91.7 in Bull Maduro Improving with strong 16.7/19.2 weekly-monthly deltas sustaining risk-on regime, but extreme healthcare concentration (65.5% largecap, 37% special) constrains new thematic additions.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"III.TO\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"PCS 79.5 rot=8 streak=4 35.8% 13w — copper diversifier at 0% weight\",\n      \"reason_full\": \"III.TO offers strongest diversification among new candidates at PCS 79.5 in commodities_copper (0% concentration) with rot=8, streak=4, and 35.82% 13w outperformance. Clean weekly leadership with spike_flag=false, extension risk medium acknowledged. Healthcare at 65.5% and cyclical at 31% make this the only high-PCS low-concentration entry available.\",\n      \"comparative_edge\": \"Over JNJ (PCS 83.5): copper at 0% concentration vs healthcare 65.5%; 35.8% 13w outperforms JNJ's 14.5% on longer 4-week streak.\",\n      \"key_supporting_factors\": [\n        \"Rotation score 8 with 4-week streak delivers 35.82% 13w outperformance vs SPY, top-5 in candidate set.\",\n        \"Copper theme at 0% concentration provides crucial diversification from healthcare 65.5% and cyclical 31%.\",\n        \"Spike_flag=false confirms no single-day distortion in the move, supporting gradual accumulation.\",\n        \"Koncorde 3D and daily both read 'up' confirming multi-timeframe structural support.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Daily momentum dems=9 below threshold means weekly metrics must lead this selection.\",\n        \"Mixed Koncorde alignment: weekly in distribution while 3D and daily are up.\",\n        \"Copper price sensitivity could pressure this position if global demand or macro outlook we"
+}
