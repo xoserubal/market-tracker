@@ -119,3 +119,13 @@ function matrixReading(early, flow) {
   if (early < 4  && flow >= 8)  return 'Tendencia madura — llegas tarde';
   return null;
 }
+
+// Export CommonJS opcional — permite `require()` desde scripts Node
+// standalone (ej. scripts/portfolio_daily_snapshot.js) sin romper el uso
+// como <script> plano en el navegador, donde `module` no existe.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    koncStateLbl, computeFlowScore, classifyFlow,
+    computeEarlyFlowScore, classifyEarlyFlow, matrixReading,
+  };
+}

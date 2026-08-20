@@ -3171,6 +3171,111 @@ si en el futuro aparece una fuente con desglose real de posicionamiento.
 
 ---
 
+## Captura diaria completa de Portfolio Tracker (implementado 2026-08-20)
+
+Origen: el usuario preguntó por qué algunas celdas de Flow Score/ATR% en
+`portfolio.html` no mostraban flecha de tendencia ni tooltip. Diagnóstico:
+`signals_history.json` (el histórico que alimenta esas flechas) solo se
+escribía desde un `useEffect` del navegador, y solo si
+`computeFlowScore()`/`computeEarlyFlowScore()` no salían `null` ese día —
+si fallaba un solo input, se perdía la fila entera, incluido el ATR%. Más
+de fondo: **toda la captura dependía de que alguien tuviera el dashboard
+abierto** — si no se abría `portfolio.html` un día, no quedaba ningún
+registro. El usuario pidió corregirlo con un objetivo más amplio: un
+registro diario completo e independiente de la consulta, para poder
+evaluar/backtestear estas señales a posteriori.
+
+**Decisión de arquitectura (confirmada con el usuario antes de tocar
+código):** correr la captura como step nuevo del pipeline de GitHub Actions
+(único sitio que cumple literalmente "aunque yo no lo consulte" — funciona
+aunque el PC esté apagado, a diferencia de una tarea programada local),
+acotada a los tickers de `portfolio.json` (no todo el universo de AI Picks
+Lab), en un archivo nuevo dedicado (`docs/data/portfolio_daily_snapshot.jsonl`)
+en vez de extender `signals_history.json` — así no hereda la limitación de
+"sin flowScore no se guarda nada".
+
+### Refactor previo — `shared/quote-lib.js` (nuevo)
+
+Para que la captura del pipeline no pudiera divergir de lo que muestra el
+dashboard en vivo (mismo riesgo ya vivido con `calcCMF` duplicado entre
+JS/Python, ver sección "Koncorde Plus v2"), se extrajo de `server.js` toda
+la lógica de `/api/quote/:symbol` — `calcRSI`, `calcMACD`, `calcAtlasMini`,
+`calcATR`, `calcSMA`, `calcCMF`, `calcOBV`, `getKoncordeData`,
+`getInsiderActivityData`, `fetchYahooChartRaw`/`fetchYahooChartFresh`, y el
+propio ensamblado de la respuesta — a un módulo CommonJS requerible tanto
+desde `server.js` (la ruta ahora es un wrapper de 6 líneas sobre
+`buildQuoteData()`) como desde un script Node standalone sin arrancar
+Express. `shared/flow-score.js` ganó un export CommonJS opcional al final
+del archivo (`if (typeof module !== 'undefined' && module.exports)`) —
+sigue cargándose igual como `<script>` plano en el navegador (donde
+`module` no existe), pero ahora también es `require()`-able.
+
+### `scripts/portfolio_daily_snapshot.js` (nuevo) — Step 9g del pipeline
+
+Lee `portfolio.json` (raíz del repo), construye el universo único de
+tickers de todas las secciones, y para cada uno llama a
+`buildQuoteData()` (idéntica a la que sirve `/api/quote/:symbol`) más
+`computeFlowScore()`/`computeEarlyFlowScore()` de `shared/flow-score.js` —
+el `prev` que necesita Early Flow (transición de estado Koncorde,
+compresión de ATR%) se lee de la fila más reciente de ese mismo ticker en
+el propio snapshot, no de `portfolio.json.lastSessionSnapshot` — así el
+script es autosuficiente y no depende de que el navegador haya corrido
+antes.
+
+**Sin la puerta de `signals_history.json`:** escribe la fila completa
+(121 campos — precio, retornos, RSI, MACD, ATLAS Mini, ATR%, CMF, Koncorde
+D/3D/W con las 5 últimas barras de cada serie, insider activity, SMAs, OBV,
+anti-extensión) siempre que el fetch a Yahoo funcione, con
+`flowScore`/`earlyFlow` como campos añadidos que pueden salir `null` sin
+que eso tumbe el resto de la fila. Corrige de raíz el gap que motivó la
+pregunta original.
+
+Dedup por `date+ticker` (mismo patrón que `rotation_history`/
+`mirror_signals.jsonl`/etc.) — si un ticker ya tiene fila hoy, se omite;
+así el pipeline puede correr 2×/día sin duplicar. Lotes de 8 tickers
+concurrentes con pausa de 300ms entre lotes (buen ciudadano con Yahoo, sin
+rate limiter dedicado — no hace falta, Yahoo no impone cuota diaria como
+Form4API). `--dry-run`/`--tickers=A,B,C`/`--report` para pruebas y
+auditoría manual.
+
+### Pipeline (`.github/workflows/market-update.yml`)
+
+Primer script Node del pipeline — hasta ahora era 100% Python. Steps
+nuevos: `actions/setup-node@v4` (Node 20, cache npm) + `npm install
+--omit=dev` (sin dependencias nuevas — `node-fetch`/`express`/`cors`/
+`dotenv` ya estaban en `package.json` para `server.js`), antes de Step 10
+(paper trading). Step 9g corre en **ambos** runs del día (a diferencia de
+Insider Activity/Mirror Espejo, que son solo mañana) — esto es una
+captura de mercado con datos que sí cambian intradía, no una consulta con
+cuota diaria limitada. `continue-on-error: true`, mismo criterio que el
+resto de steps de observación del pipeline.
+
+**Verificado con datos reales:** `buildQuoteData()` extraída probada
+contra Yahoo en vivo (AAPL: 118 campos, valores plausibles; ticker
+inválido → `Error` con `.httpStatus=404`, igual que el comportamiento HTTP
+anterior de la ruta). Escritura real + dedup probados con 2 tickers
+(segunda ejecución el mismo día: 0 filas nuevas, confirma dedup). Captura
+completa contra los 111 tickers reales de `portfolio.json`: 110/111
+capturados (único fallo: `TSND.V`, ya documentado como posiblemente
+deslistado en la sección de Koncorde mini-chart — no es un fallo de este
+cambio), 100% con `flowScore` no-null ese día. YAML del workflow validado
+con PyYAML tras la edición (36 steps, parseable). `server.js` sigue
+corriendo en la terminal del usuario tras el refactor de
+`/api/quote/:symbol` — pendiente de que el usuario lo reinicie para que
+recoja el cambio (mismo aviso que [[project_dev_server_persistent]]).
+
+### Fuera de alcance (explícito)
+
+Universo AI Picks Lab (`ai_candidates.json`) — el usuario pidió
+explícitamente acotar a Portfolio Tracker. Backfill retroactivo de fechas
+anteriores a 2026-08-20 (Yahoo no tiene snapshots de "lo que se veía ese
+día" para insider/Koncorde, solo precio — un backfill parcial sería
+engañoso). Ningún análisis/backtest sobre los datos capturados todavía —
+este cambio es solo la instrumentación, mismo criterio de "observar primero"
+que el resto de features nuevas del proyecto.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

@@ -31,6 +31,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r backtest/requirements.txt
 
+      # Solo para scripts/portfolio_daily_snapshot.js (Step 9g) — reutiliza
+      # shared/quote-lib.js y shared/flow-score.js, las mismas fórmulas que
+      # server.js/portfolio.html, en vez de reimplementarlas en Python (ver
+      # CLAUDE.md, "Captura diaria completa de Portfolio Tracker").
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm install --omit=dev
+
       # Motor de decisión de Cava AI, fijado a un tag concreto y NUNCA a main:
       # si el agente cambiara a mitad de un periodo de medición sin que lo
       # sepamos, los datos de rendimiento de ese periodo dejarían de significar
@@ -140,6 +153,19 @@ jobs:
         env:
           FORM4API_KEY: ${{ secrets.FORM4API_KEY }}
         run: python scripts/update_insider_activity.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      # Captura diaria completa de todo lo que muestra portfolio.html
+      # (precio, RSI, MACD, ATLAS Mini, ATR%, CMF, Koncorde D/3D/W, insider,
+      # SMAs, OBV, Flow Score, Early Flow Score) para los ~111 tickers de
+      # portfolio.json, corra o no el dashboard ese día — antes esto solo se
+      # guardaba (parcialmente) si alguien abría portfolio.html en el
+      # navegador. Ambos runs del día (no solo el matutino): esto es una
+      # captura de mercado, no una consulta de cuota limitada como Insider
+      # Activity. Ver CLAUDE.md.
+      - name: Run pipeline - Step 9g Portfolio daily snapshot (full raw capture)
+        run: node scripts/portfolio_daily_snapshot.js
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
