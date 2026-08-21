@@ -1,0 +1,204 @@
+{
+  "run_id": "2026-08-21_0836",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-08-21",
+  "summary": {
+    "date": "2026-08-21",
+    "run_id": "2026-08-21_0836",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 37,
+    "input_tokens": 36641,
+    "output_tokens": 20065,
+    "cost_usd": 0.033395,
+    "latency_ms": 423947.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 97,
+    "selected_count": 1,
+    "watch_count": 4,
+    "rejected_count": 5,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: SELECT OSCR cited dems=12.0 for JNJ (actual=10)",
+      "numeric_hallucination_suspected: WATCH AWX cited pcs=-68.0 for AWX (actual=68.8)"
+    ]
+  },
+  "quality_score": 97,
+  "response": {
+    "date": "2026-08-21",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-08-21_0836",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with deteriorating trend (delta_1w -6.25) signals late-cycle caution; healthcare leadership persists but sector concentration at 65.5% is extreme and requires rebalancing through exits.",
+      "risk_posture": "cautious",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "PCS 81.2 with rot=8, 31.65% 13w outperformance, and bullish-aligned Koncorde",
+        "reason_full": "OSCR leads non-open candidates at PCS 81.2 with rot=8 and 31.65% 13w outperformance vs SPY on a 2-week streak. Koncorde bullish-aligned across all timeframes; dems=12 and outperform_d10=6 confirm institutional flow. Medium extension risk is acceptable given signal strength and healthcare_special subtheme differentiation.",
+        "comparative_edge": "Selected over JNJ (PCS=79.0, rot=9) since OSCR's 31.65% 13w outperformance doubles JNJ's 14.12% and dems=12 beats JNJ's 10.",
+        "key_supporting_factors": [
+          "PCS 81.2 ranks second-highest in the entire candidate set after SLS at 82.5, confirming peak composite signal strength.",
+          "13-week outperformance of 31.65% vs SPY is 2.2x JNJ's 14.12%, the strongest sustained leadership among non-open candidates.",
+          "Bullish-aligned Koncorde across daily, 3D, and weekly timeframes provides maximum structural confirmation available.",
+          "Dems=12 with outperform_d10=6 confirms six consecutive trading days of institutional flow supporting the weekly uptrend."
+        ],
+        "key_risks_or_contradictions": [
+          "Spike_flag=true means recent gains may be concentrated in fewer sessions, raising near-term reversal probability.",
+          "Healthcare theme concentration increases from approximately 44% to 50% of portfolio after adding this position.",
+          "Streak of only 2 weeks is shorter than established leaders like MRK at 8 weeks, requiring weekly follow-through confirmation."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "JNJ",
+        "reason": "Rotation score 9 is highest among non-open candidates but ret_4w of 2.56% is modest and spike_flag=true raises reversal risk in already overconcentrated healthcare theme at 65.5%.",
+        "watch_trigger": "Select if ret_4w_vs_spy accelerates above 8% while maintaining streak >= 3 and spike_flag clears."
+      },
+      {
+        "ticker": "VRTX",
+        "reason": "Extension risk high with spike_flag=true and dist_sma20_atr_high despite strong dems=13 and 22.37% 13w outperformance. Healthcare_largecap concentration adds sector risk.",
+        "watch_trigger": "Select if extension_risk reduces to medium or lower while PCS remains above 75."
+      },
+      {
+        "ticker": "DHR",
+        "reason": "Extension risk high with spike_flag=true despite bullish-aligned Koncorde and 23.29% 13w outperformance. Healthcare_largecap theme already at extreme portfolio concentration.",
+        "watch_trigger": "Select if extension_risk reduces to medium or lower while maintaining streak >= 3."
+      },
+      {
+        "ticker": "AWX",
+        "reason": "Koncorde alignment is distribution_warning despite rot=10 being the highest in the candidate set. Dems=6 is weak and ret_13w of 2.37% trails all other pcs-68+ candidates significantly.",
+        "watch_trigger": "Select if konc_alignment improves from distribution_warning and dems rises above 10."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "LLY",
+        "reason": "Koncorde distribution_warning with spike_flag=true and healthcare_largecap concentration already at extreme levels. Ret_4w of 5.12% is modest relative to the risk profile.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "Koncorde distribution_warning with negative ret_4w of -1.46% and only 1-week streak despite strong 13w outperformance of 35.14%. Near-term momentum is deteriorating sharply.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "PFE",
+        "reason": "Extension risk high with spike_flag=true and ret_13w of 6.49% trailing OSCR at 31.65% by nearly 5x. Healthcare_largecap concentration adds unacceptable sector risk.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "URI",
+        "reason": "Koncorde distribution_warning with dems=3 and ret_5d of -0.3% showing zero near-term momentum despite 5-week streak. PCS 63.8 is below MIMO_SHADOW entry threshold of 68.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "III.L",
+        "reason": "Exiting active position: PCS 62.8 fell below 68 min entry threshold with streak collapsed to 0 and signal downgraded to IGNORAR, confirming momentum breakdown.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 74.8 with rot=6 and 8-week streak delivering 14.85% 4w outperformance; extreme extension risk acknowledged but weekly leadership intact."
+      },
+      {
+        "ticker": "NUE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 53.8 fell below absolute floor of 62 with streak at 0 and rot=4; momentum has fully unwound since entry."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 68.8 with rot=9 and 4-week streak delivering 9.75% 4w outperformance; distribution_warning noted but weekly metrics remain strong."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 75.5 with rot=7 and 6-week streak delivering 17.17% 4w outperformance; extension risk high acknowledged but sustained weekly leadership justifies hold."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 65.0 below min entry but streak=5 and rot=7 with 41.86% 4w outperformance; extreme extension risk noted but weekly momentum is exceptional."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 70.5 with rot=8 and 3-week streak delivering 37.62% 4w outperformance; extension risk high acknowledged but weekly leadership is among the strongest."
+      },
+      {
+        "ticker": "FCX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 71.5 with rot=8 and 4-week streak; bullish_pending_3d_confirmation noted but weekly metrics and dems=14 support continued hold."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 73.5 with rot=7 and 6-week streak delivering 10.06% 4w outperformance; bullish-aligned Koncorde with medium extension risk."
+      },
+      {
+        "ticker": "KTOS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 58.0 fell below absolute floor of 62 with distribution_warning on Koncorde; momentum has deteriorated sharply since entry."
+      },
+      {
+        "ticker": "AFM.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 55.5 fell below absolute floor of 62 with streak at 0 and rot=5; weekly momentum has fully unwound."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.8 with rot=9 and 4-week streak delivering 19.48% 4w outperformance; distribution_warning noted but rotation score is highest in portfolio."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.5 is the highest in the candidate set with rot=8 and 46.24% 13w outperformance; 3-week streak and dems=17 confirm strong momentum."
+      },
+      {
+        "ticker": "NBIS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 57.8 fell below absolute floor of 62 with ret_4w of -1.14% turning negative; weekly momentum has reversed since entry."
+      },
+      {
+        "ticker": "III.L",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 62.8 below 68 min entry with streak collapsed to 0 and signal downgraded to IGNORAR; momentum breakdown confirmed."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-21\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-21_0836\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with deteriorating trend (delta_1w -6.25) signals late-cycle caution; healthcare leadership persists but sector concentration at 65.5% is extreme and requires rebalancing through exits.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"OSCR\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS 81.2 with rot=8, 31.65% 13w outperformance, and bullish-aligned Koncorde\",\n      \"reason_full\": \"OSCR leads non-open candidates at PCS 81.2 with rot=8 and 31.65% 13w outperformance vs SPY on a 2-week streak. Koncorde bullish-aligned across all timeframes; dems=12 and outperform_d10=6 confirm institutional flow. Medium extension risk is acceptable given signal strength and healthcare_special subtheme differentiation.\",\n      \"comparative_edge\": \"Selected over JNJ (PCS=79.0, rot=9) since OSCR's 31.65% 13w outperformance doubles JNJ's 14.12% and dems=12 beats JNJ's 10.\",\n      \"key_supporting_factors\": [\n        \"PCS 81.2 ranks second-highest in the entire candidate set after SLS at 82.5, confirming peak composite signal strength.\",\n        \"13-week outperformance of 31.65% vs SPY is 2.2x JNJ's 14.12%, the strongest sustained leadership among non-open candidates.\",\n        \"Bullish-aligned Koncorde across daily, 3D, and weekly timeframes provides maximum structural confirmation available.\",\n        \"Dems=12 with outperform_d10=6 confirms six consecutive trading days of institutional flow supporting the weekly uptrend.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Spike_flag=true means recent gains may be concentrated in fewer sessions, raising near-term reversal probability.\",\n        \"Healthcare theme concentration increases from approximately 44% to 50% of portfolio afte"
+}
