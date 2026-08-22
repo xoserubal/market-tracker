@@ -1,115 +1,102 @@
 {
-  "run_id": "2026-08-22_0826",
+  "run_id": "2026-08-22_2020",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-08-22",
   "summary": {
     "date": "2026-08-22",
-    "run_id": "2026-08-22_0826",
+    "run_id": "2026-08-22_2020",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 27,
     "candidate_count": 33,
-    "input_tokens": 33948,
-    "output_tokens": 12199,
-    "cost_usd": 0.025381,
-    "latency_ms": 215570.0,
+    "input_tokens": 34901,
+    "output_tokens": 15038,
+    "cost_usd": 0.028265,
+    "latency_ms": 296171.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 97,
-    "selected_count": 1,
-    "watch_count": 2,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 4,
     "rejected_count": 7,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": [
-      "numeric_hallucination_suspected: REJECT JNJ cited pcs=70.0 for JNJ (actual=79.0)"
-    ]
+    "soft_warnings": []
   },
-  "quality_score": 97,
+  "quality_score": 90,
   "response": {
     "date": "2026-08-22",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-08-22_0826",
+    "run_id": "2026-08-22_2020",
     "decision_summary": {
-      "market_read": "Bull Maduro regime with deteriorating macro trend (delta_1w=-6.25) favors selective positioning in diversified themes over adding to extreme healthcare concentration at 65.5% weight.",
+      "market_read": "Bull Maduro regime at 68.75 but weekly delta of -6.25 signals deteriorating momentum, warranting caution on new entries despite the bullish macro backdrop.",
       "risk_posture": "cautious",
-      "should_select_picks": true
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "CRON",
-        "portfolio": "MIMO_SHADOW",
-        "signal_type": "confirmed_leader",
-        "confidence": "medium",
-        "reason_short": "Rot=9 cannabis diversifier with 3-week streak and bullish-aligned Koncorde",
-        "reason_full": "CRON posts rotation score 9 (highest among non-open candidates tied with SSV.V) on a 3-week unbroken streak delivering +17.07% 4w and +17.88% 13w outperformance vs SPY. Cannabis theme has zero current portfolio weight, providing critical diversification from 65.5% healthcare and 21.5% us_cyclical concentration. Koncorde is fully bullish-aligned across daily, 3D, and weekly. Dems=11 falls below the 14 early rotation threshold but weekly metrics drive conviction per framework guidance. Extension risk medium (2 pts) is acknowledged but manageable given the established 3-week trend and absence of spike_flag.",
-        "comparative_edge": "Selected over PLNH (PCS=72.2, rot=8, streak=1w, extension_risk=high with 5 pts) because CRON's 3-week streak provides 3x more weekly confirmation than PLNH's single week, and medium extension risk vs PLNH's high offers a categorically cleaner entry. PLNH watched for extension cooling.",
-        "key_supporting_factors": [
-          "Rotation score 9 is the highest among all non-open candidates, tied with SSV.V but without distribution_warning across timeframes.",
-          "3-week unbroken streak with +17.07% 4w and +17.88% 13w outperformance demonstrates sustained institutional leadership.",
-          "Cannabis theme at 0% portfolio weight provides maximum diversification from 65.5% healthcare and 21.5% cyclical concentration.",
-          "Bullish-aligned Koncorde across daily, 3D, and weekly timeframes confirms multi-timeframe structural accumulation."
-        ],
-        "key_risks_or_contradictions": [
-          "Dems=11 falls below the 14 early rotation threshold, so daily flow data cannot independently drive conviction.",
-          "Konc_d_state=distribution while 3D and weekly read up—tactical caution within the bullish structural setup.",
-          "Macro delta_1w of -6.25 indicates deteriorating conditions that could pressure speculative themes if sustained."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
         "ticker": "VRTX",
-        "reason": "Dems=16 is the strongest daily momentum in the candidate set with bullish-aligned Koncorde and no spike, but healthcare_largecap already holds 65.5% portfolio weight making additional exposure irresponsible despite the excellent signal quality.",
-        "watch_trigger": "Healthcare theme weight dropping below 50% through exits or rotations, or VRTX maintaining PCS above 75 with dems above 14 for two consecutive weeks."
+        "reason": "Strongest daily momentum among non-open candidates with dems=16, no spike_flag, and fully bullish-aligned Koncorde delivering 12.11% 4w and 23.05% 13w outperformance on a 3-week streak, but healthcare_largecap concentration at 65.5% blocks confident entry.",
+        "watch_trigger": "Select if healthcare_largecap concentration drops below 55% through position exits, or if PCS rises above 82 with maintained bullish alignment and dems >= 14."
       },
       {
         "ticker": "PLNH",
-        "reason": "Cannabis diversifier with dems=14 meeting threshold and extraordinary +37.86% 4w outperformance, but extension_risk=high (5 pts) with dist_52w_high=-60% and only a 1-week streak blocks immediate entry.",
-        "watch_trigger": "Extension points dropping below 3 and streak extending to 2+ weeks, confirming the move is sustained rather than a volatile spike."
+        "reason": "Cannabis theme at 5.5% portfolio weight provides critical diversification from 65.5% healthcare concentration with dems=14 meeting early rotation threshold and bullish-aligned Koncorde, but extension_risk=high at 5 points with ret_4w_extended and rsi_high flags requires cooling.",
+        "watch_trigger": "Select if extension_risk drops to medium or below while maintaining dems >= 14 and PCS >= 68, confirming the 37.86% 4w move is consolidating rather than reversing."
+      },
+      {
+        "ticker": "DHR",
+        "reason": "Highest PCS at 82.5 with rot=8 and 3-week streak delivering 9.96% 4w outperformance, but extension_risk=high (4 pts) with spike_flag=true and healthcare_largecap concentration already at 65.5% makes fresh entry hazardous.",
+        "watch_trigger": "Select if spike_flag clears with extension_risk dropping to medium, and healthcare_largecap concentration decreases below 55% through exits."
+      },
+      {
+        "ticker": "TK",
+        "reason": "Dems=16 with no spike_flag and 4-week streak on bullish-aligned Koncorde shows strong daily-to-weekly momentum alignment with 14.70% 4w outperformance, but PCS=64.5 falls below MIMO_SHADOW's 68.0 min entry threshold.",
+        "watch_trigger": "Select if PCS rises above 68 while maintaining dems >= 14, streak >= 4 weeks, and bullish-aligned Koncorde across timeframes."
       }
     ],
     "rejected": [
       {
-        "ticker": "DHR",
-        "reason": "Healthcare_largecap already holds 65.5% portfolio weight; adding DHR despite PCS 82.5 and rot=8 would push concentration above 70%. Spike_flag=true and extension_risk=high further reduce entry attractiveness. CRON selected for diversification instead.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
         "ticker": "LLY",
-        "reason": "Koncorde alignment is distribution_warning (the most urgent reading) with daily and weekly both in distribution state. Ret_4w_vs_spy of only 2.28% is weak relative to peers like CRON at 17.07%, and healthcare concentration at 65.5% blocks additional exposure.",
-        "rejection_category": "macro_conflict"
+        "reason": "Koncorde alignment reads distribution_warning with both daily and weekly timeframes in distribution state, and healthcare_largecap concentration at 65.5% eliminates margin for sector-specific drawdowns despite PCS=78.8.",
+        "rejection_category": "technical_overextension"
       },
       {
         "ticker": "JNJ",
-        "reason": "Ret_4w_vs_spy of 0.50% is essentially flat—the weakest 4-week return among all PCS 70+ candidates. Spike_flag=true with dems=11 below threshold and konc_3d in distribution state. Healthcare concentration at 65.5% blocks entry.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "Ret_4w_vs_spy of only 0.50% shows near-zero weekly momentum despite 3-week streak and PCS=79.0, combined with spike_flag=true and healthcare_largecap concentration at 65.5%.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "HIMS",
-        "reason": "Only 1-week streak with negative ret_4w_vs_spy of -0.55% despite strong 13w base of 37.33%. Signal is VIGILAR not EN_RADAR. Healthcare_special already at 45% weight. Weekly momentum not yet confirmed after the recent signal upgrade.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "Single-week streak with negative ret_4w_vs_spy of -0.55% provides insufficient weekly confirmation despite PCS=78.0 and dems=15, and healthcare_special concentration already at 45%.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "ABBV",
-        "reason": "Only 1-week streak with negative ret_4w_vs_spy of -0.60% and rot=6, the lowest rotation score among PCS 70+ candidates. Healthcare_largecap at 65.5% weight blocks additional entry despite dems=14 meeting threshold.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "Single-week streak with negative ret_4w_vs_spy of -0.60% despite dems=14 and bullish-aligned Koncorde at PCS=72.8, and healthcare_largecap concentration at 65.5% blocks conviction.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "SSV.V",
-        "reason": "Koncorde shows distribution_warning across ALL three timeframes (daily, 3D, and weekly all in distribution state) with spike_flag=true and dems=7 well below threshold. Despite rot=9 and +18.91% 4w outperformance, the unanimous distribution signal across timeframes is the strongest bearish structural reading in the candidate set.",
+        "reason": "Koncorde distribution_warning across all three timeframes (daily, 3D, weekly) with dems=7 well below the 14 threshold signals broad institutional selling pressure despite rot=9 and PCS=72.0.",
         "rejection_category": "technical_overextension"
       },
       {
         "ticker": "III.L",
-        "reason": "Zero-week streak with rot=5, dems=4 (lowest among PCS 62+ candidates), signal=IGNORAR, and spike_flag=true. Ret_4w_vs_spy of 5.71% is moderate but unsupported by any momentum confirmation. Europa theme adds geographic risk in a deteriorating macro environment.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "PCS=66.8 below MIMO_SHADOW's 68.0 min entry threshold with zero streak weeks, dems=4, and IGNORAR signal provides no actionable conviction for entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "RIO",
+        "reason": "PCS=62.5 below MIMO_SHADOW's 68.0 min entry threshold with only 1-week streak and negative ret_13w_vs_spy of -0.64% despite recent dems=15 daily momentum.",
+        "rejection_category": "insufficient_conviction"
       }
     ],
     "open_picks_review": [
@@ -117,69 +104,75 @@
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 75.5 above threshold with 8-week streak, rot=7, and +13.2% 4w outperformance sustaining established leadership."
+        "reason": "PCS=75.5 above 68 threshold with rot=7 and 8-week streak delivering 13.18% 4w outperformance sustains established leadership."
       },
       {
         "ticker": "SE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 68.8 at min entry with rot=9 (highest in portfolio), 4-week streak, and +14.4% 4w outperformance; distribution_warning noted but weekly metrics remain strong."
+        "reason": "PCS=68.8 at threshold with rot=9 improved from entry, 4-week streak and 14.39% 4w outperformance continues building in diversifying china_em theme."
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 75.5 above threshold with 6-week streak and rot=7; distribution_warning noted but weekly metrics and streak length justify continued hold."
+        "reason": "PCS=75.5 above threshold with 6-week streak, rot=7, and 6.22% 4w outperformance; distribution_warning noted at entry but weekly metrics remain intact."
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 65.0 below min entry but 5-week streak with rot=7 and +33.6% 4w outperformance far exceeds exit thresholds; streak and rotation compensate for PCS dip."
+        "reason": "PCS=65.0 below 68 entry threshold but 5-week streak with rot=7 and 33.58% 4w outperformance warrants hold; streak > 1 exempts from exit rule."
       },
       {
         "ticker": "PLTR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 66.5 below min entry but 3-week streak with rot=8 and extraordinary +42.1% 4w outperformance justifies continued hold despite PCS erosion."
+        "reason": "PCS=66.5 below 68 entry threshold but rot=8, 3-week streak, and 42.12% 4w outperformance with 3 consecutive outperforming days sustains conviction."
       },
       {
         "ticker": "FCX",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 75.5 above threshold with 4-week streak, rot=8, +17.0% 4w outperformance, and bullish-aligned Koncorde confirming structural leadership."
+        "reason": "PCS=75.5 above threshold with rot=8, 4-week streak, 17.0% 4w outperformance, and dems=18 confirms exceptionally strong daily institutional flow."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 69.5 above threshold with 6-week streak and rot=7; oil_gas theme at 8% weight provides valuable diversification from healthcare concentration."
+        "reason": "PCS=69.5 above threshold with 6-week streak, rot=7, and bullish-aligned Koncorde in low-concentration oil_gas theme providing portfolio diversification."
       },
       {
         "ticker": "SEDANA.ST",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 68.8 at min entry with 4-week streak, rot=7, and +15.2% 4w outperformance; distribution_warning noted but streak and rotation support hold."
+        "reason": "PCS=68.8 at threshold with 4-week streak, rot=7, and 15.21% 4w outperformance; distribution_warning noted but weekly metrics still positive."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 82.5 well above threshold with 3-week streak, rot=8, and +21.6% 4w outperformance; extreme extension risk and konc_3d distribution acknowledged but weekly leadership intact."
+        "reason": "PCS=82.5 highest in universe with rot=8, 3-week streak, and 21.55% 4w outperformance; extreme extension risk acknowledged but weekly leadership intact."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.2 well above threshold with 2-week streak, rot=8, and bullish-aligned Koncorde; recently entered yesterday, holding for weekly confirmation."
+        "reason": "PCS=81.2 second-highest with rot=8, 2-week streak, and 7.06% 4w outperformance on bullish-aligned Koncorde across all timeframes."
       },
       {
         "ticker": "TECK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 70.5 above threshold with 5-week streak, rot=8, and +11.9% 4w outperformance; silver_gold_miners theme diversifies extreme healthcare weight."
+        "reason": "PCS=70.5 above threshold with rot=8, 5-week streak, and 11.89% 4w outperformance in diversifying silver_gold_miners theme."
+      },
+      {
+        "ticker": "CRON",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS=75.2 above threshold with rot=9 tied-highest among open positions, 3-week streak, and 17.07% 4w outperformance in diversifying cannabis theme."
       }
     ]
   },
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-22\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-22_0826\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with deteriorating macro trend (delta_1w=-6.25) favors selective positioning in diversified themes over adding to extreme healthcare concentration at 65.5% weight.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"CRON\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"Rot=9 cannabis diversifier with 3-week streak and bullish-aligned Koncorde\",\n      \"reason_full\": \"CRON posts rotation score 9 (highest among non-open candidates tied with SSV.V) on a 3-week unbroken streak delivering +17.07% 4w and +17.88% 13w outperformance vs SPY. Cannabis theme has zero current portfolio weight, providing critical diversification from 65.5% healthcare and 21.5% us_cyclical concentration. Koncorde is fully bullish-aligned across daily, 3D, and weekly. Dems=11 falls below the 14 early rotation threshold but weekly metrics drive conviction per framework guidance. Extension risk medium (2 pts) is acknowledged but manageable given the established 3-week trend and absence of spike_flag.\",\n      \"comparative_edge\": \"Selected over PLNH (PCS=72.2, rot=8, streak=1w, extension_risk=high with 5 pts) because CRON's 3-week streak provides 3x more weekly confirmation than PLNH's single week, and medium extension risk vs PLNH's high offers a categorically cleaner entry. PLNH watched for extension cooling.\",\n      \"key_supporting_factors\": [\n        \"Rotation score 9 is the highest among all non-open candidates, tied with SSV.V but without distribution_warning across timeframes.\",\n        \"3-week unbroken streak with +17.07% 4w and +17.88% 13w outperformance demonstrates sustained institutional leadership.\",\n        \"Cannabis theme at 0% portfolio weight provides maximum diversification from 65.5% hea"
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-22\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-22_2020\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime at 68.75 but weekly delta of -6.25 signals deteriorating momentum, warranting caution on new entries despite the bullish macro backdrop.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"Strongest daily momentum among non-open candidates with dems=16, no spike_flag, and fully bullish-aligned Koncorde delivering 12.11% 4w and 23.05% 13w outperformance on a 3-week streak, but healthcare_largecap concentration at 65.5% blocks confident entry.\",\n      \"watch_trigger\": \"Select if healthcare_largecap concentration drops below 55% through position exits, or if PCS rises above 82 with maintained bullish alignment and dems >= 14.\"\n    },\n    {\n      \"ticker\": \"PLNH\",\n      \"reason\": \"Cannabis theme at 5.5% portfolio weight provides critical diversification from 65.5% healthcare concentration with dems=14 meeting early rotation threshold and bullish-aligned Koncorde, but extension_risk=high at 5 points with ret_4w_extended and rsi_high flags requires cooling.\",\n      \"watch_trigger\": \"Select if extension_risk drops to medium or below while maintaining dems >= 14 and PCS >= 68, confirming the 37.86% 4w move is consolidating rather than reversing.\"\n    },\n    {\n      \"ticker\": \"DHR\",\n      \"reason\": \"Highest PCS at 82.5 with rot=8 and 3-week streak delivering 9.96% 4w outperformance, but extension_risk=high (4 pts) with spike_flag=true and healthcare_largecap concentration already at 65.5% makes fresh entry hazardous.\",\n      \"watch_trigger\": \"Select if spike_flag clears with extension_risk dropping to medium, and healthcare_largecap concentration decreases below 55% through exits.\"\n    },\n    {\n      \"ticker\": \"TK\",\n      \"reason\": \"Dems=16 with no spike_flag and 4-week streak on bullish-aligned Koncorde shows strong d"
 }
