@@ -1,10 +1,10 @@
 {
-  "run_id": "2026-08-23_0826",
+  "run_id": "2026-08-23_2018",
   "model": "x-ai/grok-4.3",
   "date": "2026-08-23",
   "summary": {
     "date": "2026-08-23",
-    "run_id": "2026-08-23_0826",
+    "run_id": "2026-08-23_2018",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
@@ -12,170 +12,219 @@
     "event_count": 11,
     "candidate_count": 33,
     "input_tokens": 60497,
-    "output_tokens": 6425,
-    "cost_usd": 0.091684,
-    "latency_ms": 37336.0,
+    "output_tokens": 6415,
+    "cost_usd": 0.091659,
+    "latency_ms": 44116.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 0,
-    "quality_score": 92,
-    "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 27,
+    "hard_rule_violations": 1,
+    "quality_score": 90,
+    "selected_count": 1,
+    "watch_count": 26,
+    "rejected_count": 4,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [],
-    "soft_warnings": []
+    "violations": [
+      "SELECT WCP.TO: already an open position (use HOLD, not SELECT)"
+    ],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: WATCH LLY cited rot_score=9.0 for LLY (actual=8.0)",
+      "numeric_hallucination_suspected: WATCH VRTX cited dems=78.2 for VRTX (actual=16)",
+      "numeric_hallucination_suspected: WATCH TMO cited streak_weeks=4.0 for TMO (actual=6)",
+      "numeric_hallucination_suspected: WATCH MRK cited rot_score=9.0 for MRK (actual=7.0)",
+      "numeric_hallucination_suspected: WATCH CRON cited rot_score=10.0 for CRON (actual=9.0)",
+      "numeric_hallucination_suspected: WATCH SSV.V cited dems=75.0 for SSV.V (actual=7)",
+      "numeric_hallucination_suspected: WATCH TECK cited streak_weeks=6.0 for TECK (actual=5)",
+      "numeric_hallucination_suspected: WATCH HUM cited dems=71.2 for HUM (actual=4)",
+      "numeric_hallucination_suspected: WATCH III.L cited rot_score=8.0 for III.L (actual=7.0)"
+    ]
   },
-  "quality_score": 92,
+  "quality_score": 90,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-08-23_0826",
+    "run_id": "2026-08-23_2018",
     "date": "2026-08-23",
     "decision_summary": {
-      "market_read": "Macro score 68.75 deteriorating with -6.25 weekly delta and extreme healthcare concentration above 65 percent.",
+      "market_read": "Bull Maduro regime with macro score 68.75 deteriorating 6.25 points in one week raises caution on new entries.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
-    "selected": [],
-    "watch": [],
-    "rejected": [
+    "selected": [
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "EARLY_ROTATION",
+        "signal_type": "early_rotation",
+        "confidence": "medium",
+        "reason_short": "Dems 15 no spike, 6-week streak, oil_gas low concentration.",
+        "reason_full": "WCP.TO shows dems 15 with no spike_flag, rot_score 7, 6-week streak and ret_4w_vs_spy 7.09 on 69.5 PCS meeting early rotation threshold. Oil_gas theme at 8 percent open weight offers diversification from 65.5 percent healthcare exposure while macro delta deterioration is offset by strong individual weekly metrics.",
+        "comparative_edge": "Selected over DPM.TO (PCS 68, dems 15) because WCP.TO extension_risk medium versus extreme and oil_gas low concentration risk versus silver_gold_miners medium.",
+        "key_supporting_factors": [
+          "Dems 15 with spike_flag false exceeds 14 threshold confirming organic multi-day flow.",
+          "6-week streak with rot_score 7 delivers sustained weekly leadership.",
+          "Oil_gas theme concentration low at 8 percent diversifies heavy healthcare exposure.",
+          "Koncorde bullish_aligned across D/3D/W supports structural accumulation."
+        ],
+        "key_risks_or_contradictions": [
+          "Macro delta_1w -6.25 indicates deteriorating conditions pressuring cyclical themes.",
+          "Ret_13w_vs_spy only 5.94 percent lags peers like DPM.TO at 50.94 percent.",
+          "Extension risk medium from dist_sma20_atr_extreme requires monitoring for pullback."
+        ]
+      }
+    ],
+    "watch": [
       {
         "ticker": "SLS",
-        "reason": "Extreme extension risk, 3D distribution, macro deterioration and healthcare concentration already extreme.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 82.5 but extreme extension risk and Koncorde 3D distribution with dems 17 spike true create high reversal odds.",
+        "watch_trigger": "Extension cooling below 3 points and Koncorde 3D turning up."
       },
       {
         "ticker": "DHR",
-        "reason": "Already open position; macro deterioration and high theme concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 82.5 high theme concentration already 65.5 percent healthcare and high extension risk.",
+        "watch_trigger": "Theme weight drops below 50 percent and extension risk falls to low."
       },
       {
         "ticker": "OSCR",
-        "reason": "Already open; macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 81.2 already open position in multiple portfolios.",
+        "watch_trigger": "Exit current position and fresh entry signal with PCS above 81."
       },
       {
         "ticker": "SEDANA.ST",
-        "reason": "Already open; 3D distribution warning and macro deterioration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 80.2 already open and Koncorde distribution_warning with high extension.",
+        "watch_trigger": "Koncorde alignment turns bullish_aligned and extension drops below 3."
       },
       {
         "ticker": "JNJ",
-        "reason": "Macro deterioration and high healthcare concentration risk.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 79.0 spike true and high healthcare concentration risk.",
+        "watch_trigger": "Spike flag clears and dems rises above 14 with no spike."
       },
       {
         "ticker": "LLY",
-        "reason": "Already open; macro deterioration and extreme sector concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 78.8 already open position.",
+        "watch_trigger": "Exit and new entry with PCS above 82 and rot_score 9."
       },
       {
         "ticker": "VRTX",
-        "reason": "Macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 78.2 dems 16 but medium extension and high theme concentration.",
+        "watch_trigger": "Extension risk falls to low and outperform_d10 exceeds 8."
       },
       {
         "ticker": "HIMS",
-        "reason": "Macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 78.0 signal VIGILAR and ret_4w_vs_spy negative.",
+        "watch_trigger": "Signal upgrades to EN_RADAR and ret_4w_vs_spy turns positive above 5 percent."
       },
       {
         "ticker": "FCX",
-        "reason": "Already open; macro deterioration and high cyclical concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 75.5 already open position.",
+        "watch_trigger": "Exit and new entry with dems above 16 and extension low."
       },
       {
         "ticker": "TMO",
-        "reason": "Already open; macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 75.5 already open in multiple portfolios.",
+        "watch_trigger": "Exit and fresh PCS above 78 with streak_weeks 4."
       },
       {
         "ticker": "MRK",
-        "reason": "Already open; macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 75.5 already open position.",
+        "watch_trigger": "Exit and new signal with rot_score 9."
       },
       {
         "ticker": "KIST.L",
-        "reason": "Macro deterioration and oil gas theme lacks sufficient weekly leadership.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 75.5 high extension risk and Koncorde distribution_warning.",
+        "watch_trigger": "Koncorde alignment improves to bullish_aligned and extension below 3."
       },
       {
         "ticker": "CRON",
-        "reason": "Already open; macro deterioration and speculative theme risk.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 75.2 already open position.",
+        "watch_trigger": "Exit and new entry with rot_score 10."
       },
       {
         "ticker": "SSV.V",
-        "reason": "Macro deterioration and 3D distribution warning.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 75.0 dems only 7 below threshold and Koncorde distribution_warning.",
+        "watch_trigger": "Dems rises above 14 and Koncorde 3D turns up."
       },
       {
         "ticker": "TECK",
-        "reason": "Already open; macro deterioration and high cyclical concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 74.5 already open position.",
+        "watch_trigger": "Exit and new entry with streak_weeks 6."
       },
       {
         "ticker": "EXK",
-        "reason": "Macro deterioration and 3D distribution warning.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 74.0 ret_13w_vs_spy only 10.5 percent and medium extension.",
+        "watch_trigger": "Ret_13w_vs_spy exceeds 20 percent and extension risk falls to low."
       },
       {
         "ticker": "GOLD",
-        "reason": "Macro deterioration and 3D distribution warning.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 73.5 already open position.",
+        "watch_trigger": "Exit and new entry with outperform_d10 above 8."
       },
       {
         "ticker": "ABBV",
-        "reason": "Macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 72.8 signal VIGILAR and ret_4w_vs_spy negative.",
+        "watch_trigger": "Signal upgrades to EN_RADAR and ret_4w_vs_spy positive above 5 percent."
       },
       {
         "ticker": "PLNH",
-        "reason": "Macro deterioration and high extension risk.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 72.2 high extension risk 5 points and dems 14 borderline.",
+        "watch_trigger": "Extension risk drops to low and streak_weeks reaches 3."
       },
       {
         "ticker": "NEM",
-        "reason": "Macro deterioration and extreme extension risk.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 71.5 already open position.",
+        "watch_trigger": "Exit and new entry with ret_13w_vs_spy above 25 percent."
       },
       {
         "ticker": "PFE",
-        "reason": "Macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 71.5 spike true and high extension risk.",
+        "watch_trigger": "Spike flag clears and extension risk falls below 3."
       },
       {
         "ticker": "III.TO",
-        "reason": "Macro deterioration and extreme extension risk.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 71.5 extreme extension risk 6 points and Koncorde distribution.",
+        "watch_trigger": "Extension risk below 3 and Koncorde 3D turns up."
       },
       {
         "ticker": "HUM",
-        "reason": "Macro deterioration and high healthcare concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 71.2 dems only 4 far below threshold.",
+        "watch_trigger": "Dems rises above 14 with momentum_accel true."
       },
       {
         "ticker": "III.L",
-        "reason": "Already open; macro deterioration and high cyclical concentration.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 71.2 already open position.",
+        "watch_trigger": "Exit and new entry with rot_score 8."
       },
       {
         "ticker": "VLE.TO",
-        "reason": "Macro deterioration and low weekly momentum confirmation.",
-        "rejection_category": "macro_conflict"
+        "reason": "PCS 70.8 ret_4w_vs_spy negative and Koncorde distribution.",
+        "watch_trigger": "Ret_4w_vs_spy turns positive above 5 percent and Koncorde alignment improves."
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "Extreme extension risk at 7 points despite dems 15 and strong ret_13w_vs_spy 50.94.",
+        "watch_trigger": "Extension risk cools to medium or lower with continued streak_weeks above 5."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "PLTR",
+        "reason": "Dems 7 below 10 threshold with spike_flag true and dems insufficient for early rotation.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "SE",
+        "reason": "Koncorde distribution_warning on 3D and weekly with dems 5 too low to support selection.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "RIO",
-        "reason": "PCS 62.5 below all portfolio entry thresholds and macro deteriorating with high theme concentration risk.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "Ret_13w_vs_spy negative at -0.64 and rot_score 6 too weak for 62.5 PCS.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "TK",
-        "reason": "PCS 64.5 below all portfolio entry thresholds despite dems 16, macro deteriorating with high theme concentration.",
-        "rejection_category": "insufficient_conviction"
+        "reason": "PCS 64.5 below EARLY_ROTATION 68 min_entry and better alternatives exist.",
+        "rejection_category": "better_alternative_available"
       }
     ],
     "open_picks_review": [
@@ -183,117 +232,117 @@
         "ticker": "LLY",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Current PCS 78.8 above floor, rot 8, streak 3."
+        "reason": "Current PCS 78.8 above min entry and rot_score 8 supports continuation."
       },
       {
         "ticker": "TMO",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 75.5 meets threshold, rot 7, streak 6."
+        "reason": "Current PCS 75.5 meets threshold with 6-week streak intact."
       },
       {
         "ticker": "SEDANA.ST",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 80.2 meets threshold, rot 8, streak 4."
+        "reason": "Current PCS 80.2 and rot_score 8 justify holding despite distribution_warning."
       },
       {
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.5 meets threshold, rot 7, streak 8."
+        "reason": "Current PCS 75.5 with 8-week streak supports holding."
       },
       {
         "ticker": "SE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 68.8 meets threshold, rot 9, streak 4."
-      },
-      {
-        "ticker": "DPM.TO",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 68.0 meets threshold, rot 7, streak 5."
+        "reason": "Current PCS 68.8 above min entry with 4-week streak."
       },
       {
         "ticker": "PLTR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 66.5 above 62 floor, rot 8, streak 3."
+        "reason": "Current PCS 66.5 near floor but rot_score 8 and 3-week streak hold."
       },
       {
         "ticker": "FCX",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.5 meets threshold, rot 8, streak 4."
+        "reason": "Current PCS 75.5 and 4-week streak support holding."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 69.5 meets threshold, rot 7, streak 6."
-      },
-      {
-        "ticker": "SLS",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 82.5 meets threshold, rot 8, streak 3."
+        "reason": "Current PCS 69.5 above min entry with 6-week streak."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.2 meets threshold, rot 8, streak 2."
+        "reason": "Current PCS 81.2 and rot_score 8 support holding."
       },
       {
         "ticker": "TECK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 74.5 meets threshold, rot 8, streak 5."
+        "reason": "Current PCS 74.5 with 5-week streak supports holding."
       },
       {
         "ticker": "CRON",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.2 meets threshold, rot 9, streak 3."
+        "reason": "Current PCS 75.2 and rot_score 9 support holding."
       },
       {
         "ticker": "MAI.L",
         "portfolio": "MIRROR_ESPEJO",
         "action": "EXIT",
-        "reason": "Current rot_score 2.0 meets exit threshold."
+        "reason": "Current PCS 46.8 below 62 floor and rot_score 2."
       },
       {
         "ticker": "UNH",
         "portfolio": "MIRROR_ESPEJO",
         "action": "EXIT",
-        "reason": "Current rot_score 1.0 meets exit threshold."
+        "reason": "Current PCS 45.0 below 62 floor and rot_score 1."
       },
       {
-        "ticker": "DHR",
-        "portfolio": "CAVA_MACRO",
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 82.5 above floor, rot 8, streak 3."
+        "reason": "Current PCS 68.0 meets min entry with 5-week streak."
       },
       {
         "ticker": "III.L",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Current PCS 71.2 above floor, rot 7, streak 4."
+        "reason": "Current PCS 71.2 above floor with 4-week streak."
       },
       {
         "ticker": "TK",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Current PCS 64.5 above floor, rot 7, streak 4."
+        "reason": "Current PCS 64.5 above floor with 4-week streak."
       },
       {
         "ticker": "RIO",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Current PCS 62.5 above floor, rot 6, streak 1."
+        "reason": "Current PCS 62.5 meets absolute floor with streak intact."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "PCS min_entry 0, current PCS 82.5 above absolute floor."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "PCS min_entry 0, current PCS 82.5 above absolute floor."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-08-23\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-08-23_0826\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro score 68.75 deteriorating with -6.25 weekly delta and extreme healthcare concentration above 65 percent.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [],\n  \"rejected\": [\n    {\"ticker\": \"SLS\", \"reason\": \"Extreme extension risk, 3D distribution, macro deterioration and healthcare concentration already extreme.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"DHR\", \"reason\": \"Already open position; macro deterioration and high theme concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"OSCR\", \"reason\": \"Already open; macro deterioration and high healthcare concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"SEDANA.ST\", \"reason\": \"Already open; 3D distribution warning and macro deterioration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"JNJ\", \"reason\": \"Macro deterioration and high healthcare concentration risk.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"LLY\", \"reason\": \"Already open; macro deterioration and extreme sector concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"VRTX\", \"reason\": \"Macro deterioration and high healthcare concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"HIMS\", \"reason\": \"Macro deterioration and high healthcare concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"FCX\", \"reason\": \"Already open; macro deterioration and high cyclical concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"TMO\", \"reason\": \"Already open; macro deterioration and high healthcare concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"MRK\", \"reason\": \"Already open; macro deterioration and high healthcare concentration.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"KIST.L\", \"reason\": \"Mac"
+  "raw_response_head": "{\n  \"date\": \"2026-08-23\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-08-23_2018\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 68.75 deteriorating 6.25 points in one week raises caution on new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"SLS\",\n      \"reason\": \"PCS 82.5 but extreme extension risk and Koncorde 3D distribution with dems 17 spike true create high reversal odds.\",\n      \"watch_trigger\": \"Extension cooling below 3 points and Koncorde 3D turning up.\"\n    },\n    {\n      \"ticker\": \"DHR\",\n      \"reason\": \"PCS 82.5 high theme concentration already 65.5 percent healthcare and high extension risk.\",\n      \"watch_trigger\": \"Theme weight drops below 50 percent and extension risk falls to low.\"\n    },\n    {\n      \"ticker\": \"OSCR\",\n      \"reason\": \"PCS 81.2 already open position in multiple portfolios.\",\n      \"watch_trigger\": \"Exit current position and fresh entry signal with PCS above 81.\"\n    },\n    {\n      \"ticker\": \"SEDANA.ST\",\n      \"reason\": \"PCS 80.2 already open and Koncorde distribution_warning with high extension.\",\n      \"watch_trigger\": \"Koncorde alignment turns bullish_aligned and extension drops below 3.\"\n    },\n    {\n      \"ticker\": \"JNJ\",\n      \"reason\": \"PCS 79.0 spike true and high healthcare concentration risk.\",\n      \"watch_trigger\": \"Spike flag clears and dems rises above 14 with no spike.\"\n    },\n    {\n      \"ticker\": \"LLY\",\n      \"reason\": \"PCS 78.8 already open position.\",\n      \"watch_trigger\": \"Exit and new entry with PCS above 82 and rot_score 9.\"\n    },\n    {\n      \"ticker\": \"VRTX\",\n      \"reason\": \"PCS 78.2 dems 16 but medium extension and high theme concentration.\",\n      \"watch_trigger\": \"Extension risk falls to low and outperform_d10 exceeds 8.\"\n    },\n    {\n      \"ticker\": \"HIMS\",\n      \"reason\": \"PCS 78.0 signal VIGILAR and ret_4w_vs_spy negative.\",\n      \"watch_trigger\": \"Signal upgrades to EN_RADAR and "
 }
