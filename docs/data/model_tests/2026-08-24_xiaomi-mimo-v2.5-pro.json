@@ -1,0 +1,190 @@
+{
+  "run_id": "2026-08-24_0844",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-08-24",
+  "summary": {
+    "date": "2026-08-24",
+    "run_id": "2026-08-24_0844",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 2,
+    "candidate_count": 33,
+    "input_tokens": 31356,
+    "output_tokens": 5367,
+    "cost_usd": 0.018309,
+    "latency_ms": 128462.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 96,
+    "selected_count": 1,
+    "watch_count": 4,
+    "rejected_count": 4,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": []
+  },
+  "quality_score": 96,
+  "response": {
+    "date": "2026-08-24",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-08-24_0844",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime persists but macro trend is deteriorating with -6.25 weekly delta, favoring selective entries in strong individual signals over broad exposure.",
+      "risk_posture": "cautious",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "VRTX",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "PCS 78.2 with dems=16, bullish-aligned Koncorde, and only -1.31% from 52w high",
+        "reason_full": "VRTX posts PCS 78.2 with rotation score 7 on a 3-week streak delivering +12.11% 4w and +23.05% 13w outperformance vs SPY. Daily momentum dems=16 exceeds the 14 early rotation threshold with spike_flag=false, confirming organic multi-day institutional flow. Koncorde is fully bullish-aligned across daily, 3D, and weekly timeframes with green at 128.68 and trend at 112.35. Only -1.31% from 52-week high shows the stock is consolidating near highs rather than chasing extended moves. Extension risk medium (2 pts) with dist_sma20_atr_high is acknowledged but offset by the clean multi-timeframe alignment and strong daily momentum confirmation.",
+        "comparative_edge": "Selected over JNJ (PCS=79.0, dems=11, spike_flag=true) because VRTX's dems=16 vs JNJ's 11 provides 45% stronger daily momentum confirmation with no spike, and VRTX's -1.31% dist_52w_high vs JNJ's -2.25% shows tighter consolidation near highs. JNJ's spike_flag and weaker dems place it in watch.",
+        "key_supporting_factors": [
+          "Dems=16 with spike_flag=false exceeds the 14 early rotation threshold, confirming robust organic multi-day institutional flow.",
+          "Bullish-aligned Koncorde across daily, 3D, and weekly with green at 128.68 provides maximum structural confirmation.",
+          "13-week outperformance of 23.05% vs SPY on a 3-week streak demonstrates sustained institutional leadership.",
+          "Only -1.31% from 52-week high indicates consolidation near highs rather than extended chase territory."
+        ],
+        "key_risks_or_contradictions": [
+          "Healthcare_largecap theme already holds 65.5% portfolio weight with high concentration risk; adding VRTX increases single-sector exposure further.",
+          "Konc_d_state=distribution while 3D and weekly read up—tactical daily caution within the bullish structural setup.",
+          "Macro delta_1w of -6.25 indicates deteriorating conditions that could pressure large-cap healthcare if sustained."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "JNJ",
+        "reason": "PCS 79.0 is the highest non-open candidate but dems=11 falls below the 14 threshold and spike_flag=true concentrates recent gains in fewer sessions, weakening the daily momentum confirmation versus VRTX's dems=16 with no spike.",
+        "watch_trigger": "Select if dems rises above 14 with spike_flag clearing, or if VRTX's weekly streak breaks while JNJ's extends beyond 4 weeks with sustained ret_4w acceleration."
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "PCS 78.0 with strong 13w outperformance of 37.33% but only 1-week streak and -48.27% from 52-week high signals significant overhead supply; ret_4w_vs_spy of -0.55% shows the weekly trend has stalled despite the longer-term base.",
+        "watch_trigger": "Select if streak extends to 3+ weeks with ret_4w turning positive above +5% and dist_52w_high narrowing below -35%."
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 75.5 with strong theme flow (24/24) and dems=14 but konc_alignment=distribution_warning across 3D and weekly timeframes, and only 2-week streak with modest 4.27% 4w outperformance does not justify overriding the distribution signal.",
+        "watch_trigger": "Select if konc_3d_state shifts from distribution to up while maintaining dems >= 14 and streak extends to 4+ weeks."
+      },
+      {
+        "ticker": "SSV.V",
+        "reason": "PCS 75.0 with rot=9 (highest tier) but konc_alignment=distribution_warning across all three timeframes including weekly, dems=7 is well below threshold, and -42.48% from 52-week high indicates severe overhead supply that the distribution signal confirms.",
+        "watch_trigger": "Select if konc_alignment shifts to bullish_aligned or bullish_pending_3d_confirmation with dems rising above 14 and dist_52w_high narrowing below -30%."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "RIO",
+        "reason": "PCS 62.5 falls below the MIMO_SHADOW minimum entry threshold of 68.0; despite dems=15 and 5-day streak, the composite score is insufficient for new entry and ret_13w_vs_spy of -0.64% shows negative longer-term momentum.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "TK",
+        "reason": "PCS 64.5 falls below the MIMO_SHADOW minimum entry threshold of 68.0; despite 9-day streak and dems=16, the composite score including weak theme_flow (15/24) and modest ret_13w_vs_spy of 2.74% does not clear the entry bar.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "GOLD",
+        "reason": "PCS 69.5 crossed down from 73.5 and is below the 70.0 threshold; the declining trajectory in a deteriorating macro environment with silver_gold_miners theme already at 19% portfolio weight does not justify new entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "NEM",
+        "reason": "PCS 67.5 crossed down from 71.5 and is below the 68.0 minimum entry threshold; declining PCS trajectory with VIGILAR signal in a deteriorating macro environment provides no conviction for new entry.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 75.5 above 68 floor, rot=7, 8-week streak with +13.18% 4w outperformance sustains the confirmed leader thesis."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 68.8 above 68 floor, rot=9 improved from entry, 4-week streak with +14.39% 4w outperformance despite distribution_warning context."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 75.5 above 68 floor, rot=7, 6-week streak is the longest in portfolio confirming sustained institutional accumulation."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 68.0 at exact floor but rot=7 and 5-week streak with +33.58% 4w outperformance justify holding; monitor for PCS recovery."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 66.5 below 68 floor but rot=8, 3-week streak, and +42.12% 4w outperformance (highest in portfolio) override the PCS dip; weekly metrics remain strong."
+      },
+      {
+        "ticker": "FCX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 75.5 above 68 floor, rot=8, 4-week streak with +16.99% 4w outperformance and bullish-aligned Koncorde sustain the position."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 69.5 above 68 floor, rot=7, 6-week streak with bullish-aligned Koncorde and low oil_gas concentration provides portfolio diversification."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 80.2 above 68 floor, rot=8, 4-week streak with +31.30% 4w outperformance; distribution_warning acknowledged but weekly metrics remain strong."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 82.5 is the highest in portfolio, rot=8, 3-week streak with +21.55% 4w outperformance; extreme extension risk acknowledged but signal strength justifies holding."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 81.2 above 68 floor, rot=8, 2-week streak with bullish-aligned Koncorde; position entered only 3 days ago, too early to reassess."
+      },
+      {
+        "ticker": "TECK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 70.5 above 68 floor, rot=8, 5-week streak with +11.89% 4w outperformance; silver_gold_miners diversification remains valuable."
+      },
+      {
+        "ticker": "CRON",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 75.2 above 68 floor, rot=9 (highest in portfolio), 3-week streak with +17.07% 4w outperformance; cannabis theme provides unique diversification."
+      },
+      {
+        "ticker": "EXK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 74.0 above 68 floor, rot=8, 2-week streak with +30.53% 4w outperformance; bullish-aligned Koncorde with no spike_flag sustains the thesis."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-24\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-24_0844\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime persists but macro trend is deteriorating with -6.25 weekly delta, favoring selective entries in strong individual signals over broad exposure.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"VRTX\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS 78.2 with dems=16, bullish-aligned Koncorde, and only -1.31% from 52w high\",\n      \"reason_full\": \"VRTX posts PCS 78.2 with rotation score 7 on a 3-week streak delivering +12.11% 4w and +23.05% 13w outperformance vs SPY. Daily momentum dems=16 exceeds the 14 early rotation threshold with spike_flag=false, confirming organic multi-day institutional flow. Koncorde is fully bullish-aligned across daily, 3D, and weekly timeframes with green at 128.68 and trend at 112.35. Only -1.31% from 52-week high shows the stock is consolidating near highs rather than chasing extended moves. Extension risk medium (2 pts) with dist_sma20_atr_high is acknowledged but offset by the clean multi-timeframe alignment and strong daily momentum confirmation.\",\n      \"comparative_edge\": \"Selected over JNJ (PCS=79.0, dems=11, spike_flag=true) because VRTX's dems=16 vs JNJ's 11 provides 45% stronger daily momentum confirmation with no spike, and VRTX's -1.31% dist_52w_high vs JNJ's -2.25% shows tighter consolidation near highs. JNJ's spike_flag and weaker dems place it in watch.\",\n      \"key_supporting_factors\": [\n        \"Dems=16 with spike_flag=false exceeds the 14 early rotation threshold, confirming robust organic multi-day institutional flow.\",\n        \"Bullish-aligned Koncorde across daily, 3D, and weekly with green at 128.68 provides maximum structural confirmation.\",\n        \"13-week outperformance of 23.05% vs SPY on a 3-week streak demonstra"
+}
