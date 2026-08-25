@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: read   # solo lectura, para que el step de notificación de fallo pueda consultar qué step falló
 
 jobs:
   update:
@@ -58,7 +59,21 @@ jobs:
       - name: Run pipeline - Step 1 fetch data
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: python backtest/src/main.py
+        # main.py ya tolera fallos de descarga de tickers/series individuales
+        # (los deja como NaN y sigue) y lo señaliza con exit code 2 — "aviso",
+        # no "fatal" (ver main.py: "exit code 2: completado con fallos
+        # parciales"). Sin esto, un solo ticker caído de Yahoo/FRED bloqueaba
+        # TODO el resto del pipeline (Steps 2-12), porque Actions trata
+        # cualquier exit code != 0 como fallo del step. exit 1 (sanity checks
+        # fallidos, excepción sin capturar) sigue siendo fatal — no se toca.
+        run: |
+          python backtest/src/main.py
+          code=$?
+          if [ "$code" -eq 2 ]; then
+            echo "::warning::Step 1 completó con fallos parciales de descarga (exit 2) — el pipeline continúa con NaN en los tickers/series afectados. Revisar el log de este step para ver cuáles."
+            exit 0
+          fi
+          exit $code
         working-directory: ${{ github.workspace }}
 
       - name: Run pipeline - Step 2 macro score
@@ -248,3 +263,21 @@ jobs:
           git add backtest/data/processed/ backtest/data/manifest.json backtest/reports/ docs/data/ portfolio.json
           git diff --staged --quiet || git commit -m "chore: auto-update market data $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
+
+      # Último step, a propósito — if: failure() solo se activa cuando un
+      # step SIN continue-on-error ha fallado de verdad y ha bloqueado el
+      # resto del pipeline (ver incidente 2026-08-24/25: Step 1 falló 3 runs
+      # seguidos en silencio hasta que alguien miró la pestaña Actions a
+      # mano). Los steps que ya tienen continue-on-error:true (Cava, Koncorde
+      # alerts, Duration Monitor, Mirror Espejo, Insider Activity, Portfolio
+      # snapshot, Steps 11/12 Telegram) NO disparan esto — se degradan en
+      # silencio a propósito, avisar de cada uno sería ruido, no señal.
+      - name: Notify Telegram on pipeline failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/notify_workflow_failure.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
