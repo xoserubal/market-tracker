@@ -66,9 +66,19 @@ jobs:
         # TODO el resto del pipeline (Steps 2-12), porque Actions trata
         # cualquier exit code != 0 como fallo del step. exit 1 (sanity checks
         # fallidos, excepción sin capturar) sigue siendo fatal — no se toca.
+        #
+        # `set +e` / `set -e` alrededor de la llamada es imprescindible: los
+        # steps `run:` de Actions usan `bash -eo pipefail` por defecto, así
+        # que sin desactivar errexit aquí, bash aborta el script en cuanto
+        # main.py devuelve 2 — antes de llegar a leer `$?` — y el step muere
+        # igual que sin este arreglo. Confirmado en producción (run 238,
+        # 2026-08-25): exit code 2 real por ^VIX9D/^VIX3M caídos en Yahoo,
+        # pero el primer intento de este fix nunca llegó a evaluarse.
         run: |
+          set +e
           python backtest/src/main.py
           code=$?
+          set -e
           if [ "$code" -eq 2 ]; then
             echo "::warning::Step 1 completó con fallos parciales de descarga (exit 2) — el pipeline continúa con NaN en los tickers/series afectados. Revisar el log de este step para ver cuáles."
             exit 0
