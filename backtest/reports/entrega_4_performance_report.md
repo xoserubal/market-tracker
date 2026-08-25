@@ -147,9 +147,9 @@ Transiciones a Risk-OFF/Capitulacion detectadas: **12**
 
 ## Sección 6 — Modo A vs Modo B (2023-04-18 en adelante)
 
-- COMPRA: Modo A α13w=+0.0%  Modo B α13w=-5.1%  nA=202  nB=142
-- ACUMULAR: Modo A α13w=-1.7%  Modo B α13w=-2.0%  nA=324  nB=299
-- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.7%  nA=2395  nB=2470
+- COMPRA: Modo A α13w=+0.0%  Modo B α13w=-5.1%  nA=204  nB=144
+- ACUMULAR: Modo A α13w=-1.7%  Modo B α13w=-2.0%  nA=327  nB=302
+- VIGILAR: Modo A α13w=+0.5%  Modo B α13w=+0.7%  nA=2409  nB=2484
 
 ---
 
