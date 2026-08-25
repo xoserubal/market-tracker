@@ -1200,8 +1200,8 @@ def check_alerts(token: str, chat_id: str) -> None:
 def cmd_help(token: str, chat_id: str) -> None:
     lines = ["<b>Comandos disponibles:</b>", ""]
     for c in COMMANDS:
-        lines.append(f"<code>{c['usage']}</code>")
-        lines.append(f"  {c['desc']}")
+        lines.append(f"<code>{html.escape(c['usage'])}</code>")
+        lines.append(f"  {html.escape(c['desc'])}")
         lines.append("")
     _send(token, chat_id, "\n".join(lines).rstrip())
 
