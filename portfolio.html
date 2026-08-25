@@ -807,6 +807,7 @@ function Portfolio() {
 
   // ── LLM export ─────────────────────────────────────────────────────────
   const copyForLLM = () => {
+    if (loading.size > 0) { showToast(`⏳ Todavía cargando precios (${loading.size} pendientes) — espera un momento e inténtalo de nuevo`); return; }
     if (!Object.keys(prices).length) { showToast('⚠️ Espera a que carguen los datos'); return; }
     const md = buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot, insiderRanking);
     navigator.clipboard.writeText(md)
@@ -1010,8 +1011,8 @@ function Portfolio() {
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           {saving && <span style={{fontSize:10,color:'#aaa'}}>Guardando…</span>}
           {!saving && lastSaved && <span style={{fontSize:10,color:'#bbb'}}>Guardado {lastSaved.toLocaleTimeString()}</span>}
-          <button onClick={copyForLLM} disabled={loading.size>0}
-            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:loading.size>0?'default':'pointer',background:loading.size>0?'#aaa':'#6c3483',color:'white'}}>
+          <button onClick={copyForLLM}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:loading.size>0?'#aaa':'#6c3483',color:'white'}}>
             📋 Copiar para LLM
           </button>
           <button onClick={copyAllForLLM}
