@@ -23,5 +23,10 @@
     "id": "zerogex_fase1_trial_fin",
     "date": "2026-08-25",
     "message": "📅 <b>ZeroGEX — fin del trial gratuito (Fase 1)</b>\n\nHan pasado ~6 días desde que arrancó el piloto (2026-08-19, SPX+QQQ). El trial de 7 días está a punto de convertirse en suscripción de pago ($29/mes) si no se cancela antes. Antes de que eso pase:\n\n1. Ejecuta: <code>py -3 research/gex_zerogex_pilot_v1/fetch_zerogex_snapshot.py --report</code>\n2. Revisa el veredicto de Fase 1 por símbolo en <code>research/gex_zerogex_pilot_v1/outputs/fase1_informe.md</code>\n3. Decide con Claude: si pasa, seguir a Fase 2 (tope ya acordado: $58/2 meses máx, ver <code>wiki/PREREGISTRO_GEX_ZEROGEX_V1.md</code>); si falla, cancelar el trial en zerogex.io antes de que cobre."
+  },
+  {
+    "id": "zerogex_fase2_revision",
+    "date": "2026-09-19",
+    "message": "📅 <b>ZeroGEX — revisión de Fase 2 (calibración DIY)</b>\n\nFase 1 pasó limpio 2026-08-26 (0% datos obsoletos, spot_diff dentro de umbral en ambos símbolos) y se decidió seguir a Fase 2. Han pasado ~3.5 semanas desde el inicio (cubre VIX expiry ~16-sep y monthly OpEx ~18-sep, tal como pedía el plan). Antes de que el tope de $58/2 meses se agote:\n\n1. Ejecuta: <code>py -3 research/gex_zerogex_pilot_v1/run_diy_calibration.py --report</code>\n2. Revisa <code>research/gex_zerogex_pilot_v1/outputs/fase2_informe.md</code> — veredicto por símbolo (SPX y QQQ se evalúan por separado).\n3. Decide con Claude según el criterio de la sección 2.3 de <code>wiki/PREREGISTRO_GEX_ZEROGEX_V1.md</code>: (a) cancelar ZeroGEX y usar el DIY en solitario, (b) mantener la suscripción como fuente externa, o (c) descartar el módulo entero. Ninguna integración en dashboard se implementa sin esa decisión explícita (Fase 3, sección 7 del preregistro)."
   }
 ]

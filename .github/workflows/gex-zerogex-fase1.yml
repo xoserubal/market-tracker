@@ -1,13 +1,19 @@
 name: GEX ZeroGEX Fase 1 Collector
 
-# Piloto temporal — ver wiki/PREREGISTRO_GEX_ZEROGEX_V1.md. Recoge un snapshot
+# Piloto temporal — ver wiki/PREREGISTRO_GEX_ZEROGEX_V1.md. Recogía un snapshot
 # de SPX + QQQ cada ~20 min durante RTH (script se auto-limita a 09:30-16:00 ET,
-# el cron solo necesita cubrir esa ventana con margen). Borrar este workflow
-# (y el secret ZEROGEX_API_KEY) cuando termine el piloto de Fase 1/2.
+# el cron solo necesitaba cubrir esa ventana con margen).
+#
+# CRON DESACTIVADO 2026-08-26: Fase 1 concluyó — veredicto limpio para ambos
+# símbolos (0% datos obsoletos, p90 spot_diff_bps muy por debajo del umbral de
+# fallo en 98 snapshots/5 sesiones, ver fase1_informe.md). Decidido con el
+# usuario seguir a Fase 2 (gex-zerogex-fase2.yml, cadencia 1x/día EOD en vez de
+# cada 20 min) — mantener este cron activo solo gastaría cuota de la API ya de
+# pago sin aportar nada nuevo a la decisión. workflow_dispatch se deja por si
+# hiciera falta relanzar Fase 1 a mano más adelante. Borrar este workflow (y el
+# secret ZEROGEX_API_KEY, junto con el de fase2) al concluir el piloto entero.
 
 on:
-  schedule:
-    - cron: '*/20 13-20 * * 1-5'   # 13:00-20:40 UTC, L-V (cubre RTH 13:30-20:00 UTC con margen)
   workflow_dispatch: {}
 
 permissions:

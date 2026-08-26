@@ -1,0 +1,56 @@
+name: GEX ZeroGEX Fase 2 — DIY Calibration
+
+# Piloto temporal — ver wiki/PREREGISTRO_GEX_ZEROGEX_V1.md, sección 2. Fase 1
+# (gex-zerogex-fase1.yml) pasó limpio para SPX y QQQ (0% datos obsoletos,
+# p90 spot_diff_bps muy por debajo del umbral de fallo, 98 snapshots en 5
+# sesiones) — decidido con el usuario 2026-08-26 seguir a Fase 2 en vez de
+# dejar que el trial expirase sin usarse. Recoge 1 snapshot/día por símbolo
+# cerca del cierre (15:50-16:00 ET) — el script se auto-limita a la ventana
+# 15:30-16:15 ET (más ancha, para tolerar un runner lento), no hace falta que
+# el cron sea exacto. Borrar este workflow (y el secret ZEROGEX_API_KEY) al
+# concluir el piloto (Fase 3 o descarte, ver preregistro sección 7).
+
+on:
+  schedule:
+    - cron: '55 19 * * 1-5'   # 19:55 UTC = 15:55 ET (EDT) — dentro de la ventana 15:30-16:15 ET
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gex-zerogex-fase2
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backtest/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backtest/requirements.txt
+
+      - name: Run ZeroGEX Fase 2 DIY calibration collector
+        env:
+          ZEROGEX_API_KEY: ${{ secrets.ZEROGEX_API_KEY }}
+        run: python research/gex_zerogex_pilot_v1/run_diy_calibration.py
+
+      - name: Commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add research/gex_zerogex_pilot_v1/outputs/fase2_calibration.jsonl
+          git diff --staged --quiet || git commit -m "bot: zerogex fase2 calibration $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
