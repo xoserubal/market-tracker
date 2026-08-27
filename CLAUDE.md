@@ -3389,9 +3389,19 @@ sma_window=20)`: `yf.download` de ambos, join por fecha (`dropna`), ratio =
 sesiones — misma convención que "precio sobre su SMA20" ya usada en el
 proyecto. **Caveat conocido, no arreglado en v1:** sin conversión de divisa
 — `ADS.DE/NKE` (EUR/USD) mezcla rendimiento relativo real con movimiento
-EUR/USD; `ADS.DE/FEZ` (EUR/EUR) es limpio. Verificado en vivo: `ADS.DE/FEZ
-ratio_now=2.1031 sma20=2.2201 improving=False`, `ADS.DE/NKE ratio_now=3.9011
-sma20=3.8646 improving=True`.
+EUR/USD. **Corrección 2026-08-27:** la nota original de este mismo párrafo
+decía que `ADS.DE/FEZ` era EUR/EUR "limpio" — verificado ahora contra
+`fast_info`/`get_info()` de yfinance que **FEZ cotiza en USD** (NYSE Arca,
+"State Street SPDR EURO STOXX 50 ETF" — el nombre sigue un índice
+denominado en EUR, pero el ETF en sí cotiza en dólares), así que
+`ADS.DE/FEZ` **también es cross-currency (EUR/USD)**, igual que `ADS.DE/NKE`
+— la afirmación anterior no estaba verificada con el cuidado habitual del
+proyecto. `EXV5.DE` (iShares STOXX Europe 600 Consumer Discretionary UCITS
+ETF, Xetra) sí cotiza en EUR — es el benchmark limpio de verdad si se
+necesita comparar ADS.DE contra algo sin ruido de divisa. Verificado en
+vivo: `ADS.DE/FEZ ratio_now=2.1031 sma20=2.2201 improving=False`,
+`ADS.DE/EXV5.DE ratio_now=3.8167 sma20=3.8961 improving=False`,
+`ADS.DE/NKE ratio_now=3.9011 sma20=3.8646 improving=True`.
 
 ### 3. `scripts/check_koncorde_alerts.py` — generalizado
 
@@ -3490,6 +3500,88 @@ allá de AND. Ratios de más de 2 patas o fórmulas custom más allá de `A/B`.
 Conversión de divisa en `ratio_signal.py`. Ningún cambio en
 `.github/workflows/market-update.yml` — el Step 9c2 ya ejecuta
 `check_koncorde_alerts.py` y `yfinance` ya es dependencia del pipeline.
+
+### Primera tesis real: ADS.DE — starter en reversión (creada 2026-08-27)
+
+Primer uso real del sistema, creada vía `POST /api/special-situations`
+(id `ads_de_starter_reversal`) directamente contra el servidor local del
+usuario ya en marcha — mismo path de producción que si se hubiera creado
+desde el modal de `portfolio.html`.
+
+**Condiciones exigidas (AND):**
+```
+Flow Score cruza de negativo a positivo
++ ADS.DE/FEZ mejora (por encima de su SMA20)
++ Koncorde D: blue_positive
+```
+`"Koncorde D → Acumulación/Alza"` (como lo pidió el usuario) se tradujo a
+la condición ya existente `blue_positive`, no a una condición nueva: por
+definición de los 4 estados Koncorde (`Alza`: blue≥0,green≥0 · `Acumulación`:
+blue≥0,green<0 · `Distribución`/`Baja`: blue<0), "Acumulación o Alza" es
+exactamente `blue≥0` — no hace falta lógica OR nueva, `blue_positive` ya lo
+cubre con precisión.
+
+**Ratios de seguimiento no obligatorios** (`ratio_pairs`, sin marcar
+"exigir mejora"): `ADS.DE/EXV5.DE` (iShares STOXX Europe 600 Consumer
+Discretionary UCITS ETF — el "sector consumo europeo" pedido) y
+`ADS.DE/NKE`. Se fetchean igual en segundo plano (el `useEffect` de
+`portfolio.html` itera todos los `ratio_pairs` de cada situación, no solo
+los marcados como condición) pero **no aparecen como fila en la tabla de
+condiciones de la UI** — v1 solo renderiza lo que está en `conditions[]`.
+Si se quiere verlos en pantalla habría que añadir una vista de "métricas de
+contexto" separada de las condiciones de disparo — no incluido en este
+cambio.
+
+**Bug real encontrado y corregido en el propio proceso de creación:** un
+primer intento de crear la situación vía `curl -d '{...}'` con el guion
+largo "—" y una "ó" incrustados directamente en el string de shell corrompió
+esos caracteres a `�` (carácter de reemplazo Unicode) **de verdad en
+disco** — no era un artefacto de visualización de la terminal, se guardó
+corrupto en `docs/data/koncorde_bot_alerts.json`. Diagnosticado leyendo el
+fichero directamente (no vía `curl | python -m json.tool`, que enmascaraba
+el problema con su propio round-trip de encoding). Corregido escribiendo el
+payload a un fichero JSON (encoding garantizado) y usando
+`curl --data-binary @archivo` en vez de un string inline — la entrada
+corrupta se borró y se recreó limpia (con el label en ASCII plano para
+evitar el problema de raíz, no solo mitigarlo). **Lección para futuras
+escrituras a `docs/data/*.json` con acentos/rayas vía curl+bash en este
+entorno:** preferir siempre `--data-binary @archivo` a un string inline.
+
+**Corrección de dato de mercado, no solo de código:** verificando el ratio
+`ADS.DE/FEZ` se descubrió que la nota previa de este archivo (arriba, en la
+sección de `ratio_signal.py`) que llamaba a ese par "EUR/EUR, limpio" era
+incorrecta — FEZ cotiza en USD, no en EUR (ver corrección fechada 2026-08-27
+en esa sección). El caveat de mezcla de divisa aplica también a la condición
+obligatoria `ADS.DE/FEZ`, no solo al ratio de contexto `ADS.DE/NKE`.
+
+**Datos sembrados manualmente el mismo día para no esperar al próximo run
+programado** (2026-08-27, fuera del pipeline 08:00/20:00 UTC): `python
+scripts/koncorde_calculator.py` (pasada completa, 202/204 tickers del
+universo, incluye ADS.DE por primera vez — antes no tenía ninguna entrada en
+`koncorde_data.json`) + `node scripts/portfolio_daily_snapshot.js
+--tickers=ADS.DE` (primera fila de `flowScore` para el ticker). Snapshot del
+día de creación: `konc_d_state=accumulation` (blue=11.58, ya cumple
+`blue_positive`), `konc_3d_state=distribution`, `konc_w_state=distribution`,
+`flowScore=-12.4`. Con solo 1 sesión de historial, la condición de Flow
+queda en pendiente (`None`, nunca `False`) hasta que exista una segunda
+fila — se resolverá sola en la próxima captura diaria (pipeline 2×/día).
+Resultado del día: `overall=False` (el ratio ADS.DE/FEZ está por debajo de
+su SMA20 hoy) — la tesis correctamente no está armada todavía.
+
+**No implementado, señalado en vez de inventado:** `ΔFlow 5d` como métrica
+formal (distinta del delta día-a-día ya existente vía `TrendArrow`) e
+`InflectionScore` — ninguno de los dos existe en el sistema; no se
+construyeron ad hoc para esta tesis. `Early` (Early Flow Score) y el estado
+Koncorde W ya son visibles gratis para cualquier ticker de `portfolio.json`
+en la tabla "Ranking de Setups" una vez tiene `flowScore`/`earlyFlow`
+reales, sin cambio adicional.
+
+Los ficheros de datos tocados por la pasada manual (`ai_candidates.json`,
+`koncorde_data.json`, `koncorde_failed_state.json`,
+`koncorde_signals_history.jsonl`, `portfolio_daily_snapshot.jsonl`) se
+dejaron sin commitear en el árbol de trabajo, mismo criterio que la sección
+"Mini-gráfico Koncorde por fila" — el próximo run programado los
+sobrescribirá de todos modos en unas horas.
 
 ---
 

@@ -36,11 +36,15 @@ LOOKBACK_DAYS = 90  # comfortably more than SMA_WINDOW trading days once weekend
 # KNOWN CAVEAT, not a bug: no FX conversion. If ticker_a/ticker_b trade in
 # different currencies (e.g. ADS.DE in EUR vs NKE in USD), the raw price
 # ratio conflates genuine relative equity performance with EUR/USD movement.
-# Verified in production 2026-08-26: ADS.DE/FEZ is same-currency (EUR/EUR),
-# clean; ADS.DE/NKE is cross-currency (EUR/USD) and should be read with that
-# in mind. Left unconverted deliberately for v1 — same currency pairs (vs a
-# European benchmark) are the common case for this feature; add FX conversion
-# here if a cross-currency pair proves to matter.
+# CORRECTED 2026-08-27: the original note here claimed ADS.DE/FEZ was
+# same-currency (EUR/EUR) and clean. Re-verified against yfinance's
+# fast_info/get_info(): FEZ ("State Street SPDR EURO STOXX 50 ETF") trades
+# in USD on NYSE Arca despite tracking a EUR-denominated index — so
+# ADS.DE/FEZ is ALSO cross-currency (EUR/USD), same caveat as ADS.DE/NKE.
+# EXV5.DE (iShares STOXX Europe 600 Consumer Discretionary UCITS ETF, Xetra)
+# is the actual EUR/EUR clean benchmark for ADS.DE. Left unconverted
+# deliberately for v1 regardless — add FX conversion here if a
+# cross-currency pair proves to matter in practice.
 
 
 def fetch_ratio_trend(ticker_a: str, ticker_b: str, sma_window: int = SMA_WINDOW) -> dict | None:
