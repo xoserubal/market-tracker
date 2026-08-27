@@ -14,5 +14,45 @@
     "raw_request": "Avisar si Banco de Galicia, la acción argentina en Concorde, pasa en azul positivo o bien en la vela diaria o bien en la vela semanal.",
     "created": "2026-08-18",
     "id": "legacy_ggal_w_blue_positive"
+  },
+  {
+    "id": "ads_de_starter_reversal",
+    "label": "ADS - starter 20-30% en reversion (Flow + ADS/FEZ + Konc D)",
+    "ticker": "ADS.DE",
+    "ratio_pairs": [
+      {
+        "key": "ads_fez",
+        "other_ticker": "FEZ",
+        "label": "ADS.DE/FEZ"
+      },
+      {
+        "key": "ads_sector",
+        "other_ticker": "EXV5.DE",
+        "label": "ADS.DE/EXV5.DE (sector consumo discrecional Europa)"
+      },
+      {
+        "key": "ads_nke",
+        "other_ticker": "NKE",
+        "label": "ADS.DE/NKE"
+      }
+    ],
+    "conditions": [
+      {
+        "type": "flow",
+        "op": "cross_positive"
+      },
+      {
+        "type": "ratio",
+        "ratio_key": "ads_fez",
+        "op": "improving"
+      },
+      {
+        "type": "koncorde",
+        "timeframe": "d",
+        "condition": "blue_positive"
+      }
+    ],
+    "active": true,
+    "created": "2026-08-27"
   }
 ]
