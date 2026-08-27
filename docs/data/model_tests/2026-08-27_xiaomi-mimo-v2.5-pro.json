@@ -1,0 +1,194 @@
+{
+  "run_id": "2026-08-27_1848",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-08-27",
+  "summary": {
+    "date": "2026-08-27",
+    "run_id": "2026-08-27_1848",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 34,
+    "input_tokens": 37929,
+    "output_tokens": 10012,
+    "cost_usd": 0.02521,
+    "latency_ms": 179269.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 96,
+    "selected_count": 1,
+    "watch_count": 3,
+    "rejected_count": 3,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": [
+      "KONC_3D_BLUE_DOWNTREND_WARNING: DHR selected with konc_3d_blue_down_2_bars=true"
+    ]
+  },
+  "quality_score": 96,
+  "response": {
+    "date": "2026-08-27",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-08-27_1848",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with macro score 91.7 and +22.9 weekly delta supports continued risk-on positioning across sectors.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "PCS 87.5, rot=8, 4-week streak, bullish-aligned Koncorde, zero extension risk",
+        "reason_full": "DHR posts PCS 87.5 with rotation score 8 on a 4-week unbroken streak delivering +22.31% 13w outperformance vs SPY, the second-highest PCS among non-open candidates. Koncorde is fully bullish-aligned across daily, 3D, and weekly timeframes with zero extension risk—the cleanest structural profile among all PCS 85+ candidates. Healthcare_largecap concentration at 73.5% is extreme and acknowledged, but DHR's combination of bullish alignment, zero extension risk, and 4-week sustained streak justifies entry over distribution-warning alternatives like TNZ.TO and VLE.TO.",
+        "comparative_edge": "Selected over TNZ.TO (PCS=88.5, rot=8) because TNZ.TO shows distribution_warning across all three Koncorde timeframes with spike_flag=true and high extension risk (4 pts), while DHR has fully bullish-aligned Koncorde with zero extension risk and a longer 4-week streak vs TNZ.TO's 2 weeks.",
+        "key_supporting_factors": [
+          "PCS 87.5 ranks second-highest among all non-open candidates, confirming peak composite signal strength.",
+          "Fully bullish-aligned Koncorde across daily, 3D, and weekly provides maximum structural confirmation available.",
+          "Zero extension risk with no extension flags offers the cleanest entry among all PCS 85+ candidates.",
+          "4-week unbroken streak with rot=8 and +22.31% 13w outperformance demonstrates sustained institutional leadership."
+        ],
+        "key_risks_or_contradictions": [
+          "Healthcare_largecap concentration at 73.5% will increase further, amplifying single-sector risk to extreme levels.",
+          "Dems score of 7 is below 10, meaning daily flow data cannot independently drive conviction.",
+          "Ret_4w_vs_spy of 4.79% is modest compared to top candidates like SEDANA.ST at 37.7%, showing slower recent momentum."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "TNZ.TO",
+        "reason": "Highest PCS at 88.5 with rot=8 and 24.61% 13w outperformance, but konc_alignment=distribution_warning across all three timeframes with spike_flag=true and high extension risk (4 pts). The distribution warning on all timeframes is too severe to enter despite the top-ranked PCS.",
+        "watch_trigger": "SELECT if konc_3d_state transitions from distribution to up or accumulation, confirming the weekly uptrend is structurally supported rather than peaking."
+      },
+      {
+        "ticker": "VLE.TO",
+        "reason": "Rot=9 (highest tier) with PCS 86.0 and zero extension risk, but konc_alignment=distribution_warning across all three timeframes. The distribution warning combined with modest ret_4w of 4.43% suggests the uptrend may be exhausting.",
+        "watch_trigger": "SELECT if konc_3d_state transitions from distribution to up, or if ret_4w accelerates above 10% confirming renewed momentum."
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "PCS 84.0 with rot=8, 4-week streak, and bullish-aligned Koncorde with zero extension risk—structurally clean. However, ret_4w_vs_spy is -1.68% indicating recent underperformance despite the streak, and healthcare_largecap concentration is already at 73.5%.",
+        "watch_trigger": "SELECT if ret_4w_vs_spy turns positive above +3%, confirming the weekly streak is reaccelerating rather than stalling."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "HIMS",
+        "reason": "konc_alignment=distribution_warning with ret_4w_vs_spy at -1.66% and only a 2-week streak. The distribution warning across all timeframes combined with negative recent momentum and short streak duration provides insufficient conviction for entry.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "LLY",
+        "reason": "PCS 68.2 barely clears the 68 min_entry threshold with rot=5, zero streak weeks, and ret_4w_vs_spy at -5.82%. konc_alignment=distribution_warning with dems=4 shows no meaningful momentum support. Multiple superior healthcare_largecap alternatives already in the portfolio.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "EOS.AX",
+        "reason": "PCS 62.5 falls below the MIMO_SHADOW min_entry threshold of 68. Extension risk is extreme (8 pts) with spike_flag=true and dist_sma20_atr_extreme. The 59.73% 4w return appears driven by a single spike event rather than sustained institutional flow.",
+        "rejection_category": "technical_overextension"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.5 with rot=7, 8-week streak, and +12.74% 4w outperformance; streak extended from 5 to 8 weeks since entry."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 81.0 with rot=8, streak extended to 5 weeks, and +25.11% 13w outperformance holding strong."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.5 with rot=7, streak extended to 7 weeks, and +36.70% 13w outperformance; weekly trend intact."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 77.0 with rot=8, 6-week streak, and +44.34% 13w outperformance; strong weekly leadership sustained."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 73.2 with rot=8, 4-week streak, and +40.29% 4w outperformance; weekly momentum accelerating."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 85.5 with rot=8, streak extended to 7 weeks, and bullish_pending_3d_confirmation alignment."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85.2 with rot=8, streak extended to 5 weeks, and +37.71% 4w outperformance; bullish-aligned Koncorde."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 88.0 (highest) with rot=9, 4-week streak, and +57.68% 13w outperformance; extreme extension risk acknowledged but weekly leadership undeniable."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 83.2 with rot=7, 3-week streak, and +39.72% 13w outperformance; ret_4w dipped to -3.91% but 13w trend intact."
+      },
+      {
+        "ticker": "TECK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 75.5 with rot=8, streak extended to 6 weeks, and +17.90% 4w outperformance; dems=16 confirms daily momentum."
+      },
+      {
+        "ticker": "CRON",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 74.2 with rot=8, streak extended to 4 weeks, and +21.16% 4w outperformance; cannabis diversifier holding."
+      },
+      {
+        "ticker": "EXK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 77.8 with rot=9, 3-week streak, and +37.11% 4w outperformance; bullish-aligned Koncorde."
+      },
+      {
+        "ticker": "VRTX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 83.2 with rot=7, 4-week streak, and +22.83% 13w outperformance; bullish-aligned Koncorde."
+      },
+      {
+        "ticker": "III.L",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 68.2 at min_entry floor with rot=5 and streak=0; ret_4w turned negative at -5.77% but pcs and rot above exit thresholds."
+      },
+      {
+        "ticker": "CVE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 78.8 with rot=7, 2-week streak, and +10.41% 4w outperformance; bullish_pending_3d_confirmation and oil_gas diversifier."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-08-27\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-08-27_1848\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 91.7 and +22.9 weekly delta supports continued risk-on positioning across sectors.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"DHR\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS 87.5, rot=8, 4-week streak, bullish-aligned Koncorde, zero extension risk\",\n      \"reason_full\": \"DHR posts PCS 87.5 with rotation score 8 on a 4-week unbroken streak delivering +22.31% 13w outperformance vs SPY, the second-highest PCS among non-open candidates. Koncorde is fully bullish-aligned across daily, 3D, and weekly timeframes with zero extension risk—the cleanest structural profile among all PCS 85+ candidates. Healthcare_largecap concentration at 73.5% is extreme and acknowledged, but DHR's combination of bullish alignment, zero extension risk, and 4-week sustained streak justifies entry over distribution-warning alternatives like TNZ.TO and VLE.TO.\",\n      \"comparative_edge\": \"Selected over TNZ.TO (PCS=88.5, rot=8) because TNZ.TO shows distribution_warning across all three Koncorde timeframes with spike_flag=true and high extension risk (4 pts), while DHR has fully bullish-aligned Koncorde with zero extension risk and a longer 4-week streak vs TNZ.TO's 2 weeks.\",\n      \"key_supporting_factors\": [\n        \"PCS 87.5 ranks second-highest among all non-open candidates, confirming peak composite signal strength.\",\n        \"Fully bullish-aligned Koncorde across daily, 3D, and weekly provides maximum structural confirmation available.\",\n        \"Zero extension risk with no extension flags offers the cleanest entry among all PCS 85+ candidates.\",\n        \"4-week unbroken streak with rot=8 and +22.31% 13w outperformance demonstrates sustained institutional leadership"
+}
