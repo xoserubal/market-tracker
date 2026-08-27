@@ -917,6 +917,96 @@ app.post("/api/universe/remove", express.json(), (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Situaciones Especiales (composite thesis alerts) ────────────────────
+// Same storage file the /kalert Telegram bot already writes to
+// (docs/data/koncorde_bot_alerts.json) — one unified alert system, not a
+// parallel one, per the user's explicit request. Same sync pattern as
+// /api/universe/add above: write file, respond, then push to GitHub in the
+// background so scripts/check_koncorde_alerts.py (runs in CI) sees the
+// change on its next run — /api/portfolio and /api/state deliberately NOT
+// used here, they're local-disk-only with no push at all.
+const SPECIAL_SITUATIONS_FILE = path.join(__dirname, "docs", "data", "koncorde_bot_alerts.json");
+
+function _readSpecialSituations() {
+  if (!fs.existsSync(SPECIAL_SITUATIONS_FILE)) return [];
+  let rows;
+  try { rows = JSON.parse(fs.readFileSync(SPECIAL_SITUATIONS_FILE, "utf8")); }
+  catch { return []; }
+  // Read-time shim only (never rewrites the file): legacy /kalert rows (pre-
+  // 2026-08-26, flat ticker/timeframe/condition, no "id") get a deterministic
+  // synthetic id so the dashboard's edit/delete-by-id works on them too. If
+  // the row is later edited from the UI, the POST handler below persists it
+  // with this same id in the new {conditions:[...]} schema — a natural
+  // one-time migration on first touch, same "shim not migration" principle
+  // as koncorde_alert_conditions.get_conditions() on the Python side.
+  return rows.map(s => (s.id ? s : {
+    ...s,
+    id: `legacy_${(s.ticker || "").toLowerCase()}_${s.timeframe || ""}_${s.condition || ""}`.replace(/[^a-z0-9_]/g, ""),
+  }));
+}
+
+function _pushSpecialSituations(commitMsg) {
+  const rel = path.relative(__dirname, SPECIAL_SITUATIONS_FILE).replace(/\\/g, "/");
+  const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "${commitMsg}" && git push origin master`;
+  exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
+    if (err) console.log("⚠ git push situaciones especiales:", (stderr || err.message).trim());
+    else     console.log("✓ git push situaciones especiales:", stdout.trim() || "ok");
+  });
+}
+
+app.get("/api/special-situations", (_req, res) => {
+  try { res.json({ situations: _readSpecialSituations() }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/special-situations", express.json(), (req, res) => {
+  try {
+    const body = req.body || {};
+    const ticker = (body.ticker || "").trim().toUpperCase();
+    if (!ticker) return res.status(400).json({ error: "ticker required" });
+    if (!Array.isArray(body.conditions) || !body.conditions.length)
+      return res.status(400).json({ error: "at least one condition required" });
+
+    const situations = _readSpecialSituations();
+    const id = (body.id || "").trim() || `${ticker.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
+    const entry = {
+      id,
+      label: (body.label || "").trim() || ticker,
+      ticker,
+      ratio_pairs: Array.isArray(body.ratio_pairs) ? body.ratio_pairs : [],
+      conditions: body.conditions,
+      active: body.active !== false,
+      created: body.created || new Date().toISOString().slice(0, 10),
+    };
+
+    const idx = situations.findIndex(s => s.id === id);
+    const isUpdate = idx >= 0;
+    if (isUpdate) situations[idx] = entry; else situations.push(entry);
+
+    fs.writeFileSync(SPECIAL_SITUATIONS_FILE, JSON.stringify(situations, null, 2), "utf8");
+    res.json({ ok: true, id, updated: isUpdate });
+
+    _pushSpecialSituations(`chore: ${isUpdate ? "update" : "add"} situación especial ${ticker} from dashboard`);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/special-situations/delete", express.json(), (req, res) => {
+  try {
+    const id = ((req.body || {}).id || "").trim();
+    if (!id) return res.status(400).json({ error: "id required" });
+
+    const situations = _readSpecialSituations();
+    const before = situations.length;
+    const remaining = situations.filter(s => s.id !== id);
+    if (remaining.length === before) return res.json({ ok: true, not_found: true });
+
+    fs.writeFileSync(SPECIAL_SITUATIONS_FILE, JSON.stringify(remaining, null, 2), "utf8");
+    res.json({ ok: true, removed: id });
+
+    _pushSpecialSituations(`chore: remove situación especial ${id} from dashboard`);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
 app.listen(3000, () => {

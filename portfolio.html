@@ -408,6 +408,160 @@ function UniverseModal({ ticker, onDone, onClose }) {
   );
 }
 
+// ── SpecialSituationModal ─────────────────────────────────────────────────
+// Crea/edita una "situación especial" (tesis compuesta) — POST /api/special-
+// situations. Mismo esquema que scripts/koncorde_alert_conditions.py espera:
+// {id, label, ticker, ratio_pairs:[{key,other_ticker,label}], conditions:[...]}.
+const KONC_TF_OPTIONS = [
+  { value: 'd',  label: 'Diario' },
+  { value: '3d', label: '3 días' },
+  { value: 'w',  label: 'Semanal' },
+];
+const KONC_COND_OPTIONS = [
+  { value: '',                   label: '— ninguna —' },
+  { value: 'state_accumulation', label: 'Estado = Acumulación' },
+  { value: 'state_distribution', label: 'Estado = Distribución' },
+  { value: 'blue_positive',      label: 'Blue positivo' },
+  { value: 'blue_negative',      label: 'Blue negativo' },
+  { value: 'blue_cross_up',      label: 'Blue cruza a alcista' },
+  { value: 'green_positive',     label: 'Green positivo' },
+  { value: 'green_negative',     label: 'Green negativo' },
+];
+const FLOW_OP_OPTIONS = [
+  { value: '',               label: '— ninguna —' },
+  { value: 'cross_positive', label: 'Flow cruza de negativo a positivo' },
+  { value: 'improving',      label: 'Flow mejora vs sesión anterior' },
+];
+
+function SpecialSituationModal({ item, onSave, onClose }) {
+  const existingConds = item ? (item.conditions || [{ type:'koncorde', timeframe:item.timeframe, condition:item.condition }]) : [];
+  const koncByTf = {};
+  existingConds.filter(c => (c.type||'koncorde')==='koncorde').forEach(c => { koncByTf[c.timeframe] = c.condition; });
+  const flowCond = existingConds.find(c => c.type==='flow');
+
+  const [ticker,     setTicker]     = React.useState(item?.ticker || '');
+  const [label,      setLabel]      = React.useState(item?.label || '');
+  const [flowOp,     setFlowOp]     = React.useState(flowCond?.op || '');
+  const [koncD,      setKoncD]      = React.useState(koncByTf.d  || '');
+  const [konc3D,     setKonc3D]     = React.useState(koncByTf['3d'] || '');
+  const [koncW,      setKoncW]      = React.useState(koncByTf.w  || '');
+  const [ratioPairs, setRatioPairs] = React.useState(
+    item?.ratio_pairs?.length ? item.ratio_pairs.map(rp => ({ ...rp, required: existingConds.some(c => c.type==='ratio' && c.ratio_key===rp.key) }))
+      : [{ key:'', other_ticker:'', label:'', required:false }]
+  );
+  const [saving, setSaving] = React.useState(false);
+  const [err,    setErr]    = React.useState('');
+
+  const updateRatioPair = (i, field, val) => setRatioPairs(prev => prev.map((rp,idx) => idx!==i ? rp : { ...rp, [field]: val }));
+  const addRatioPair    = () => setRatioPairs(prev => [...prev, { key:'', other_ticker:'', label:'', required:false }]);
+  const removeRatioPair = i  => setRatioPairs(prev => prev.filter((_,idx) => idx!==i));
+
+  const handleSave = () => {
+    const t = ticker.trim().toUpperCase();
+    if (!t) return setErr('Ticker obligatorio');
+
+    const cleanPairs = ratioPairs
+      .filter(rp => rp.other_ticker.trim())
+      .map((rp, i) => ({
+        key: rp.key || `ratio_${i}`,
+        other_ticker: rp.other_ticker.trim().toUpperCase(),
+        label: rp.label.trim() || `${t}/${rp.other_ticker.trim().toUpperCase()}`,
+      }));
+
+    const conditions = [];
+    if (flowOp) conditions.push({ type:'flow', op: flowOp });
+    if (koncD)  conditions.push({ type:'koncorde', timeframe:'d',  condition: koncD });
+    if (konc3D) conditions.push({ type:'koncorde', timeframe:'3d', condition: konc3D });
+    if (koncW)  conditions.push({ type:'koncorde', timeframe:'w',  condition: koncW });
+    ratioPairs.filter(rp => rp.required && rp.other_ticker.trim()).forEach((rp, i) => {
+      const key = cleanPairs[i]?.key;
+      if (key) conditions.push({ type:'ratio', ratio_key: key, op:'improving' });
+    });
+
+    if (!conditions.length) return setErr('Marca al menos una condición');
+
+    setSaving(true); setErr('');
+    onSave({
+      id: item?.id,
+      label: label.trim() || t,
+      ticker: t,
+      ratio_pairs: cleanPairs,
+      conditions,
+      active: true,
+    });
+  };
+
+  const inp = { border:'1px solid #ddd', borderRadius:3, padding:'4px 8px', fontSize:12, width:'100%', boxSizing:'border-box' };
+  const sel = { ...inp, background:'white' };
+  const lbl = { fontSize:10, color:'#777', textTransform:'uppercase', letterSpacing:'.3px', display:'block', marginBottom:2 };
+
+  return (
+    <div className="overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal" style={{width:560}}>
+        <h3>{item ? 'Editar' : 'Nueva'} situación especial</h3>
+
+        <div className="row2">
+          <div className="field">
+            <label>Ticker</label>
+            <input style={inp} value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase())} placeholder="ADS.DE" autoFocus disabled={!!item} />
+          </div>
+          <div className="field">
+            <label>Etiqueta (opcional)</label>
+            <input style={inp} value={label} onChange={e=>setLabel(e.target.value)} placeholder="ADS — starter en reversión" />
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Flow Score</label>
+          <select style={sel} value={flowOp} onChange={e=>setFlowOp(e.target.value)}>
+            {FLOW_OP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Koncorde — condiciones por timeframe (opcional, marca las que apliquen)</label>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+            {[['D', koncD, setKoncD], ['3D', konc3D, setKonc3D], ['W', koncW, setKoncW]].map(([tfLbl, val, setter]) => (
+              <div key={tfLbl}>
+                <span style={lbl}>{tfLbl}</span>
+                <select style={sel} value={val} onChange={e=>setter(e.target.value)}>
+                  {KONC_COND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Ratios custom (ticker/otro) — marca "exigir mejora" para que cuente como condición</label>
+          {ratioPairs.map((rp, i) => (
+            <div key={i} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
+              <input style={{...inp,flex:1}} value={rp.other_ticker} onChange={e=>updateRatioPair(i,'other_ticker',e.target.value.toUpperCase())} placeholder="FEZ" />
+              <input style={{...inp,flex:1}} value={rp.label} onChange={e=>updateRatioPair(i,'label',e.target.value)} placeholder={`${ticker||'TICKER'}/${rp.other_ticker||'OTRO'}`} />
+              <label style={{display:'flex',alignItems:'center',gap:4,fontSize:11,whiteSpace:'nowrap'}}>
+                <input type="checkbox" checked={rp.required} onChange={e=>updateRatioPair(i,'required',e.target.checked)} />
+                exigir mejora
+              </label>
+              {ratioPairs.length > 1 && <button type="button" onClick={()=>removeRatioPair(i)} style={{border:'none',background:'none',color:'#c0392b',cursor:'pointer',fontSize:14}}>✕</button>}
+            </div>
+          ))}
+          {ratioPairs.length < 3 && (
+            <button type="button" onClick={addRatioPair} style={{border:'1px dashed #bbb',background:'white',borderRadius:3,padding:'3px 10px',fontSize:11,cursor:'pointer',color:'#555'}}>+ añadir ratio</button>
+          )}
+        </div>
+
+        {err && <div style={{color:'#e74c3c',fontSize:11,marginBottom:8}}>⚠ {err}</div>}
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:4}}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Guardando…' : (item ? 'Guardar cambios' : 'Crear situación')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── HistoryExportModal ───────────────────────────────────────────────────
 // Exporta el histórico crudo de docs/data/portfolio_daily_snapshot.jsonl
 // (Step 9g del pipeline — ver CLAUDE.md) filtrado por ticker(s) + rango de
@@ -618,6 +772,8 @@ function Portfolio() {
   const [stockConfig,   setStockConfig]   = React.useState({});
   const [universeTickers, setUniverseTickers] = React.useState(new Set());
   const [signalsHistory, setSignalsHistory] = React.useState([]);
+  const [situations,  setSituations]  = React.useState([]);
+  const [ratioTrends, setRatioTrends] = React.useState({}); // "TICKERA|TICKERB" -> {ratio_now, sma, improving} | null
   const saveTimer = React.useRef(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3200); };
@@ -646,7 +802,124 @@ function Portfolio() {
       .then(r => r.json())
       .then(d => setSignalsHistory(Array.isArray(d) ? d : []))
       .catch(() => {});
+    fetch('/api/special-situations')
+      .then(r => r.json())
+      .then(d => setSituations(Array.isArray(d.situations) ? d.situations : []))
+      .catch(() => {});
   }, []);
+
+  // ── Situaciones Especiales — evaluación en vivo en el cliente ───────────
+  // Espejo deliberado de scripts/koncorde_alert_conditions.py /
+  // scripts/ratio_signal.py (mismo umbral SMA20, misma semántica de cruce) —
+  // ver comentario en ratio_signal.py sobre por qué no se comparte código
+  // directamente entre JS y Python aquí.
+  const RATIO_SMA_WINDOW = 20;
+
+  const getSituationConditions = sit =>
+    sit.conditions || [{ type: 'koncorde', timeframe: sit.timeframe, condition: sit.condition }];
+
+  function checkKoncordeCond(p, timeframe, condition) {
+    if (!p) return null;
+    const prefix = `konc_${timeframe}_`;
+    if (condition === 'blue_positive')      return p[prefix+'blue'] == null ? null : p[prefix+'blue'] >= 0;
+    if (condition === 'blue_negative')      return p[prefix+'blue'] == null ? null : p[prefix+'blue'] < 0;
+    if (condition === 'blue_cross_up')      return p[prefix+'blue_cross_up'] == null ? null : !!p[prefix+'blue_cross_up'];
+    if (condition === 'green_positive')     return p[prefix+'green'] == null ? null : p[prefix+'green'] >= 0;
+    if (condition === 'green_negative')     return p[prefix+'green'] == null ? null : p[prefix+'green'] < 0;
+    if (condition === 'state_accumulation') return p[prefix+'accumulation_flag'] == null ? null : !!p[prefix+'accumulation_flag'];
+    if (condition === 'state_distribution') return p[prefix+'distribution_flag'] == null ? null : !!p[prefix+'distribution_flag'];
+    return null;
+  }
+
+  function checkFlowCond(ticker, p, op) {
+    const cur = computeFlowScore(p);
+    const prev = prevSessionMap[ticker]?.flowScore;
+    if (cur == null || prev == null) return null;
+    if (op === 'cross_positive') return prev < 0 && cur >= 0;
+    if (op === 'improving')      return cur > prev;
+    return null;
+  }
+
+  function checkRatioCond(ratioKey, sit, op) {
+    const trend = ratioTrends[`${sit.ticker}|${(sit.ratio_pairs||[]).find(r=>r.key===ratioKey)?.other_ticker}`];
+    if (trend === undefined || trend === null) return null;
+    if (op === 'improving') return trend.improving;
+    return null;
+  }
+
+  function evaluateSituationConditions(sit, prices) {
+    const p = prices[sit.ticker];
+    const results = getSituationConditions(sit).map(c => {
+      const ctype = c.type || 'koncorde';
+      if (ctype === 'koncorde') return checkKoncordeCond(p, c.timeframe, c.condition);
+      if (ctype === 'flow')     return checkFlowCond(sit.ticker, p, c.op);
+      if (ctype === 'ratio')    return checkRatioCond(c.ratio_key, sit, c.op);
+      return null;
+    });
+    if (results.some(r => r === false)) return false;
+    if (results.some(r => r === null))  return null;
+    return true;
+  }
+
+  // Ratio ADS/FEZ-style: fetch de historial de ambas patas vía /api/history/:symbol
+  // (ya genérico), alineado por fecha, ratio + SMA20 — mismo criterio "improving"
+  // que ratio_signal.py. Se cachea por par para no re-pedir en cada render.
+  async function fetchRatioTrendClient(tickerA, tickerB) {
+    const key = `${tickerA}|${tickerB}`;
+    try {
+      const [ra, rb] = await Promise.all([
+        fetch('/api/history/' + encodeURIComponent(tickerA)).then(r => r.json()),
+        fetch('/api/history/' + encodeURIComponent(tickerB)).then(r => r.json()),
+      ]);
+      const mapB = new Map((rb.series || []).map(p => [p.date, p.close]));
+      const ratioSeries = (ra.series || [])
+        .filter(p => mapB.has(p.date) && p.close != null && mapB.get(p.date) != null)
+        .map(p => p.close / mapB.get(p.date));
+      if (ratioSeries.length < RATIO_SMA_WINDOW + 1) {
+        setRatioTrends(prev => ({ ...prev, [key]: null }));
+        return;
+      }
+      const ratioNow = ratioSeries[ratioSeries.length - 1];
+      const window = ratioSeries.slice(-RATIO_SMA_WINDOW);
+      const sma = window.reduce((a,b) => a+b, 0) / window.length;
+      setRatioTrends(prev => ({ ...prev, [key]: { ratio_now: ratioNow, sma, improving: ratioNow > sma } }));
+    } catch {
+      setRatioTrends(prev => ({ ...prev, [key]: null }));
+    }
+  }
+
+  // Dispara el fetch de cada ratio referenciado por alguna situación, una vez,
+  // en cuanto se cargan las situaciones (no en cada render).
+  React.useEffect(() => {
+    situations.forEach(sit => {
+      (sit.ratio_pairs || []).forEach(rp => {
+        const key = `${sit.ticker}|${rp.other_ticker}`;
+        if (!(key in ratioTrends)) fetchRatioTrendClient(sit.ticker, rp.other_ticker);
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [situations]);
+
+  async function saveSituation(sit) {
+    try {
+      const r = await fetch('/api/special-situations', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(sit) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || ('HTTP '+r.status));
+      const refreshed = await fetch('/api/special-situations').then(x => x.json());
+      setSituations(Array.isArray(refreshed.situations) ? refreshed.situations : []);
+      showToast(d.updated ? '✓ Situación actualizada' : '✓ Situación creada');
+      setModal(null);
+    } catch (e) { showToast('❌ Error al guardar: ' + e.message); }
+  }
+
+  async function deleteSituation(id) {
+    try {
+      const r = await fetch('/api/special-situations/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      setSituations(prev => prev.filter(s => s.id !== id));
+      showToast('✓ Situación eliminada');
+    } catch (e) { showToast('❌ Error al eliminar: ' + e.message); }
+  }
 
   // ── Guardado automático (debounce 800 ms) ─────────────────────────────
   const persistPortfolio = React.useCallback(async data => {
@@ -804,6 +1077,36 @@ function Portfolio() {
     }));
     return [...seen.values()].sort((a, b) => (b.insider_activity_score ?? -1) - (a.insider_activity_score ?? -1));
   }, [portfolio, prices]);
+
+  // ── Situaciones Especiales — tesis compuestas con estado en vivo ────────
+  const situationsRanking = React.useMemo(() => {
+    return situations.map(sit => {
+      const conds = getSituationConditions(sit).map(c => {
+        const ctype = c.type || 'koncorde';
+        let result, desc;
+        if (ctype === 'koncorde') {
+          result = checkKoncordeCond(prices[sit.ticker], c.timeframe, c.condition);
+          desc = `${(KONC_COND_OPTIONS.find(o=>o.value===c.condition)||{}).label || c.condition} (${c.timeframe.toUpperCase()})`;
+        } else if (ctype === 'flow') {
+          result = checkFlowCond(sit.ticker, prices[sit.ticker], c.op);
+          desc = (FLOW_OP_OPTIONS.find(o=>o.value===c.op)||{}).label || c.op;
+        } else if (ctype === 'ratio') {
+          result = checkRatioCond(c.ratio_key, sit, c.op);
+          const rp = (sit.ratio_pairs||[]).find(r=>r.key===c.ratio_key);
+          desc = `${rp?.label || c.ratio_key} mejora`;
+        } else {
+          result = null; desc = ctype;
+        }
+        return { desc, result };
+      });
+      const overall = conds.some(c=>c.result===false) ? false
+        : conds.some(c=>c.result===null) ? null : true;
+      return { ...sit, conds, overall };
+    }).sort((a,b) => {
+      const rank = v => v===true ? 0 : v===null ? 1 : 2;
+      return rank(a.overall) - rank(b.overall);
+    });
+  }, [situations, prices, ratioTrends, prevSessionMap]);
 
   // ── LLM export ─────────────────────────────────────────────────────────
   const copyForLLM = () => {
@@ -990,6 +1293,11 @@ function Portfolio() {
       {modal?.type==='history-export' && (
         <HistoryExportModal onClose={()=>setModal(null)} showToast={showToast} />
       )}
+      {modal?.type==='special-situation' && (
+        <SpecialSituationModal item={modal.item}
+          onSave={saveSituation}
+          onClose={()=>setModal(null)} />
+      )}
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12}}>
@@ -1145,6 +1453,72 @@ function Portfolio() {
           </div>
         </div>
       )}
+
+      {/* ── Situaciones Especiales — tesis compuestas ────────────────────── */}
+      <div style={{marginBottom:16,border:'1px solid #e0e0e0',borderRadius:6,overflow:'hidden'}}>
+        <div style={{padding:'5px 12px',background:'#354f73',color:'white',
+          display:'flex',justifyContent:'space-between',alignItems:'center'}}
+          data-tip={"Tesis de trade discrecionales con condiciones compuestas (Flow Score, ratios custom, Koncorde D/3D/W).\nSe disparan (y avisan por Telegram) solo cuando TODAS las condiciones marcadas se cumplen a la vez.\nSe evalúan en el pipeline (scripts/check_koncorde_alerts.py); aquí solo se ve su estado en vivo con los datos ya cargados."}>
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:'.5px',textTransform:'uppercase'}}>Situaciones Especiales</span>
+          <button onClick={()=>setModal({type:'special-situation', item:null})}
+            style={{padding:'2px 10px',fontSize:10,border:'1px solid rgba(255,255,255,.5)',borderRadius:3,cursor:'pointer',background:'transparent',color:'white'}}>
+            + Nueva situación
+          </button>
+        </div>
+        {situationsRanking.length === 0 ? (
+          <div style={{padding:'10px 12px',fontSize:11,color:'#999',fontStyle:'italic'}}>
+            Sin situaciones especiales todavía.
+          </div>
+        ) : (
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+              <thead className="rank-thead">
+                <tr style={{background:'#f0f4f8'}}>
+                  <th style={{padding:'4px 10px',textAlign:'left',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Ticker / Etiqueta</th>
+                  <th style={{padding:'4px 10px',textAlign:'left',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Condiciones</th>
+                  <th style={{padding:'4px 10px',textAlign:'center',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}>Armada</th>
+                  <th style={{padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px'}}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {situationsRanking.map((sit,i) => (
+                  <tr key={sit.id || `${sit.ticker}-${i}`} style={{background: i%2===0?'white':'#fafafa', borderBottom:'1px solid #f0f0f0'}}>
+                    <td style={{padding:'4px 10px',verticalAlign:'top'}}>
+                      <div style={{fontWeight:700,color:'#1a6baa',fontFamily:'monospace'}}>{sit.ticker}</div>
+                      {sit.label && sit.label!==sit.ticker && <div style={{fontSize:10,color:'#888'}}>{sit.label}</div>}
+                    </td>
+                    <td style={{padding:'4px 10px',verticalAlign:'top'}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                        {sit.conds.map((c,ci) => {
+                          const bg = c.result===true ? '#e8f5e9' : c.result===false ? '#ffebee' : '#f5f5f5';
+                          const fg = c.result===true ? '#1b5e20' : c.result===false ? '#b71c1c' : '#999';
+                          const icon = c.result===true ? '✓' : c.result===false ? '✗' : '…';
+                          return (
+                            <span key={ci} style={{background:bg,color:fg,borderRadius:3,padding:'2px 6px',fontSize:10,width:'fit-content'}}>
+                              {icon} {c.desc}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                    <td style={{padding:'4px 10px',textAlign:'center',verticalAlign:'top'}}>
+                      {sit.overall===true && <span style={{background:'#1b5e20',color:'white',borderRadius:3,padding:'2px 10px',fontSize:10,fontWeight:700}}>🔥 SÍ</span>}
+                      {sit.overall===false && <span style={{color:'#aaa',fontSize:10}}>No</span>}
+                      {sit.overall===null && <span style={{color:'#bbb',fontSize:10,fontStyle:'italic'}}>pendiente</span>}
+                    </td>
+                    <td style={{padding:'4px 10px',textAlign:'right',verticalAlign:'top',whiteSpace:'nowrap'}}>
+                      <button onClick={()=>setModal({type:'special-situation', item:sit})}
+                        style={{border:'none',background:'none',cursor:'pointer',color:'#3a6ca0',fontSize:11,marginRight:8}}>✎</button>
+                      <button onClick={()=>deleteSituation(sit.id)}
+                        style={{border:'none',background:'none',cursor:'pointer',color:'#c0392b',fontSize:11}}>🗑</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* ── Insider Activity (Form4API) ───────────────────────────────── */}
       {insiderRanking.length > 0 && (

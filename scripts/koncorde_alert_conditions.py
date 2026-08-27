@@ -77,3 +77,131 @@ def describe(ticker: str, timeframe: str, condition: str) -> str:
     tf_label   = TIMEFRAME_LABELS.get(timeframe, timeframe)
     cond_label = CONDITIONS.get(condition, condition)
     return f"{ticker} — {cond_label} en {tf_label}"
+
+
+# ── Generalization: composite multi-type conditions (2026-08-26) ───────────
+# Extends the vocabulary above from "1 Koncorde condition on 1 ticker" to
+# "N conditions of possibly-different types, all required at once (AND)" —
+# for user-composed theses ("situaciones especiales") from the web UI, e.g.
+# the ADS.DE case: Flow crosses positive + ADS/FEZ ratio improving + Koncorde
+# D -> accumulation, all simultaneously. Deliberately generalizes the existing
+# single-condition system instead of building a parallel one (see
+# wiki/PREREGISTRO... — no, see the plan discussion: user explicitly asked
+# for "un único sistema de alertas, de las más simples a las más complejas").
+#
+# evaluate()/describe()/CONDITIONS/VALID_TIMEFRAMES/TIMEFRAME_LABELS above are
+# UNCHANGED — telegram_portfolio_bot.py and check_koncorde_alerts.py keep
+# importing them as-is. Everything below is additive.
+
+FLOW_OPS: dict[str, str] = {
+    "cross_positive": "Flow Score cruza de negativo a positivo (sesión anterior -> hoy)",
+    "improving":      "Flow Score mejora respecto a la sesión anterior",
+}
+
+RATIO_OPS: dict[str, str] = {
+    "improving": "El ratio mejora (por encima de su media móvil reciente)",
+}
+
+
+def get_conditions(row: dict) -> list[dict]:
+    """Returns the `conditions` list for an alert row, upgrading old-format
+    rows (flat ticker/timeframe/condition, from /kalert before this change)
+    into the new list-of-typed-conditions shape on the fly. Never mutates or
+    rewrites the row on disk — this is a read-time compatibility shim, not a
+    migration, so the ~2 alerts already active as of 2026-08-26 (IRS, GGAL)
+    keep working without anyone touching docs/data/koncorde_bot_alerts.json.
+    """
+    if "conditions" in row:
+        return row["conditions"]
+    return [{"type": "koncorde", "timeframe": row["timeframe"], "condition": row["condition"]}]
+
+
+def evaluate_flow(rows_for_ticker: list[dict], op: str) -> bool | None:
+    """Evaluates one Flow Score condition from portfolio_daily_snapshot.jsonl
+    rows for a single ticker (any order; only the two most recent by date are
+    used). Returns None if fewer than 2 sessions of history exist yet, or if
+    flowScore is null in either of the two most recent rows (computeFlowScore
+    can return null — see shared/flow-score.js) — same "missing data is never
+    False" principle as evaluate() above.
+    """
+    if op not in FLOW_OPS:
+        raise ValueError(f"Unknown flow op: {op}")
+    rows = sorted((r for r in rows_for_ticker if r.get("date")), key=lambda r: r["date"])
+    if len(rows) < 2:
+        return None
+    prev_score, cur_score = rows[-2].get("flowScore"), rows[-1].get("flowScore")
+    if prev_score is None or cur_score is None:
+        return None
+    if op == "cross_positive":
+        return prev_score < 0 and cur_score >= 0
+    if op == "improving":
+        return cur_score > prev_score
+    raise AssertionError("unreachable — op validated above")
+
+
+def evaluate_ratio(trend: dict | None, op: str) -> bool | None:
+    """Evaluates one ratio condition from a scripts/ratio_signal.py trend dict.
+    `trend` is None if the ratio couldn't be fetched/computed that run (missing
+    data, never treated as False)."""
+    if op not in RATIO_OPS:
+        raise ValueError(f"Unknown ratio op: {op}")
+    if trend is None:
+        return None
+    if op == "improving":
+        return trend.get("improving")
+    raise AssertionError("unreachable — op validated above")
+
+
+def evaluate_single_condition(condition: dict, ctx: dict) -> bool | None:
+    """Dispatches one condition dict (from get_conditions()) to the right
+    evaluator, using pre-fetched data supplied in `ctx`:
+      ctx["koncorde_ticker_data"] — this ticker's koncorde_data.json entry
+      ctx["flow_rows"]            — this ticker's portfolio_daily_snapshot rows
+      ctx["ratio_trends"]         — {ratio_key: trend_dict} for this alert's ratio_pairs
+    Never fetches anything itself — callers own all I/O, same separation of
+    concerns evaluate() already has (it takes ticker_data, doesn't read files).
+    """
+    ctype = condition.get("type", "koncorde")  # legacy rows have no "type" key at all
+    if ctype == "koncorde":
+        ticker_data = ctx.get("koncorde_ticker_data")
+        if ticker_data is None:
+            return None
+        return evaluate(ticker_data, condition["timeframe"], condition["condition"])
+    if ctype == "flow":
+        return evaluate_flow(ctx.get("flow_rows") or [], condition["op"])
+    if ctype == "ratio":
+        ratio_trends = ctx.get("ratio_trends") or {}
+        return evaluate_ratio(ratio_trends.get(condition["ratio_key"]), condition["op"])
+    raise ValueError(f"Unknown condition type: {ctype}")
+
+
+def evaluate_conditions(conditions: list[dict], ctx: dict) -> bool | None:
+    """AND over all conditions. Returns:
+      True  — every condition evaluated True (fire the alert)
+      False — at least one condition evaluated False (definitively not yet — a
+              single-condition legacy alert behaves exactly as evaluate() did)
+      None  — no condition is False, but at least one is still unknown/missing
+              data (keep pending, same as before — never fire, never discard)
+    """
+    results = [evaluate_single_condition(c, ctx) for c in conditions]
+    if any(r is False for r in results):
+        return False
+    if any(r is None for r in results):
+        return None
+    return True
+
+
+def describe_conditions(ticker: str, conditions: list[dict]) -> str:
+    """Human-readable ES summary of a (possibly multi-condition) alert."""
+    parts = []
+    for c in conditions:
+        ctype = c.get("type", "koncorde")
+        if ctype == "koncorde":
+            parts.append(f"{CONDITIONS.get(c['condition'], c['condition'])} en {TIMEFRAME_LABELS.get(c['timeframe'], c['timeframe'])}")
+        elif ctype == "flow":
+            parts.append(FLOW_OPS.get(c["op"], c["op"]))
+        elif ctype == "ratio":
+            parts.append(f"{c.get('ratio_key', '?')}: {RATIO_OPS.get(c['op'], c['op'])}")
+        else:
+            parts.append(f"[{ctype}?]")
+    return f"{ticker} — " + " Y ".join(parts)

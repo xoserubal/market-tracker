@@ -3330,6 +3330,169 @@ formato correcto, sin errores).
 
 ---
 
+## Situaciones Especiales — sistema unificado de alertas compuestas (implementado 2026-08-26)
+
+Origen: el usuario quiso hacer seguimiento de una tesis de trade discrecional
+sobre ADS.DE (Adidas) — Flow Score cruzando a positivo, ratio ADS/FEZ
+mejorando, Koncorde D pasando a acumulación, todo simultáneamente — y pidió
+explícitamente **no** construir un sistema de alertas paralelo a `/kalert`:
+*"Mi preferencia sería caminar hacia un sistema único de alertas que
+permitiese desde las más simples hasta las más complejas"*. Este cambio
+generaliza `/kalert` (1 condición Koncorde sobre 1 ticker) a un sistema de N
+condiciones de distinto tipo, todas exigidas a la vez (AND), con una UI en
+`portfolio.html` para componerlas — en vez de crear una arquitectura nueva.
+
+**Un único fichero, un único evaluador, esquema generalizado con
+compatibilidad retroactiva.** `docs/data/koncorde_bot_alerts.json` sigue
+siendo el único almacén — las ~2 alertas simples ya activas (IRS, GGAL,
+creadas vía `/kalert`) no se migraron ni se tocaron, se leen igual vía un
+shim de compatibilidad en tiempo de lectura.
+
+### 1. `scripts/koncorde_alert_conditions.py` — generalizado, no reemplazado
+
+`evaluate()`/`describe()`/`CONDITIONS`/`VALID_TIMEFRAMES`/`TIMEFRAME_LABELS`
+(las 7 condiciones Koncorde de siempre) quedan **sin tocar** —
+`telegram_portfolio_bot.py` los sigue importando igual. Todo lo nuevo es
+aditivo:
+
+- `get_conditions(row)` — shim de lectura: si la fila ya tiene `conditions`
+  (formato nuevo), la devuelve tal cual; si no (fila vieja de `/kalert`,
+  `ticker`/`timeframe`/`condition` sueltos), la envuelve en
+  `[{"type":"koncorde", "timeframe":..., "condition":...}]`. Nunca reescribe
+  el fichero — es una traducción al vuelo, no una migración.
+- `evaluate_flow(rows, op)` — condición sobre Flow Score
+  (`cross_positive`/`improving`), usando las 2 filas más recientes de
+  `docs/data/portfolio_daily_snapshot.jsonl` para ese ticker (ver sección
+  "Captura diaria completa de Portfolio Tracker" más arriba — ya cubre TODOS
+  los tickers de `portfolio.json`, incluidos los de solo watchlist con
+  `shares:0`, así que añadir ADS.DE al portfolio ya da Flow/ΔFlow gratis).
+- `evaluate_ratio(trend, op)` — condición sobre un ratio custom
+  (`improving` = por encima de su SMA reciente), delega el fetch en
+  `ratio_signal.py` (punto 2).
+- `evaluate_single_condition(condition, ctx)` / `evaluate_conditions(conditions, ctx)`
+  — dispatcher + AND compuesto, con la misma semántica de tres valores que
+  ya tenía `evaluate()`: `True` (dispara), `False` (al menos una condición
+  es definitivamente falsa — gana sobre cualquier `None`), `None` (ninguna
+  es `False` pero falta dato en alguna — sigue pendiente, nunca se
+  descarta ni se dispara con datos a medias).
+- `describe_conditions(ticker, conditions)` — resumen en ES para Telegram y
+  para la UI, generaliza `describe()`.
+
+### 2. `scripts/ratio_signal.py` (nuevo)
+
+Distinto de `shared/relative-ratio-registry.js`/`relative_flow_lib.py`
+(registro fijo de ~50 pares macro/sector) — aquí el usuario elige **cualquier
+par de tickers** desde la UI (ADS.DE/FEZ, ADS.DE/NKE), sin necesidad de dar
+de alta un ratio en el registro. `fetch_ratio_trend(ticker_a, ticker_b,
+sma_window=20)`: `yf.download` de ambos, join por fecha (`dropna`), ratio =
+`close_a/close_b`, `improving` = ratio de hoy por encima de su SMA de 20
+sesiones — misma convención que "precio sobre su SMA20" ya usada en el
+proyecto. **Caveat conocido, no arreglado en v1:** sin conversión de divisa
+— `ADS.DE/NKE` (EUR/USD) mezcla rendimiento relativo real con movimiento
+EUR/USD; `ADS.DE/FEZ` (EUR/EUR) es limpio. Verificado en vivo: `ADS.DE/FEZ
+ratio_now=2.1031 sma20=2.2201 improving=False`, `ADS.DE/NKE ratio_now=3.9011
+sma20=3.8646 improving=True`.
+
+### 3. `scripts/check_koncorde_alerts.py` — generalizado
+
+`run()` ahora: construye `conditions` de cada alerta vía `get_conditions()`,
+carga `portfolio_daily_snapshot.jsonl` una sola vez por ejecución **solo si**
+alguna alerta tiene una condición tipo `flow`, y llama a `ratio_signal.py`
+(con caché en memoria por par, una sola llamada por par aunque varias
+alertas lo compartan) **solo si** alguna tiene una condición tipo `ratio` —
+evita gasto de red/proceso en el caso simple de solo-Koncorde, que sigue
+funcionando exactamente igual que antes. Dispara y auto-borra (one-shot,
+igual que siempre) solo cuando `evaluate_conditions()` devuelve `True` para
+**todas** las condiciones de la alerta.
+
+### 4. `server.js` — nuevas rutas, mismo patrón que `/api/universe/add`
+
+Sin credenciales nuevas — se reutiliza el mecanismo ya probado de
+`/api/universe/add` (escribe el fichero en disco + `git add/commit/push
+origin master` en background, fire-and-forget) en vez del PAT que usa
+`telegram_portfolio_bot.py`. Decisión explícita del usuario
+("Push local automático (Recomendado)") tras comparar ambos mecanismos —
+ver también el hallazgo de que `/api/portfolio`/`/api/state` **no** hacen
+push (solo disco local), así que no eran una base válida para esto.
+
+- `GET /api/special-situations` — lista todas las entradas.
+- `POST /api/special-situations` — crea/edita (upsert por `id`).
+- `POST /api/special-situations/delete` — borra por `id`.
+
+**`_readSpecialSituations()` aplica su propio shim de compatibilidad, en el
+mismo espíritu que `get_conditions()` en Python pero resolviendo un problema
+distinto:** las alertas viejas de `/kalert` no tienen campo `id` en absoluto,
+y tanto el `key` de React como el `filter(s => s.id !== id)` del borrado
+necesitan uno. Se les asigna un id sintético determinista
+(`legacy_{ticker}_{timeframe}_{condition}`) **solo en memoria al leer**,
+nunca se reescribe el fichero por esto — si el usuario edita una alerta
+vieja desde la UI nueva, el POST la persiste con ese mismo id ya en el
+formato `conditions:[...]`, migrándola de forma natural al primer toque.
+Bug real encontrado y corregido en la propia verificación: sin este shim,
+las dos alertas legacy (IRS, GGAL) comparten `id: undefined` → React avisaba
+de "duplicate key" y el botón de borrar de cualquiera de las dos fallaba con
+`400 id required`.
+
+### 5. `portfolio.html` — sección "Situaciones Especiales" + `SpecialSituationModal`
+
+Widget nuevo entre "Ranking de Setups" e "Insider Activity" (mismo patrón
+visual `border:1px solid #e0e0e0` / header `background:#354f73` que el
+resto de tablas de la página), no una pestaña aparte — reutiliza el ciclo de
+fetch y los `prices`/`prevSessionMap` ya cargados en el componente.
+
+- **Evaluador cliente** (`checkKoncordeCond`/`checkFlowCond`/`checkRatioCond`/
+  `evaluateSituationConditions`) — réplica deliberada en JS del evaluador
+  Python de `koncorde_alert_conditions.py` (mismos 3 valores True/False/None,
+  mismo AND), para mostrar el estado en vivo con los datos ya en memoria del
+  navegador sin pedirle nada al backend. Mismo patrón de duplicación
+  JS/Python ya aceptado en el proyecto (ver `calcCMF`) — constantes
+  compartidas explícitamente (`SMA_WINDOW=20` en ambos lados).
+- **Ratios en cliente:** `fetchRatioTrendClient(tickerA, tickerB)` reutiliza
+  `/api/history/:symbol` (ya genérico) en vez de pedirle a `server.js` una
+  ruta de ratio nueva — join por fecha + SMA20 en el navegador, cacheado en
+  `ratioTrends` por par, un fetch por par referenciado por cualquier
+  situación (no por fila).
+- **`SpecialSituationModal`** — mismo patrón visual que `UniverseModal`
+  (`.overlay`/`.modal`, estilos locales `inp`/`sel`, `.field`/`.row2`):
+  ticker, etiqueta, selector de Flow Score, 3 selects Koncorde D/3D/W, hasta
+  3 pares de ratio (ticker + label + checkbox "exigir mejora" para que
+  cuente como condición). Ticker deshabilitado en modo edición.
+  Tabla lista cada situación con badges de color por condición
+  (✓/✗/… pendiente) y un indicador compuesto "Armada" (🔥 SÍ / No /
+  pendiente).
+
+### Verificado end-to-end (Edge headless vía CDP, servidor local real)
+
+Sintaxis JSX transpila sin errores (`@babel/standalone`). Con el servidor
+real corriendo: las 2 alertas legacy renderizan correctamente vía el shim
+(`✗ Blue positivo (W)`, dato real de hoy); creación de una tesis ADS.DE de
+prueba (Flow cross_positive + Koncorde D state_accumulation + ratio
+ADS.DE/FEZ improving) vía la UI real — las 3 condiciones se evalúan con
+datos en vivo (2 pendientes por falta de historial de 2 sesiones para
+ADS.DE en el snapshot/falta de Koncorde para ese ticker, 1 resuelta de
+verdad contra Yahoo real), compuesto "Armada: No" correcto (una condición
+en pendiente + ninguna en false puro en este caso concreto, evaluado
+correctamente por la cascada False-gana-sobre-None); apertura del modal de
+edición confirma los datos precargados y el ticker bloqueado; borrado desde
+la UI confirmado con el toast correcto y el `git push` real en el log del
+servidor (`chore: remove situación especial ... from dashboard`). Cero
+errores/warnings de consola tras el fix del `id` sintético del punto 4.
+Los commits de prueba (`TESTX`, `ads_de_...`) se crearon y revirtieron
+durante la verificación — `docs/data/koncorde_bot_alerts.json` quedó de
+nuevo con exactamente las 2 alertas legacy, confirmado con `git log`.
+
+### Explícitamente fuera de alcance (v1)
+
+Componer tesis multi-condición por voz/texto libre en Telegram (el parser NL
+de `/kalert` sigue cubriendo solo 1 condición Koncorde simple — la
+composición de tesis complejas es solo-UI en v1). Lógica OR/booleana más
+allá de AND. Ratios de más de 2 patas o fórmulas custom más allá de `A/B`.
+Conversión de divisa en `ratio_signal.py`. Ningún cambio en
+`.github/workflows/market-update.yml` — el Step 9c2 ya ejecuta
+`check_koncorde_alerts.py` y `yfinance` ya es dependencia del pipeline.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
