@@ -798,10 +798,20 @@ function Portfolio() {
       .then(r => r.json())
       .then(d => setUniverseTickers(new Set((d.tickers || []).map(t => t.ticker))))
       .catch(() => {});
-    fetch('/api/signals')
-      .then(r => r.json())
-      .then(d => setSignalsHistory(Array.isArray(d) ? d : []))
-      .catch(() => {});
+    // Histórico para prevSessionMap/TrendArrow (Flow Score, ATR%) — migrado
+    // 2026-08-27 de /api/signals (signals_history.json, escrito solo cuando
+    // alguien tiene portfolio.html abierto en el navegador — gitignored,
+    // nunca llega a GitHub Actions) a portfolio_daily_snapshot.jsonl (Step 9g
+    // del pipeline, captura los 111 tickers 2x/día aunque nadie abra el
+    // dashboard). Mismo shape de fila ({ticker, date, flowScore, atrPct, ...})
+    // — buildPrevSessionMap/buildAtrAvgMap no necesitan cambios.
+    (() => {
+      const from = new Date(Date.now() - 90*24*3600*1000).toISOString().slice(0, 10);
+      fetch('/api/portfolio-history?from=' + from)
+        .then(r => r.json())
+        .then(d => setSignalsHistory(Array.isArray(d.rows) ? d.rows : []))
+        .catch(() => {});
+    })();
     fetch('/api/special-situations')
       .then(r => r.json())
       .then(d => setSituations(Array.isArray(d.situations) ? d.situations : []))
