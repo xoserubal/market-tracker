@@ -548,7 +548,7 @@ app.get("/api/signals", (_req, res) => {
   res.json(readSignals());
 });
 
-app.post("/api/signals", express.json(), (req, res) => {
+app.post("/api/signals", express.json({ limit: '5mb' }), (req, res) => {
   const incoming = req.body;
   if (!Array.isArray(incoming)) return res.status(400).json({ error: "Expected array" });
 
@@ -629,7 +629,7 @@ app.get("/api/portfolio", (_req, res) => {
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post("/api/portfolio", express.json(), (req, res) => {
+app.post("/api/portfolio", express.json({ limit: '5mb' }), (req, res) => {
   try {
     fs.writeFileSync(PORTFOLIO_FILE, JSON.stringify(req.body, null, 2));
     res.json({ ok: true });
@@ -707,7 +707,7 @@ app.get("/api/stock-config", (_req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/stock-config", express.json(), (req, res) => {
+app.post("/api/stock-config", express.json({ limit: '5mb' }), (req, res) => {
   try {
     fs.writeFileSync(STOCK_CFG, generateStockYaml(req.body), 'utf8');
     res.json({ ok: true });
@@ -765,7 +765,7 @@ app.get("/api/ux-instrumentation", (_req, res) => {
   res.json(loadUxInstrumentation());
 });
 
-app.post("/api/ux-instrumentation", express.json(), (req, res) => {
+app.post("/api/ux-instrumentation", express.json({ limit: '5mb' }), (req, res) => {
   try {
     const { kind, name } = req.body || {};
     const data = loadUxInstrumentation();
@@ -795,7 +795,7 @@ app.post("/api/ux-instrumentation", express.json(), (req, res) => {
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post("/api/state", express.json(), (req, res) => {
+app.post("/api/state", express.json({ limit: '5mb' }), (req, res) => {
   try { fs.writeFileSync(STATE_FILE, JSON.stringify(req.body, null, 2)); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -852,7 +852,7 @@ app.get("/api/universe", (_req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/universe/add", express.json(), (req, res) => {
+app.post("/api/universe/add", express.json({ limit: '5mb' }), (req, res) => {
   try {
     const body = req.body || {};
     const ticker = (body.ticker || "").trim().toUpperCase();
@@ -891,7 +891,7 @@ app.post("/api/universe/add", express.json(), (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/universe/remove", express.json(), (req, res) => {
+app.post("/api/universe/remove", express.json({ limit: '5mb' }), (req, res) => {
   try {
     const ticker = ((req.body || {}).ticker || "").trim().toUpperCase();
     if (!ticker) return res.status(400).json({ error: "ticker required" });
@@ -959,7 +959,7 @@ app.get("/api/special-situations", (_req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/special-situations", express.json(), (req, res) => {
+app.post("/api/special-situations", express.json({ limit: '5mb' }), (req, res) => {
   try {
     const body = req.body || {};
     const ticker = (body.ticker || "").trim().toUpperCase();
@@ -990,7 +990,7 @@ app.post("/api/special-situations", express.json(), (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/special-situations/delete", express.json(), (req, res) => {
+app.post("/api/special-situations/delete", express.json({ limit: '5mb' }), (req, res) => {
   try {
     const id = ((req.body || {}).id || "").trim();
     if (!id) return res.status(400).json({ error: "id required" });

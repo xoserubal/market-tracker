@@ -3585,6 +3585,77 @@ sobrescribirá de todos modos en unas horas.
 
 ---
 
+## Orden en tabla "Acciones individuales — candidatos por cluster" + fix de /api/state (2026-08-28)
+
+### Orden por columna (`rotacion.html`, `StockCandidates`)
+
+A petición del usuario, las 13 columnas de la tabla de candidatos individuales
+(`⚡ Acciones individuales — candidatos por cluster`) se pueden ordenar
+ascendente/descendente pulsando la cabecera — mismo mecanismo y misma
+convención visual que ya usaba la tabla principal "Mapa de Rotación" (`Th()`
+en el componente `App`): primer click en una columna nueva ordena con
+`dir=-1` (etiquetado `▼` en este código, aunque produce orden ascendente —
+convención ya existente, no se corrigió aquí, solo se replicó para no crear
+una excepción visual en la misma pestaña), segundo click invierte a `▲`
+descendente. Estado de orden (`scSortCol`/`scSortDir`) local a
+`StockCandidates`, independiente del de la tabla principal — compartido entre
+la tabla de candidatos activos y la de "ignorados" (mismo toggle).
+
+`SC_COLS` ganó un campo `key` por columna, mapeado a un comparador genérico
+(`scCompare`) que trata números/strings por separado y manda los valores sin
+dato (`null`/`''`) siempre al final, en cualquier dirección. La columna
+"Señal" ordena por un ranking propio de esta tabla
+(`SC_SIGNAL_RANK = {CANDIDATO:3, EN_RADAR:2, VIGILAR:1, IGNORAR:0}`) — vocabulario
+distinto del `SIGNAL_RANK` de la tabla ETF principal (COMPRA/ACUMULAR/...),
+no reutilizable entre ambos.
+
+**Verificado con Edge headless vía CDP contra el servidor local real:**
+click en "Score" → 6→9 ascendente (`Score ▼`); segundo click → 9→6
+descendente (`Score ▲`); click en "Ticker" → alfabético, resetea la flecha
+de la columna anterior. Cero errores de consola nuevos.
+
+### Fix real encontrado durante la verificación: `POST /api/state` devolvía 413 desde el 2026-08-20
+
+Mientras se verificaba el cambio de arriba apareció en consola
+`Failed to load resource: 413 (Payload Too Large)` para `POST /api/state`.
+Diagnóstico: las 9 rutas `POST` de `server.js` usaban `express.json()` sin
+`limit` — el límite por defecto de Express es **100 KB**. `state.json` (que
+guarda `rotation_history`, `macro_score_history`, `relative_flow_history`,
+`regime_coherence_history`, etc. — ver "Flujos & Rotación v2" y "Relative
+Flow Lab v2" más arriba) llevaba tiempo por encima de eso: **169.8 KB**, con
+fecha de modificación del **2026-08-20** — es decir, llevaba más de una
+semana sin poder guardar ningún dato nuevo, en completo silencio: la página
+sigue funcionando porque todo se recalcula en memoria en cada carga, así que
+nadie lo habría notado mirando la UI. Mismo patrón exacto de fallo silencioso
+ya vivido con `TELEGRAM_BOT_TOKEN` y `CAVA_ENGINE_TOKEN` (ver secciones
+correspondientes) — aquí sin ningún secret de por medio, solo un límite de
+body por defecto que el crecimiento normal de estos históricos acabó
+superando.
+
+**Fix:** las 9 llamadas a `express.json()` en `server.js` (`/api/signals`,
+`/api/portfolio`, `/api/stock-config`, `/api/ux-instrumentation`,
+`/api/state`, `/api/universe/add`, `/api/universe/remove`,
+`/api/special-situations`, `/api/special-situations/delete`) pasan ahora
+`{ limit: '5mb' }` — margen amplio y deliberado frente al ~170 KB actual de
+`state.json`, para que este mismo fallo no se repita a corto plazo con
+ninguno de los otros ficheros que estas rutas escriben (`portfolio.json` ya
+en 46 KB y creciendo con Situaciones Especiales).
+
+**Verificado:** `curl -X POST /api/state --data-binary @state.json` → antes
+`413`, tras el fix `200`. Recarga real de `rotacion.html` en Edge headless
+tras el fix: cero respuestas ≥400, cero errores de consola. `state.json`
+pasó de 169.800 bytes (20-ago) a 177.068 bytes con timestamp del momento de
+la verificación — confirma que el histórico volvió a persistir.
+
+**Pendiente de verificar en el futuro:** cuánto histórico se perdió durante
+la semana de silencio (2026-08-20 → 2026-08-28) — `rotation_history`/
+`relative_flow_history`/etc. seguramente tienen un hueco de esas fechas; no
+se ha intentado reconstruirlo (no hay snapshots intermedios de los que
+recuperarlo, a diferencia de `ai_candidates.json` en el pipeline Python, que
+sí se commitea a git en cada run).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

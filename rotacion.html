@@ -1219,6 +1219,13 @@ function StockCandidates({ data }) {
   const [syncing,       setSyncing]       = useState(false);
   const [syncMsg,       setSyncMsg]       = useState(null);
   const [syncStatus,    setSyncStatus]    = useState(null);
+  // Orden de tabla al pulsar cabeceras — mismo convenio que Th() de la tabla
+  // principal "Mapa de Rotación" (dir=-1 en el primer click de una columna
+  // nueva, flecha ▼/▲ igual que allí, aunque la etiqueta esté invertida
+  // respecto a la intuición habitual — se replica tal cual por consistencia
+  // visual con el resto de la pestaña, no se corrige aquí).
+  const [scSortCol,     setScSortCol]     = useState(null);
+  const [scSortDir,     setScSortDir]     = useState(-1);
 
   useEffect(() => {
     fetch('/api/sync/status').then(r=>r.json()).then(setSyncStatus).catch(()=>{});
@@ -1279,25 +1286,46 @@ function StockCandidates({ data }) {
 
   const SC_TH = { padding:'6px 10px', textAlign:'left', fontWeight:600, color:'#555', borderBottom:'2px solid #e0e0e0', whiteSpace:'nowrap' };
   const SC_COLS = [
-    { h:'Ticker',     tip: null },
-    { h:'Cluster',    tip: "Sector/cluster al que pertenece la acción (macro_cluster).\nDetermina si hay ROT.CONFIRMADA activa en el ETF del cluster (marca ⚡ en Señal).\n\nBadge morado ⚡ subtheme adicional: ROT.TEMPRANA por inflexión detectada en el subtheme_cluster (universe.json) — independiente del macro_cluster, ej. Crypto/Miners, Uranium." },
-    { h:'Señal',      tip: "⚡ CANDIDATO: cluster ETF con ROT.CONFIRMADA activa + streak ≥ 2w\nEN_RADAR: streak ≥ 2w, cluster sin señal ETF todavía\nVIGILAR: score ≥ 6 pero streak < 2w\nIGNORAR: score < 6\n\nCriterios relajados vs sistema ETF (threshold 6 vs 8, streak 2 vs 3)." },
-    { h:'Score',      tip: "RotationScore 0–10 — mismo cálculo que la tabla ETF principal.\n\nUmbral relajado: ≥ 6 (vs ≥ 8 en el sistema ETF).\n\nScore ≥ 8 → zona óptima\nScore 6–7 → elegible para señal" },
-    { h:'Streak',     tip: "Semanas consecutivas con Score ≥ 6.\n\nSe necesitan ≥ 2 semanas consecutivas para generar señal activa (EN_RADAR o CANDIDATO)." },
-    { h:'Beta 52w',   tip: "Beta calculada sobre retornos semanales — últimas 52 semanas vs SPY.\n\nBeta = Cov(ticker, SPY) / Var(SPY)\n\n> 1.8 = muy alta (rojo)\n> 1.3 = alta (naranja)\n\nActúa como multiplicador del movimiento del sector ETF." },
-    { h:'Amplifier',  tip: "Amplifier = Beta 52w × RotationScore\n\nEstima el potencial de amplificación relativo al cluster ETF. Una acción con Beta 2.0 y Score 8 tiene Amplifier 16.\n\n> 12 = muy alto (rojo)\n8–12 = alto (naranja)\n\nMayor Amplifier → mayor potencial de retorno y mayor riesgo." },
-    { h:'4w vs SPY',  tip: "Retorno 4 semanas de la acción menos retorno 4w de SPY.\n\nPositivo = outperformance reciente." },
-    { h:'13w vs SPY', tip: "Retorno 13 semanas de la acción menos retorno 13w de SPY.\n\nHorizonte trimestral: evalúa si la tendencia relativa es sostenida." },
-    { h:'RS Mom',    tip: "Mejora del diferencial RS vs SPY en las últimas 4 semanas.\n\nRS Mom = (ret_4w_vs_spy hoy) − (ret_4w_vs_spy hace 4w)\n\nPositivo → RS construyendo aunque el precio esté lateral = acumulación en relativo.\nNegativo → RS deteriorándose." },
-    { h:'ATR%',      tip: "Percentil del ATR% (ATR14/precio×100) actual respecto a los últimos 252 días.\n\n< 25 = volatilidad muy contraída (squeeze) → posible pre-breakout\n25–50 = rango normal-bajo\n> 50 = volatilidad expansiva\n\nBuscar valor bajo combinado con precio cerca del máximo 52w." },
-    { h:'Dist 52h',  tip: "Distancia del precio actual al máximo de las últimas 52 semanas (%).\n\nCerca de 0% = precio rozando máximos anuales → zona de breakout potencial\n< −5% = bastante cerca\n< −15% = aún lejos" },
-    { h:'Nota',       tip: "Comentario libre del YAML (motivo de inclusión del ticker en la lista)." },
+    { h:'Ticker',     key:'ticker',          tip: null },
+    { h:'Cluster',    key:'cluster',         tip: "Sector/cluster al que pertenece la acción (macro_cluster).\nDetermina si hay ROT.CONFIRMADA activa en el ETF del cluster (marca ⚡ en Señal).\n\nBadge morado ⚡ subtheme adicional: ROT.TEMPRANA por inflexión detectada en el subtheme_cluster (universe.json) — independiente del macro_cluster, ej. Crypto/Miners, Uranium." },
+    { h:'Señal',      key:'signal',          tip: "⚡ CANDIDATO: cluster ETF con ROT.CONFIRMADA activa + streak ≥ 2w\nEN_RADAR: streak ≥ 2w, cluster sin señal ETF todavía\nVIGILAR: score ≥ 6 pero streak < 2w\nIGNORAR: score < 6\n\nCriterios relajados vs sistema ETF (threshold 6 vs 8, streak 2 vs 3)." },
+    { h:'Score',      key:'rot_score',       tip: "RotationScore 0–10 — mismo cálculo que la tabla ETF principal.\n\nUmbral relajado: ≥ 6 (vs ≥ 8 en el sistema ETF).\n\nScore ≥ 8 → zona óptima\nScore 6–7 → elegible para señal" },
+    { h:'Streak',     key:'streak_weeks',    tip: "Semanas consecutivas con Score ≥ 6.\n\nSe necesitan ≥ 2 semanas consecutivas para generar señal activa (EN_RADAR o CANDIDATO)." },
+    { h:'Beta 52w',   key:'beta_52w',        tip: "Beta calculada sobre retornos semanales — últimas 52 semanas vs SPY.\n\nBeta = Cov(ticker, SPY) / Var(SPY)\n\n> 1.8 = muy alta (rojo)\n> 1.3 = alta (naranja)\n\nActúa como multiplicador del movimiento del sector ETF." },
+    { h:'Amplifier',  key:'amplifier_score', tip: "Amplifier = Beta 52w × RotationScore\n\nEstima el potencial de amplificación relativo al cluster ETF. Una acción con Beta 2.0 y Score 8 tiene Amplifier 16.\n\n> 12 = muy alto (rojo)\n8–12 = alto (naranja)\n\nMayor Amplifier → mayor potencial de retorno y mayor riesgo." },
+    { h:'4w vs SPY',  key:'ret_4w_vs_spy',   tip: "Retorno 4 semanas de la acción menos retorno 4w de SPY.\n\nPositivo = outperformance reciente." },
+    { h:'13w vs SPY', key:'ret_13w_vs_spy',  tip: "Retorno 13 semanas de la acción menos retorno 13w de SPY.\n\nHorizonte trimestral: evalúa si la tendencia relativa es sostenida." },
+    { h:'RS Mom',     key:'rs_momentum',     tip: "Mejora del diferencial RS vs SPY en las últimas 4 semanas.\n\nRS Mom = (ret_4w_vs_spy hoy) − (ret_4w_vs_spy hace 4w)\n\nPositivo → RS construyendo aunque el precio esté lateral = acumulación en relativo.\nNegativo → RS deteriorándose." },
+    { h:'ATR%',       key:'atr_pct_rank',    tip: "Percentil del ATR% (ATR14/precio×100) actual respecto a los últimos 252 días.\n\n< 25 = volatilidad muy contraída (squeeze) → posible pre-breakout\n25–50 = rango normal-bajo\n> 50 = volatilidad expansiva\n\nBuscar valor bajo combinado con precio cerca del máximo 52w." },
+    { h:'Dist 52h',   key:'dist_52w_high',   tip: "Distancia del precio actual al máximo de las últimas 52 semanas (%).\n\nCerca de 0% = precio rozando máximos anuales → zona de breakout potencial\n< −5% = bastante cerca\n< −15% = aún lejos" },
+    { h:'Nota',       key:'note',            tip: "Comentario libre del YAML (motivo de inclusión del ticker en la lista)." },
   ];
+  // Ranking local de Señal para esta tabla — vocabulario propio (CANDIDATO/
+  // EN_RADAR/VIGILAR/IGNORAR), distinto del SIGNAL_RANK de la tabla ETF
+  // principal (COMPRA/ACUMULAR/...), no reutilizable entre ambos.
+  const SC_SIGNAL_RANK = { CANDIDATO:3, EN_RADAR:2, VIGILAR:1, IGNORAR:0 };
+  const scSortValue = (c, key) => key === 'signal' ? (SC_SIGNAL_RANK[c.signal] ?? -1) : c[key];
+  const scCompare = (a, b, key, dir) => {
+    const va = scSortValue(a, key), vb = scSortValue(b, key);
+    const aEmpty = va == null || va === '';
+    const bEmpty = vb == null || vb === '';
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return 1;   // sin dato siempre al final, en cualquier dirección
+    if (bEmpty) return -1;
+    if (typeof va === 'string') return dir === -1 ? va.localeCompare(vb) : vb.localeCompare(va);
+    return dir * (vb - va); // mismo convenio numérico que Th() en la tabla "Mapa de Rotación"
+  };
+  const sortCandidates = list => scSortCol ? [...list].sort((a,b) => scCompare(a, b, scSortCol, scSortDir)) : list;
+  const handleScSort = key => scSortCol === key ? setScSortDir(d => -d) : (setScSortCol(key), setScSortDir(-1));
   const THead = () => (
     <thead>
       <tr style={{ background:'#f8f9fa' }}>
-        {SC_COLS.map(({ h, tip }) =>
-          <ThTip key={h} tip={tip} style={SC_TH}>{h}</ThTip>
+        {SC_COLS.map(({ h, tip, key }) =>
+          <ThTip key={h} tip={tip}
+            style={{ ...SC_TH, cursor:'pointer', background: scSortCol===key ? '#e8f0fe' : SC_TH.background }}
+            onClick={() => handleScSort(key)}>
+            {h} {scSortCol===key ? (scSortDir<0?'▼':'▲') : ''}
+          </ThTip>
         )}
       </tr>
     </thead>
@@ -1388,7 +1416,7 @@ function StockCandidates({ data }) {
         ? <div style={{ fontSize:12, color:'#aaa', padding:'6px 0' }}>Sin señales activas — todos los candidatos con score {'<'} 6.</div>
         : <div style={{ overflowX:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-              <THead /><tbody>{active.map(c => <TRow key={c.ticker} c={c} />)}</tbody>
+              <THead /><tbody>{sortCandidates(active).map(c => <TRow key={c.ticker} c={c} />)}</tbody>
             </table>
           </div>
       }
@@ -1403,7 +1431,7 @@ function StockCandidates({ data }) {
           {showIgnorados &&
             <div style={{ overflowX:'auto', marginTop:6, opacity:0.5 }}>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-                <THead /><tbody>{ignorados.map(c => <TRow key={c.ticker} c={c} />)}</tbody>
+                <THead /><tbody>{sortCandidates(ignorados).map(c => <TRow key={c.ticker} c={c} />)}</tbody>
               </table>
             </div>}
         </div>
