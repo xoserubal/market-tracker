@@ -9,6 +9,26 @@
 //   - higher_is_risk_on/off solo se usa en risk_appetite (alimenta el conteo del monitor).
 //   - contextual = no tiene lectura risk-on/off inequívoca; se muestra pero no cuenta en el agregado.
 //   - En el resto de bloques, higher_is_bullish/contextual son puramente descriptivos (no alimentan ningún agregado).
+//
+// context_ratio_id (RFL v2 — arquitectura de información, 2026-08-28): id opcional de
+// OTRO ratio del registry cuyo estado se muestra como "Market Context" junto a este —
+// resuelve el problema de leer un ratio de detalle intra-sectorial (ej. XLE/BZ=F,
+// anticipation) sin haber visto antes el flujo agregado del sector vs mercado (ej.
+// XLE/SPY, sector_snapshot). Solo se asigna entre ratios YA existentes en el registry —
+// nunca se inventa un ratio nuevo solo para servir de contexto (ver
+// smh_igv más abajo, deliberadamente sin asignar). Default: ausente = sin contexto.
+//
+// alsoShowIn (mismo cambio): array opcional de `type`s adicionales en los que esta fila
+// se muestra TAMBIÉN (además de su `type` real, que no cambia) — visualización cruzada
+// de un dato ya calculado una vez, no una segunda entrada de registry. No participa en
+// ningún agregado del type "prestado" (Risk Appetite Monitor, Cluster Coherence View,
+// Most Extreme Relative Moves siguen contando la fila una sola vez, por su `type` real) —
+// solo el QuestionBlock del type prestado la añade a su tabla, marcada visualmente. Nace
+// de un caso concreto: xlk_spy es `type:"rotation"` (reclasificado 2026-08-11), pero varios
+// ratios de esa misma sección (smh_igv, xlk_xlf) necesitarían "Technology vs Market" como
+// contexto — sin poder usar xlk_spy (viviría en la misma sección, circular) ni crear un
+// ratio nuevo (fuera de alcance). alsoShowIn:["sector_snapshot"] en xlk_spy resuelve el
+// caso sin ninguna de las dos cosas.
 (function (global) {
 
   const RATIO_TYPES = {
@@ -123,14 +143,14 @@
       primaryQuestion: "Are energy equities discounting stronger fundamentals than crude oil itself?",
       positiveMeaning: "Energy equities outperform Brent; the equity market may be anticipating stronger future energy fundamentals.",
       negativeMeaning: "Brent outperforms energy equities; the equity market may doubt the sustainability of the crude move.",
-      primaryUse: "theme_confirmation", actionability: "medium", enabled: true },
+      primaryUse: "theme_confirmation", actionability: "medium", enabled: true, context_ratio_id: "xle_spy" },
 
     { id: "gdx_gld", label: "Gold Miners vs Gold", pair: ["GDX", "GLD"],
       type: "anticipation", cluster: "METALS", signalDirection: "higher_is_bullish",
       primaryQuestion: "Are gold miners leading gold itself, suggesting early accumulation?",
       positiveMeaning: "GDX outperforming GLD suggests early accumulation in miners ahead of the metal — a leading signal.",
       negativeMeaning: "GLD outperforming GDX suggests miners are lagging the metal — a bearish divergence.",
-      primaryUse: "theme_confirmation", actionability: "medium", enabled: true },
+      primaryUse: "theme_confirmation", actionability: "medium", enabled: true, context_ratio_id: "gld_spy" },
 
     { id: "gdxj_gdx", label: "Junior Miners vs Senior Miners", pair: ["GDXJ", "GDX"],
       type: "anticipation", cluster: "METALS", signalDirection: "higher_is_bullish",
@@ -144,14 +164,14 @@
       primaryQuestion: "Is local/regional credit conviction leading large-bank strength?",
       positiveMeaning: "KRE outperforming XLF suggests stronger conviction in local credit conditions — usually reflects broader confidence in the credit cycle.",
       negativeMeaning: "XLF outperforming KRE suggests flight to quality within financials — caution around regional credit exposure.",
-      primaryUse: "theme_confirmation", actionability: "medium", enabled: true },
+      primaryUse: "theme_confirmation", actionability: "medium", enabled: true, context_ratio_id: "xlf_spy" },
 
     { id: "xop_xle", label: "E&P vs Integrated Energy", pair: ["XOP", "XLE"],
       type: "anticipation", cluster: "ENERGY", signalDirection: "higher_is_bullish",
       primaryQuestion: "Is speculative upstream exposure leading integrated energy majors?",
       positiveMeaning: "XOP outperforming XLE suggests speculative, high-beta upstream exposure is leading — risk appetite within energy.",
       negativeMeaning: "XLE outperforming XOP suggests rotation to quality/integrated majors within the energy complex.",
-      primaryUse: "theme_confirmation", actionability: "medium", enabled: true },
+      primaryUse: "theme_confirmation", actionability: "medium", enabled: true, context_ratio_id: "xle_spy" },
 
     { id: "silver_gold", label: "Silver vs Gold", pair: ["SI=F", "GC=F"],
       type: "anticipation", cluster: "METALS", signalDirection: "higher_is_bullish",
@@ -208,7 +228,10 @@
       primaryQuestion: "Is capital rotating between growth/technology and financials/value?",
       positiveMeaning: "XLK outperforming XLF suggests rotation into growth/technology.",
       negativeMeaning: "XLF outperforming XLK suggests rotation into financials/value.",
-      primaryUse: "capital_rotation", actionability: "medium", enabled: true },
+      // context_ratio_id: xlf_spy, no xlk_spy — xlk_spy es type:"rotation" (misma sección
+      // que este ratio), sería circular. XLF/SPY sí vive en sector_snapshot y Financials
+      // es una de las dos patas de este ratio (ver nota al pie del registry).
+      primaryUse: "capital_rotation", actionability: "medium", enabled: true, context_ratio_id: "xlf_spy" },
 
     { id: "iwd_iwf", label: "Value vs Growth", pair: ["IWD", "IWF"],
       type: "rotation", cluster: "STYLE / FACTOR", signalDirection: "contextual",
@@ -231,6 +254,10 @@
       primaryQuestion: "Within technology, is capital rotating into hardware/semis or software?",
       positiveMeaning: "SMH outperforming IGV suggests rotation into semiconductors/hardware within tech.",
       negativeMeaning: "IGV outperforming SMH suggests rotation into software within tech.",
+      // context_ratio_id deliberadamente ausente: no hay hoy ningún ratio "Technology vs
+      // Market" en sector_snapshot (xlk_spy vive en rotation, misma sección — sería
+      // circular; XLC/SPY es Comunicación, no encaja semánticamente con semis/software).
+      // No se inventa un ratio nuevo solo para esto en Fase 1 — ver nota al pie del registry.
       primaryUse: "capital_rotation", actionability: "medium", enabled: true },
 
     { id: "xle_xlk", label: "Energy vs Technology", pair: ["XLE", "XLK"],
@@ -262,7 +289,13 @@
       primaryQuestion: "Is technology beating the broad market?",
       positiveMeaning: "XLK outperforming SPY indicates flow into growth/tech.",
       negativeMeaning: "SPY outperforming XLK indicates rotation out of tech.",
-      primaryUse: "capital_rotation", actionability: "medium", enabled: true },
+      // alsoShowIn (2026-08-28): se muestra TAMBIÉN en la tabla de Sector Relative
+      // Snapshot (marcado visualmente como cruzado desde Rotation) — sirve de
+      // "Technology vs Market" a los ratios de esa sección que lo necesitan como
+      // contexto (ver smh_igv/xlk_xlf) sin duplicar la entrada ni cambiar su `type`
+      // real. No participa en ningún agregado de sector_snapshot (Cluster View,
+      // conteos) — solo aparece en su tabla.
+      primaryUse: "capital_rotation", actionability: "medium", enabled: true, alsoShowIn: ["sector_snapshot"] },
 
     // ── REGIONS / EM LEADERSHIP ───────────────────────────────────────────────
     { id: "eem_urth", label: "Emerging Markets vs World", pair: ["EEM", "URTH"],

@@ -239,6 +239,18 @@ function cellStyle(v) {
   return { background: "", color: "#555" };
 }
 
+// Market Context (RFL v2 — arquitectura de información, Fase 1, 2026-08-28): resuelve
+// context_ratio_id contra un lookup id->row ya calculado (rowById) — nunca recalcula ni
+// vuelve a fetchear nada. null si el ratio no tiene contexto asignado o si el contexto
+// aún no cargó/tiene error (nunca se muestra un dato a medias).
+function marketContextLabel(row, rowById) {
+  if (!row?.context_ratio_id) return null;
+  const ctx = rowById?.[row.context_ratio_id];
+  if (!ctx || ctx.error) return null;
+  const sig = classify(ctx);
+  return `${ctx.a}/${ctx.b}: ${sig.label}, flow ${fmtPct(ctx.flowChange)}`;
+}
+
 function flowChangeLabel(v) {
   const n = toN(v);
   if (n == null) return { label: "-", bg: "", fg: "#aaa" };
@@ -491,11 +503,33 @@ function Spark({ ratio, strong }) {
   );
 }
 
+// Nota de bootstrap de relative_flow_history (Δ1W/Sem./badge) — extraída para no
+// duplicar la condición ahora que se muestra en dos puntos (Sector Snapshot adelantado
+// + el resto de Question-Based Views), tras el reordenamiento RFL v2 de 2026-08-28.
+function BootstrapNote({ bootstrap }) {
+  if (bootstrap.ready) return null;
+  return (
+    <div style={{fontSize:10,color:"#8a94a6",fontStyle:"italic",margin:"-4px 0 8px"}}>
+      {bootstrap.startDate
+        ? `Métricas históricas (Δ1W, semanas en clasificación) disponibles a partir de la segunda semana desde ${bootstrap.startDate}.`
+        : "Histórico diario en construcción — las métricas de tendencia (Δ1W, semanas en clasificación) aparecerán tras la primera semana de datos."}
+    </div>
+  );
+}
+
 // ── Question Block (bloques primarios por tipo) ────────────────────────────
-function QuestionBlock({ typeKey, rows, bootstrapReady }) {
+// rowById: lookup completo id->row (ver Coherencia Cross-Módulos más abajo), usado aquí
+// para resolver context_ratio_id y las filas alsoShowIn — permite leer un ratio de otro
+// type sin depender de en qué rowsByType[t] esté clasificado.
+// extraRows: filas "prestadas" de otro type (alsoShowIn) — se muestran en la tabla,
+// marcadas visualmente, pero NUNCA en el mini-ranking "top 3" (no son miembros nativos
+// de esta pregunta, son solo contexto visual cruzado).
+function QuestionBlock({ typeKey, rows, bootstrapReady, rowById, extraRows }) {
   const meta = RATIO_TYPES[typeKey];
-  const sorted = [...rows].sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
-  const loaded = sorted.filter(r => !r.error);
+  const showMarketContext = typeKey !== "sector_snapshot"; // sector_snapshot ya ES el contexto
+  const allRows = extraRows?.length ? [...rows, ...extraRows.map(r => ({ ...r, crossListed: true }))] : rows;
+  const sorted = [...allRows].sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
+  const loaded = sorted.filter(r => !r.error && !r.crossListed);
   const top = loaded.slice(0, 3);
   return (
     <div className="qblock">
@@ -536,6 +570,7 @@ function QuestionBlock({ typeKey, rows, bootstrapReady }) {
             <th data-tip={"Tendencia de medias móviles del ratio."}>Trend</th>
             <th style={{textAlign:"left"}} data-tip={"Lectura del ratio según su signalDirection y el signo del Score actual."}>Interpretation</th>
             <th data-tip={"Gráfico de los últimos 90 días del ratio A/B."}>90D Ratio</th>
+            {showMarketContext && <th style={{textAlign:"left"}} data-tip={"Estado del ratio de contexto sectorial (context_ratio_id): flujo agregado del sector vs mercado, para leer este ratio de detalle con el contexto ya establecido.\n'—' si no tiene contexto asignado todavía (ver shared/relative-ratio-registry.js)."}>Market Context</th>}
           </tr>
         </thead>
         <tbody>
@@ -543,9 +578,18 @@ function QuestionBlock({ typeKey, rows, bootstrapReady }) {
             const sig = classify(r);
             const flowSig = flowChangeLabel(r.flowChange);
             const c1w = cellStyle(r.r1w), c1m = cellStyle(r.r1m), c3m = cellStyle(r.r3m);
+            const ctxLabel = showMarketContext ? marketContextLabel(r, rowById) : null;
             return (
               <tr key={r.id} style={{background: idx % 2 ? "#f8f9fb" : "white"}}>
-                <td className="name" data-tip={r.tip}>{r.name}</td>
+                <td className="name" data-tip={r.tip}>
+                  {r.name}
+                  {r.crossListed && (
+                    <span style={{marginLeft:5,fontSize:8,fontWeight:700,padding:"1px 5px",borderRadius:8,background:"#ede7f6",color:"#5e35b1"}}
+                      title="Vive de forma nativa en Rotation Between Blocks — mostrado aquí también, sin duplicar el dato, como contexto sectorial (ver alsoShowIn en el registry).">
+                      ↳ Rotación
+                    </span>
+                  )}
+                </td>
                 <td className="tickers">{r.a} / {r.b}</td>
                 <td className="num" style={{fontWeight:700,color:r.score>0?"#1a7a1a":r.score<0?"#b71c1c":"#666"}}>{r.error?"-":fmtNum(r.score)}</td>
                 <td>
@@ -573,6 +617,7 @@ function QuestionBlock({ typeKey, rows, bootstrapReady }) {
                 <td style={{fontWeight:700,color:r.trend==="Up"?"#1a7a1a":r.trend==="Down"?"#b71c1c":"#777"}}>{r.trend??"-"}</td>
                 <td className="interp-cell">{interpretationFor(r)}</td>
                 <td><Spark ratio={r.ratio} strong={sig.label==="Leader"||sig.label==="Improving"}/></td>
+                {showMarketContext && <td className="interp-cell" style={{fontSize:10,color:"#555"}}>{ctxLabel ?? "—"}</td>}
               </tr>
             );
           })}
@@ -625,6 +670,15 @@ function RelativeFlowLab() {
       return { ...row, dyn };
     })])
   ), [history, appState]);
+
+  // Filas "prestadas" vía alsoShowIn — hoy solo xlk_spy en sector_snapshot (ver
+  // shared/relative-ratio-registry.js). rowsByTypeExtras[t] = filas de OTRO type que
+  // también deben mostrarse en la tabla de t, marcadas crossListed por QuestionBlock.
+  const rowsByTypeExtras = React.useMemo(() => Object.fromEntries(
+    RATIO_TYPE_ORDER.map(t => [t, ALL_RATIO_DEFS
+      .filter(pair => pair.type !== t && (pair.alsoShowIn || []).includes(t))
+      .map(pair => buildRow(pair, history))])
+  ), [history]);
 
   // Bootstrap de relative_flow_history: fecha del primer snapshot guardado y si ya hay al
   // menos 7 días naturales de histórico. Mismo criterio que rotHistoryBootstrap en
@@ -799,30 +853,40 @@ function RelativeFlowLab() {
       const dir = m.signalDirection + (m.countedInMonitor === false ? " (no cuenta)" : "");
       lines.push(`| ${m.name} | ${m.a}/${m.b} | ${dir} | ${st.label} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} |`);
     });
-    if (earlyFlowRatios.length) {
-      lines.push("");
-      lines.push("## Early Flow (acumulación temprana)");
-      earlyFlowRatios.forEach(r => lines.push(`- ${r.name} (${r.a}/${r.b}) — FlowChg: ${fmtPct(r.flowChange)}, RSI: ${r.rsi?.toFixed(0)}, 1M: ${fmtPct(r.r1m)}`));
-    }
-
-    RATIO_TYPE_ORDER.filter(t => t !== "risk_appetite").forEach(t => {
+    // Orden RFL v2 (arquitectura de información, 2026-08-28): Sector Relative Snapshot
+    // primero — establece el contexto agregado sector-vs-mercado antes de Anticipation/
+    // Rotation/Regions, mismo orden que la UI. Constante local, no toca RATIO_TYPE_ORDER
+    // (que sigue gobernando rowsByType/DEFS_BY_TYPE, sin cambios).
+    const MARKDOWN_TYPE_ORDER = ["sector_snapshot", "anticipation", "rotation", "regions"];
+    MARKDOWN_TYPE_ORDER.forEach((t, ti) => {
       const meta = RATIO_TYPES[t];
-      const rows = [...rowsByType[t]].filter(r => !r.error).sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
+      const extras = (rowsByTypeExtras[t] || []).filter(r => !r.error).map(r => ({ ...r, crossListed: true }));
+      const rows = [...rowsByType[t].filter(r => !r.error), ...extras].sort((a,b) => (b.score ?? -999) - (a.score ?? -999));
+      const showCtx = t !== "sector_snapshot"; // sector_snapshot ya ES el contexto
       lines.push("");
       lines.push(`## ${meta.label}`);
       lines.push(`Question: ${meta.question}`);
       lines.push("");
       lines.push("Top Signals:");
-      rows.slice(0, 3).forEach((r, i) => lines.push(`${i+1}. ${r.name} (${r.a}/${r.b}) — ${classify(r).label} — ${interpretationFor(r)}`));
+      rows.filter(r => !r.crossListed).slice(0, 3).forEach((r, i) => lines.push(`${i+1}. ${r.name} (${r.a}/${r.b}) — ${classify(r).label} — ${interpretationFor(r)}`));
       lines.push("");
-      lines.push("| Ratio | Pair | Score | Signal | Δ1W | Sem. | Flow Chg | 1W | 1M | 3M | RSI | Trend | Interpretation |");
-      lines.push("|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|");
+      lines.push(`| Ratio | Pair | Score | Signal | Δ1W | Sem. | Flow Chg | 1W | 1M | 3M | RSI | Trend | Interpretation |${showCtx ? " Market Context |" : ""}`);
+      lines.push(`|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---|${showCtx ? "---|" : ""}`);
       rows.forEach(r => {
         const d1 = relFlowHistoryBootstrap.ready && r.dyn?.delta1w != null ? (r.dyn.delta1w>0?"+":"")+r.dyn.delta1w : "—";
         const wk = relFlowHistoryBootstrap.ready && r.dyn?.weeksInSignal != null ? r.dyn.weeksInSignal : "—";
         const badgeStr = relFlowHistoryBootstrap.ready && r.dyn?.badge ? ` [${r.dyn.badge}]` : "";
-        lines.push(`| ${r.name} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label}${badgeStr} | ${d1} | ${wk} | ${fmtPct(r.flowChange)} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} | ${interpretationFor(r)} |`);
+        const crossStr = r.crossListed ? " [también en Rotation Between Blocks]" : "";
+        const ctxCell = showCtx ? ` ${marketContextLabel(r, rowById) ?? "—"} |` : "";
+        lines.push(`| ${r.name}${crossStr} | ${r.a}/${r.b} | ${fmtNum(r.score)} | ${classify(r).label}${badgeStr} | ${d1} | ${wk} | ${fmtPct(r.flowChange)} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} | ${interpretationFor(r)} |${ctxCell}`);
       });
+      // Early Flow se intercala aquí, tras Sector Relative Snapshot y antes de Anticipation —
+      // mismo orden que la UI (Risk Appetite -> Sector Snapshot -> Early Flow -> resto).
+      if (ti === 0 && earlyFlowRatios.length) {
+        lines.push("");
+        lines.push("## Early Flow (acumulación temprana)");
+        earlyFlowRatios.forEach(r => lines.push(`- ${r.name} (${r.a}/${r.b}) — FlowChg: ${fmtPct(r.flowChange)}, RSI: ${r.rsi?.toFixed(0)}, 1M: ${fmtPct(r.r1m)}`));
+      }
     });
 
     if (!relFlowHistoryBootstrap.ready) {
@@ -1037,6 +1101,17 @@ function RelativeFlowLab() {
         </div>
       </div>
 
+      {/* ── Sector Relative Snapshot — adelantada a posición 2 (RFL v2, arquitectura de
+           información, 2026-08-28): establece qué sectores reciben/pierden flujo agregado
+           vs mercado ANTES de bajar al detalle intra-sectorial de Anticipation/Rotation.
+           Ver shared/relative-ratio-registry.js. Incluye xlk_spy (alsoShowIn) — vive de
+           forma nativa en Rotation Between Blocks, se muestra aquí también marcado
+           "↳ Rotación" como referencia de "Technology vs Market" sin duplicar el dato. ── */}
+      <BootstrapNote bootstrap={relFlowHistoryBootstrap} />
+      <QuestionBlock typeKey="sector_snapshot" rows={rowsByType.sector_snapshot}
+        bootstrapReady={relFlowHistoryBootstrap.ready} rowById={rowById}
+        extraRows={rowsByTypeExtras.sector_snapshot} />
+
       {/* ── Early Flow Detector ── */}
       <div className="early-panel">
         <div className="early-header">🔍 Early Flow Detector — ratios en acumulación temprana</div>
@@ -1062,22 +1137,13 @@ function RelativeFlowLab() {
         <div className="stat"><div className="label">Worst</div><div className="value" style={{fontSize:13}}>{summary.worst ? `${summary.worst.a}/${summary.worst.b}` : "-"}</div></div>
       </div>
 
-      {/* ── Bloques por pregunta (vista primaria) ── */}
+      {/* ── Bloques por pregunta (Anticipation → Rotation → Regions) — con contexto
+           sectorial ya establecido arriba ── */}
       <div className="section-label">📍 Question-Based Views</div>
-      {relFlowHistoryBootstrap.startDate && !relFlowHistoryBootstrap.ready && (
-        <div style={{fontSize:10,color:"#8a94a6",fontStyle:"italic",margin:"-4px 0 8px"}}>
-          Métricas históricas (Δ1W, semanas en clasificación) disponibles a partir de la segunda semana desde {relFlowHistoryBootstrap.startDate}.
-        </div>
-      )}
-      {!relFlowHistoryBootstrap.startDate && (
-        <div style={{fontSize:10,color:"#8a94a6",fontStyle:"italic",margin:"-4px 0 8px"}}>
-          Histórico diario en construcción — las métricas de tendencia (Δ1W, semanas en clasificación) aparecerán tras la primera semana de datos.
-        </div>
-      )}
-      <QuestionBlock typeKey="anticipation" rows={rowsByType.anticipation} bootstrapReady={relFlowHistoryBootstrap.ready} />
-      <QuestionBlock typeKey="rotation" rows={rowsByType.rotation} bootstrapReady={relFlowHistoryBootstrap.ready} />
-      <QuestionBlock typeKey="regions" rows={rowsByType.regions} bootstrapReady={relFlowHistoryBootstrap.ready} />
-      <QuestionBlock typeKey="sector_snapshot" rows={rowsByType.sector_snapshot} bootstrapReady={relFlowHistoryBootstrap.ready} />
+      <BootstrapNote bootstrap={relFlowHistoryBootstrap} />
+      <QuestionBlock typeKey="anticipation" rows={rowsByType.anticipation} bootstrapReady={relFlowHistoryBootstrap.ready} rowById={rowById} />
+      <QuestionBlock typeKey="rotation" rows={rowsByType.rotation} bootstrapReady={relFlowHistoryBootstrap.ready} rowById={rowById} />
+      <QuestionBlock typeKey="regions" rows={rowsByType.regions} bootstrapReady={relFlowHistoryBootstrap.ready} rowById={rowById} />
 
       {/* ── Most Extreme / Flow Change ── */}
       <div className="panel-grid">

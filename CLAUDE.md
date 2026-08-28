@@ -3656,6 +3656,136 @@ sí se commitea a git en cada run).
 
 ---
 
+## Relative Flow Lab — Fase 1: arquitectura de información (contexto sectorial antes de anticipación interna) (implementado 2026-08-28)
+
+Propuesta de un asesor externo, revisada contra el código real antes de
+implementar (mismo criterio que el resto del proyecto: no fiarse de un
+resumen sin contrastar contra el registry). Diagnóstico correcto: en el RFL,
+un ratio de detalle intra-sectorial (ej. `XLE/BZ=F`, "Anticipation") podía
+leerse como "Leader" sin que el lector hubiera visto antes que el propio
+sector pierde flujo agregado vs mercado (`XLE/SPY`, "Sector Relative
+Snapshot", 4 secciones más abajo) — no es un problema de datos, es de orden
+de lectura. Fase 1 (esta) resuelve el orden; Fase 2 (estados derivados +
+interpretaciones condicionales) queda pendiente, deliberadamente no mezclada
+en la misma sesión.
+
+### 1. Reordenamiento de secciones (`relative.html`)
+
+Nuevo orden: Risk Appetite Monitor → **Sector Relative Snapshot** (adelantada,
+antes en posición ~6) → Early Flow Detector → Summary → Anticipation /
+Internal Conviction → Rotation Between Blocks → Regions / EM Leadership →
+Most Extreme Relative Moves / Top 3 Flow In-Out / Top 5 Flow Change →
+Coherencia Cross-Módulos → Cluster Coherence View → Raw Ratio Tables.
+
+Los 4 `QuestionBlock` (anticipation/rotation/regions/sector_snapshot) vivían
+como un único bloque visual bajo una sola cabecera "📍 Question-Based Views"
++ una sola nota de bootstrap sobre Δ1W. Sacar `sector_snapshot` a una
+posición temprana exigió separar ese bloque en dos: `sector_snapshot` solo
+(sin la etiqueta "Question-Based Views", ya que su propio `QuestionBlock`
+ya muestra su título) + los 3 restantes bajo la etiqueta original. La nota
+de bootstrap se extrajo a un componente `BootstrapNote({bootstrap})` para no
+duplicar la condición ahora que aparece en dos puntos. `RATIO_TYPE_ORDER`
+(usado por `rowsByType`/`DEFS_BY_TYPE`) no se tocó — el reordenamiento es
+puramente de JSX/render, no de la estructura de datos. El export a Markdown
+(`buildRelativeMarkdown`) usa una constante local
+`MARKDOWN_TYPE_ORDER = ["sector_snapshot", "anticipation", "rotation", "regions"]`
+para el mismo efecto, e intercala la sección "Early Flow" justo después de
+Sector Snapshot (antes vivía fija justo tras Risk Appetite).
+
+### 2. `context_ratio_id` — Market Context column (`shared/relative-ratio-registry.js`, `relative.html`)
+
+Campo opcional nuevo por ratio: id de OTRO ratio ya existente en el registry
+cuyo estado se muestra como "Market Context" junto a este. Nunca se inventa
+un ratio nuevo solo para servir de contexto — si no hay uno natural entre
+los existentes, se deja sin asignar (ver `smh_igv` más abajo).
+
+Asignados en Fase 1 — 5 de los 6 sugeridos por el asesor, tras verificar
+contra el registry real:
+
+```
+xle_brent (XLE/BZ=F) → xle_spy   (Energy vs Market)
+xop_xle   (XOP/XLE)  → xle_spy
+kre_xlf   (KRE/XLF)  → xlf_spy   (Financials vs Market)
+gdx_gld   (GDX/GLD)  → gld_spy   (Gold vs Market)
+xlk_xlf   (XLK/XLF)  → xlf_spy
+smh_igv   (SMH/IGV)  → (sin asignar, ver más abajo)
+```
+
+**Hallazgo real que corrigió 2 de las 6 sugerencias originales del
+asesor:** `xlk_spy` (Technology vs Market) se reclasificó de
+`sector_snapshot` a `type:"rotation"` el 2026-08-11 (ver sección "Relative
+Flow Lab v2 — ratio_registry" más arriba) — hoy vive en la sección
+"Rotation Between Blocks", la misma que `smh_igv`/`xlk_xlf`. Usarlo como su
+`context_ratio_id` habría sido circular (el contexto no se leería antes,
+sería fila hermana en la misma tabla — justo el problema que esta Fase 1
+resuelve, reintroducido por la puerta de atrás). `xlk_xlf` usa `xlf_spy` en
+su lugar (Financials es una de sus dos patas). `smh_igv` se queda sin
+`context_ratio_id`: no hay hoy ningún ratio limpio "Technology vs Market"
+en `sector_snapshot` (la alternativa que proponía el asesor, `XLC/SPY`, es
+Comunicación — no encaja semánticamente con semis/software), y crear uno
+nuevo está fuera de alcance de Fase 1.
+
+Columna "Market Context" (formato `<pair>: <signal>, flow <flowChange>%`,
+o `—` si no hay `context_ratio_id` o el contexto tiene error) añadida al
+final de las tablas de **Anticipation, Rotation y Regions** — no en Sector
+Relative Snapshot (que ya ES el contexto) ni en Risk Appetite (bloque
+propio, no usa `QuestionBlock`). Resuelta vía `marketContextLabel(row,
+rowById)`, reutilizando el `rowById` (lookup plano id→row) que ya existía
+para la Coherencia Cross-Módulos — sin fetch ni cálculo nuevo.
+
+### 3. `alsoShowIn` — visualización cruzada sin duplicar datos ni inflar agregados
+
+El hueco de `smh_igv` reveló un problema de diseño más de fondo (según el
+propio asesor): un ratio puede tener utilidad conceptual en varias
+secciones (`xlk_spy` sirve tanto de "Rotation" como de contexto sectorial
+de Tecnología), y el modelo de asignación única (`type`) no lo captura. El
+asesor propuso esperar 2-3 semanas de uso real antes de decidir; el usuario
+prefirió resolverlo ya, dado que el coste es bajo — decisión explícita del
+usuario, no del asesor.
+
+Implementado como campo opcional `alsoShowIn: string[]` en el registry
+(hoy solo en `xlk_spy: alsoShowIn: ["sector_snapshot"]`) — **no** cambia el
+`type` real del ratio (sigue siendo `rotation`, sigue contando una sola vez
+en Risk Appetite Monitor, Cluster Coherence View, Most Extreme Relative
+Moves, Raw Ratio Tables — ninguno de los cuales se tocó). Es puramente un
+mecanismo de visualización: `rowsByTypeExtras[t]` (nuevo `useMemo` en
+`relative.html`) filtra `ALL_RATIO_DEFS` por `alsoShowIn.includes(t)` y
+`QuestionBlock` las añade a su tabla marcadas `crossListed:true` — badge
+"↳ Rotación" junto al nombre en la UI, `[también en Rotation Between
+Blocks]` en el Markdown. Las filas cruzadas quedan **excluidas** del
+mini-ranking "Top Signals" de cada bloque (no son miembros nativos de esa
+pregunta) y no tienen `dyn` (Δ1W/Sem./badge) calculado — solo Score/Flow
+Chg de referencia, no seguimiento histórico duplicado.
+
+**Deliberadamente NO se generalizó** a "un ratio puede pertenecer a varias
+secciones" como modelo formal — es un mecanismo aditivo acotado a este único
+caso, siguiendo el propio consejo del asesor de no construir el refactor
+general hasta ver 3-4 huecos similares.
+
+### Verificado end-to-end (Edge headless vía CDP, servidor local real)
+
+Sintaxis JSX transpila sin errores (`@babel/core` + `preset-react` en Node).
+Orden de secciones confirmado en la UI real y en el Markdown exportado
+(`Copy for LLM`, clic real interceptando `navigator.clipboard.writeText`):
+idéntico en ambos, Sector Relative Snapshot antes de Early Flow y de
+Anticipation. Los 5 `context_ratio_id` verificados con datos reales del
+momento (ej. `XLE/BZ=F` → `XLE/SPY: Improving, flow -6.2%`; `SMH/IGV` →
+`—`), coincidentes byte a byte entre la tabla UI y el export Markdown (misma
+función `marketContextLabel` en ambos). `xlk_spy` confirmado apareciendo dos
+veces en el HTML (Sector Snapshot con badge cruzado + Rotation nativo, sin
+`context_ratio_id` propio) sin inflar ningún agregado: "Ratios cargados"
+del summary se mantuvo en `50/50` (no 51) tras el cambio. Cero errores de
+consola en ambas pasadas.
+
+### Fuera de alcance (Fase 2, explícito, no abordado en esta sesión)
+
+Estados derivados (`state_detail`, `context_state`, `context_confirmation`),
+interpretaciones textuales condicionales (~200 frases sobre los 45 ratios),
+Theme Context Cards. No se toca PCS, rot_score, AI Picks, carteras, ni
+reglas de entrada/salida — mismo alcance acordado desde el inicio.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
