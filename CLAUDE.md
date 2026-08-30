@@ -4322,13 +4322,63 @@ mecanismo de auto-commit+push de `server.js` en Situaciones Especiales
 generó y revirtió esos 2 commits de prueba en `origin/master`, ya limpiados
 (mismo patrón ya aceptado para `TESTX`/`ads_de_...` en la sección anterior).
 
-**Fuera de alcance (explícito):** el parser NL de `/kalert` (voz/texto vía
-Telegram) sigue sin soportar precio — la petición original del usuario solo
-pedía que el sistema de "Situaciones Especiales" (solo-UI) pudiera
-contemplarlo, no que el parser conversacional lo entienda todavía.
-Conversión de divisa (no aplica, es un umbral absoluto en la moneda nativa
-del ticker). Re-armado automático tras dispararse (alertas de un solo uso,
-igual que el resto del sistema).
+**Fuera de alcance de esta primera pasada (ver corrección inmediatamente
+abajo):** el parser NL de `/kalert` (voz/texto vía Telegram) — la petición
+original del usuario solo pedía que "Situaciones Especiales" (solo-UI)
+pudiera contemplarlo. Conversión de divisa (no aplica, es un umbral absoluto
+en la moneda nativa del ticker). Re-armado automático tras dispararse
+(alertas de un solo uso, igual que el resto del sistema).
+
+### Corrección el mismo día: `/kalert` (texto y voz) también soporta precio
+
+El usuario probó de nuevo la petición original por voz en Telegram
+(*"avisar si TNZ supera 70 y en vela diaria azul positivo"*) y seguía
+fallando — la extensión de arriba solo cubría "Situaciones Especiales"
+(la UI web), no `/kalert`, que es como el usuario realmente interactúa con
+las alertas. Corregido extendiendo también `scripts/telegram_portfolio_bot.py`
+al mismo modelo de condición compuesta, sin crear un sistema paralelo:
+
+- **Sintaxis exacta** — 4º token opcional: `/kalert TNZ d blue_positive >70`
+  (`_parse_price_clause()`, regex `^([<>])(\d+(?:\.\d+)?)$`). Sin el 4º token,
+  comportamiento y almacenamiento byte a byte idénticos a antes.
+- **Lenguaje natural/voz** — `_parse_koncorde_alert_nl()` gana un campo
+  `"price"` opcional en el JSON que pide al modelo (Haiku), con la misma
+  disciplina "no inventes nada" que ya regía ticker/timeframe/condition: si
+  el usuario menciona un precio pero el umbral o la dirección quedan
+  ambiguos, se rechaza la alerta entera (nunca se crea a medias, ignorando
+  el precio en silencio).
+- **Almacenamiento** — `cmd_kalert_set()` gana un parámetro `price` opcional.
+  Sin él, escribe la fila plana legacy de siempre. Con él, escribe la fila en
+  el esquema compuesto `conditions:[...]` que ya usa "Situaciones
+  Especiales" — mismo almacén (`koncorde_bot_alerts.json`), mismo
+  evaluador (`evaluate_conditions()` en `koncorde_alert_conditions.py`, sin
+  ningún cambio), solo un segundo *escritor* para un formato que ya existía.
+  Con varios `timeframes` (sintaxis "diario o semanal"), cada uno se
+  convierte en su propia fila con el precio ANDed dentro — mismo mecanismo
+  OR-entre-filas ya usado para multi-timeframe, sin lógica nueva.
+- **`cmd_kalerts_list()`** pasa a usar `get_conditions()`/`describe_conditions()`
+  (el shim de compatibilidad ya existente) en vez de asumir el formato plano
+  — así `/kalerts` renderiza correctamente tanto las alertas antiguas como
+  las nuevas compuestas, con manejo defensivo (`try/except KeyError`) para
+  filas malformadas.
+- **Confirmación de ticker deducido** (`_pending_ticker_confirmation`) — el
+  precio viaja también en la propuesta pendiente y se aplica igual tanto si
+  el usuario responde "ok" como si corrige el ticker directamente.
+
+**Verificado:** 5 tests unitarios sobre `_parse_koncorde_alert_strict`
+(sin precio, con `>`/`<`+decimal, 4º token malformado → rechazo total,
+multi-timeframe+precio). Llamada real a OpenRouter (Haiku) reproduciendo la
+petición original del usuario palabra por palabra — parseada correctamente
+(`TNZ`, `d`, `blue_positive`, `price:{above,70.0}`); más 2 llamadas reales
+adicionales confirmando que una petición sin precio sigue devolviendo
+`price:None` (sin regresión) y que "cae por debajo de 50" mapea a
+`below`. Flujo completo `cmd_kalert()` → `cmd_kalert_set()` probado con
+Telegram/GitHub-API mockeados: caso con ticker deducido ("Loma") + precio
+queda correctamente en confirmación pendiente (no crea la alerta hasta que
+el usuario confirme), y al responder "ok" crea la fila compuesta correcta.
+Dedup verificado: repetir la misma alerta no duplica fila; el mismo
+ticker+timeframe+condición con un umbral de precio distinto sí coexiste
+como fila independiente.
 
 ---
 

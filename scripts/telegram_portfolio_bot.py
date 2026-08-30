@@ -45,9 +45,12 @@ for _stream in (sys.stdout, sys.stderr):
 sys.path.insert(0, str(Path(__file__).parent))
 from koncorde_alert_conditions import (
     CONDITIONS as KONC_CONDITIONS,
+    PRICE_OPS as KONC_PRICE_OPS,
     TIMEFRAME_LABELS as KONC_TIMEFRAME_LABELS,
     VALID_TIMEFRAMES as KONC_VALID_TIMEFRAMES,
     describe as describe_koncorde_condition,
+    describe_conditions as describe_konc_conditions,
+    get_conditions as get_konc_conditions,
 )
 from paper_trading import call_model, parse_response  # lazy-imports openai internally
 
@@ -827,14 +830,39 @@ def cmd_alert_delete(token: str, chat_id: str, ticker: str) -> None:
 
 
 _TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
+# Optional 4th token for a price condition alongside the Koncorde one, e.g.
+# ">70" or "<70.5" — kept as its own regex so the parser stays a simple,
+# no-LLM token check like the rest of the strict-syntax path.
+_PRICE_CLAUSE_RE = re.compile(r"^([<>])(\d+(?:\.\d+)?)$")
+
+
+def _parse_price_clause(token: str) -> dict | None:
+    """Parses one price-clause token (">70", "<70.5") into
+    {"type": "price", "op": "above"|"below", "threshold": float}, or None if
+    it doesn't match the shape at all."""
+    m = _PRICE_CLAUSE_RE.match(token)
+    if not m:
+        return None
+    op = "above" if m.group(1) == ">" else "below"
+    return {"type": "price", "op": op, "threshold": float(m.group(2))}
 
 
 def _parse_koncorde_alert_strict(args_text: str) -> dict | None:
-    """Exact 3-token form: TICKER TIMEFRAME CONDITION. No LLM call needed.
-    TIMEFRAME accepts a comma-separated list (e.g. "d,w") to alert on any of
-    several timeframes — each becomes its own independent alert row, so
-    whichever fires first fires (OR semantics) without any evaluator changes."""
+    """Exact form: TICKER TIMEFRAME CONDITION [PRICE_CLAUSE]. No LLM call
+    needed. TIMEFRAME accepts a comma-separated list (e.g. "d,w") to alert on
+    any of several timeframes — each becomes its own independent alert row,
+    so whichever fires first fires (OR semantics) without any evaluator
+    changes. PRICE_CLAUSE is optional (">70" or "<70.5") and, when present,
+    is ANDed onto every timeframe row via koncorde_alert_conditions.py's
+    composite `conditions` schema — same mechanism "Situaciones Especiales"
+    already uses, not a new evaluator path."""
     tokens = args_text.split()
+    price = None
+    if len(tokens) == 4:
+        price = _parse_price_clause(tokens[3])
+        if price is None:
+            return None
+        tokens = tokens[:3]
     if len(tokens) != 3:
         return None
     ticker, tf_raw, cond = tokens[0].upper(), tokens[1].lower(), tokens[2].lower()
@@ -843,16 +871,20 @@ def _parse_koncorde_alert_strict(args_text: str) -> dict | None:
         return None
     if not _TICKER_RE.match(ticker):
         return None
-    return {"ticker": ticker, "timeframes": tfs, "condition": cond}
+    return {"ticker": ticker, "timeframes": tfs, "condition": cond, "price": price}
 
 
 def _parse_koncorde_alert_nl(text: str) -> dict | None:
     """Free-text (or voice-transcribed) request -> {ticker, timeframes, condition,
-    ticker_guessed}. timeframes is always a list — a request naming several
+    price, ticker_guessed}. timeframes is always a list — a request naming several
     timeframes with "or" semantics ("o bien diario o bien semanal") becomes one
     entry per timeframe, later saved as independent alert rows (whichever fires
     first fires) rather than requiring any real multi-timeframe evaluator logic.
-    ticker_guessed=True means the model had to infer the symbol from a
+    price is None unless the request also names a price threshold ("supera 70",
+    "cae por debajo de 70"), in which case it's ANDed onto every timeframe row —
+    the case that originally motivated adding this: "avisar si TNZ supera 70 y
+    en vela diaria azul positivo" needs both true at once, not two independent
+    alerts. ticker_guessed=True means the model had to infer the symbol from a
     company/asset name rather than the user stating the ticker literally
     (e.g. "Loma" -> LOMA) — the caller must NOT create the alert directly in that
     case, only propose it for confirmation via the exact-syntax command. This is
@@ -862,16 +894,20 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
     Uses a cheap OpenRouter call (Haiku) constrained to the closed condition
     vocabulary in koncorde_alert_conditions.py. Returns None (never guesses
     condition) if OPENROUTER_API_KEY is missing, the call fails, or the model
-    can't determine ticker/timeframes/condition with confidence.
+    can't determine ticker/timeframes/condition with confidence. A price
+    threshold, when present, must be unambiguous too, or the whole alert is
+    rejected (never silently dropped) — same "no inventes nada" posture as
+    ticker/timeframe/condition.
     """
     if not os.environ.get("OPENROUTER_API_KEY", ""):
         return None
 
     cond_lines = "\n".join(f'  "{k}" — {v}' for k, v in KONC_CONDITIONS.items())
     system = (
-        "Extraes una alerta sobre el indicador Koncorde a partir de una petición en "
-        "español (texto libre, a veces transcrita de una nota de voz). Responde SOLO "
-        "con JSON compacto, sin markdown ni explicación.\n\n"
+        "Extraes una alerta sobre el indicador Koncorde (y opcionalmente un umbral "
+        "de precio) a partir de una petición en español (texto libre, a veces "
+        "transcrita de una nota de voz). Responde SOLO con JSON compacto, sin "
+        "markdown ni explicación.\n\n"
         "Campos a extraer:\n"
         '- "ticker": símbolo bursátil en mayúsculas. Si el usuario ya dice el símbolo '
         'tal cual (ej. "CRESY", "AAPL", "GLEN.L"), úsalo directamente y pon '
@@ -891,11 +927,21 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         '  Ejemplos de mapeo: "señal azul positiva"/"blue en positivo" -> blue_positive; '
         '"blue cruza a positivo"/"cruce alcista" -> blue_cross_up; '
         '"acumulación"/"acumulando" -> state_accumulation; '
-        '"distribución"/"distribuyendo" -> state_distribution.\n\n'
-        'Si tienes los 3 campos con confianza, responde exactamente:\n'
-        '{"ticker": "...", "ticker_guessed": true|false, "timeframes": ["..."], "condition": "..."}\n'
-        'Si falta o es ambiguo timeframes/condition, o el ticker/nombre no es reconocible '
-        'en absoluto, responde exactamente:\n'
+        '"distribución"/"distribuyendo" -> state_distribution.\n'
+        '- "price": OPCIONAL. Solo inclúyelo si el usuario también pide una condición '
+        'de precio (ej. "supera 70", "sube de 70", "cae por debajo de 70", "baja de 50"). '
+        'Si la incluyes, debe ser exactamente {"op": "above"|"below", "threshold": NUMERO} '
+        '— "above" para "supera"/"sube de"/"por encima de", "below" para "cae por debajo '
+        'de"/"baja de"/"por debajo de". Si el usuario NO menciona ningún precio, omite '
+        'el campo "price" por completo (no lo pongas a null ni inventes un umbral).\n\n'
+        'Si tienes ticker/timeframes/condition con confianza (price es opcional), '
+        'responde exactamente:\n'
+        '{"ticker": "...", "ticker_guessed": true|false, "timeframes": ["..."], '
+        '"condition": "...", "price": {"op": "above", "threshold": 70} }\n'
+        '(omite "price" si no aplica)\n'
+        'Si falta o es ambiguo timeframes/condition, el ticker/nombre no es reconocible '
+        'en absoluto, o el usuario menciona un precio pero no queda claro el umbral o la '
+        'dirección, responde exactamente:\n'
         '{"error": "razón breve en español"}'
     )
     try:
@@ -918,39 +964,89 @@ def _parse_koncorde_alert_nl(text: str) -> dict | None:
         return None
     if not _TICKER_RE.match(ticker):
         return None
+
+    price = None
+    price_raw = data.get("price")
+    if isinstance(price_raw, dict):
+        op = str(price_raw.get("op", "")).strip().lower()
+        threshold = price_raw.get("threshold")
+        if op not in KONC_PRICE_OPS or not isinstance(threshold, (int, float)):
+            return None  # model tried to add a price clause but it's malformed — reject
+            # the whole alert rather than silently drop the price half of the request.
+        price = {"type": "price", "op": op, "threshold": float(threshold)}
+
     return {
         "ticker": ticker,
         "timeframes": tfs,
         "condition": cond,
+        "price": price,
         "ticker_guessed": bool(data.get("ticker_guessed", False)),
     }
 
 
 def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframes: list[str],
-                    condition: str, raw_request: str) -> None:
+                    condition: str, raw_request: str, price: dict | None = None) -> None:
     """Creates one independent alert row per timeframe in `timeframes` — a
     request for "diario o semanal" becomes 2 separate rows, so whichever
     fires first fires (OR semantics) without any multi-timeframe evaluator
     logic; each keeps working on its own even after the other one deletes
-    itself on firing."""
+    itself on firing.
+
+    `price` is optional ({"type":"price","op":...,"threshold":...} from
+    _parse_price_clause/_parse_koncorde_alert_nl). When present, each row is
+    stored in the composite `conditions` schema (koncorde condition AND the
+    price condition) instead of the flat legacy shape — same storage format
+    "Situaciones Especiales" already uses (koncorde_alert_conditions.py's
+    get_conditions/evaluate_conditions read both transparently), so this
+    doesn't add a new evaluator path, just a new writer for one that already
+    exists. Without `price`, behavior/storage is byte-for-byte unchanged from
+    before this was added."""
     ticker = ticker.upper()
     konc_universe = _load_koncorde_data()
     known = ticker in konc_universe
 
+    def _safe_conditions(row: dict) -> list[dict]:
+        try:
+            return get_konc_conditions(row)
+        except KeyError:
+            return []  # malformed row — never matches, just falls through the dedupe check
+
     alerts = _load_konc_alerts()
     for tf in timeframes:
-        alerts = [
-            a for a in alerts
-            if not (a.get("ticker") == ticker and a.get("timeframe") == tf
-                    and a.get("condition") == condition)
-        ]
-        alerts.append({
-            "ticker":      ticker,
-            "timeframe":   tf,
-            "condition":   condition,
-            "raw_request": raw_request.strip(),
-            "created":     str(date.today()),
-        })
+        if price:
+            alerts = [
+                a for a in alerts
+                if not (
+                    a.get("ticker") == ticker
+                    and any(c.get("type") == "koncorde" and c.get("timeframe") == tf
+                            and c.get("condition") == condition for c in _safe_conditions(a))
+                    and any(c.get("type") == "price" and c.get("op") == price["op"]
+                            and c.get("threshold") == price["threshold"] for c in _safe_conditions(a))
+                )
+            ]
+            alerts.append({
+                "id":          f"{ticker.lower()}_{tf}_{condition}_price_{price['op']}_{int(time.time())}",
+                "ticker":      ticker,
+                "conditions":  [
+                    {"type": "koncorde", "timeframe": tf, "condition": condition},
+                    price,
+                ],
+                "raw_request": raw_request.strip(),
+                "created":     str(date.today()),
+            })
+        else:
+            alerts = [
+                a for a in alerts
+                if not (a.get("ticker") == ticker and a.get("timeframe") == tf
+                        and a.get("condition") == condition)
+            ]
+            alerts.append({
+                "ticker":      ticker,
+                "timeframe":   tf,
+                "condition":   condition,
+                "raw_request": raw_request.strip(),
+                "created":     str(date.today()),
+            })
     if not _save_konc_alerts(alerts):
         _send(token, chat_id,
               "⚠️ No pude guardar la alerta (fallo al escribir en GitHub). "
@@ -963,12 +1059,21 @@ def cmd_kalert_set(token: str, chat_id: str, ticker: str, timeframes: list[str],
         "se evaluará en cuanto los haya en el próximo run del pipeline."
     )
     if len(timeframes) == 1:
-        desc = describe_koncorde_condition(ticker, timeframes[0], condition)
+        desc = (
+            describe_konc_conditions(ticker, [{"type": "koncorde", "timeframe": timeframes[0], "condition": condition}, price])
+            if price else describe_koncorde_condition(ticker, timeframes[0], condition)
+        )
         _send(token, chat_id,
               f"✅ Alerta creada: <b>{desc}</b>.\nTe aviso por Telegram cuando se cumpla "
               f"(una sola vez, se borra sola al dispararse).{note}")
     else:
-        lines = [describe_koncorde_condition(ticker, tf, condition) for tf in timeframes]
+        if price:
+            lines = [
+                describe_konc_conditions(ticker, [{"type": "koncorde", "timeframe": tf, "condition": condition}, price])
+                for tf in timeframes
+            ]
+        else:
+            lines = [describe_koncorde_condition(ticker, tf, condition) for tf in timeframes]
         bullets = "\n".join(f"• {d}" for d in lines)
         _send(token, chat_id,
               f"✅ {len(timeframes)} alertas creadas (aviso con la que se cumpla primero):\n"
@@ -982,9 +1087,13 @@ def cmd_kalerts_list(token: str, chat_id: str) -> None:
         return
     lines = ["<b>Alertas de Koncorde activas:</b>", ""]
     for a in alerts:
-        desc = describe_koncorde_condition(
-            a.get("ticker", "?"), a.get("timeframe", "?"), a.get("condition", "?")
-        )
+        # get_conditions() upgrades legacy flat rows on the fly, so a single
+        # describe_conditions() call covers both single-condition (from
+        # before this composite storage existed) and price+koncorde rows.
+        try:
+            desc = describe_konc_conditions(a.get("ticker", "?"), get_konc_conditions(a))
+        except KeyError:
+            desc = f"{a.get('ticker', '?')} — [alerta con formato inválido]"
         lines.append(f"🔮 {desc}  <i>({a.get('created', '')})</i>")
     _send(token, chat_id, "\n".join(lines))
 
@@ -1010,12 +1119,14 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
     args_text = args_text.strip()
     if not args_text:
         _send(token, chat_id,
-              "Uso: <code>/kalert TICKER TIMEFRAME CONDICION</code>  "
+              "Uso: <code>/kalert TICKER TIMEFRAME CONDICION [PRECIO]</code>  "
               "(ej: <code>/kalert CRESY w blue_positive</code>, o "
               "<code>/kalert CRESY d,w blue_positive</code> para avisar con el primero "
-              "de varios timeframes que se cumpla)\n"
-              "O en lenguaje natural: <code>/kalert avisa cuando CRESY tenga la señal "
-              "azul de koncorde positiva en el gráfico semanal</code>\n"
+              "de varios timeframes que se cumpla, o "
+              "<code>/kalert TNZ d blue_positive &gt;70</code> para exigir precio Y koncorde "
+              "a la vez — PRECIO admite &gt;N o &lt;N)\n"
+              "O en lenguaje natural: <code>/kalert avisa si TNZ supera 70 y en vela diaria "
+              "azul positivo</code>\n"
               "También puedes mandar una nota de voz.")
         return
 
@@ -1036,12 +1147,15 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
               f"CONDICION: {', '.join(KONC_CONDITIONS)}")
         return
 
+    price = parsed.get("price")
+
     if parsed.get("ticker_guessed"):
-        desc = _describe_multi(parsed["ticker"], parsed["timeframes"], parsed["condition"])
+        desc = _describe_multi(parsed["ticker"], parsed["timeframes"], parsed["condition"], price)
         _pending_ticker_confirmation[chat_id] = {
             "ticker":      parsed["ticker"],
             "timeframes":  parsed["timeframes"],
             "condition":   parsed["condition"],
+            "price":       price,
             "raw_request": args_text,
             "proposed_at": time.time(),
         }
@@ -1053,13 +1167,21 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
         return
 
     cmd_kalert_set(token, chat_id, parsed["ticker"], parsed["timeframes"],
-                    parsed["condition"], raw_request=args_text)
+                    parsed["condition"], raw_request=args_text, price=price)
 
 
-def _describe_multi(ticker: str, timeframes: list[str], condition: str) -> str:
+def _describe_multi(ticker: str, timeframes: list[str], condition: str, price: dict | None = None) -> str:
     """Human-readable summary for one or several timeframes of the same
-    ticker+condition — shared between the pending-confirmation prompt in
-    cmd_kalert() and the success message in cmd_kalert_set()."""
+    ticker+condition (optionally ANDed with a price condition) — shared
+    between the pending-confirmation prompt in cmd_kalert() and the success
+    message in cmd_kalert_set()."""
+    if price:
+        if len(timeframes) == 1:
+            return describe_konc_conditions(ticker, [{"type": "koncorde", "timeframe": timeframes[0], "condition": condition}, price])
+        tf_labels = " o ".join(KONC_TIMEFRAME_LABELS.get(tf, tf) for tf in timeframes)
+        cond_label = KONC_CONDITIONS.get(condition, condition)
+        price_label = f"Precio {'por encima de' if price['op']=='above' else 'por debajo de'} {price['threshold']}"
+        return f"{ticker} — ({cond_label} en {tf_labels}) Y {price_label}"
     if len(timeframes) == 1:
         return describe_koncorde_condition(ticker, timeframes[0], condition)
     tf_labels = " o ".join(KONC_TIMEFRAME_LABELS.get(tf, tf) for tf in timeframes)
@@ -1092,12 +1214,14 @@ def handle_plain_text(token: str, chat_id: str, text: str) -> bool:
     if lowered in ("ok", "okay", "vale", "si", "sí", "confirmo", "correcto"):
         del _pending_ticker_confirmation[chat_id]
         cmd_kalert_set(token, chat_id, pending["ticker"], pending["timeframes"],
-                        pending["condition"], raw_request=pending["raw_request"])
+                        pending["condition"], raw_request=pending["raw_request"],
+                        price=pending.get("price"))
         return True
     if _TICKER_RE.match(stripped.upper()) and " " not in stripped:
         del _pending_ticker_confirmation[chat_id]
         cmd_kalert_set(token, chat_id, stripped, pending["timeframes"],
-                        pending["condition"], raw_request=pending["raw_request"])
+                        pending["condition"], raw_request=pending["raw_request"],
+                        price=pending.get("price"))
         return True
     return False
 
