@@ -78,7 +78,7 @@ PCS_GATED_PORTFOLIOS = [
     "HIGH_CONVICTION", "CONFIRMED_FLOW_LEADERS", "EARLY_ROTATION",
     "MACRO_THEMATIC_BENEFICIARIES", "MIMO_SHADOW",
 ]
-ALL_LIVE_PORTFOLIOS = PCS_GATED_PORTFOLIOS + ["CAVA_MACRO", "MIRROR_ESPEJO", "CRUCE_ROJO_D"]
+ALL_LIVE_PORTFOLIOS = PCS_GATED_PORTFOLIOS + ["CAVA_MACRO", "MIRROR_ESPEJO", "CRUCE_ROJO_D", "CRUCE_ROJO_D_25"]
 
 SCORING_VERSION = "v1"   # placeholder — no hay versionado real todavía
 DATA_VERSION    = "v1"
@@ -233,7 +233,9 @@ def compute_mechanical_exit(portfolio: str, cand: dict | None, pos: dict,
         if hwm and current_price is not None and current_price <= hwm * 0.95:
             return True, "trailing_stop_5pct_from_high"
         return False, None
-    if portfolio == "CRUCE_ROJO_D":
+    if portfolio in ("CRUCE_ROJO_D", "CRUCE_ROJO_D_25"):
+        # Misma regla de salida en las dos variantes de la familia — solo
+        # difiere el umbral de entrada (percentil<=10 vs <=25).
         cross = cand.get("konc_d_trend_cross") if cand else None
         if cross == "down":
             return True, "konc_d_trend_cross_down"
@@ -298,7 +300,7 @@ def build_rows(picks: dict, cand_by_ticker: dict[str, dict], shadow_lookup: dict
                 model = "cava-engine-1.1.0"
             elif portfolio == "MIRROR_ESPEJO":
                 model = "x-ai/grok-4.3-espejo"
-            elif portfolio == "CRUCE_ROJO_D":
+            elif portfolio in ("CRUCE_ROJO_D", "CRUCE_ROJO_D_25"):
                 model = "mechanical-no-model"
             else:
                 model = None

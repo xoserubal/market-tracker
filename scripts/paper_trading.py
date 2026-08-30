@@ -1245,6 +1245,7 @@ _PORTFOLIO_LABELS = {
     # crudo en vez de una etiqueta legible, no bloqueante pero sí un hueco real).
     "CAVA_MACRO":                   "Cava Macro",
     "CRUCE_ROJO_D":                 "Cruce Rojo D",
+    "CRUCE_ROJO_D_25":              "Cruce Rojo D 25",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 

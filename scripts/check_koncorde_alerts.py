@@ -9,9 +9,13 @@ Generalized 2026-08-26 from a Koncorde-only single-condition evaluator to a
 composite AND-over-typed-conditions one (see koncorde_alert_conditions.py's
 `get_conditions`/`evaluate_conditions`/`evaluate_single_condition`) — same
 storage file, same evaluator entry point, one alert can now require any mix
-of Koncorde state, Flow Score crossing, and custom ticker-ratio trend
-conditions simultaneously. Old-format rows (flat ticker/timeframe/condition)
-keep working unmodified via the read-time compatibility shim.
+of Koncorde state, Flow Score crossing, custom ticker-ratio trend, and live
+price-threshold conditions simultaneously (price added 2026-08-30, in direct
+response to a real request that failed: "avisar si TNZ supera 70 y en vela
+diaria azul positivo" — a single alert needing both a price level AND a
+Koncorde condition true at once). Old-format rows (flat
+ticker/timeframe/condition) keep working unmodified via the read-time
+compatibility shim.
 
 Reads:
   docs/data/koncorde_bot_alerts.json         (alerts; both formats, see above)
@@ -19,6 +23,7 @@ Reads:
   docs/data/portfolio_daily_snapshot.jsonl   (flowScore history — only read if
                                                 any alert has a "flow" condition)
   live yfinance fetch via ratio_signal.py    (only for alerts with a "ratio" condition)
+  live yfinance fetch via price_signal.py    (only for alerts with a "price" condition)
 
 Writes:
   docs/data/koncorde_bot_alerts.json   (fired alerts removed — one-shot, same
@@ -56,6 +61,7 @@ for _stream in (sys.stdout, sys.stderr):
 sys.path.insert(0, str(Path(__file__).parent))
 from koncorde_alert_conditions import describe_conditions, evaluate_conditions, get_conditions
 from ratio_signal import fetch_ratio_trend
+from price_signal import fetch_current_price
 
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
@@ -131,7 +137,8 @@ def run(dry_run: bool = False) -> None:
 
     konc_tickers = _load_json(KONC_PATH, {}).get("tickers", {})
 
-    # Only pay for flow-snapshot / ratio-fetch work if some alert actually needs it.
+    # Only pay for flow-snapshot / ratio-fetch / price-fetch work if some alert
+    # actually needs it — same gating principle for all three.
     all_conditions = [c for a in alerts for c in get_conditions(a)]
     needs_flow = any(c.get("type") == "flow" for c in all_conditions)
     flow_rows_by_ticker = _load_flow_rows_by_ticker() if needs_flow else {}
@@ -143,6 +150,13 @@ def run(dry_run: bool = False) -> None:
         if key not in ratio_trend_cache:
             ratio_trend_cache[key] = fetch_ratio_trend(ticker_a, ticker_b)
         return ratio_trend_cache[key]
+
+    price_cache: dict[str, float | None] = {}
+
+    def _cached_price(ticker: str) -> float | None:
+        if ticker not in price_cache:
+            price_cache[ticker] = fetch_current_price(ticker)
+        return price_cache[ticker]
 
     fired: list[dict]   = []
     pending: list[dict] = []
@@ -160,10 +174,12 @@ def run(dry_run: bool = False) -> None:
             rp["key"]: _cached_ratio_trend(ticker, rp["other_ticker"])
             for rp in ratio_pairs
         }
+        needs_price = any(c.get("type") == "price" for c in conditions)
         ctx = {
             "koncorde_ticker_data": konc_tickers.get(ticker),
             "flow_rows": flow_rows_by_ticker.get(ticker, []),
             "ratio_trends": ratio_trends,
+            "current_price": _cached_price(ticker) if needs_price else None,
         }
 
         try:

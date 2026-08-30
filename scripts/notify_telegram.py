@@ -64,6 +64,7 @@ PORTFOLIO_LABELS = {
     # encontrado 2026-08-30 al registrar CRUCE_ROJO_D).
     "CAVA_MACRO":                   "Cava Macro",
     "CRUCE_ROJO_D":                 "Cruce Rojo D",
+    "CRUCE_ROJO_D_25":              "Cruce Rojo D 25",
 }
 
 CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}

@@ -4054,6 +4054,64 @@ precio; ampliar a otros timeframes. Si el umbral estricto resulta demasiado
 restrictivo con datos reales, replantear con el usuario antes de tocar los
 números — no ajustar umbrales unilateralmente sobre la marcha.
 
+### CRUCE_ROJO_D_25 — segunda variante, misma familia (implementado 2026-08-30)
+
+El usuario pidió una segunda cartera idéntica pero con el umbral laxo del
+mismo backtest (percentil≤25 en vez de ≤10 — la otra fila de la tabla de
+`research/koncorde_cross_backtest_2026-08/README.md`: 134 señales/4 años,
+media +3.70%, peor caso -11.9%, frente a 38 señales/+5.39%/-8.7% de la
+estricta). RSI<30, 5% fijo, sin límite de posiciones y misma salida (cruce a
+la baja) — todo igual, solo cambia el umbral de entrada.
+
+**Refactor de `scripts/cruce_rojo_d_portfolio.py` a multi-config en vez de
+duplicar el archivo** — decisión directamente derivada de la conversación de
+esa misma tarde sobre reutilización del motor de ejecución (ver "Hoja de
+ruta consolidada" más abajo): en vez de copiar ~250 líneas a un segundo
+script (el mismo patrón de duplicación ya visto y corregido varias veces en
+este proyecto — `calcCMF`, `HARD_RULES` antes de `ai_shared.py`), el script
+pasó a tener una lista `CONFIGS` (`CRUCE_ROJO_D` percentil≤10,
+`CRUCE_ROJO_D_25` percentil≤25) y funciones parametrizadas
+(`qualifies_for_entry(k, config)`, `check_exits(..., config)`,
+`run_for_config(...)`) — un solo pase lee `koncorde_data.json` una vez y
+evalúa ambas variantes, cada una con su propio slot en `ai_picks.json` y su
+propia fila en el log compartido `docs/data/cruce_rojo_d_log.jsonl` (ahora
+con campo `"portfolio"` para distinguirlas).
+
+**Bug real encontrado en la propia verificación:** el primer refactor solo
+escribía `ai_picks.json` si `any(n_added or n_closed)` en cualquiera de las
+dos — regresión respecto al comportamiento original ("persistir siempre que
+`--apply` esté activo, aunque no haya cambios hoy, para que la cartera
+aparezca en el dashboard desde el primer run incluso vacía"). Con eso,
+`CRUCE_ROJO_D_25` no se registraba en absoluto el día de su creación (0
+candidatos, 0 cierres). Corregido: se escribe siempre que `apply=True`,
+igual que antes del refactor.
+
+Registrada en dashboard (`docs/index.html` PTF_LABELS, fuera de
+GROK_PTFS/MIMO_PTFS y de PTF_THRESHOLDS, mismo motivo que `CRUCE_ROJO_D` —
+no tiene modelo ni usa PCS) y Telegram (`_PORTFOLIO_LABELS` en
+`paper_trading.py` y `notify_telegram.py`) desde el primer commit — sin
+repetir el hueco de `CAVA_MACRO` que se encontró al registrar la primera
+variante. `scripts/ai_picks_decision_state.py` (P0) también actualizado:
+`ALL_LIVE_PORTFOLIOS` y las ramas de `compute_mechanical_exit()`/lookup de
+`model` cubren ahora las dos variantes con la misma lógica (`portfolio in
+("CRUCE_ROJO_D", "CRUCE_ROJO_D_25")`).
+
+**Verificado:** test aislado con datos sintéticos — un ticker que solo
+califica para la variante laxa (percentil 20, entre 10 y 25), otro que
+califica para ambas, y una posición abierta solo en la estricta que cruza a
+la baja — confirma que las dos carteras no se contaminan entre sí (la
+laxa tiene ambos candidatos, la estricta solo el que de verdad cumple ≤10,
+el cierre solo afecta a la estricta). `--apply` real contra producción:
+ambas carteras registradas (vacías, 0 candidatos reales el día de creación —
+ningún ticker con cruce alcista hoy tiene RSI<30, confirmado manualmente).
+Dashboard verificado con Edge headless — pestaña "Cruce Rojo D 25" presente
+y navegable, cero errores de consola.
+
+**Nota de naming:** el nombre interno de cartera (`CRUCE_ROJO_D_25`) sigue
+la convención `SCREAMING_SNAKE_CASE` del resto de claves de
+`ai_picks.json.portfolios`; la etiqueta visible es "Cruce Rojo D 25", tal
+como la pidió el usuario.
+
 ---
 
 ## Hoja de ruta consolidada — Auditoría de carteras IA (firmada 2026-08-30) — P0 arrancado
@@ -4197,6 +4255,80 @@ umbrales correctos. Envío real de confirmación disparado a producción
 silenciar las alertas de verdad cuando toquen. Mismo bug de emoji/consola
 Windows ya documentado en `duration_monitor.py`/`check_koncorde_alerts.py`
 encontrado y arreglado aquí también (mismo fix, `reconfigure` a UTF-8).
+
+---
+
+## Situaciones Especiales — condición de precio (implementado 2026-08-30)
+
+Origen: el usuario intentó crear por nota de voz en Telegram *"avisar si TNZ
+supera 70 y en vela diaria azul positivo"*. Falló porque el vocabulario
+cerrado de `koncorde_alert_conditions.py` (7 condiciones Koncorde, más
+`flow`/`ratio` desde "Situaciones Especiales") no tenía ningún tipo de
+condición de precio — ni siquiera el sistema compuesto la soportaba. Se le
+ofreció como alternativa dos alertas independientes; el usuario la rechazó
+explícitamente: *"no, quiero que la alerta pueda contemplar que se cumplan
+las dos condiciones a la vez"*. Cuarto tipo de condición del sistema
+(`koncorde`/`flow`/`ratio`/**`price`**), mismo patrón AND de
+`evaluate_conditions()` (three-valued True/False/None, False gana sobre
+None) — sin tocar nada de lo ya existente.
+
+**`scripts/price_signal.py` (nuevo)** — mismo espíritu que `ratio_signal.py`
+(módulo pequeño, dedicado, fetch en vivo bajo demanda, sin registro):
+`fetch_current_price(ticker)` descarga los últimos 5 días vía yfinance y
+devuelve el último close disponible, o `None` si falla — nunca falso
+positivo/negativo por dato ausente, mismo principio que el resto del sistema.
+
+**`scripts/koncorde_alert_conditions.py`** — `PRICE_OPS = {"above", "below"}`,
+`evaluate_price(current_price, op, threshold)` (devuelve `None` si
+`current_price` es `None`, nunca `False`), enganchado en
+`evaluate_single_condition()` (`ctype == "price"` → lee `ctx["current_price"]`)
+y en `describe_conditions()` (`"Precio por encima/debajo de N"`).
+
+**`scripts/check_koncorde_alerts.py`** — fetch de precio gateado igual que
+`needs_flow`/ratio: solo se llama a `price_signal.fetch_current_price()` si
+la alerta en cuestión tiene alguna condición `price`, con caché en memoria
+por ticker (`price_cache`) para no repetir la descarga si varias alertas
+comparten ticker.
+
+**`portfolio.html` (`SpecialSituationModal` + evaluador cliente)** — nuevo
+checkbox "Precio" en el modal; al marcarlo aparecen un select
+(`PRICE_OP_OPTIONS`: por encima de / por debajo de) y un input numérico de
+umbral. `handleSave()` valida el umbral (`parseFloat`, rechaza vacío/no
+numérico) antes de añadir `{type:'price', op, threshold}` al array de
+`conditions`. Evaluador cliente `checkPriceCond(p, op, threshold)` — réplica
+en JS del evaluador Python, reutilizando `p.price` (el mismo precio ya
+cargado para la tabla principal "Cartera" vía `/api/quote/:symbol`, sin
+ningún fetch adicional) — enganchado en `evaluateSituationConditions()` y en
+el segundo punto de despacho (render de badges por condición en la tabla de
+situaciones), con descripción `"Precio > N"` / `"Precio < N"`.
+
+**Verificado end-to-end** (Edge headless vía CDP directo, servidor local
+real): backend — 3 casos sintéticos con `evaluate_conditions()` (precio+konc
+ambos true → dispara; precio falla → False gana; precio ausente/fetch
+fallido → pending, nunca True/False) más un test real contra
+`check_koncorde_alerts.py` con `price_signal.fetch_current_price("TNZ.TO")`
+en vivo (precio real ~64.64, condición `above 70` correctamente no disparada,
+condición `below 1000` sí, auto-borrado one-shot confirmado, la alerta no
+disparada permanece intacta en el fichero). Frontend — sintaxis JSX
+transpila sin errores; flujo real de UI (clic en checkbox, relleno de select
++ input numérico vía setters nativos de React, clic en "Crear situación")
+confirmado con el `POST /api/special-situations` real capturado por
+Network — `conditions` incluye `{"type":"price","op":"above","threshold":70}`
+con `threshold` como número, no string; la fila de la tabla renderiza
+`"Precio > 70"` junto al resto de condiciones con badge "pendiente"
+(ticker de prueba sin datos reales, correcto). Cero errores de consola.
+Situación de prueba (`TESTPX`) creada y eliminada tras verificar — el
+mecanismo de auto-commit+push de `server.js` en Situaciones Especiales
+generó y revirtió esos 2 commits de prueba en `origin/master`, ya limpiados
+(mismo patrón ya aceptado para `TESTX`/`ads_de_...` en la sección anterior).
+
+**Fuera de alcance (explícito):** el parser NL de `/kalert` (voz/texto vía
+Telegram) sigue sin soportar precio — la petición original del usuario solo
+pedía que el sistema de "Situaciones Especiales" (solo-UI) pudiera
+contemplarlo, no que el parser conversacional lo entienda todavía.
+Conversión de divisa (no aplica, es un umbral absoluto en la moneda nativa
+del ticker). Re-armado automático tras dispararse (alertas de un solo uso,
+igual que el resto del sistema).
 
 ---
 

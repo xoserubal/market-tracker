@@ -102,6 +102,11 @@ RATIO_OPS: dict[str, str] = {
     "improving": "El ratio mejora (por encima de su media móvil reciente)",
 }
 
+PRICE_OPS: dict[str, str] = {
+    "above": "Precio por encima de un umbral",
+    "below": "Precio por debajo de un umbral",
+}
+
 
 def get_conditions(row: dict) -> list[dict]:
     """Returns the `conditions` list for an alert row, upgrading old-format
@@ -152,12 +157,28 @@ def evaluate_ratio(trend: dict | None, op: str) -> bool | None:
     raise AssertionError("unreachable — op validated above")
 
 
+def evaluate_price(current_price: float | None, op: str, threshold: float) -> bool | None:
+    """Evaluates one price-threshold condition. `current_price` is None if the
+    live fetch failed that run (scripts/price_signal.py) — missing data is
+    never treated as False, same principle as every other evaluator here."""
+    if op not in PRICE_OPS:
+        raise ValueError(f"Unknown price op: {op}")
+    if current_price is None:
+        return None
+    if op == "above":
+        return current_price > threshold
+    if op == "below":
+        return current_price < threshold
+    raise AssertionError("unreachable — op validated above")
+
+
 def evaluate_single_condition(condition: dict, ctx: dict) -> bool | None:
     """Dispatches one condition dict (from get_conditions()) to the right
     evaluator, using pre-fetched data supplied in `ctx`:
       ctx["koncorde_ticker_data"] — this ticker's koncorde_data.json entry
       ctx["flow_rows"]            — this ticker's portfolio_daily_snapshot rows
       ctx["ratio_trends"]         — {ratio_key: trend_dict} for this alert's ratio_pairs
+      ctx["current_price"]        — this ticker's live price (scripts/price_signal.py), or None
     Never fetches anything itself — callers own all I/O, same separation of
     concerns evaluate() already has (it takes ticker_data, doesn't read files).
     """
@@ -172,6 +193,8 @@ def evaluate_single_condition(condition: dict, ctx: dict) -> bool | None:
     if ctype == "ratio":
         ratio_trends = ctx.get("ratio_trends") or {}
         return evaluate_ratio(ratio_trends.get(condition["ratio_key"]), condition["op"])
+    if ctype == "price":
+        return evaluate_price(ctx.get("current_price"), condition["op"], condition["threshold"])
     raise ValueError(f"Unknown condition type: {ctype}")
 
 
@@ -202,6 +225,9 @@ def describe_conditions(ticker: str, conditions: list[dict]) -> str:
             parts.append(FLOW_OPS.get(c["op"], c["op"]))
         elif ctype == "ratio":
             parts.append(f"{c.get('ratio_key', '?')}: {RATIO_OPS.get(c['op'], c['op'])}")
+        elif ctype == "price":
+            verb = "por encima de" if c.get("op") == "above" else "por debajo de"
+            parts.append(f"Precio {verb} {c.get('threshold')}")
         else:
             parts.append(f"[{ctype}?]")
     return f"{ticker} — " + " Y ".join(parts)

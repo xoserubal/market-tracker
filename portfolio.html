@@ -432,12 +432,17 @@ const FLOW_OP_OPTIONS = [
   { value: 'cross_positive', label: 'Flow cruza de negativo a positivo' },
   { value: 'improving',      label: 'Flow mejora vs sesión anterior' },
 ];
+const PRICE_OP_OPTIONS = [
+  { value: 'above', label: 'Por encima de' },
+  { value: 'below', label: 'Por debajo de' },
+];
 
 function SpecialSituationModal({ item, onSave, onClose }) {
   const existingConds = item ? (item.conditions || [{ type:'koncorde', timeframe:item.timeframe, condition:item.condition }]) : [];
   const koncByTf = {};
   existingConds.filter(c => (c.type||'koncorde')==='koncorde').forEach(c => { koncByTf[c.timeframe] = c.condition; });
   const flowCond = existingConds.find(c => c.type==='flow');
+  const priceCond = existingConds.find(c => c.type==='price');
 
   const [ticker,     setTicker]     = React.useState(item?.ticker || '');
   const [label,      setLabel]      = React.useState(item?.label || '');
@@ -445,6 +450,9 @@ function SpecialSituationModal({ item, onSave, onClose }) {
   const [koncD,      setKoncD]      = React.useState(koncByTf.d  || '');
   const [konc3D,     setKonc3D]     = React.useState(koncByTf['3d'] || '');
   const [koncW,      setKoncW]      = React.useState(koncByTf.w  || '');
+  const [priceOn,    setPriceOn]    = React.useState(!!priceCond);
+  const [priceOp,    setPriceOp]    = React.useState(priceCond?.op || 'above');
+  const [priceVal,   setPriceVal]   = React.useState(priceCond?.threshold != null ? String(priceCond.threshold) : '');
   const [ratioPairs, setRatioPairs] = React.useState(
     item?.ratio_pairs?.length ? item.ratio_pairs.map(rp => ({ ...rp, required: existingConds.some(c => c.type==='ratio' && c.ratio_key===rp.key) }))
       : [{ key:'', other_ticker:'', label:'', required:false }]
@@ -468,11 +476,16 @@ function SpecialSituationModal({ item, onSave, onClose }) {
         label: rp.label.trim() || `${t}/${rp.other_ticker.trim().toUpperCase()}`,
       }));
 
+    if (priceOn && !priceVal.trim()) return setErr('Indica un umbral de precio, o desmarca la condición de precio');
+    const priceThreshold = priceOn ? parseFloat(priceVal) : null;
+    if (priceOn && !Number.isFinite(priceThreshold)) return setErr('Umbral de precio inválido');
+
     const conditions = [];
     if (flowOp) conditions.push({ type:'flow', op: flowOp });
     if (koncD)  conditions.push({ type:'koncorde', timeframe:'d',  condition: koncD });
     if (konc3D) conditions.push({ type:'koncorde', timeframe:'3d', condition: konc3D });
     if (koncW)  conditions.push({ type:'koncorde', timeframe:'w',  condition: koncW });
+    if (priceOn) conditions.push({ type:'price', op: priceOp, threshold: priceThreshold });
     ratioPairs.filter(rp => rp.required && rp.other_ticker.trim()).forEach((rp, i) => {
       const key = cleanPairs[i]?.key;
       if (key) conditions.push({ type:'ratio', ratio_key: key, op:'improving' });
@@ -516,6 +529,21 @@ function SpecialSituationModal({ item, onSave, onClose }) {
           <select style={sel} value={flowOp} onChange={e=>setFlowOp(e.target.value)}>
             {FLOW_OP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        </div>
+
+        <div className="field">
+          <label style={{display:'flex',alignItems:'center',gap:6}}>
+            <input type="checkbox" checked={priceOn} onChange={e=>setPriceOn(e.target.checked)} />
+            Precio
+          </label>
+          {priceOn && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:4}}>
+              <select style={sel} value={priceOp} onChange={e=>setPriceOp(e.target.value)}>
+                {PRICE_OP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <input style={inp} type="number" step="any" value={priceVal} onChange={e=>setPriceVal(e.target.value)} placeholder="70" />
+            </div>
+          )}
         </div>
 
         <div className="field">
@@ -857,6 +885,17 @@ function Portfolio() {
     return null;
   }
 
+  // Reutiliza `p.price` — el mismo precio ya cargado para la tabla principal
+  // "Cartera" vía /api/quote/:symbol, sin ningún fetch adicional. Réplica
+  // deliberada del evaluador Python (scripts/koncorde_alert_conditions.py →
+  // evaluate_price), no una fuente de verdad distinta.
+  function checkPriceCond(p, op, threshold) {
+    if (!p || p.price == null) return null;
+    if (op === 'above') return p.price > threshold;
+    if (op === 'below') return p.price < threshold;
+    return null;
+  }
+
   function evaluateSituationConditions(sit, prices) {
     const p = prices[sit.ticker];
     const results = getSituationConditions(sit).map(c => {
@@ -864,6 +903,7 @@ function Portfolio() {
       if (ctype === 'koncorde') return checkKoncordeCond(p, c.timeframe, c.condition);
       if (ctype === 'flow')     return checkFlowCond(sit.ticker, p, c.op);
       if (ctype === 'ratio')    return checkRatioCond(c.ratio_key, sit, c.op);
+      if (ctype === 'price')    return checkPriceCond(p, c.op, c.threshold);
       return null;
     });
     if (results.some(r => r === false)) return false;
@@ -1104,6 +1144,9 @@ function Portfolio() {
           result = checkRatioCond(c.ratio_key, sit, c.op);
           const rp = (sit.ratio_pairs||[]).find(r=>r.key===c.ratio_key);
           desc = `${rp?.label || c.ratio_key} mejora`;
+        } else if (ctype === 'price') {
+          result = checkPriceCond(prices[sit.ticker], c.op, c.threshold);
+          desc = `Precio ${c.op === 'above' ? '>' : '<'} ${c.threshold}`;
         } else {
           result = null; desc = ctype;
         }
