@@ -4056,6 +4056,150 @@ números — no ajustar umbrales unilateralmente sobre la marcha.
 
 ---
 
+## Hoja de ruta consolidada — Auditoría de carteras IA (firmada 2026-08-30) — P0 arrancado
+
+El usuario trajo una hoja de ruta consolidada (v1.2, "FINAL — arquitectura
+congelada") de tres rondas de revisión externa sobre
+`wiki/ASESOR_EXTERNO_AUDITORIA_CARTERAS_IA.md` — no está commiteada en el
+repo (documento externo, se referencia aquí por lo que activa, no se
+reproduce). Estructura: P0 (persistencia diaria, fundación) → Rama A
+(P1A/P1C/P2/P3, ejecución/salidas) + Rama B (P1B/P4/P5/P6, selección/
+timing) → P7 (datos nuevos, bloqueado hasta que las ramas anteriores den
+lectura). Discutido con el usuario antes de empezar: **Rama A reduce el
+"giveback" de la salida mecánica pero no genera alfa por sí sola** — el
+alfa real, si existe, sale de P1B (H7: sobreextensión de 5 sesiones en la
+entrada) y P4 (Ranking Score componentes C-F), con P7 como el pago gordo si
+ambas concluyen "problema de señales". Objeción propia planteada al
+usuario, no bloqueante: los umbrales de promoción de P1A/P1C (n≥40
+operaciones/≥30 eventos) están por debajo del criterio que este mismo
+proyecto ya se exigió en otras rondas (~100-150 eventos, 2+ regímenes) —
+queda como pregunta a los asesores, no como condición para firmar.
+
+**Decisión de arquitectura acordada, aplicable más allá de este programa:**
+P1A/P1C (motor de riesgo — trailing/ATR stops, no leen PCS ni Koncorde, solo
+precio/ATR) se construirán desde el principio como módulo compartido
+(`scripts/risk_engine.py`, pendiente), no acoplados a una cartera — para
+que el día que se gestione algo con criterios de selección completamente
+distintos, el motor de riesgo ya esté separado y validado. Cuando llegue
+P1A, migrar también la lógica ya duplicada de `mirror_portfolio.py`
+(trailing 5%) y `cava_portfolio.py` (cortacircuito 25%) al mismo módulo en
+vez de mantener tres copias — mismo patrón que motivó centralizar
+`HARD_RULES` en `ai_shared.py`.
+
+### P0 — `scripts/ai_picks_decision_state.py` (implementado 2026-08-30, Step 10i)
+
+Fundación de la que dependen todos los experimentos — sin captura diaria no
+hay muestra que analizar. Distinto de `portfolio_daily_snapshot.js`
+(captura Portfolio Tracker/`portfolio.json`, un sistema aparte) — este es
+específico del AI Picks Lab (`ai_picks.json`, las 8 carteras con posiciones:
+HIGH_CONVICTION, CONFIRMED_FLOW_LEADERS, EARLY_ROTATION,
+MACRO_THEMATIC_BENEFICIARIES, MIMO_SHADOW, CAVA_MACRO, MIRROR_ESPEJO,
+CRUCE_ROJO_D — REJECTED_HIGH_SCORE excluida, nunca tiene posiciones).
+
+**Mínimo viable v1** (no la versión "deseable" completa del documento — que
+él mismo avisa de no convertir en proyecto): una fila por (posición, día) en
+`docs/data/ai_picks_decision_state.jsonl`, dedup por posición+fecha. Corre
+al final del pipeline (Step 10i, tras Step 10/paper_trading y Step
+10d/Cava — Mirror y Cruce Rojo D ya corrieron antes, en 9d/9c3) para que el
+SELECT de hoy quede capturado en su propia fila de entrada sin necesitar un
+hook por cartera.
+
+**`T_active` (definición formal del suelo, §6 de la hoja de ruta):**
+`max(62, pcs_min_entry si streak_weeks≤1)` — implementado en
+`compute_t_active()`, solo aplica a las 5 carteras PCS-gated
+(`PCS_GATED_PORTFOLIOS`); MIRROR_ESPEJO/CAVA_MACRO/CRUCE_ROJO_D no usan PCS,
+quedan `None` con `trigger_threshold_source="not_pcs_gated"` documentado —
+nunca un valor inventado.
+
+**`mechanical_exit_trigger`/`exit_rule_id` — réplica en Python puro, no
+importación.** La regla 13 real (`ai_shared.py`) vive repartida entre
+`paper_trading.py`/`cava_portfolio.py`/`mirror_portfolio.py` sin factorizar
+en funciones puras reusables — `compute_mechanical_exit()` la reimplementa.
+**Riesgo de drift conocido y documentado en el propio código a propósito**:
+es exactamente lo que el test de concordancia de P3 (§7 de la hoja de ruta)
+va a validar o desmentir cuando corra. No se ha intentado extraer la lógica
+real a una función compartida en este cambio — haría el cambio mucho más
+grande y P3 es precisamente el mecanismo que decidiría si merece la pena.
+
+**Campos aproximados, documentados, no inventados:**
+- `fromHigh52w` — sobre la ventana descargada (~4 meses, `period="4mo"` de
+  yfinance), no 252 sesiones reales. Se documenta la limitación en vez de
+  fingir un 52 semanas con menos datos; corregible más adelante ampliando
+  la descarga si hace falta.
+- `RS` (relative strength) — proxy con `ret_4w_vs_spy` de
+  `ai_candidates.json`, el campo más parecido a "fuerza relativa" que ya
+  existe en el pipeline. No se ha inventado un cálculo nuevo.
+- `prompt_version`/`scoring_version`/`data_version` — constantes fijas
+  `"v1"`, no un sistema de versionado real (no existe todavía).
+- `PCS_delta_1d/3d/5d` — se calculan leyendo hacia atrás el propio
+  `ai_picks_decision_state.jsonl` (fila más cercana a N días atrás para la
+  misma `position_id`), no reconstrucción vía git-history — más simple,
+  correcto desde el día en que hay suficiente histórico propio acumulado
+  (los primeros ~5 días de vida de P0 tendrán estos campos a `null`, es
+  esperado, no un fallo).
+
+**Verificado con datos reales:** primer run real (`--apply` implícito, sin
+flag) capturó 33 filas (31 posiciones distintas — 2 duplicadas entre
+MIMO_SHADOW y otra cartera, mismo evento de mercado, correcto) en 5 de las
+8 carteras vivas (las otras 3 —EARLY_ROTATION, MACRO_THEMATIC_BENEFICIARIES,
+CRUCE_ROJO_D— sin posiciones abiertas hoy). 33/33 con
+`mechanical_exit_trigger` evaluable. Segunda ejecución inmediata: 0 filas
+nuevas (dedup confirmado). Bug real encontrado y corregido en la propia
+verificación: los componentes A-F se leían mal (`pcs_components` usa claves
+largas, `"A_macro_permission"` no `"A"` — corregido para leer directamente
+los campos planos `component_A`.._F` que ya existen en `ai_candidates.json`
+desde la Fase 0.2 del Ranking Score). `entry_price=None` (caso real,
+VIT-B.ST en CAVA_MACRO, entrada de ayer sin precio todavía) manejado sin
+crashear — MFE/MAE/running_high/running_low quedan `null` correctamente en
+vez de reventar.
+
+**Pendiente, explícitamente no bloqueante para P0:** los "deseable v1.1"
+(flowScore/earlyFlow/MACD/Koncorde D/3D/W por posición) — no implementados
+todavía, el nivel obligatorio ya es capturable y es lo que bloquea el resto
+del programa. `risk_engine.py` compartido — pendiente de P1A, no de P0.
+
+### Monitor de umbrales — `scripts/p1_readiness_monitor.py` (implementado 2026-08-30, Step 10j)
+
+El usuario pidió aviso por Telegram para cuando toque continuar con P1, en
+vez de tener que comprobarlo a mano. Cuenta episodios/eventos acumulados
+desde la fecha de firma (`FIRMA_DATE = "2026-08-30"`, el día que arrancó P0
+— todo "post-firma" de los preregistros se cuenta desde aquí, no desde el
+arranque del sistema en mayo) y avisa **una sola vez por umbral** (dedup vía
+`docs/data/p1_readiness_state.json`, mismo patrón que `duration_monitor.py`):
+
+- **P2** — ≥14 días desde la firma (gate simple de calendario, §6).
+- **P1A/P1C** — ≥40 cierres nuevos Y ≥30 eventos independientes
+  (`event_id=ticker+entry_date`) en el ámbito exacto de §3: HIGH_CONVICTION,
+  CONFIRMED_FLOW_LEADERS, EARLY_ROTATION, MACRO_THEMATIC_BENEFICIARIES,
+  CAVA_MACRO — MIRROR_ESPEJO excluida a propósito, tal como especifica la
+  hoja de ruta.
+- **P1B** — ≥60 eventos de SELECT independientes, sin restricción de
+  cartera (contando posiciones abiertas y cerradas — un cierre no borra el
+  evento de haber entrado).
+- **Cláusula de potencia calendario (§3/§6)** — si a los 90 días de la firma
+  P1A/P1C todavía no alcanzó su umbral, avisa igual, pero con el mensaje
+  correcto: publicar informe intermedio y alargar el plazo, **nunca** tocar
+  parámetros ni mirar resultados por brazo.
+
+No decide ni ejecuta nada — solo cuenta y avisa. La decisión de arrancar
+cada experimento sigue siendo manual. Reutiliza `send_telegram()` de
+`notify_telegram.py` en vez de reimplementar el envío.
+
+**Verificado:** sanity check contra el histórico real completo
+(`FIRMA_DATE` forzado a `2026-05-01` en una prueba aislada, sin tocar el
+estado real) dio 57 cierres en el ámbito P1A/P1C — coincide exacto con la
+suma manual de la auditoría del día anterior (HC 8 + CFL 26 + ER 6 + MTB 2 +
+Cava 15 = 57), confirmando que la lógica de conteo es correcta contra datos
+reales, no solo sintéticos. Los 4 mensajes (P2, P1A/P1C listos, P1B listo,
+checkpoint 90 días sin cumplir) probados con datos sintéticos — texto y
+umbrales correctos. Envío real de confirmación disparado a producción
+("Monitor P1 activo") sin tocar el `p1_readiness_state.json` real, para no
+silenciar las alertas de verdad cuando toquen. Mismo bug de emoji/consola
+Windows ya documentado en `duration_monitor.py`/`check_koncorde_alerts.py`
+encontrado y arreglado aquí también (mismo fix, `reconfigure` a UTF-8).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

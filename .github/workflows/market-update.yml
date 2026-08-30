@@ -255,6 +255,29 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # P0 de la Hoja de ruta consolidada — Auditoría de carteras IA (firmada
+      # 2026-08-30, wiki/). Fundación de la que dependen P1A/P1B/P1C/P2/P3.
+      # Corre al final a propósito: después de todos los pasos que mutan
+      # ai_picks.json (Step 10 paper_trading, Step 10d Cava; Mirror y Cruce
+      # Rojo D ya corrieron antes, en 9d/9c3) — así el SELECT de hoy queda
+      # capturado en su propia fila de entrada, sin hook aparte por cartera.
+      - name: Run pipeline - Step 10i AI Picks decision state (P0, daily capture)
+        run: python scripts/ai_picks_decision_state.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      # Avisa por Telegram, una sola vez cada uno, cuando P2/P1A+P1C/P1B
+      # cumplan el umbral de la hoja de ruta consolidada (o si a los 90 días
+      # P1A/P1C todavía no lo ha alcanzado) — para no tener que comprobarlo a
+      # mano. No decide ni ejecuta nada, solo cuenta y avisa.
+      - name: Run pipeline - Step 10j P1 readiness monitor (Telegram alert)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/p1_readiness_monitor.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 11 Telegram notifications
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
