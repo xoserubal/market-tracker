@@ -7365,16 +7365,37 @@
   },
   "last_ai_review": {
     "date": "2026-08-30",
-    "market_read": "Bull Maduro regime with improving trend (macro_score 75, delta_1w +6.25) supports continued risk-on positioning across themes.",
-    "risk_posture": "normal",
+    "market_read": "Bull Maduro regime with improving trend (macro_score=75, delta_1w=+6.25) supports risk-on positioning, but healthcare_largecap concentration at 74.5% and 18 existing positions severely limit new entry conviction.",
+    "risk_posture": "cautious",
     "should_select": false,
     "watch": [
       {
         "ticker": "PFE",
-        "reason": "PCS 83.5 with rot=8, 3-week streak, and +8.5% 4w outperformance is a strong signal, but adding PFE to healthcare_largecap would push sector concentration from 74.5% to approximately 82.5% — an extreme single-sector risk that outweighs the signal strength. PFE's ret_4w of 8.5% is solid but trails MRK's 10.6% on a longer 8-week streak already held, making it a lower-priority add within the same over-concentrated sector.",
-        "watch_trigger": "Select if healthcare_largecap concentration drops below 65% via exits in other positions, OR if PFE's streak extends to 5+ weeks with ret_4w exceeding 15% confirming acceleration beyond current peers."
+        "reason": "PCS 83.5 with rot=8, 3-week streak, and low extension risk is the strongest non-open signal, but healthcare_largecap already at 74.5% portfolio weight and mixed Koncorde alignment (daily+weekly both in distribution, only 3D reads 'up') prevent confident entry at this time.",
+        "watch_trigger": "Select if healthcare_largecap concentration drops below 65% via exits, or if Koncorde alignment shifts to bullish_aligned with daily and weekly both reading 'up'."
+      },
+      {
+        "ticker": "TK",
+        "reason": "Weekly metrics are strong (rot=8, 5-week streak, +11.76% 4w, +11.81% 13w outperformance) with low extension risk, but PCS 64.5 falls below MIMO_SHADOW minimum entry of 68.0 and dems=8 provides no daily momentum confirmation.",
+        "watch_trigger": "Select if PCS crosses above 68.0 threshold with dems rising above 10, confirming both composite and daily momentum alignment."
       }
     ],
-    "rejected": []
+    "rejected": [
+      {
+        "ticker": "OSCR",
+        "reason": "Signal is IGNORAR with rotation score only 5, zero-week streak, and -6.16% 4-week underperformance vs SPY confirming momentum has completely stalled despite the strong 13-week base of +35.1%; healthcare_special theme at 51.5% weight adds no diversification value.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "HIMS",
+        "reason": "Rotation score 6 with only 2-week streak and modest returns (+2.93% 4w, +8.32% 13w) do not justify adding to healthcare_special theme already at 51.5% portfolio weight, especially with konc_3d in distribution state and dems=7 providing no daily momentum support.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "VIT-B.ST",
+        "reason": "Spike_flag=true with extension_risk high (5 points including dist_sma20_atr_extreme) on only a single-week streak and mixed Koncorde alignment signals a late chase rather than a sustainable entry, compounded by PCS 64.5 falling below the portfolio minimum threshold of 68.0.",
+        "rejection_category": "technical_overextension"
+      }
+    ]
   }
 }
