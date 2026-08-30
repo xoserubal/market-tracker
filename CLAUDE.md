@@ -4382,6 +4382,67 @@ como fila independiente.
 
 ---
 
+## Fix: GEX ZeroGEX Fase 2 fallaba en las 3 corridas desde que arrancó (2026-08-31)
+
+**Nota lateral:** el piloto GEX ZeroGEX (`gex-zerogex-fase1.yml`/`-fase2.yml`,
+`research/gex_zerogex_pilot_v1/`, `wiki/PREREGISTRO_GEX_ZEROGEX_V1.md`) nunca
+se documentó en este archivo cuando se construyó — la única entrada GEX de
+aquí ("GEX (dealer gamma exposure) — piloto, no integrado", 2026-08-18) es de
+un experimento *anterior y distinto* (`research/gex_monitor_pilot/`, cálculo
+DIY vía Black-Scholes, descartado por falta de benchmark) que Fase 1/2
+retoman y sí llegan a contrastar contra un proveedor de pago (ZeroGEX). Esta
+entrada documenta solo el fix de hoy, no reconstruye el historial completo
+del piloto — ver el preregistro en `wiki/` para el diseño completo.
+
+El usuario reportó el workflow "GEX ZeroGEX Fase 2 — DIY Calibration" en
+rojo en GitHub Actions. Las 3 corridas desde que Fase 2 arrancó
+(2026-08-26/28/29) habían fallado — **0 snapshots reales recogidos en 5
+días**. Causa real, en dos capas independientes:
+
+1. **Deriva del cron de GitHub.** El cron programado (`55 19 * * 1-5`,
+   19:55 UTC = 15:55 ET) se ejecutó en la práctica con 2h36m, ~6.5h y ~8h de
+   retraso en las 3 corridas observadas (confirmado en los logs de cada
+   run) — deriva conocida de la plataforma bajo carga, no un fallo de este
+   repo. El script (`run_diy_calibration.py`) hizo lo correcto: detectó que
+   caía fuera de su ventana de aceptación (15:30-16:15 ET, ya pensada con
+   margen para un cron lento) y no recogió nada — comportamiento diseñado,
+   no un bug.
+2. **El bug real:** el step "Commit snapshot" del workflow hacía `git add`
+   incondicional de `fase2_calibration.jsonl` — como nunca se había
+   recogido nada (por el punto 1, en todas las corridas), ese fichero no
+   existe. `git add` sobre un pathspec inexistente sale con exit 128, y eso
+   era lo que marcaba el job entero como fallido — no la ausencia de datos
+   en sí, que era correcta y esperada.
+
+**Fix (`gex-zerogex-fase2.yml`):**
+- El step de commit ahora comprueba `[ -f "$FILE" ]` antes de tocar git —
+  una corrida sin nada que commitear (fuera de ventana, fin de semana, día
+  ya recogido por el dedup interno del script) termina en éxito limpio,
+  mismo tratamiento que el resto del pipeline da a los pasos "no-op".
+- Cron cambiado de un único disparo diario (`55 19 * * 1-5`) a
+  `*/15 18-20 * * 1-5` — cada 15 min entre 18:00-20:45 UTC (≈14:00-16:45 ET,
+  12 disparos/día). **No cambia la metodología congelada del preregistro**
+  (la ventana de aceptación real del script sigue siendo exactamente
+  15:30-16:15 ET, sin tocar) — solo aumenta la frecuencia de sondeo para que,
+  sea cual sea el retraso de GitHub ese día, alguna de las 12 ejecuciones
+  tenga buenas probabilidades de caer dentro de la ventana real. Coste
+  extra despreciable: las ejecuciones fuera de ventana no llegan a llamar a
+  la API de ZeroGEX (el check de ventana es anterior al fetch), solo gastan
+  ~35-40s de minutos de Actions cada una.
+
+**Verificado:** los 3 casos del step de commit probados en aislado (fichero
+ausente → exit 0 sin tocar git; fichero presente sin diff → no commitea;
+fichero presente con diff nuevo → commitea correctamente) contra un repo git
+temporal. YAML del workflow validado con PyYAML tras el cambio.
+
+**Fuera de alcance:** no se ha tocado `gex-zerogex-fase1.yml` (inactivo,
+solo `workflow_dispatch`, su fichero de salida ya existe en el repo desde
+que Fase 1 concluyó con éxito — mismo bug de clase, pero sin riesgo real
+hoy). Si algún día se relanza Fase 1 a mano contra un checkout limpio sin
+ese fichero, aplicaría el mismo guard.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

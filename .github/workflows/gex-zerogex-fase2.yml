@@ -6,13 +6,35 @@ name: GEX ZeroGEX Fase 2 — DIY Calibration
 # sesiones) — decidido con el usuario 2026-08-26 seguir a Fase 2 en vez de
 # dejar que el trial expirase sin usarse. Recoge 1 snapshot/día por símbolo
 # cerca del cierre (15:50-16:00 ET) — el script se auto-limita a la ventana
-# 15:30-16:15 ET (más ancha, para tolerar un runner lento), no hace falta que
-# el cron sea exacto. Borrar este workflow (y el secret ZEROGEX_API_KEY) al
-# concluir el piloto (Fase 3 o descarte, ver preregistro sección 7).
+# 15:30-16:15 ET (más ancha, para tolerar un runner lento). Borrar este
+# workflow (y el secret ZEROGEX_API_KEY) al concluir el piloto (Fase 3 o
+# descarte, ver preregistro sección 7).
+#
+# FIX 2026-08-31: las 3 corridas desde que arrancó Fase 2 (2026-08-26/28/29)
+# fallaron todas — 0 snapshots reales recogidos en 5 días. Causa real, en dos
+# capas: (1) GitHub retrasó el cron programado (19:55 UTC) entre 2h36m y ~8h
+# en las 3 ejecuciones observadas (confirmado en los logs — deriva de carga
+# de la plataforma, no un fallo de este repo), aterrizando siempre fuera de
+# la ventana de 45 min que el script acepta — el propio script hacía lo
+# correcto (detectarlo y no recoger nada), pero (2) el step "Commit snapshot"
+# hacía `git add` incondicional de un fichero que, al no haberse recogido
+# nunca nada, no existe — `git add` sobre un pathspec inexistente sale con
+# exit 128, y eso es lo que marcaba el job entero como fallido, no la
+# ausencia de datos en sí (que era el comportamiento diseñado). Corregidos
+# ambos: el cron ahora dispara cada 15 min en una ventana de 3h (18:00-20:45
+# UTC ≈ 14:00-16:45 ET) para que, sea cual sea el retraso de GitHub ese día,
+# alguna ejecución tenga buenas probabilidades de aterrizar dentro de la
+# ventana real de aceptación del script (que sigue exactamente igual,
+# 15:30-16:15 ET — no se ha tocado nada de la metodología congelada en el
+# preregistro, solo la frecuencia de sondeo); y el commit ahora comprueba que
+# el fichero exista antes de intentar `git add`, así una ejecución que no
+# recogió nada (fuera de ventana, día ya recogido por dedup, fin de semana)
+# termina en éxito sin más, como ya hacía correctamente el resto del pipeline
+# para casos "no-op" análogos.
 
 on:
   schedule:
-    - cron: '55 19 * * 1-5'   # 19:55 UTC = 15:55 ET (EDT) — dentro de la ventana 15:30-16:15 ET
+    - cron: '*/15 18-20 * * 1-5'   # cada 15 min, 18:00-20:45 UTC ≈ 14:00-16:45 ET — cubre con margen la deriva observada del cron de GitHub; el script decide si esa ejecución concreta cae dentro de su propia ventana 15:30-16:15 ET
   workflow_dispatch: {}
 
 permissions:
@@ -49,8 +71,13 @@ jobs:
 
       - name: Commit snapshot
         run: |
+          FILE=research/gex_zerogex_pilot_v1/outputs/fase2_calibration.jsonl
+          if [ ! -f "$FILE" ]; then
+            echo "No se ha recogido nada todavía (fuera de ventana / fin de semana / ya recogido hoy) — nada que commitear."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add research/gex_zerogex_pilot_v1/outputs/fase2_calibration.jsonl
+          git add "$FILE"
           git diff --staged --quiet || git commit -m "bot: zerogex fase2 calibration $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
