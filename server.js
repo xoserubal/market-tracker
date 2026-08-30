@@ -461,7 +461,16 @@ const COT_CONTRACTS = {
 };
 const _cotCache = {};
 const COT_TTL = 12 * 60 * 60 * 1000; // 12h — el dato es semanal (viernes), no hace falta refrescar más a menudo
-const COT_HISTORY_WEEKS = 170; // ~3.3 años — ventana para el percentil (170 obs, algo de margen sobre 156=3y)
+// ~5.2 años — cubre el selector de rango 3M/6M/1A/3A/5A de positioning.html
+// (implementado 2026-08-30). Antes 170 (~3.3 años), un tope autoimpuesto sin
+// relación con lo que la API realmente tiene: Oro/Plata sí llegan hasta 2006
+// bajo este mismo nombre de mercado (verificado en vivo), así que ampliar el
+// límite les da más historial real, no datos inventados. Cobre/WTI no tienen
+// tanto — su nombre de mercado actual solo existe desde 2022-02-08 (ver nota
+// de arriba sobre el rename de WTI) — con este límite la API simplemente
+// devuelve todo lo que hay (~238 filas) sin error, así que el 5A del
+// selector para esos dos contratos mostrará ~4.5 años reales, no 5.
+const COT_HISTORY_WEEKS = 270;
 
 app.get("/api/cot/:contract", async (req, res) => {
   const key = req.params.contract.toLowerCase();
