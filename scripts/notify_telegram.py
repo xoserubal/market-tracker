@@ -60,6 +60,10 @@ PORTFOLIO_LABELS = {
     "REJECTED_HIGH_SCORE":          "Rechazados (control)",
     "MIMO_SHADOW":                  "Mimo Shadow",
     "MIRROR_ESPEJO":                "Espejo (Grok)",
+    # CAVA_MACRO faltaba aquí también (mismo hueco que en paper_trading.py,
+    # encontrado 2026-08-30 al registrar CRUCE_ROJO_D).
+    "CAVA_MACRO":                   "Cava Macro",
+    "CRUCE_ROJO_D":                 "Cruce Rojo D",
 }
 
 CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}

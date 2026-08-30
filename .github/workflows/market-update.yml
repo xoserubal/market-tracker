@@ -140,6 +140,16 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Cartera 100% mecánica, sin IA (entrada Y salida) — a diferencia de
+      # Mirror Espejo (que sí llama a Grok) y Cava (que sí usa PCS). Corre en
+      # ambos pases del día, no solo por la mañana — coste mínimo (sin llamada
+      # a ningún modelo, solo lectura de koncorde_data.json + un fetch de
+      # precio pequeño para altas/bajas del día). Ver scripts/cruce_rojo_d_portfolio.py.
+      - name: Run pipeline - Step 9c3 Cruce Rojo D portfolio (mechanical, no AI)
+        run: python scripts/cruce_rojo_d_portfolio.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 9e Duration Stress Monitor (BOJ/Treasury thesis)
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}

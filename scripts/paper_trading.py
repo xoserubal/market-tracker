@@ -1239,6 +1239,12 @@ _PORTFOLIO_LABELS = {
     "REJECTED_HIGH_SCORE":          "Rechazados (control)",
     "MIMO_SHADOW":                  "Mimo Shadow",
     "MIRROR_ESPEJO":                "Espejo (Grok)",
+    # CAVA_MACRO faltaba aquí (encontrado 2026-08-30 al registrar CRUCE_ROJO_D
+    # — nunca se añadió pese a que sí se arregló en docs/index.html el
+    # 2026-08-03; sin esto sus avisos de Telegram mostraban "CAVA_MACRO" en
+    # crudo en vez de una etiqueta legible, no bloqueante pero sí un hueco real).
+    "CAVA_MACRO":                   "Cava Macro",
+    "CRUCE_ROJO_D":                 "Cruce Rojo D",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 

@@ -281,16 +281,36 @@ def _resample_3d(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _resample_weekly(df: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate daily bars to weekly (Mon–Fri, closing on Friday)."""
+    """
+    Aggregate daily bars to weekly (Mon-Fri, closing on Friday).
+
+    Only fully-elapsed weeks are returned — mirrors _resample_3d()'s
+    "discard the leading/trailing partial block" discipline. Without this,
+    pandas' resample("W-FRI") happily emits a bin for the week in progress
+    (e.g. Tue-only = 2 sessions) labeled with the upcoming Friday's date,
+    and konc_w_* would silently be a 2-of-5-session read rewritten every
+    day of the week instead of a stable weekly one (found 2026-08-30:
+    verified against real PLTR commits, konc_w_blue moved 10.70 -> 5.23 ->
+    1.96 -> 6.88 -> 15.41 Mon-through-Fri of the same calendar week).
+
+    Detection: if the most recent daily bar isn't itself a Friday close,
+    the last resampled bin is the in-progress week -> drop it. (A
+    Friday-holiday week whose last session is Thursday gets its bin
+    deferred rather than dropped: it stops being "last" — and starts being
+    emitted — as soon as the following week closes on a real Friday.)
+    """
     if not isinstance(df.index, pd.DatetimeIndex):
         return pd.DataFrame(columns=["open","high","low","close","volume"])
     idx = df.index
     if idx.tz is not None:
         df = df.copy()
         df.index = idx.tz_localize(None)
+        idx = df.index
     wk = df.resample("W-FRI").agg(
         {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
     ).dropna(subset=["close"])
+    if len(wk) and len(idx) and idx[-1].weekday() != 4:
+        wk = wk.iloc[:-1]
     return wk
 
 
@@ -341,6 +361,24 @@ def _cross_up(arr: np.ndarray) -> bool:
     if np.isnan(arr[-1]) or np.isnan(arr[-2]):
         return False
     return bool(arr[-1] >= 0 and arr[-2] < 0)
+
+
+def _cross_series(a: np.ndarray, b: np.ndarray) -> str:
+    """
+    Cross direction of series `a` against series `b` on the last closed bar —
+    "up"/"down"/"none". Generalizes _cross_up() (which only compares one series
+    against the fixed level 0) to two series crossing each other — needed for
+    "Cruce Rojo D" (trend crossing its own trend_ma), added 2026-08-30.
+    """
+    if len(a) < 2 or len(b) < 2:
+        return "none"
+    if np.isnan(a[-1]) or np.isnan(a[-2]) or np.isnan(b[-1]) or np.isnan(b[-2]):
+        return "none"
+    if a[-2] < b[-2] and a[-1] >= b[-1]:
+        return "up"
+    if a[-2] >= b[-2] and a[-1] < b[-1]:
+        return "down"
+    return "none"
 
 
 def _state(blue, green) -> str:
@@ -406,12 +444,14 @@ def _konc_alignment(state_d, state_3d, state_w, blue_down_2_bars_3d: bool) -> st
 
 # ── Per-ticker computation ─────────────────────────────────────────────────
 
-def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None]:
+def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
     """
     Compute Koncorde Plus for one timeframe df. Returns (flat dict of konc_{tf}_*
-    fields, raw blue array) — the array is exposed so compute_for_ticker can feed
-    the D-timeframe blue series into _compute_research_fields() without a second
-    (duplicate) call to _calc_koncorde_plus().
+    fields, raw blue array, raw trend array, raw trend_ma array) — the arrays are
+    exposed so compute_for_ticker can feed them into _compute_research_fields() /
+    _compute_cross_signal_fields() without a second (duplicate) call to
+    _calc_koncorde_plus(). blue_a/trend_a/tma_a are only meaningfully used for the
+    D timeframe by callers today (2026-08-30, "Cruce Rojo D") — 3D/W discard them.
     """
     pfx = f"konc_{tf_name}"
     nulls = {k: None for k in [
@@ -429,7 +469,7 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None
     nulls[f"{pfx}_distribution_flag"] = False
     nulls[f"{pfx}_bar_closed"]        = True
     if len(df) < MIN_BARS:
-        return nulls, None
+        return nulls, None, None, None
     try:
         o = df["open"].to_numpy(dtype=float)
         h = df["high"].to_numpy(dtype=float)
@@ -480,10 +520,10 @@ def _compute_tf(df: pd.DataFrame, tf_name: str) -> tuple[dict, np.ndarray | None
             # Flip to false if this is ever run intraday on a partial bar.
             f"{pfx}_bar_closed":         True,
             f"{pfx}_bar_date":           bar_date,
-        }, blue_a
+        }, blue_a, trend_a, tma_a
     except Exception as e:
         print(f"    compute_tf({tf_name}) error: {e}")
-        return nulls, None
+        return nulls, None, None, None
 
 
 def _mirror_signal(
@@ -652,17 +692,69 @@ def _compute_research_fields(df: pd.DataFrame, blue_d: np.ndarray | None) -> dic
         return nulls
 
 
+TREND_PCTILE_WINDOW = 252  # ~1 trading year — same window backtested for "Cruce Rojo D"
+TREND_PCTILE_MIN_PERIODS = 60
+
+
+def _compute_cross_signal_fields(close: np.ndarray, trend_a: np.ndarray | None, tma_a: np.ndarray | None) -> dict:
+    """
+    Fields for the "Cruce Rojo D" portfolio (scripts/cruce_rojo_d_portfolio.py,
+    implemented 2026-08-30) — operational inputs to a real mechanical cartera's
+    entry decision, not observational-only like _compute_research_fields().
+
+    konc_d_rsi14: standard Wilder RSI(14) on CLOSE (reuses _rsi(), same formula
+    already used internally for the `trend` composite — just fed `close` here
+    instead of `ohlc4`, matching what "RSI muy bajo" means on the dashboard).
+
+    konc_d_trend_pctile252: percentile rank (0-100) of today's `trend` value
+    within its own trailing 252-session history — `trend` (RSI+MFI+BB+Stoch
+    composite) is almost always positive by construction (empirically <0 only
+    ~2.3% of the time across the full universe, verified 2026-08-30 backtest),
+    so an absolute "<0" oversold threshold is nearly unusable; a per-ticker
+    relative percentile is what actually captures "this ticker, right now, is
+    unusually weak for itself" — same backtest that motivated this field.
+
+    konc_d_trend_cross: "up"/"down"/"none" — fresh trend/trend_ma crossover on
+    the last closed daily bar, via _cross_series(). This IS the entry/exit
+    trigger of Cruce Rojo D; kept here (not computed ad hoc in the portfolio
+    script) so the trigger can never drift from what koncorde_data.json shows.
+    """
+    nulls = {"konc_d_rsi14": None, "konc_d_trend_pctile252": None, "konc_d_trend_cross": "none"}
+    if trend_a is None or tma_a is None or len(close) < 20:
+        return nulls
+    try:
+        rsi14 = _rsi(close, 14)
+        rsi_val = None if np.isnan(rsi14[-1]) else round(float(rsi14[-1]), 1)
+
+        pctile = None
+        valid_trend = trend_a[~np.isnan(trend_a)]
+        if valid_trend.size >= TREND_PCTILE_MIN_PERIODS:
+            window = valid_trend[-TREND_PCTILE_WINDOW:]
+            pctile = round(float((window[:-1] < window[-1]).mean() * 100), 1)
+
+        cross = _cross_series(trend_a, tma_a)
+
+        return {
+            "konc_d_rsi14": rsi_val,
+            "konc_d_trend_pctile252": pctile,
+            "konc_d_trend_cross": cross,
+        }
+    except Exception as e:
+        print(f"    compute_cross_signal_fields error: {e}")
+        return nulls
+
+
 def compute_for_ticker(df: pd.DataFrame) -> dict:
     """Compute all 3 timeframes for a single daily OHLCV DataFrame."""
     result: dict = {}
 
     # Daily (D)
-    d_dict, blue_d = _compute_tf(df, "d")
+    d_dict, blue_d, trend_d, tma_d = _compute_tf(df, "d")
     result.update(d_dict)
 
     # 3D — non-overlapping 3-session blocks
     df_3d = _resample_3d(df)
-    dict_3d, _ = _compute_tf(df_3d, "3d")
+    dict_3d, _, _, _ = _compute_tf(df_3d, "3d")
     result.update(dict_3d)
 
     # Weekly
@@ -670,7 +762,7 @@ def compute_for_ticker(df: pd.DataFrame) -> dict:
     # For weekly, use 100 as minimum (slightly lower — weekly bars are fewer)
     orig_min = MIN_BARS
     globals()["MIN_BARS"] = 100
-    dict_w, _ = _compute_tf(df_w, "w")
+    dict_w, _, _, _ = _compute_tf(df_w, "w")
     globals()["MIN_BARS"] = orig_min
     result.update(dict_w)
 
@@ -688,6 +780,9 @@ def compute_for_ticker(df: pd.DataFrame) -> dict:
     )
 
     result.update(_compute_research_fields(df, blue_d))
+
+    close_d = df["close"].to_numpy(dtype=float) if len(df) else np.array([])
+    result.update(_compute_cross_signal_fields(close_d, trend_d, tma_d))
 
     return result
 

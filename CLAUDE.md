@@ -3786,6 +3786,276 @@ reglas de entrada/salida — mismo alcance acordado desde el inicio.
 
 ---
 
+## Fix: la vela semanal de Koncorde se recalculaba a diario sobre semanas incompletas (implementado 2026-08-30)
+
+Origen: revisando por qué PLTR mostraba `konc_d_state=distribution` sostenido
+desde el 22-jul mientras `konc_w_state=up` desde finales de junio (caso real,
+resultó ser ruido del diario, no una divergencia problemática — ver el hilo
+de esa fecha), salió a la luz un problema de fondo distinto y más serio en
+`_resample_weekly()` (`scripts/koncorde_calculator.py`): a diferencia de
+`_resample_3d()` (que ya descarta correctamente el bloque de 3 sesiones en
+curso si está incompleto), el resample semanal (`df.resample("W-FRI")`) no
+excluía la semana en curso — emitía un bin para ella usando solo las sesiones
+acumuladas hasta ese día, etiquetado con la fecha del viernes que todavía no
+había llegado.
+
+**Verificado contra los commits reales del pipeline** (semana 24-28 ago,
+PLTR): `konc_w_blue` cambiaba cada día dentro de la misma semana —
+10.70 (viernes anterior, cerrado) → 5.23 (martes, 2 sesiones) → 1.96
+(miércoles, 3 sesiones) → 6.88 (jueves, 4) → 15.41 (viernes, semana completa)
+— es decir, el campo que el resto del sistema trata como "la lectura
+estable, de confirmación" (`konc_alignment`, alertas `/kalert TICKER w ...`,
+Situaciones Especiales, la guía del prompt IA "weight 3D and W more heavily")
+podía en realidad ser una vela de 2 sesiones a mitad de semana — más
+ruidosa que el propio diario en ese momento, tratada con la confianza
+contraria.
+
+**Fix — `_resample_weekly()` ahora replica la disciplina que ya tenía
+`_resample_3d()`:** tras el resample, si la última sesión diaria disponible
+no es en sí misma un viernes (`idx[-1].weekday() != 4`), se descarta el
+último bin (la semana en curso) y se devuelve la última semana ya cerrada.
+Con esto `konc_w_state`/`konc_w_blue`/etc. pasan a actualizarse una vez por
+semana (al cierre del viernes), no una vez por día — igual que su nombre
+promete. `konc_w_bar_closed` (ya existía, hardcodeado a `True` con el
+comentario "flip to false if run intraday on a partial bar") pasa a ser
+honesto sin necesitar lógica nueva: con el fix, nunca se le da a `_compute_tf`
+un DataFrame semanal cuya última fila sea parcial.
+
+**Caso borde deliberadamente aceptado, no arreglado:** una semana que cierra
+en jueves por festivo (el viernes no tiene sesión) se retrasa un poco — su
+bin no se emite como "última" hasta que la semana siguiente cierre en un
+viernes real, momento en el que dejará de ser la última fila y se mostrará
+con normalidad. No se pierde el dato, solo se demora unos días en el caso
+raro de una semana acortada por festivo — mismo criterio de "simple y
+conservador" ya aceptado en `_resample_3d()` (que tampoco tiene en cuenta
+el calendario de festivos, solo cuenta múltiplos de 3 sesiones).
+
+**Verificado:** 3 casos sintéticos (semana parcial sola → vacío; semana
+completa + parcial siguiente → solo la completa; dos semanas completas
+terminando en viernes → ambas) + verificación end-to-end contra datos reales
+de PLTR (yfinance): recalcular en miércoles 26-ago da exactamente el mismo
+resultado (`bar_date=2026-08-21, blue=10.68`) que recalcular el viernes
+anterior 21-ago, y el viernes 28-ago sí rueda a la semana nueva
+(`blue=15.74`, consistente con el 15.41/15.77 ya visto en producción antes
+del fix). `py_compile` limpio.
+
+**Efecto colateral esperado, no verificado en producción todavía:** el
+payload IA, `konc_alignment`, las alertas Koncorde ya creadas (`/kalert
+IRS w ...`, `/kalert GGAL w ...`) y Situaciones Especiales pasan a leer una
+`W` más lenta pero más fiable — el próximo cierre de viernes real será la
+primera confirmación en producción del comportamiento nuevo. No se tocó
+`_resample_3d()` (ya tenía este cuidado) ni ningún otro consumidor de
+`konc_w_*` — el fix vive enteramente en la función de resample.
+
+**Deliberadamente fuera de alcance:** un campo "W en vivo" (semana en
+curso, parcial, para quien quiera adelantarse) — no pedido, mismo criterio
+de "no añadir complejidad antes de que haya un caso de uso real" que el
+resto de features en fase de observación del proyecto. Si hace falta más
+adelante, sería un campo nuevo y explícitamente etiquetado, sin volver a
+mezclarlo con `konc_w_state`.
+
+---
+
+## CoT Positioning — escala y selector de rango en los sparklines (implementado 2026-08-30)
+
+A petición del usuario: los sparklines de `positioning.html` (Oro/Plata/Cobre/
+WTI, posicionamiento neto de Managed Money) no mostraban escala numérica y
+siempre pintaban todo el historial disponible sin poder elegir ventana.
+
+**`server.js` — `COT_HISTORY_WEEKS` 170 → 270 (~5.2 años).** El límite
+anterior (~3.3 años) era un tope autoimpuesto sin relación con lo que la API
+de CFTC realmente tiene — verificado en vivo antes de tocar el código: Oro y
+Plata llegan hasta 2006 bajo el mismo nombre de mercado que ya usa el
+sistema, así que ampliar el límite les da más historial real, no inventado.
+Cobre y WTI sí tienen un techo real: su nombre de mercado actual en el
+dataset solo existe desde 2022-02-08 (mismo rename ya documentado para WTI en
+la sección de creación de este módulo) — con el límite nuevo la API
+simplemente devuelve todo lo que hay (238 filas, confirmado en vivo) sin
+error, así que el rango "5A" del selector para esos dos contratos muestra en
+la práctica ~4.5 años, no 5. El percentil (`percentile`, `n_weeks`) sigue
+calculándose sobre **todo** el historial que llega del servidor — al crecer
+la ventana de fetch, la ventana del percentil crece con ella (Oro pasó de
+calcularse sobre ~170 semanas a 270; percentil real verificado tras el
+cambio: 80 de 270 semanas). Es el mismo diseño de siempre ("percentil sobre
+la ventana disponible"), solo que la ventana disponible ahora es mayor.
+
+**`positioning.html`:**
+- `Spark()` gana `showScale` (activado por defecto): máx/mín numéricos
+  (arriba/abajo del gráfico) + rango de fechas mostrado + una etiqueta "0"
+  posicionada sobre la línea de cero cuando la serie cruza de signo (ya
+  existía la línea punteada, le faltaba el número).
+- Selector de rango nuevo (`SPARK_RANGES`: 3M/6M/1A/3A/5A), un único control
+  a nivel de página que filtra `history` por fecha antes de pasarlo a los 4
+  sparklines a la vez — no per-tarjeta, es "cambiar la vista", no cuatro
+  controles independientes. **Filtra solo lo que se dibuja** — el percentil
+  y el resto de la tarjeta (neto, largos/cortos, cambio 1 semana) no
+  cambian con el selector, están anclados a la última lectura real,
+  aclarado explícitamente en el `section-sub` para que no se lea como que
+  el percentil también se recalcula por rango.
+- Rango por defecto: `5y` — el más parecido al comportamiento previo
+  (mostrar todo lo disponible), ahora con un techo explícito en vez de "todo
+  lo que llegue".
+
+**Verificado en producción real** (Edge headless vía CDP directo, cliente
+CDP raro este caso: sin Playwright ni puppeteer-core instalados en el
+proyecto, así que se usó el `WebSocket` nativo de Node 24 hablando el
+protocolo CDP a pelo, contra un `server.js` temporal en el puerto 3098,
+terminado y borrado al acabar): `/api/cot/gold` real devuelve 270 semanas
+(antes 170), oldest=2021-06-29 (antes ~2023); `/api/cot/wti` devuelve 238
+(el máximo real, sin error). En la UI: los 5 botones de rango presentes,
+"5A" activo por defecto, tarjeta de Oro muestra escala real (máx 219.029,
+mín -43.094, rango de fechas 2021-08-31→2026-08-25, percentil "80 de 270
+semanas"); clic real en "3M" actualiza la escala (máx/mín/fechas se
+recalculan sobre la ventana de 3 meses) sin tocar el percentil ("80 de 270
+semanas" idéntico antes y después). Cero errores de consola nuevos (solo el
+aviso preexistente de Babel en desarrollo, presente en todas las páginas del
+proyecto).
+
+**Fuera de alcance:** ningún cambio en la tabla completa de abajo (no lleva
+sparkline); ningún cambio en el export a Markdown/LLM (no incluye series
+históricas, solo el snapshot actual — el selector de rango es puramente
+visual).
+
+---
+
+## Cartera CRUCE_ROJO_D — 100% mecánica, sin IA en ningún punto (implementado 2026-08-30)
+
+Origen: el usuario propuso una idea de cartera nueva ("línea negra por debajo
+de 0, cruza al alza a la línea roja → entra; cruza a la baja → sale") sobre
+Koncorde diario. Antes de implementar nada se validó con un backtest
+retroactivo sobre el universo Koncorde completo (198-202 tickers,
+2022-06→2026-08-30, `research/koncorde_cross_backtest_2026-08/`) — mismo
+criterio que Mirror Espejo/Cava en su día: no operar una idea nueva sin
+evidencia primero.
+
+**Aclaración de terminología, verificada con datos reales antes de construir
+nada:** "línea negra" = `konc_d_trend` (la composición cruda RSI+MFI+BB+Stoch,
+que este proyecto ya venía llamando internamente "marrón/ocre" en el
+mini-gráfico de `portfolio.html`), "línea roja" = `konc_d_trend_ma` (EMA-15 de
+esa composición, ya calculada y guardada desde el fix del 2026-08-14). La
+condición literal "por debajo de 0" resultó casi inexistente en la práctica:
+esa serie es casi siempre positiva por construcción (3 de sus 4 componentes,
+RSI/MFI/Stoch, son ≥0) — verificado: solo el 2,3% de las lecturas del universo
+completo están por debajo de cero, dando apenas 12-13 señales en 4+ años sobre
+198-202 tickers. Se sustituyó por dos condiciones combinadas, elegidas tras
+comparar varias alternativas en el backtest: **percentil propio del marrón
+≤10 sobre su ventana móvil de 252 sesiones** (sobreventa relativa al propio
+histórico del valor, no un nivel absoluto) **Y RSI(14) < 30**. Esta
+combinación fue la de mejor perfil de las probadas: 38 señales/4 años, media
++5,39%, peor caso solo -8,7% (frente a -54%/-99% de la versión sin filtro o
+con un solo filtro suelto).
+
+**Hallazgo de calidad de datos durante el backtest, no relacionado con la
+señal en sí:** dos tickers `.L` (LSE) mostraron saltos de precio de exactamente
+100x — el mismo error GBX/GBP (peniques vs libras) que Yahoo comete
+ocasionalmente. `MAI.L` fue un glitch transitorio de 3 sesiones (corregido,
+reescalado). `FXPO.L` mostró el mismo salto pero **persistente desde
+2026-05-18, sin revertir** — no se corrigió a ciegas, se excluyó del universo
+del backtest. Sin esta limpieza, el "peor caso" de varias condiciones salía en
+-99%, puro artefacto de datos.
+
+### Por qué esta cartera no necesita IA (a diferencia de Mirror Espejo)
+
+Mirror Espejo sí llama a Grok porque su señal base (blue cruzando de negativo
+a positivo) es más laxa y necesita que alguien juzgue "si el giro parece
+creíble". Aquí el doble filtro (percentil bajo + RSI bajo) ya hace ese trabajo
+de forma determinista — entrada y salida son ambas una comparación numérica
+sin ambigüedad que resolver. Es la primera cartera del sistema sin ningún
+modelo en ningún punto de la decisión (Cava tampoco usa IA para elegir ticker,
+pero sí decide la postura macro; Mirror Espejo sí llama a Grok para la
+entrada).
+
+**Decisiones tomadas con el usuario antes de implementar** (cada una cambia
+el comportamiento real de la cartera):
+- Umbral estricto (percentil≤10 + RSI<30), no el más laxo (percentil≤25) —
+  prioriza calidad/peor-caso sobre frecuencia. La cartera pasará la mayor
+  parte del tiempo con pocas posiciones o vacía (~9-10 señales/año sobre todo
+  el universo).
+- 5% fijo, sin límite de posiciones — mismo patrón que MIRROR_ESPEJO.
+- **Sin cortacircuito de precio** (a diferencia de MIRROR_ESPEJO 5% / CAVA_MACRO
+  25%) — decisión explícita del usuario, fiel a la regla tal como la describió:
+  la única salida es el cruce a la baja del marrón sobre la roja.
+- Universo Koncorde completo (~198-202 tickers), no solo los 91-128 candidatos
+  PCS — coherente con que esta cartera no usa PCS para nada.
+
+### Campos nuevos en Koncorde (`scripts/koncorde_calculator.py`)
+
+`_compute_tf()` ahora también devuelve los arrays completos de `trend`/
+`trend_ma` (antes solo `blue`, para `_compute_research_fields()`) — cambio de
+firma de 2-tupla a 4-tupla, actualizado en los 3 sitios donde se llama
+(D/3D/W). Nueva función `_compute_cross_signal_fields()` (deliberadamente
+separada de `_compute_research_fields()`, que está documentada como "no
+gated en ninguna señal" — estos campos sí alimentan una decisión operativa
+real):
+
+- `konc_d_rsi14` — RSI(14) de Wilder sobre `close` (reutiliza `_rsi()`, ya
+  existente, solo alimentada con `close` en vez de `ohlc4`).
+- `konc_d_trend_pctile252` — percentil (0-100) del `trend` de hoy dentro de su
+  propia ventana móvil de 252 sesiones.
+- `konc_d_trend_cross` — `"up"`/`"down"`/`"none"`, nueva función genérica
+  `_cross_series(a, b)` (generaliza `_cross_up()`, que solo compara una serie
+  contra el nivel fijo 0, a dos series cruzándose entre sí).
+
+Verificado exacto contra un caso real conocido (BBAR, 2025-09-17→18): cruce
+"up" con rsi14=23.1/pctile252=9.2 el día de entrada del backtest, cruce
+"down" al día siguiente — coincide con el propio backtest que motivó la
+cartera.
+
+### `scripts/cruce_rojo_d_portfolio.py` (nuevo, Step 9c3 del pipeline)
+
+Mismo patrón que `mirror_portfolio.py` (`fetch_last_closes`, persistencia en
+`ai_picks.json`, `"event": "close"` desde el primer commit — para no repetir
+el bug ya visto dos veces con CAVA_MACRO/MIRROR_ESPEJO) pero sin ninguna
+llamada a modelo. Corre en **ambos** pases del pipeline (no solo por la
+mañana, a diferencia de Mirror Espejo/Insider Activity) — coste mínimo, sin
+llamada a OpenRouter. `py -3 scripts/cruce_rojo_d_portfolio.py` (dry-run) /
+`--apply` (aplica de verdad). Log ligero en
+`docs/data/cruce_rojo_d_log.jsonl`.
+
+**Registro en dashboard/Telegram** (checklist de
+`wiki/PREREGISTRO_RANKING_SCORE_V0.md`, para no repetir el bug de
+CAVA_MACRO/MIRROR_ESPEJO invisibles): añadida a `PTF_LABELS`
+(`docs/index.html`, "Cruce Rojo D") — deliberadamente **fuera** de
+`GROK_PTFS`/`MIMO_PTFS` del mini-panel de overview, porque no tiene modelo y
+ninguna de las dos etiquetas la describiría bien; sigue teniendo su propia
+pestaña completa. Añadida a `_PORTFOLIO_LABELS` en `paper_trading.py` y
+`notify_telegram.py`.
+
+**Hallazgo colateral durante este registro:** `CAVA_MACRO` nunca se había
+añadido a `_PORTFOLIO_LABELS` en ninguno de los dos scripts (sí se arregló en
+`docs/index.html` el 2026-08-03, pero no ahí) — sus avisos de Telegram
+llevaban mostrando el nombre crudo `"CAVA_MACRO"` en vez de una etiqueta
+legible. Corregido de paso, no bloqueante pero real.
+
+**Verificado end-to-end:** pipeline real corrido en local
+(`koncorde_calculator.py` completo, 203/205 tickers, campos nuevos poblados y
+verificados exactos contra PLTR); test aislado con datos sintéticos (ticker
+que califica entra con todos los campos `_at_entry`, ticker en cartera con
+cruce a la baja se cierra con `event=close`, ticker con cruce alcista pero
+sin sobreventa no entra) — las 4 aserciones pasaron; `--apply` real contra
+`ai_picks.json` de producción registró la cartera (vacía, 0 candidatos reales
+hoy — la propia rareza del umbral estricto, consistente con lo esperado);
+dashboard verificado con Edge headless vía CDP contra el servidor local real
+— pestaña "Cruce Rojo D" visible en AI Picks Lab, navegable, muestra "0
+posiciones abiertas" correctamente, cero errores de consola nuevos.
+
+**Nota de infraestructura descubierta durante la verificación:** `server.js`
+sirve estáticos desde la raíz del repo (`express.static(__dirname)`), y hay
+**dos** `index.html` distintos — uno en la raíz (56KB, sin relación con AI
+Picks Lab) y `docs/index.html` (el dashboard real, 90KB) — así que
+`localhost:3000/index.html` sirve el equivocado; hay que pedir
+`localhost:3000/docs/index.html` explícitamente. No es un bug, ya era así
+antes de este cambio, pero no estaba anotado en ningún sitio y costó una
+verificación fallida descubrirlo.
+
+**Fuera de alcance (explícito):** confirmación 3D/semanal (el backtest y la
+cartera son deliberadamente solo-D, de ahí el nombre); cortacircuito de
+precio; ampliar a otros timeframes. Si el umbral estricto resulta demasiado
+restrictivo con datos reales, replantear con el usuario antes de tocar los
+números — no ajustar umbrales unilateralmente sobre la marcha.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
