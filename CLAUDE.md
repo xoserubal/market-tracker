@@ -4382,6 +4382,79 @@ como fila independiente.
 
 ---
 
+## Alertas Koncorde — condiciones de dirección/giro de flecha por línea (implementado 2026-08-31)
+
+El usuario pidió poder alertar sobre "el cambio de la flecha que indica el
+trend" — la flecha de dirección que el mini-panel de `portfolio.html`
+dibuja para cada línea Koncorde — en verde, en azul o "en global" (la línea
+*trend*, la marrón/roja), para cada uno de los 3 timeframes. El vocabulario
+cerrado de `koncorde_alert_conditions.py` no tenía nada sobre pendiente/giro
+de ninguna línea (solo signo de blue/green, `blue_cross_up`, y estado
+acumulación/distribución).
+
+**12 condiciones nuevas** = 3 líneas (`blue`, `green`, `trend`) × 4 tipos,
+mismo estilo "cerrado y estrecho" que las 7 existentes (dos de nivel + dos
+de evento, como ya había `blue_positive` nivel vs `blue_cross_up` evento):
+
+| id | qué evalúa | campo(s) de `koncorde_data.json` |
+|---|---|---|
+| `{line}_rising` | flecha hacia arriba ahora | `konc_{tf}_{line}_delta1 > 0` |
+| `{line}_falling` | flecha hacia abajo ahora | `konc_{tf}_{line}_delta1 < 0` |
+| `{line}_turns_up` | la flecha gira al alza en la última barra cerrada (venía plana/bajando) | `konc_{tf}_{line}_last5`: `v[-1]-v[-2] > 0 AND v[-2]-v[-3] <= 0` |
+| `{line}_turns_down` | gira a la baja en la última barra cerrada | `konc_{tf}_{line}_last5`: `v[-1]-v[-2] < 0 AND v[-2]-v[-3] >= 0` |
+
+`{line}` ∈ `blue` / `green` / `trend`. `trend` = la línea `konc_{tf}_trend`
+(la "marrón/roja" del mini-gráfico, lo que el usuario llama "global") — **no**
+`trend_ma` ni el estado global de 4 estados. Los 3 timeframes (`d`/`3d`/`w`)
+salen gratis vía `VALID_TIMEFRAMES` como el resto.
+
+**Sin cambios en el dato ni en el pipeline.** `konc_{tf}_{line}_delta1` y
+`konc_{tf}_{line}_last5` (blue, green, trend) ya se calculan y guardan en
+`koncorde_data.json` desde el mini-gráfico de `portfolio.html` (2026-08-14).
+`v[-1]-v[-2]` de `_last5` == `delta1` exactamente (verificado con datos
+reales), así que la condición coincide con la flecha que se ve en pantalla.
+`check_koncorde_alerts.py` no necesitó tocarse — ya pasa el dict completo
+del ticker (`konc_tickers.get(ticker)`) al evaluador.
+
+**Archivos:**
+- `scripts/koncorde_alert_conditions.py` — 12 entradas nuevas en `CONDITIONS`
+  + `_ARROW_CONDITIONS` (frozenset) + `_arrow_eval()` (helper) + una rama en
+  `evaluate()` que despacha las 12 con `condition.split("_", 1)`. Dato
+  ausente/corto → `None` (nunca `False`), mismo principio que el resto.
+- `scripts/telegram_portfolio_bot.py` — solo ejemplos de mapeo NL añadidos
+  al prompt de `_parse_koncorde_alert_nl()` ("la flecha verde gira al
+  alza" → `green_turns_up`, "la línea marrón gira a la baja" →
+  `trend_turns_down`, "blue subiendo" → `blue_rising`…). El parser estricto
+  (`/kalert GGAL 3d green_turns_up`) y el listado (`/kalerts`) recogen las
+  condiciones nuevas solos porque leen `KONC_CONDITIONS` dinámicamente.
+- `portfolio.html` — 12 opciones nuevas en `KONC_COND_OPTIONS` (con etiquetas
+  ES y ↑/↓) disponibles en los 3 selectores D/3D/W del `SpecialSituationModal`
+  + rama nueva en `checkKoncordeCond()` (espejo JS literal de `_arrow_eval`,
+  mismo patrón de duplicación JS/Python ya aceptado — `calcCMF`, etc.).
+
+**Verificado:** `py_compile` de los 3 scripts Python OK. Evaluador Python
+probado contra datos reales (`AAG.V`, `koncorde_data.json`) — los 12 ids en
+los 3 timeframes producen valores coherentes con `delta1`/`last5`
+(p. ej. `w blue_turns_up`=True porque `_last5` semanal `[…,10.9,9.41,12.42]`
+gira de -1.49 a +3.01; `d trend_turns_down`=True; `3d blue_turns_down`=False
+porque venía cayendo sin giro fresco). Parser estricto acepta las nuevas
+condiciones + cláusula de precio ANDed. `describe_conditions` / `describe`
+generan texto correcto para filas legacy y compuestas. Mirror JS de
+`checkKoncordeCond` extraído y ejecutado en Node contra los mismos datos
+reales — coincidencia exacta con el evaluador Python en los 8 casos
+probados, y `blue_positive` legacy sigue funcionando. No se pudo transpilar
+`portfolio.html` con Babel (no instalado localmente) — pendiente de
+verificación visual en Edge headless contra `node server.js` cuando el
+usuario lo tenga en marcha.
+
+**Fuera de alcance:** cruce trend↔trend_ma como condición de `/kalert` (es
+la base de la cartera `CRUCE_ROJO_D` pero sigue sin exponerse aquí);
+condiciones sobre `slope` de N barras (se usa `delta1`, la barra inmediata,
+que es lo que muestra la flecha); estados `up`/`down` sueltos (siguen sin
+condición propia, solo `accumulation`/`distribution`).
+
+---
+
 ## Fix: GEX ZeroGEX Fase 2 fallaba en las 3 corridas desde que arrancó (2026-08-31)
 
 **Nota lateral:** el piloto GEX ZeroGEX (`gex-zerogex-fase1.yml`/`-fase2.yml`,

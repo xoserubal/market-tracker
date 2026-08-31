@@ -29,7 +29,59 @@ CONDITIONS: dict[str, str] = {
     "green_negative":     "Green < 0 (línea verde en negativo)",
     "state_accumulation": "Estado Koncorde = acumulación",
     "state_distribution": "Estado Koncorde = distribución",
+    # ── Dirección / giro de la "flecha" de cada línea (2026-08-31) ─────────
+    # La flecha que muestra el mini-panel de portfolio.html sale de
+    # konc_{tf}_{line}_delta1 (cambio de la última barra cerrada vs la
+    # anterior). Se cubren las 3 líneas — blue, green y trend (la
+    # "marrón/roja", lo que el usuario llama "global") — en los 3
+    # timeframes. Dos condiciones de nivel (la flecha apunta arriba/abajo
+    # ahora) + dos de evento (la flecha acaba de girar en la última barra).
+    "blue_rising":        "Flecha azul hacia arriba (sube vs la barra anterior)",
+    "blue_falling":       "Flecha azul hacia abajo (baja vs la barra anterior)",
+    "blue_turns_up":      "La flecha azul gira al alza en la última barra cerrada (venía plana/bajando)",
+    "blue_turns_down":    "La flecha azul gira a la baja en la última barra cerrada (venía plana/subiendo)",
+    "green_rising":       "Flecha verde hacia arriba (sube vs la barra anterior)",
+    "green_falling":      "Flecha verde hacia abajo (baja vs la barra anterior)",
+    "green_turns_up":     "La flecha verde gira al alza en la última barra cerrada (venía plana/bajando)",
+    "green_turns_down":   "La flecha verde gira a la baja en la última barra cerrada (venía plana/subiendo)",
+    "trend_rising":       "Flecha de tendencia (marrón/roja) hacia arriba (sube vs la barra anterior)",
+    "trend_falling":      "Flecha de tendencia (marrón/roja) hacia abajo (baja vs la barra anterior)",
+    "trend_turns_up":     "La flecha de tendencia (marrón/roja) gira al alza en la última barra cerrada",
+    "trend_turns_down":   "La flecha de tendencia (marrón/roja) gira a la baja en la última barra cerrada",
 }
+
+# Set of the arrow-direction conditions above, resolved to (line, kind) by
+# splitting on the first "_". Kept separate so evaluate() can dispatch them
+# with one branch instead of 12.
+_ARROW_CONDITIONS = frozenset(
+    f"{line}_{kind}"
+    for line in ("blue", "green", "trend")
+    for kind in ("rising", "falling", "turns_up", "turns_down")
+)
+
+
+def _arrow_eval(ticker_data: dict, prefix: str, line: str, kind: str) -> bool | None:
+    """Direction / turn of one Koncorde line's per-bar change (the "flecha"
+    the portfolio.html mini panel draws from konc_{tf}_{line}_delta1).
+
+    `rising`/`falling` read konc_{tf}_{line}_delta1 directly. `turns_up`/
+    `turns_down` also need the *previous* bar's delta, taken from
+    konc_{tf}_{line}_last5 (oldest->newest, real per-bar values). Missing or
+    too-short data -> None, never False — same principle as evaluate()."""
+    if kind in ("rising", "falling"):
+        d1 = ticker_data.get(f"{prefix}{line}_delta1")
+        if d1 is None:
+            return None
+        return d1 > 0 if kind == "rising" else d1 < 0
+
+    series = ticker_data.get(f"{prefix}{line}_last5") or []
+    if len(series) < 3 or any(v is None for v in series[-3:]):
+        return None
+    a, b, c = series[-3], series[-2], series[-1]
+    cur_delta, prev_delta = c - b, b - a
+    if kind == "turns_up":
+        return cur_delta > 0 and prev_delta <= 0
+    return cur_delta < 0 and prev_delta >= 0  # turns_down
 
 
 def evaluate(ticker_data: dict, timeframe: str, condition: str) -> bool | None:
@@ -68,6 +120,9 @@ def evaluate(ticker_data: dict, timeframe: str, condition: str) -> bool | None:
     if condition == "state_distribution":
         v = ticker_data.get(prefix + "distribution_flag")
         return None if v is None else bool(v)
+    if condition in _ARROW_CONDITIONS:
+        line, kind = condition.split("_", 1)
+        return _arrow_eval(ticker_data, prefix, line, kind)
 
     raise AssertionError("unreachable — condition validated above")
 

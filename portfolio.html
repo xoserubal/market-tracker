@@ -426,6 +426,18 @@ const KONC_COND_OPTIONS = [
   { value: 'blue_cross_up',      label: 'Blue cruza a alcista' },
   { value: 'green_positive',     label: 'Green positivo' },
   { value: 'green_negative',     label: 'Green negativo' },
+  { value: 'blue_rising',        label: 'Blue — flecha ↑ (subiendo)' },
+  { value: 'blue_falling',       label: 'Blue — flecha ↓ (bajando)' },
+  { value: 'blue_turns_up',      label: 'Blue — la flecha gira al alza' },
+  { value: 'blue_turns_down',    label: 'Blue — la flecha gira a la baja' },
+  { value: 'green_rising',       label: 'Green — flecha ↑ (subiendo)' },
+  { value: 'green_falling',      label: 'Green — flecha ↓ (bajando)' },
+  { value: 'green_turns_up',     label: 'Green — la flecha gira al alza' },
+  { value: 'green_turns_down',   label: 'Green — la flecha gira a la baja' },
+  { value: 'trend_rising',       label: 'Tendencia (marrón) — flecha ↑' },
+  { value: 'trend_falling',      label: 'Tendencia (marrón) — flecha ↓' },
+  { value: 'trend_turns_up',     label: 'Tendencia (marrón) — gira al alza' },
+  { value: 'trend_turns_down',   label: 'Tendencia (marrón) — gira a la baja' },
 ];
 const FLOW_OP_OPTIONS = [
   { value: '',               label: '— ninguna —' },
@@ -866,6 +878,24 @@ function Portfolio() {
     if (condition === 'green_negative')     return p[prefix+'green'] == null ? null : p[prefix+'green'] < 0;
     if (condition === 'state_accumulation') return p[prefix+'accumulation_flag'] == null ? null : !!p[prefix+'accumulation_flag'];
     if (condition === 'state_distribution') return p[prefix+'distribution_flag'] == null ? null : !!p[prefix+'distribution_flag'];
+    // Dirección / giro de la flecha de cada línea — espejo de _arrow_eval en
+    // scripts/koncorde_alert_conditions.py (misma flecha del mini-panel, sale
+    // de konc_{tf}_{line}_delta1; el giro necesita además la barra previa via
+    // konc_{tf}_{line}_last5).
+    const am = condition.match(/^(blue|green|trend)_(rising|falling|turns_up|turns_down)$/);
+    if (am) {
+      const line = am[1], kind = am[2];
+      if (kind === 'rising' || kind === 'falling') {
+        const d1 = p[prefix + line + '_delta1'];
+        if (d1 == null) return null;
+        return kind === 'rising' ? d1 > 0 : d1 < 0;
+      }
+      const s = p[prefix + line + '_last5'];
+      if (!Array.isArray(s) || s.length < 3 || s.slice(-3).some(v => v == null)) return null;
+      const a = s[s.length-3], b = s[s.length-2], c = s[s.length-1];
+      const cur = c - b, prev = b - a;
+      return kind === 'turns_up' ? (cur > 0 && prev <= 0) : (cur < 0 && prev >= 0);
+    }
     return null;
   }
 
