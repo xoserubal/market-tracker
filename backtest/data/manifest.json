@@ -1,8 +1,8 @@
 {
-  "download_timestamp": "2026-08-30T22:17:24+00:00",
+  "download_timestamp": "2026-08-31T15:44:42+00:00",
   "date_range": {
     "start": "2005-01-01",
-    "end": "2026-08-30"
+    "end": "2026-08-31"
   },
   "series": {
     "XLK": {
@@ -221,24 +221,6 @@
       "file": "data/raw/yahoo_VIX.parquet",
       "note": "Serie inicia 2005-01-03; NaN para fechas anteriores a 2005-01-01"
     },
-    "^VIX9D": {
-      "source": "yahoo",
-      "rows": 1,
-      "first_date": "2026-08-28",
-      "last_date": "2026-08-28",
-      "nan_count": 0,
-      "file": "data/raw/yahoo_VIX9D.parquet",
-      "note": "Serie inicia 2026-08-28; NaN para fechas anteriores a 2005-01-01"
-    },
-    "^VIX3M": {
-      "source": "yahoo",
-      "rows": 1,
-      "first_date": "2026-08-28",
-      "last_date": "2026-08-28",
-      "nan_count": 0,
-      "file": "data/raw/yahoo_VIX3M.parquet",
-      "note": "Serie inicia 2026-08-28; NaN para fechas anteriores a 2005-01-01"
-    },
     "DX-Y.NYB": {
       "source": "yahoo",
       "rows": 5454,
@@ -248,11 +230,19 @@
       "file": "data/raw/yahoo_DX-YNYB.parquet",
       "note": "Serie inicia 2005-01-03; NaN para fechas anteriores a 2005-01-01"
     },
+    "^VIX9D": {
+      "source": "yahoo",
+      "status": "FAILED"
+    },
+    "^VIX3M": {
+      "source": "yahoo",
+      "status": "FAILED"
+    },
     "BAMLH0A0HYM2": {
       "source": "fred",
-      "rows": 795,
-      "first_date": "2023-08-29",
-      "last_date": "2026-08-27",
+      "rows": 793,
+      "first_date": "2023-09-01",
+      "last_date": "2026-08-28",
       "nan_count": 8,
       "file": "data/raw/fred_BAMLH0A0HYM2.parquet",
       "note": "FRED rolling 3y window desde abril 2026 (ICE licensing). ALFRED sin vintages pre-2023 (verificado empiricamente). Proxy NFCICREDIT abortado: 3 modelos fallaron spot-checks historicos. Ver calibration_report_failed.json."
@@ -351,9 +341,9 @@
     },
     "hy_spread_real_only": {
       "derivation": "BAMLH0A0HYM2 real en bps (FRED % x100). NaN pre-2023-04-18. Usado en Modo A (2023+) y Modo B (sin HY para 2005-2022).",
-      "real_obs": 775,
-      "real_start": "2023-08-29",
-      "real_end": "2026-08-27",
+      "real_obs": 773,
+      "real_start": "2023-09-01",
+      "real_end": "2026-08-28",
       "proxy_aborted": true,
       "calibration_report": "data/calibration_report_failed.json",
       "file": "data/processed/hy_spread_real_only.parquet"
@@ -384,11 +374,14 @@
     "EFA: Serie inicia 2005-01-03; NaN para fechas anteriores a 2005-01-01",
     "FEZ: Serie inicia 2005-01-03; NaN para fechas anteriores a 2005-01-01",
     "^VIX: Serie inicia 2005-01-03; NaN para fechas anteriores a 2005-01-01",
-    "^VIX9D: Serie inicia 2026-08-28; NaN para fechas anteriores a 2005-01-01",
-    "^VIX3M: Serie inicia 2026-08-28; NaN para fechas anteriores a 2005-01-01",
     "DX-Y.NYB: Serie inicia 2005-01-03; NaN para fechas anteriores a 2005-01-01",
+    "^VIX9D: descarga fallida",
+    "^VIX3M: descarga fallida",
     "FRED RRPONTSYD: gap de datos >5 días hábiles detectado",
     "FRED CFNAI: gap de datos >5 días hábiles detectado"
   ],
-  "failed_series": []
+  "failed_series": [
+    "^VIX9D",
+    "^VIX3M"
+  ]
 }
