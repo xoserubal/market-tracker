@@ -48,6 +48,14 @@ CONDITIONS: dict[str, str] = {
     "trend_falling":      "Flecha de tendencia (marrón/roja) hacia abajo (baja vs la barra anterior)",
     "trend_turns_up":     "La flecha de tendencia (marrón/roja) gira al alza en la última barra cerrada",
     "trend_turns_down":   "La flecha de tendencia (marrón/roja) gira a la baja en la última barra cerrada",
+    # ── Cruce trend vs trend_ma — "línea negra" vs "línea roja" (2026-09-03) ──
+    # Distinto de trend_turns_up/down (que miran solo la propia pendiente de
+    # `trend`): esto es la línea negra (trend, cruda) cruzando su línea roja
+    # de señal (trend_ma, EMA-15) — el mismo disparador que usa la cartera
+    # mecánica Cruce Rojo D (konc_d_trend_cross, ver CLAUDE.md), expuesto aquí
+    # también para 3D/W a partir del campo konc_{tf}_trend_cross.
+    "trend_cross_up":     "La línea negra (trend) cruza al alza su línea roja de señal (trend_ma) en la última barra cerrada",
+    "trend_cross_down":   "La línea negra (trend) cruza a la baja su línea roja de señal (trend_ma) en la última barra cerrada",
 }
 
 # Set of the arrow-direction conditions above, resolved to (line, kind) by
@@ -123,6 +131,13 @@ def evaluate(ticker_data: dict, timeframe: str, condition: str) -> bool | None:
     if condition in _ARROW_CONDITIONS:
         line, kind = condition.split("_", 1)
         return _arrow_eval(ticker_data, prefix, line, kind)
+    if condition in ("trend_cross_up", "trend_cross_down"):
+        v = ticker_data.get(prefix + "trend_cross")
+        # "none" is a real (non-missing) value meaning "no cross today" -> False.
+        # Only an absent field (timeframe not computed yet) means "pending".
+        if v is None:
+            return None
+        return v == ("up" if condition == "trend_cross_up" else "down")
 
     raise AssertionError("unreachable — condition validated above")
 

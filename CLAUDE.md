@@ -4447,11 +4447,65 @@ probados, y `blue_positive` legacy sigue funcionando. No se pudo transpilar
 verificación visual en Edge headless contra `node server.js` cuando el
 usuario lo tenga en marcha.
 
-**Fuera de alcance:** cruce trend↔trend_ma como condición de `/kalert` (es
-la base de la cartera `CRUCE_ROJO_D` pero sigue sin exponerse aquí);
-condiciones sobre `slope` de N barras (se usa `delta1`, la barra inmediata,
+**Fuera de alcance (en su momento, cerrado 2026-09-03 — ver sección
+siguiente):** cruce trend↔trend_ma como condición de `/kalert`.
+Condiciones sobre `slope` de N barras (se usa `delta1`, la barra inmediata,
 que es lo que muestra la flecha); estados `up`/`down` sueltos (siguen sin
 condición propia, solo `accumulation`/`distribution`).
+
+---
+
+## Alertas Koncorde — cruce trend/trend_ma ("línea roja"), en los 3 timeframes (implementado 2026-09-03)
+
+El usuario intentó crear `/kalert QXO konkorde en vela diaria cruce al alza
+de linea roja` y falló en silencio — correctamente, según el diseño: el
+vocabulario cerrado de `koncorde_alert_conditions.py` no tenía ninguna
+condición de "cruce" entre dos líneas (solo `blue_cross_up`, que es blue
+cruzando **cero**, no dos líneas cruzándose entre sí), así que el parser NL
+no tenía ningún id al que mapear la petición y la rechazó ("no inventes
+nada"). Era exactamente el hueco ya anotado como "Fuera de alcance" en la
+sección anterior — la propia base de la cartera `CRUCE_ROJO_D`
+(`konc_d_trend_cross`, el cruce de la línea negra `trend` sobre su línea
+roja de señal `trend_ma`), calculada desde el 2026-08-30 pero nunca
+expuesta como condición de alerta, y solo para D.
+
+**`scripts/koncorde_calculator.py`:** nueva `_compute_trend_cross(tf_name,
+trend_a, tma_a)` — mismo `_cross_series()` que ya usaba
+`_compute_cross_signal_fields()` (D), ahora también llamada para 3D y W en
+`compute_for_ticker()` (antes esas dos ramas descartaban `trend_a`/`tma_a`
+con `_, _, _`). Da `konc_3d_trend_cross`/`konc_w_trend_cross`, mismo formato
+`"up"/"down"/"none"` que el de D — que se deja intacto, sin tocar
+`_compute_cross_signal_fields()` (RSI14/percentil siguen siendo D-only, no
+se pidieron para 3D/W y no se han añadido).
+
+**`scripts/koncorde_alert_conditions.py`:** condiciones nuevas
+`trend_cross_up`/`trend_cross_down`, leyendo `konc_{tf}_trend_cross`.
+**Distintas de `trend_turns_up`/`trend_turns_down`** (que solo miran si la
+propia pendiente de `trend` gira, sección anterior) — aquí "cruce" es
+dos líneas cruzándose entre sí (trend vs trend_ma), no una línea sola
+cambiando de dirección. `"none"` (valor real, "no hay cruce hoy") evalúa a
+`False`; solo la ausencia del campo (timeframe sin datos/no calculado
+todavía) da `None`/pendiente — mismo principio de siempre.
+
+**`scripts/telegram_portfolio_bot.py`:** ejemplo nuevo en el prompt del
+parser NL, con aviso explícito de no confundirlo con `trend_turns_up/down`.
+
+**Verificado:** `evaluate()` con datos sintéticos (up/down/none/ausente,
+los 4 casos); pipeline real corrido para QXO vía yfinance —
+`konc_{d,3d,w}_trend_cross` ahora se calculan en los 3 timeframes (antes
+3D/W ni siquiera tenían el campo); llamada real a
+`_parse_koncorde_alert_nl()` con el texto exacto que falló al usuario —
+ahora resuelve `{ticker: QXO, timeframes: [d], condition: trend_cross_up}`;
+sintaxis exacta (`/kalert QXO d trend_cross_up`) también verificada.
+QXO hoy (2026-09-02) no tiene cruce activo en ningún timeframe (trend por
+debajo de su trend_ma en los 3) — la alerta creada quedará correctamente
+pendiente hasta que ocurra un cruce real.
+
+**Pendiente del lado del usuario:** el campo `konc_{3d,w}_trend_cross`
+todavía no existe en el `koncorde_data.json` de producción — se generará
+en el próximo run del pipeline (o con `--retry-failed`/un run manual). Debe
+crear la alerta de nuevo: `/kalert QXO d trend_cross_up` (sintaxis exacta)
+o repetir la petición por voz/texto tal cual la formuló.
 
 ---
 

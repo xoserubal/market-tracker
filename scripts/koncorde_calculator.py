@@ -744,6 +744,21 @@ def _compute_cross_signal_fields(close: np.ndarray, trend_a: np.ndarray | None, 
         return nulls
 
 
+def _compute_trend_cross(tf_name: str, trend_a: np.ndarray | None, tma_a: np.ndarray | None) -> dict:
+    """konc_{tf}_trend_cross: "up"/"down"/"none" — fresh trend/trend_ma ("línea
+    roja") crossover on the last closed bar of this timeframe, via
+    _cross_series(). D already had this via _compute_cross_signal_fields()
+    (the "Cruce Rojo D" trigger, 2026-08-30); 3D/W added 2026-09-03 so
+    /kalert can offer trend_cross_up/trend_cross_down on any timeframe, not
+    just D — a user request phrased as "cruce al alza de la línea roja"
+    without naming D explicitly had nowhere to map to otherwise.
+    """
+    key = f"konc_{tf_name}_trend_cross"
+    if trend_a is None or tma_a is None:
+        return {key: "none"}
+    return {key: _cross_series(trend_a, tma_a)}
+
+
 def compute_for_ticker(df: pd.DataFrame) -> dict:
     """Compute all 3 timeframes for a single daily OHLCV DataFrame."""
     result: dict = {}
@@ -754,17 +769,19 @@ def compute_for_ticker(df: pd.DataFrame) -> dict:
 
     # 3D — non-overlapping 3-session blocks
     df_3d = _resample_3d(df)
-    dict_3d, _, _, _ = _compute_tf(df_3d, "3d")
+    dict_3d, _, trend_3d, tma_3d = _compute_tf(df_3d, "3d")
     result.update(dict_3d)
+    result.update(_compute_trend_cross("3d", trend_3d, tma_3d))
 
     # Weekly
     df_w = _resample_weekly(df)
     # For weekly, use 100 as minimum (slightly lower — weekly bars are fewer)
     orig_min = MIN_BARS
     globals()["MIN_BARS"] = 100
-    dict_w, _, _, _ = _compute_tf(df_w, "w")
+    dict_w, _, trend_w, tma_w = _compute_tf(df_w, "w")
     globals()["MIN_BARS"] = orig_min
     result.update(dict_w)
+    result.update(_compute_trend_cross("w", trend_w, tma_w))
 
     result["konc_alignment"] = _konc_alignment(
         result.get("konc_d_state"),
