@@ -4691,6 +4691,195 @@ calendario, arranca cuando el usuario lo decida.
 
 ---
 
+## Ranking Score — Fase 2 (shadow + cartera experimental) implementada (2026-09-04)
+
+Mismo día que el cierre de Fase 1, a petición del usuario ("arrancamos").
+Implementa literalmente el texto de Fase 2 (pegado por el usuario
+2026-09-04, secciones 2.1-2.6) sobre los pesos de bucket congelados en
+`wiki/PREREGISTRO_RANKING_SCORE_V0.md` §1-3.
+
+### Fórmula del score — decisión de esta sesión, no parte del preregistro
+
+Ni el preregistro ni el texto de Fase 2 fijan sub-pesos **dentro** de cada
+bucket (solo los pesos de bucket 30/25/20/15/10 y qué componentes entran en
+cada uno) — confirmado explícitamente con el usuario antes de escribir
+código (ver [[feedback_rigor_ask_for_literal_spec]]). Regla adoptada,
+documentada aquí para que sea auditable:
+
+- Cada componente se transforma a un sub-score 0-100 con una función
+  monótona simple y acotada (dirección tomada literalmente de cómo el plan
+  describe cada componente, nunca de los resultados de Fase 1 — que
+  prohíbe explícitamente recalibrar).
+- Dentro de cada bucket: **media equitativa** de los sub-scores
+  disponibles, renormalizada si falta alguno (`vehicle_vs_theme_strength`
+  siempre falta — nunca se implementó, confirmado por grep en Fase 1 — así
+  que Contexto Sectorial es en la práctica solo `theme_breadth` hasta que
+  exista otro dato).
+- Score final: suma ponderada de los 5 buckets por sus pesos del
+  preregistro, renormalizada sobre los buckets con dato disponible (`cooldown_score`
+  siempre tiene valor — 100 si el ticker nunca se pickeó antes — así que en
+  la práctica solo Entry Quality/Flow/Cambio/Contexto pueden faltar).
+
+Transformaciones exactas (`scripts/ranking_score_calculator.py`):
+`extension_risk` low/medium/high/extreme→100/66.7/33.3/0 · `dist_sma20_atr`
+100 en 0 ATR, 0 en ≥3.0 ATR (mismo umbral "extreme" ya usado en
+`pcs_calculator.compute_extension_risk`) · `spike_flag`/`momentum_decay`
+100 si false · RSI 45-65→100 dentro/0 fuera · `konc_3d_state`/`konc_w_state`
+accumulation/up/down/distribution→100/75/25/0 · `konc_alignment` (proxy de
+coherencia D/3D/W) bearish_aligned→0 … bullish_aligned→100 ·
+`rot_score_delta_4w`/`streak_weeks_delta`/`theme_flow_delta` 50±50·delta/tope
+(topes 5/4/12, elegidos por ser aproximadamente el rango real de cada delta
+dado los techos de `rot_score`/`streak_weeks`/`component_B`) ·
+`theme_breadth` 0-15 peers→0-100 · `cooldown_days` rampa lineal 0→100 sobre
+28 días (mismo horizonte que la regla de no-reentrada de la propia cartera).
+
+`ranking_score_data_quality`/`ranking_score_missing_fields`/
+`ranking_score_eligible` reutilizan **exactamente** la misma definición que
+ya fijó `scripts/ranking_score_fase1_analysis.py` (mismos 5 campos críticos
+— `extension_risk`, `konc_3d_state`, `konc_w_state`, `rot_score_delta_4w`,
+`theme_breadth` —, mismo umbral 0.80), sin campo `macro_regime_at_entry`
+(ese solo servía para la segmentación de Fase 1, no es un input del score).
+
+### `rot_score_delta_4w`/`streak_weeks_delta`/`theme_flow_delta` — via git-history, no un fichero de serie temporal nuevo
+
+En vez de arrancar un `docs/data/*.jsonl` desde cero (con semanas de espera
+hasta acumular 28 días, como le pasó a otros históricos de este proyecto),
+se reutiliza `list_commits()`/`candidates_at_commit()` de
+`reconstruct_pcs_components_historical.py` (Fase 0): el historial ya existe
+en git, commiteado 2×/día desde 2026-05-08. Cada corrida busca el commit
+más cercano a "hoy − 28 días" (ventana ±5 días) una sola vez (no por
+ticker — todos los tickers comparten la misma fecha objetivo, así que es 1
+`git show` cacheado, no ~130), y lee `rot_score`/`streak_weeks`/
+`pcs_components.B_theme_flow` de ese commit para cada ticker. Da
+profundidad histórica completa desde el primer día, sin bootstrap.
+
+**`daily_signals` — hallazgo real durante la implementación:**
+`dist_sma20_atr`/`spike_flag`/`rsi_14`/`momentum_decay` (Entry Quality) NO
+son campos de nivel superior en `ai_candidates.json` como se asumía al
+diseñar la fórmula — viven anidados bajo `candidate["daily_signals"]`
+(`pcs_calculator.py`, ya calculados y persistidos ahí desde antes, solo
+había que leerlos del sitio correcto). Cobertura real verificada:
+127-129/132 candidatos vivos, no hizo falta tocar `pcs_calculator.py`.
+
+`theme_breadth` (Contexto) se calcula en vivo sobre el snapshot de hoy —
+misma definición exacta que `reconstruct_theme_breadth_historical.py`
+(nº de candidatos `eligible=true` del mismo `theme`, el propio ticker
+cuenta si es elegible) — no hacía falta ningún fichero nuevo, es un conteo
+directo sobre `data["candidates"]`.
+
+**"shadow" es literal, verificado, no solo nominal:** `compact_candidate()`
+en `ai_shared.py` construye un diccionario explícito por whitelist (no
+`{**c}`) — los campos `ranking_score_*`/`candidate_ranking_score_shadow`
+nunca se añadieron a esa whitelist, así que no pueden llegar al payload del
+LLM ni influir en las 4 carteras clásicas por construcción, no por
+convención.
+
+**Verificado con datos reales:** `--report` sobre los 132 candidatos
+vivos: 117 `ranking_score_eligible=true`, score 30.4-88.9 (mediana 63.0).
+Aritmética de un candidato (VLE.TO) verificada a mano campo por campo
+contra la fórmula — coincide exacta con el output del script.
+
+### Cartera `RANKING_SHADOW_EXPERIMENTAL` (`scripts/ranking_score_experimental_portfolio.py`)
+
+100% mecánica — el LLM no participa en ningún punto (ni HARD_RULES ni
+ranking). Universo: `pcs≥62` **y** `ranking_score_eligible=true`, excluye
+ETFs apalancados (denylist explícito — `UCO`/`TQQQ`/etc, ninguno presente
+hoy en el universo de 132 pero es la HARD_RULE literal del texto) +
+`NON_TRADABLE_SUBTHEMES` (reutilizado de `ai_shared.py`, no reimplementado)
++ tickers ya abiertos en las 4 carteras clásicas + tickers en cooldown de
+**esta misma cartera** (cerrados hace <28 días). Selección: top-5 por
+`candidate_ranking_score_shadow` (empate a `pcs`), tamaño 5% fijo, máx. 10
+posiciones simultáneas.
+
+**Cadencia — auto-gate interno, no en el YAML:** a diferencia del gate
+`is_morning` (Mirror Espejo/Insider Activity, resuelto en un step propio
+del workflow), aquí el propio script comprueba
+`datetime.now(timezone.utc).weekday()==4` (viernes) antes de considerar
+entradas nuevas — `--force` lo salta para pruebas manuales. Las salidas
+mecánicas se revisan **todos los días**, no solo los viernes.
+
+**Salidas — solo hard failure cierra, literal del texto ("no hay salida
+basada en Ranking Score"):** si un ticker desaparece por completo de
+`ai_candidates.json` un día, se cierra (`event:"close"`,
+`close_reason:"left_universe..."`) — es la única salida automática.
+`PCS<55` y "llevar ≥4 semanas abierta" se guardan como **flags visibles**
+(`pcs_review_flag`, `review_due`) en la propia posición, nunca cierran nada
+— el propio texto de Fase 2 remite esa decisión al "Follow-through engine
+(Fase 4)", que no existe todavía; inventar una regla de salida ahí habría
+violado la restricción explícita de la sección 2.3.
+
+**Tracking de rendimiento — reutiliza la infraestructura ya existente, sin
+tabla nueva:** cada SELECT se loguea también en `shadow_picks.jsonl`
+(`model:"ranking-score-shadow-v0"`, `portfolio:"RANKING_SHADOW_EXPERIMENTAL"`,
+`valid_for_performance_tracking:true`) con el mismo patrón que ya usa
+`cava_portfolio.py` — así `update_performance.py` (Step 10b) rellena
+`ret_1w/2w/1m/3m`/MFE/MAE sin ningún script nuevo. Verificado en
+producción: `update_performance.py --ticker SLP.L` backfilleó
+`entry_price` real en `ai_picks.json` y lo sincronizó a `shadow_picks.jsonl`
+en la primera pasada.
+
+**7 baselines shadow (§2.5)** — `docs/data/ranking_score_baselines.jsonl`,
+calculadas la misma cadencia semanal: top-5 por `pcs`, `pcs_ex_macro`,
+`rot_score`, `ret_13w_vs_spy`, `ret_4w_vs_spy`, `entry_quality_score`, y
+`random` con 5 semillas fijas (0-4, para promediar varianza más adelante) —
+universo `pcs≥62` únicamente, **sin** exigir `ranking_score_eligible`
+(literal del texto: "mismo universo (PCS ≥ 62)", más laxo a propósito que
+el de la cartera experimental).
+
+**Métricas semanales (§2.4)** — `docs/data/ranking_score_weekly_metrics.jsonl`:
+overlap rate contra las 4 clásicas (mismo día, vía `shadow_picks.jsonl`),
+tickers solo-experimental/solo-clásicas. La correlación Ranking
+Score→rendimiento y el Rank IC semanal (§2.4) no se calculan todavía en
+este script — con n=5 picks/semana no hay potencia para nada semanal
+aislado; se evaluarán en Fase 3 sobre el acumulado, tal como hace el resto
+del programa (mismo criterio que el resto de análisis de este proyecto:
+esperar a tener muestra, no fabricar un número semanal sin sentido
+estadístico).
+
+### Registro obligatorio (checklist del preregistro §2, para no repetir el hueco de CAVA_MACRO/MIRROR_ESPEJO)
+
+`_PORTFOLIO_LABELS` en `paper_trading.py` y `notify_telegram.py`
+("Ranking Score (shadow)"); `PTF_LABELS`/`PTF_THRESHOLDS` (62, el
+`PCS_MIN_UNIVERSE` real) en `docs/index.html` — fuera de
+`GROK_PTFS`/`MIMO_PTFS` del mini-panel de overview, mismo criterio que
+`CRUCE_ROJO_D` (no tiene modelo). Evento `"event":"close"` explícito desde
+el primer commit de `review_positions()`.
+
+### Pipeline (`.github/workflows/market-update.yml`)
+
+Dos steps nuevos, ambos `continue-on-error: true`:
+- **Step 9h** (Ranking Score calculator) — justo después de Step 9b
+  (Koncorde), antes de Step 9c — necesita PCS y Koncorde del día ya
+  escritos.
+- **Step 10d2** (cartera experimental + baselines) — justo después de Step
+  10d (Cava), antes de Step 10b (`update_performance.py`) — mismo motivo
+  que Cava: los picks de hoy entran en el mismo pase de
+  `update_performance` sin esperar 12h, y necesita que Step 10
+  (`paper_trading.py`) ya haya escrito el SELECT de hoy de las 4 clásicas
+  para calcular el overlap semanal correctamente.
+
+**Primer `--apply --force` real ejecutado 2026-09-04** (jueves, fuera del
+calendario natural de viernes — mismo criterio que el primer `--apply`
+manual de CAVA_MACRO/CRUCE_ROJO_D, sembrar ahora en vez de esperar): 5
+posiciones abiertas (SLP.L, LCX.V, DPM.TO, DHR, KOS), 11 filas de baselines
+(6 top-N + 5 semillas random), 1 fila de métricas semanales
+(`overlap_rate=0.0` — ninguno de los 5 coincidía con un SELECT de las
+clásicas ese mismo día). YAML del workflow validado con PyYAML tras los
+cambios (42 steps).
+
+### Explícitamente fuera de alcance (Fase 2)
+
+Correlación Ranking Score→rendimiento y Rank IC semanal (esperan a Fase 3,
+n insuficiente cada semana por separado). Cualquier ajuste de pesos o
+componentes basado en resultados de Fase 1 (prohibido por el propio
+preregistro §1.1/§5). Integración con `ai_picks_decision_state.py` (P0 de
+la Hoja de ruta consolidada, programa distinto) — el tracking de esta
+cartera vive enteramente en `shadow_picks.jsonl`, sin cruzar ambos
+programas. Follow-through engine (Fase 4) para decidir salida en los casos
+de `pcs_review_flag`/`review_due`.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

@@ -128,6 +128,17 @@ jobs:
         run: python scripts/koncorde_calculator.py
         working-directory: ${{ github.workspace }}
 
+      # Ranking Score SHADOW (preregistro wiki/PREREGISTRO_RANKING_SCORE_V0.md,
+      # Fase 2). Escribe candidate_ranking_score_shadow/ranking_score_eligible
+      # en cada candidato de ai_candidates.json -- nunca entra en
+      # compact_candidate() (ai_shared.py), asi que no llega al payload del
+      # LLM ni afecta a las 4 carteras clasicas. Necesita PCS (Step 8) y
+      # Koncorde (Step 9b) ya calculados hoy, por eso va justo despues.
+      - name: Run pipeline - Step 9h Ranking Score calculator (Fase 2, shadow)
+        run: python scripts/ranking_score_calculator.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 9c Koncorde shadow exits
         run: python scripts/koncorde_shadow_exits.py
         working-directory: ${{ github.workspace }}
@@ -223,6 +234,17 @@ jobs:
       # esperar doce horas.
       - name: Run pipeline - Step 10d Cava macro portfolio
         run: python scripts/cava_portfolio.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      # Cartera RANKING_SHADOW_EXPERIMENTAL + 7 baselines shadow (Fase 2).
+      # Mismo motivo de orden que Step 10d: entra antes del 10b para que sus
+      # SELECT de hoy (solo viernes UTC, el propio script se auto-limita) se
+      # rellenen de entry_price/ret_* en el mismo pase. Necesita el overlap
+      # de hoy contra shadow_picks.jsonl, por eso va despues de Step 10
+      # paper_trading (las 4 clasicas ya deben haber escrito su SELECT de hoy).
+      - name: Run pipeline - Step 10d2 Ranking Score experimental portfolio (Fase 2, mechanical)
+        run: python scripts/ranking_score_experimental_portfolio.py --apply
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 

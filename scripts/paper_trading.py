@@ -1246,6 +1246,7 @@ _PORTFOLIO_LABELS = {
     "CAVA_MACRO":                   "Cava Macro",
     "CRUCE_ROJO_D":                 "Cruce Rojo D",
     "CRUCE_ROJO_D_25":              "Cruce Rojo D 25",
+    "RANKING_SHADOW_EXPERIMENTAL":  "Ranking Score (shadow)",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 
