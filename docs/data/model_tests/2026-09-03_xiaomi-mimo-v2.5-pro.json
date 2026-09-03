@@ -1,0 +1,219 @@
+{
+  "run_id": "2026-09-03_1231",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-09-03",
+  "summary": {
+    "date": "2026-09-03",
+    "run_id": "2026-09-03_1231",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 32,
+    "input_tokens": 39777,
+    "output_tokens": 6337,
+    "cost_usd": 0.022816,
+    "latency_ms": 232339.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 4,
+    "quality_score": 69,
+    "selected_count": 0,
+    "watch_count": 7,
+    "rejected_count": 4,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [
+      "Duplicate ticker: ABBV",
+      "Duplicate ticker: OSCR",
+      "Duplicate ticker: VIT-B.ST",
+      "Duplicate ticker: KIST.L"
+    ],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: WATCH OSCR cited streak_weeks=5.0 for OSCR (actual=1)",
+      "numeric_hallucination_suspected: WATCH KIST.L cited streak_weeks=1.0 for KIST.L (actual=4)",
+      "numeric_hallucination_suspected: REJECT ABBV cited streak_weeks=5.0 for ABBV (actual=3)",
+      "numeric_hallucination_suspected: REJECT OSCR cited streak_weeks=5.0 for OSCR (actual=1)",
+      "numeric_hallucination_suspected: REJECT KIST.L cited streak_weeks=1.0 for KIST.L (actual=4)"
+    ]
+  },
+  "quality_score": 69,
+  "response": {
+    "date": "2026-09-03",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-09-03_1231",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with macro score 91.7 and strong +16.7 weekly delta provides broad risk-on permission; healthcare concentration at 82.5% open weight remains the dominant portfolio risk.",
+      "risk_posture": "normal",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 87.0 with rot=8, 19.2% 4w outperformance, and theme_concentration_risk=low — but only 2-week streak and konc_3d_state=distribution with blue at -7.06. Already Grok-open; watch for 3D confirmation or streak extension to 4+ weeks before MIMO entry.",
+        "watch_trigger": "streak_weeks >= 4 AND konc_3d_state transitions from distribution to up"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "PCS 80.2 with rot=6 and 1-week streak; VIGILAR signal is weaker than EN_RADAR peers. JNJ (PCS 87.5) provides a stronger healthcare entry with 5-week streak and rot=8.",
+        "watch_trigger": "signal upgrades to EN_RADAR with streak_weeks >= 3 and PCS stays above 78"
+      },
+      {
+        "ticker": "TK",
+        "reason": "PCS 68.5 below MIMO Shadow 70 threshold despite strong rot=8, 6-week streak, 19.8% 4w outperformance, and bullish-aligned Koncorde. us_cyclical theme_flow=3.0 (very poor) is the primary drag on composite score.",
+        "watch_trigger": "PCS crosses above 70 AND theme_flow improves above 10"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 83.0 with rot=8, 10.7% 4w outperformance, and 7/10 outperforming days — strongest daily momentum among watch-listed oil_gas peers. Only 1-week streak is insufficient for confirmation; weekly distribution_warning and weekly distribution state add caution.",
+        "watch_trigger": "streak_weeks >= 3 AND konc_w_state transitions to up, confirming no distribution_warning"
+      },
+      {
+        "ticker": "ABBV",
+        "reason": "PCS 85.0 with rot=8 and 19.7% 13w outperformance trending upward, but 3D distribution_warning with blue at -8.98, -1.1% 10d return, and only 3-week streak make JNJ the cleaner healthcare entry at this snapshot. konc_alignment softens signal despite strong weekly metrics.",
+        "watch_trigger": "konc_3d_state transitions to up (removing distribution_warning) AND streak_weeks >= 4 with 10d outperformance returning positive"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 73.5 with signal upgraded to VIGILAR and rot improving to 6; -1.1% 4w return and 1-week streak are insufficient for selection despite the bull macro backdrop. Weekly distribution_warning limits entry conviction.",
+        "watch_trigger": "PCS crosses above 78 with positive ret_4w_vs_spy above 5% AND streak_weeks >= 2"
+      },
+      {
+        "ticker": "VIT-B.ST",
+        "reason": "PCS 70.5 with rot=8 and 7.98% 5d outperformance showing emerging momentum; dems=10 is in the watch range (10-13). However distribution_warning across all timeframes and extension_risk=high with spike_flag block selection.",
+        "watch_trigger": "konc_alignment upgrades from distribution_warning AND extension_risk drops below high"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "ABBV",
+        "reason": "JNJ provides a cleaner healthcare entry: PCS 87.5 vs 85.0, streak_weeks 5 vs 3, konc_3d_state up vs distribution, and 10d outperformance +2.3% vs -1.1%. ABBV's distribution_warning on 3D with blue at -8.98 and stalled recent momentum place it behind JNJ.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "JNJ dominates on all weekly dimensions: PCS 87.5 vs 80.2, rot=8 vs 6, streak_weeks 5 vs 1, 13w outperformance 22.2% vs 46.2% (junction between streak lengths makes JNJ's position more mature and sustainable). OSCR's VIGILAR signal and 1-week streak cannot compete.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "VIT-B.ST",
+        "reason": "JNJ is superior on PCS (87.5 vs 70.5), streak_weeks (5 vs 1), rotation score (8 vs 8 — tie), and extension_risk (0 vs 4 points). VIT-B.ST's distribution_warning across all timeframes and high extension risk with spike flag make it categorically unpickable.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "Weekly distribution_warning with konc_w_state=distribution and only 1-week streak; aligned with existing oil_gas 29.5% theme concentration. Within oil_gas, VLE.TO (PCS 89.5, streak 4, bullish_aligned) and TNZ.TO (PCS 89.5, streak 3) are already open positions providing better exposure.",
+        "rejection_category": "better_alternative_available"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 87.5, rot=8, streak_weeks=8, 19.3% 4w outperformance — top-tier momentum with bull macro permission despite spike_flag and high healthcare concentration."
+      },
+      {
+        "ticker": "SE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.5, rot=7, streak_weeks=6, recent ret_4w_vs_spy slowed to +2.0% but 13w outperformance of +24.4% holds; china_em diversifier still effective."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.5, streak_weeks=8 extended from 4 at entry, 8.6% 4w outperformance; weekly leadership intact despite daily distribution."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 69.2 barely above 68 min-entry but streak_weeks=7 and 13% 4w outperformance justify maintenance; rot drop to 6 flagged."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 57.5 has fallen below the absolute exit floor of 62 with trajectory deteriorating; theme us_tech_ai showing poor theme_flow and distribution_warning alignment now dominate the weekly picture."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85.5, rot=8, streak_weeks=8 at all-time-highs, 13.0% 4w outperformance with strong daily dems supports continued weekly leadership."
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85.8, rot=9, streak_weeks=6, 15.3% 4w outperformance; weekly metrics strong but distribution_warning across all timeframes logged — watch for deterioration."
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85.0, rot=8, streak_weeks=5, 20.7% 4w outperformance with highest 13w returns 71.2% in universe; konc_3d_state=up mitigates some risk."
+      },
+      {
+        "ticker": "CRON",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 77.2, rot=8, streak_weeks=5 continuing extension from 3-week entry; 16.1% 4w outperformance and cannabis theme diversification justifies HOLD despite distribution_warning."
+      },
+      {
+        "ticker": "EXK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 74.5, rot=8, streak_weeks=4, 34.4% 4w outperformance (one of highest); antibiotic extensioned demand despite intermediate extension risk and distribution_warning."
+      },
+      {
+        "ticker": "VRTX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 88.0, rot=8, streak_weeks=5, 17.1% 4w outperformance with bull-aligned Koncorde consolidating near 52-week highs at -0.3% distance."
+      },
+      {
+        "ticker": "CVE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 79.0 and rot=7 on 3-week streak with 15% 4w outperformance; bullish-aligned Koncorde across all timeframes including distribution_warning on 3D — watch weekly for pause."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 81.0, rot=8, streak_weeks=5, zero extension risk with bull-aligned daily and weekly; 8.6% 4w outperformance building steadily."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 89.5 (tied-highest in universe), rot=8, streak_weeks=4, 19.4% 4w outperformance with bullish-aligned Koncorde and zero extension_risk — benchmark oil_gas position."
+      },
+      {
+        "ticker": "TNZ.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 89.5 (tied-highest), rot=8, streak_weeks=3, 17.5% 4w outperformance; konc_d=distribution at entry acknowledged but weekly bullish alignment and bull macro justify continuation."
+      },
+      {
+        "ticker": "FCX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 53.2 below the 62 exit floor — mandatory exit regardless of streak; us_cyclical theme very poor flow combined with 3D distribution_warning confirmation."
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 87.2, rot=8, streak_weeks=4, 11.5% 4w outperformance with daily distribution and 3D distribution_warning conceded; healthcare concentration extreme but weekly metrics justify HOLD."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-09-03\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-09-03_1231\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 91.7 and strong +16.7 weekly delta provides broad risk-on permission; healthcare concentration at 82.5% open weight remains the dominant portfolio risk.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"BTCC-B.TO\",\n      \"reason\": \"PCS 87.0 with rot=8, 19.2% 4w outperformance, and theme_concentration_risk=low — but only 2-week streak and konc_3d_state=distribution with blue at -7.06. Already Grok-open; watch for 3D confirmation or streak extension to 4+ weeks before MIMO entry.\",\n      \"watch_trigger\": \"streak_weeks >= 4 AND konc_3d_state transitions from distribution to up\"\n    },\n    {\n      \"ticker\": \"OSCR\",\n      \"reason\": \"PCS 80.2 with rot=6 and 1-week streak; VIGILAR signal is weaker than EN_RADAR peers. JNJ (PCS 87.5) provides a stronger healthcare entry with 5-week streak and rot=8.\",\n      \"watch_trigger\": \"signal upgrades to EN_RADAR with streak_weeks >= 3 and PCS stays above 78\"\n    },\n    {\n      \"ticker\": \"TK\",\n      \"reason\": \"PCS 68.5 below MIMO Shadow 70 threshold despite strong rot=8, 6-week streak, 19.8% 4w outperformance, and bullish-aligned Koncorde. us_cyclical theme_flow=3.0 (very poor) is the primary drag on composite score.\",\n      \"watch_trigger\": \"PCS crosses above 70 AND theme_flow improves above 10\"\n    },\n    {\n      \"ticker\": \"KIST.L\",\n      \"reason\": \"PCS 83.0 with rot=8, 10.7% 4w outperformance, and 7/10 outperforming days — strongest daily momentum among watch-listed oil_gas peers. Only 1-week streak is insufficient for confirmation; weekly distribution_warning and weekly distribution state add caution.\",\n      \"watch_trigger\": \"streak_weeks >= 3 AND konc_w_state transitions to up, confirming no distribution_warning\"\n    },\n    {\n      \"ticker\": \"ABBV\",\n      \"reason\": \"PCS 85.0 with"
+}
