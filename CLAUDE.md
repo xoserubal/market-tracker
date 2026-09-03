@@ -4880,6 +4880,57 @@ de `pcs_review_flag`/`review_due`.
 
 ---
 
+## Ranking Score — monitor de aviso para Fase 3 (implementado 2026-09-04)
+
+A petición del usuario ("crea una alarma para el bot que me avise cuando
+tenemos que pasar a Fase 3"), mismo día que Fase 2. Script nuevo
+`scripts/ranking_score_readiness_monitor.py`, mismo patrón que
+`p1_readiness_monitor.py` (cuenta y avisa una sola vez por umbral vía
+state file, no decide ni ejecuta nada) pero para los umbrales de
+`wiki/PREREGISTRO_RANKING_SCORE_V0.md` §4, no los de la Hoja de ruta
+consolidada.
+
+**Fecha de arranque para "meses desde":** 2026-09-04, el día del primer
+`--apply` real de `RANKING_SHADOW_EXPERIMENTAL` (no la fecha del
+preregistro ni la de Fase 1, que son anteriores pero no tienen picks reales
+detrás).
+
+**Tres alertas, umbrales literales de §4, sin inventar ninguno:**
+- 🟢 **Piloto** — ≥30 picks con `ret_1m` maduro Y ≥90 días (~3 meses) desde
+  el arranque.
+- 🟢 **Productivo** — ≥75 picks con `ret_1m` Y ≥75 con `ret_3m` Y ≥180 días
+  (~6 meses).
+- 🔴 **Descarte anticipado** — solo se evalúa a partir de 42 días (6
+  semanas): retorno acumulado proxy (suma simple de `ret_1m` de los picks
+  con entrada en las últimas 6 semanas — no una NAV real de cartera, pero
+  con tamaño 5% fijo por posición es aproximadamente proporcional al drag
+  real) **por debajo de -10% Y** Spearman(`candidate_ranking_score_shadow`,
+  `ret_1m`) **negativo** sobre todos los picks maduros hasta la fecha —
+  ambas condiciones a la vez, literal del texto ("rendimiento < -10%
+  acumulado tras 6 semanas con correlación negativa"). Solo avisa, no cierra
+  la cartera ni toca nada.
+
+**Sin dependencia de scipy/pandas** — Spearman implementado a mano
+(`spearman()`, ranking con desempate por rango promedio), mismo criterio de
+"scripts monitor ligeros" que `duration_monitor.py`/
+`check_koncorde_alerts.py`: un fallo de dependencias no debe quitarle
+utilidad a un script que solo cuenta y avisa. Verificado contra
+`scipy.stats.spearmanr` con datos sintéticos, con y sin empates —
+coincidencia exacta (diferencia ~1e-16, redondeo de punto flotante).
+
+**Wired al pipeline:** Step 10k, después de Step 10b (`update_performance.py`
+— necesita `ret_1m`/`ret_3m` ya rellenos) y de Step 10j (P1 readiness
+monitor, el de la otra hoja de ruta). `continue-on-error: true`.
+
+**Verificado en producción:** `--dry-run` contra los datos reales de hoy
+(0 días desde el arranque, 0 picks con `ret_1m` — recién sembrados) confirma
+que ningún umbral dispara todavía, como se espera. Mensaje de confirmación
+real enviado a Telegram ("Monitor Ranking Score Fase 3 activo") sin tocar
+`ranking_score_readiness_state.json` real — mismo patrón ya usado para
+confirmar `p1_readiness_monitor.py` en su día.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

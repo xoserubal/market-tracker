@@ -300,6 +300,19 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Mismo patron que Step 10j, para el preregistro del Ranking Score
+      # (wiki/PREREGISTRO_RANKING_SCORE_V0.md §4/§6) -- avisa cuando toca
+      # escribir el informe de Fase 3 (nivel piloto/productivo) o si se
+      # cumple el criterio de descarte anticipado. Necesita ret_1m/ret_3m ya
+      # rellenos en shadow_picks.jsonl, por eso va despues de Step 10b.
+      - name: Run pipeline - Step 10k Ranking Score Fase 3 readiness monitor (Telegram alert)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/ranking_score_readiness_monitor.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 11 Telegram notifications
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
