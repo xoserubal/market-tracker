@@ -4570,6 +4570,127 @@ ese fichero, aplicaría el mismo guard.
 
 ---
 
+## Ranking Score — Fase 1 (análisis exploratorio) completada (implementado 2026-09-04)
+
+Disparado por el recordatorio `ranking_score_fase1_analisis`
+(`docs/data/reminders.json`, 2026-09-03). Implementa literalmente la sección
+"FASE 1 — Análisis exploratorio" del plan original (texto pegado por el
+usuario 2026-09-04), acotada por lo ya firmado en
+`wiki/PREREGISTRO_RANKING_SCORE_V0.md` (informe de 3-5 páginas, no 10-15; el
+gate de cobertura del 1.7 no bloquea Fase 2, ya resuelto en el preregistro
+§0). **Nota de proceso:** antes de escribir código se detectó y se corrigió
+un cruce de documentos — el usuario pegó primero, por error, el texto de
+`P1A/P1B/P1C` de la "Hoja de ruta consolidada — Auditoría de carteras IA"
+(sección de arriba) en vez del texto de Fase 1 del Ranking Score; se
+verificó contra `p1_readiness_state.json` (ningún umbral disparado
+todavía) y contra el propio recordatorio antes de proceder, en línea con
+[[feedback_rigor_ask_for_literal_spec]].
+
+Script nuevo: `scripts/ranking_score_fase1_analysis.py`.
+
+**Dataset limpio de P0 (definición operativa de este análisis):**
+`dedup_same_day_reruns()` de `compare_vs_baselines.py` (reutilizado, no
+reimplementado) sobre `shadow_picks.jsonl` (303→271 filas), filtrado a
+`valid_for_performance_tracking != False` (271→150) — excluye runs con
+violaciones de HARD_RULES o `forced_run=True`, que nunca se convirtieron en
+decisión real de portfolio. De esas 150, 98 ya tienen `ret_1m` y 33
+`ret_3m`.
+
+**Paso previo — refrescar reconstrucciones de la Fase 0, no repetirlas
+desde cero:** `reconstruct_pcs_components_historical.py`,
+`reconstruct_rot_score_delta_historical.py` y
+`reconstruct_theme_breadth_historical.py` se habían quedado congelados en
+190 filas desde el 2026-08-07 mientras `shadow_picks.jsonl` seguía
+creciendo — se re-ejecutaron (idempotentes, solo añaden filas nuevas, sin
+`--force`) y subieron a 238 filas cada uno antes de construir el dataset de
+Fase 1.
+
+**Consolidación con git-history, más allá de lo que la Fase 0 había
+construido:** el plan de Fase 1 pide "régimen macro en el momento de
+entrada", `streak_weeks_delta` y `theme_flow_delta` (delta de
+`component_B`) — ninguno tenía script de reconstrucción propio (la Fase 0
+solo cubrió `rot_score_delta`/`theme_breadth`, ver preregistro §0). En vez
+de construir infraestructura nueva, el script reutiliza el
+`matched_commit`/`prior_matched_commit` que la reconstrucción de PCS y de
+`rot_score_delta` ya habían resuelto por ticker+fecha, y simplemente lee
+campos adicionales (`macro_context.regime`, `streak_weeks`,
+`pcs_components.B_theme_flow`) del mismo commit de `ai_candidates.json` ya
+localizado — cero búsquedas nuevas por fecha, solo más lectura sobre un
+commit ya encontrado. Resultado: `macro_regime_at_entry` cubre 150/150,
+`streak_weeks_delta` y `theme_flow_delta` ~102-106/150.
+
+**Metodología de clasificación (fijada en esta ejecución, el preregistro
+deja el criterio en términos cualitativos):** por componente, Spearman rho
+vs `ret_1m`/`ret_3m`, IC95% vía Fisher-z (misma convención que
+`analyze_relative_flow_signal.py`). `not_usable_missing_data` si n<15 o
+cobertura<30%; `suspicious_redundant` si `|rho|`>=0.70 contra otro
+componente preregistrado; `plausible` si `|rho pooled|`>=0.15, p<=0.10, sin
+inversión de signo en ningún segmento (cartera/régimen, n>=10) y — solo
+para Entry Quality, que sí tiene dirección a priori en el plan — el signo
+coincide con lo esperado; `inconclusive` en cualquier otro caso.
+
+**Bug real encontrado y corregido durante la propia ejecución:** la primera
+versión calculaba el signo esperado por componente (`expected_sign` en
+`COMPONENT_SPECS`) pero nunca lo usaba en la regla de clasificación —
+`spike_flag` salió "plausible" con signo **positivo** (spike asociado a
+mejor retorno, lo contrario de la hipótesis de extensión) antes del fix.
+Corregido añadiendo el chequeo de signo esperado como condición necesaria
+de `plausible`; tras el fix, `spike_flag` baja a `inconclusive` (correcto:
+señal débil y en la dirección equivocada, no debe contar como evidencia a
+favor).
+
+**Resultado (n=98 con `ret_1m`):** de los 14 componentes preregistrados,
+solo **`dist_sma20_atr`** clasifica `plausible` (rho=-0.268, p=0.008,
+n=98, IC95%=[-0.443,-0.073] — mayor distancia a SMA20 en unidades de ATR
+predice peor retorno a 1 mes, en la dirección esperada). El resto queda
+`inconclusive` — con n=98 y muestras menores por componente, es el
+resultado esperable de una muestra aún pequeña, no evidencia de que el
+diseño esté mal (documentado explícitamente así en el informe, para no
+malinterpretarlo). Ninguna pareja de componentes cruza el umbral de
+redundancia (0.70) todavía, pero 4 parejas quedan cerca (0.53-0.66) y se
+listan en el informe como "vigilar, no actuar" — incluye
+`konc_3d_state_ord`↔`konc_alignment_ord` (rho=0.663, esperable por
+construcción, ya que `konc_alignment` deriva en parte de `konc_3d_state`).
+
+**Koncorde, subsección separada tal como exige el preregistro §1:** n=32-33
+frente a `ret_1m` (cobertura 33-41% sobre las 150 filas limpias, muy por
+debajo del resto — no es un hueco de logging, Koncorde no existía como
+feature antes de 2026-06-30). Los 3 campos (`konc_3d_state`,
+`konc_w_state`, `konc_alignment` como proxy de "coherencia D/3D/W")
+quedan `inconclusive` frente a `ret_1m`, pero la coherencia D/3D/W muestra
+una asociación con MAE (`max_drawdown_1m`) que sí cruza p<0.05
+(rho=+0.293, p=0.018, n=65 — más alcista asociado a drawdowns menos
+profundos, no a mejor retorno medio) — anotado como patrón a vigilar, sin
+ninguna implicación de diseño (§1.1 lo prohíbe explícitamente).
+
+**Gate de cobertura del preregistro §1.7 — no bloqueante (ya resuelto en
+el preregistro §0), reportado por transparencia:** Koncorde 3D/W 41.3%,
+`rot_score_delta_4w` 68.0% — ambos por debajo del 80% nominal del plan
+original, pero el preregistro ya fijó que este gate no detiene Fase 2.
+`extension_risk` y `theme_breadth` sí llegan a 100%.
+
+**`vehicle_vs_theme_strength`:** confirmado por grep que no existe como
+campo calculado en ningún punto del codebase — reportado directamente como
+`not_usable_missing_data`, cobertura 0%, sin inventar un proxy no pedido.
+
+**Salidas:**
+- `docs/data/ranking_score_fase1_dataset.jsonl` — dataset consolidado, 1
+  fila/pick, 150 filas (formato `.jsonl` en vez de `.csv/.parquet` del
+  plan original — mismo contenido tabular, consistente con el resto de
+  `docs/data/`).
+- `docs/data/ranking_score_fase1_results.json` — correlaciones +
+  clasificación completas, incluido el detalle por segmento que el
+  informe no lista para mantenerse en 3-5 páginas.
+- `docs/analysis/ranking_score_fase1_informe.md` — informe (~4 páginas).
+
+**No se tocó** `pcs_calculator.py`, ninguna cartera, ni el diseño
+preregistrado — tal como exige el preregistro §1.1/§5. Próximo paso: Fase
+2 (Ranking Score shadow + cartera `RANKING_SHADOW_EXPERIMENTAL` + 7
+baselines shadow), sin fecha fija — el preregistro no la agenda por
+calendario, arranca cuando el usuario lo decida.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
