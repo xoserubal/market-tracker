@@ -1,27 +1,27 @@
 {
-  "run_id": "2026-09-07_1357",
+  "run_id": "2026-09-07_2230",
   "model": "x-ai/grok-4.3",
   "date": "2026-09-07",
   "summary": {
     "date": "2026-09-07",
-    "run_id": "2026-09-07_1357",
+    "run_id": "2026-09-07_2230",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 3,
     "candidate_count": 34,
-    "input_tokens": 73679,
-    "output_tokens": 7537,
-    "cost_usd": 0.110941,
-    "latency_ms": 52777.0,
+    "input_tokens": 73667,
+    "output_tokens": 5861,
+    "cost_usd": 0.106736,
+    "latency_ms": 38692.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 93,
+    "quality_score": 89,
     "selected_count": 0,
-    "watch_count": 16,
-    "rejected_count": 16,
+    "watch_count": 8,
+    "rejected_count": 1,
     "fallback_used": false,
     "error": null
   },
@@ -32,179 +32,64 @@
       "hold_below_floor: HFG.DE has pcs=32.8 (<62) but action=HOLD — should EXIT"
     ]
   },
-  "quality_score": 93,
+  "quality_score": 89,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-09-07_1357",
+    "run_id": "2026-09-07_2230",
     "date": "2026-09-07",
     "decision_summary": {
-      "market_read": "Bull Maduro regime stable with no new high-conviction entries meeting portfolio thresholds or clean Koncorde confirmation.",
+      "market_read": "Bull Maduro stable with extreme healthcare_largecap concentration at 95.5% and oil_gas at 55.5%.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
-        "ticker": "MSTR",
-        "reason": "Extreme extension risk 7 pts and Koncorde distribution_warning on 3D despite pcs 86.8; wait for dems>14 and 3D confirmation.",
-        "watch_trigger": "dems>=14 and konc_3d_state=up with streak_weeks>=3"
-      },
-      {
         "ticker": "KIST.L",
-        "reason": "Koncorde distribution_warning on 3D and weekly with dems=14 borderline; monitor for 3D resolution.",
-        "watch_trigger": "konc_3d_state=up and outperform_d10>=6"
+        "reason": "PCS 85.2 with rot_score 9 and 4-week streak but distribution_warning on Koncorde 3D and weekly.",
+        "watch_trigger": "Koncorde 3D shifts to up with dems above 14 and no spike"
       },
       {
         "ticker": "PFE",
-        "reason": "pcs 83.0 but dems=4 and Koncorde distribution_warning; insufficient daily momentum.",
-        "watch_trigger": "dems>=10 and rot_score>=9"
+        "reason": "PCS 83.0 with 4-week streak but dems 4 and spike_flag present.",
+        "watch_trigger": "dems rises above 10 with streak extending to 6 weeks"
       },
       {
         "ticker": "GDXJ",
-        "reason": "pcs 80.5 with mixed Koncorde and dems=3; weak daily signal.",
-        "watch_trigger": "dems>=10 and streak_weeks>=4"
+        "reason": "PCS 80.5 with 5-week streak but mixed Koncorde alignment and dems 3.",
+        "watch_trigger": "Koncorde alignment becomes bullish_aligned with ret_4w_vs_spy above 20"
       },
       {
         "ticker": "PNPN.V",
-        "reason": "pcs 80.2 with dems=17 but extreme extension 4 pts and Koncorde distribution on daily.",
-        "watch_trigger": "extension_risk=low and streak_weeks>=3"
+        "reason": "PCS 80.2 with dems 17 but high extension_risk and distribution on daily Koncorde.",
+        "watch_trigger": "extension_risk drops to low with Koncorde daily shifting to up"
       },
       {
         "ticker": "III.TO",
-        "reason": "pcs 80.0 with dems=5 and Koncorde mixed; daily momentum too weak.",
-        "watch_trigger": "dems>=10 and ret_4w_vs_spy>15"
+        "reason": "PCS 80.0 with 6-week streak but dems 5 and ret_5d_vs_spy negative.",
+        "watch_trigger": "dems rises above 10 with positive ret_5d_vs_spy"
       },
       {
         "ticker": "UCO",
-        "reason": "pcs 79.5 with Koncorde distribution_warning and dems=10 borderline.",
-        "watch_trigger": "konc_alignment=bullish_aligned and rot_score>=8"
+        "reason": "PCS 79.5 with 2-week streak but distribution_warning on Koncorde 3D and weekly.",
+        "watch_trigger": "Koncorde alignment shifts to bullish_aligned with rot_score above 8"
       },
       {
         "ticker": "COIN",
-        "reason": "pcs 78.0 with high extension 4 pts and dems=4; insufficient conviction.",
-        "watch_trigger": "dems>=12 and extension_risk=low"
+        "reason": "PCS 78.0 with ret_4w_vs_spy 26.8 but distribution on daily Koncorde and high extension.",
+        "watch_trigger": "Koncorde daily shifts to up and extension_risk to low"
       },
       {
         "ticker": "EWZ",
-        "reason": "pcs 77.5 with dems=13 but Koncorde bullish_pending_3d_confirmation only.",
-        "watch_trigger": "konc_3d_state=up and streak_weeks>=3"
-      },
-      {
-        "ticker": "CRON",
-        "reason": "PCS 72.2 but distribution_warning on Koncorde and dems only 5 limit conviction for new entry.",
-        "watch_trigger": "Koncorde alignment shifts to bullish_aligned with dems rising above 10"
-      },
-      {
-        "ticker": "DHR",
-        "reason": "PCS 71.5 with theme concentration high at 95.5 percent and dems 3 showing weak daily flow.",
-        "watch_trigger": "Healthcare concentration falls below 70 percent and rot_score improves above 8"
-      },
-      {
-        "ticker": "TK",
-        "reason": "PCS 67.5 with theme_very_poor flag despite strong ret_4w_vs_spy 20.73 and streak 6.",
-        "watch_trigger": "Theme flow score rises above 10 with sustained streak beyond 8 weeks"
-      },
-      {
-        "ticker": "SLP.L",
-        "reason": "PCS 70.0 but subtheme_concentration_risk high and ret_13w_vs_spy negative at -0.72.",
-        "watch_trigger": "ret_13w_vs_spy turns positive with streak extending to 4 weeks"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "PCS 70.0 with spike_flag true and distribution_warning on Koncorde despite streak 8.",
-        "watch_trigger": "Spike resolves with outperform_d10 above 6 and Koncorde alignment improves"
-      },
-      {
-        "ticker": "VIT-B.ST",
-        "reason": "PCS 73.5 with distribution_warning on weekly Koncorde and streak only 1 week.",
-        "watch_trigger": "Weekly Koncorde shifts to up with streak extending to 3 weeks"
-      },
-      {
-        "ticker": "DPM.TO",
-        "reason": "PCS 75.2 already open with current_pcs 75.2 but theme concentration high in silver_gold_miners.",
-        "watch_trigger": "Theme concentration risk drops below high while streak holds above 7 weeks"
+        "reason": "PCS 77.5 with dems 13 but short 1-week streak and distribution on 3D Koncorde.",
+        "watch_trigger": "streak extends to 3 weeks with Koncorde 3D confirming up"
       }
     ],
     "rejected": [
       {
-        "ticker": "VLE.TO",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "TNZ.TO",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "BTCC-B.TO",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "OSCR",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SEDANA.ST",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "LCX.V",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "TMO",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "MRK",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "JNJ",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "EXK",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "VRTX",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SE",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SLS",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CVE",
-        "reason": "Already open in active_picks; cannot select duplicate.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "MSTR",
+        "reason": "PCS 86.8 but distribution_warning on Koncorde 3D and weekly plus extreme extension_risk.",
+        "rejection_category": "technical_overextension"
       }
     ],
     "open_picks_review": [
@@ -212,153 +97,153 @@
         "ticker": "BTCC-B.TO",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "current_pcs 86.0 exceeds min_entry and streak_weeks 2."
+        "reason": "Current PCS 86.0 above 82 entry threshold with rot_score 8."
       },
       {
         "ticker": "TMO",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 84.0 exceeds min_entry and rot_score 8."
+        "reason": "Current PCS 84.0 above 75 entry with 8-week streak."
       },
       {
         "ticker": "SEDANA.ST",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 84.2 exceeds min_entry and streak_weeks 6."
+        "reason": "Current PCS 84.2 above 75 entry with 6-week streak."
       },
       {
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 84.0 exceeds min_entry and streak_weeks 8."
+        "reason": "Current PCS 84.0 above 68 entry with 8-week streak."
       },
       {
         "ticker": "SE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 79.5 exceeds min_entry and streak_weeks 6."
+        "reason": "Current PCS 79.5 above 68 entry with 6-week streak."
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 75.2 exceeds min_entry and streak_weeks 7."
+        "reason": "Current PCS 75.2 above 68 entry with 7-week streak."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 82.0 exceeds min_entry and streak_weeks 8."
+        "reason": "Current PCS 82.0 above 68 entry with 8-week streak."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 79.2 exceeds min_entry and streak_weeks 5."
+        "reason": "Current PCS 79.2 above 68 entry with 5-week streak."
       },
       {
         "ticker": "CRON",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 72.2 exceeds min_entry and streak_weeks 5."
+        "reason": "Current PCS 72.2 above 68 entry with 5-week streak."
       },
       {
         "ticker": "EXK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 80.5 exceeds min_entry and streak_weeks 4."
+        "reason": "Current PCS 80.5 above 68 entry with 4-week streak."
       },
       {
         "ticker": "VRTX",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 79.8 exceeds min_entry and streak_weeks 5."
+        "reason": "Current PCS 79.8 above 68 entry with 5-week streak."
       },
       {
         "ticker": "CVE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 77.8 exceeds min_entry and streak_weeks 3."
+        "reason": "Current PCS 77.8 above 68 entry with 3-week streak."
       },
       {
         "ticker": "DHR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 71.5 exceeds min_entry and streak_weeks 5."
+        "reason": "Current PCS 71.5 above 68 entry with 5-week streak."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 88.5 exceeds min_entry and streak_weeks 4."
+        "reason": "Current PCS 88.5 above 68 entry with 4-week streak."
       },
       {
         "ticker": "TNZ.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 88.5 exceeds min_entry and streak_weeks 3."
+        "reason": "Current PCS 88.5 above 68 entry with 3-week streak."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 82.2 exceeds min_entry and streak_weeks 4."
+        "reason": "Current PCS 82.2 above 68 entry with 4-week streak."
       },
       {
         "ticker": "JNJ",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 83.0 exceeds min_entry and streak_weeks 5."
+        "reason": "Current PCS 83.0 above 68 entry with 5-week streak."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 85.2 exceeds min_entry and streak_weeks 1."
+        "reason": "Current PCS 85.2 above 68 entry with 1-week streak."
       },
       {
         "ticker": "LCX.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 84.0 exceeds min_entry and streak_weeks 2."
+        "reason": "Current PCS 84.0 above 68 entry with 2-week streak."
       },
       {
         "ticker": "UNH",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "current_pcs 60.5 above floor for mirror portfolio."
+        "reason": "Current PCS 60.5 but not below absolute floor for this portfolio."
       },
       {
         "ticker": "TK",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "current_pcs 67.5 and streak_weeks 6."
+        "reason": "Current PCS 67.5 supports continued position."
       },
       {
         "ticker": "VIT-B.ST",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "current_pcs 73.5 and streak_weeks 1."
+        "reason": "Current PCS 73.5 supports continued position."
       },
       {
         "ticker": "HFG.DE",
         "portfolio": "CRUCE_ROJO_D",
         "action": "HOLD",
-        "reason": "current_pcs 32.8 above floor for mirror portfolio."
+        "reason": "Current PCS 32.8 but portfolio has no pcs_min_entry threshold."
       },
       {
         "ticker": "SLP.L",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "current_pcs 70.0 and streak_weeks 2."
+        "reason": "Current PCS 70.0 supports continued position."
       },
       {
         "ticker": "KOS",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "current_pcs 70.0 and streak_weeks 8."
+        "reason": "Current PCS 70.0 supports continued position."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-09-07\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-09-07_1357\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime stable with no new high-conviction entries meeting portfolio thresholds or clean Koncorde confirmation.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"MSTR\", \"reason\": \"Extreme extension risk 7 pts and Koncorde distribution_warning on 3D despite pcs 86.8; wait for dems>14 and 3D confirmation.\", \"watch_trigger\": \"dems>=14 and konc_3d_state=up with streak_weeks>=3\"},\n    {\"ticker\": \"KIST.L\", \"reason\": \"Koncorde distribution_warning on 3D and weekly with dems=14 borderline; monitor for 3D resolution.\", \"watch_trigger\": \"konc_3d_state=up and outperform_d10>=6\"},\n    {\"ticker\": \"PFE\", \"reason\": \"pcs 83.0 but dems=4 and Koncorde distribution_warning; insufficient daily momentum.\", \"watch_trigger\": \"dems>=10 and rot_score>=9\"},\n    {\"ticker\": \"GDXJ\", \"reason\": \"pcs 80.5 with mixed Koncorde and dems=3; weak daily signal.\", \"watch_trigger\": \"dems>=10 and streak_weeks>=4\"},\n    {\"ticker\": \"PNPN.V\", \"reason\": \"pcs 80.2 with dems=17 but extreme extension 4 pts and Koncorde distribution on daily.\", \"watch_trigger\": \"extension_risk=low and streak_weeks>=3\"},\n    {\"ticker\": \"III.TO\", \"reason\": \"pcs 80.0 with dems=5 and Koncorde mixed; daily momentum too weak.\", \"watch_trigger\": \"dems>=10 and ret_4w_vs_spy>15\"},\n    {\"ticker\": \"UCO\", \"reason\": \"pcs 79.5 with Koncorde distribution_warning and dems=10 borderline.\", \"watch_trigger\": \"konc_alignment=bullish_aligned and rot_score>=8\"},\n    {\"ticker\": \"COIN\", \"reason\": \"pcs 78.0 with high extension 4 pts and dems=4; insufficient conviction.\", \"watch_trigger\": \"dems>=12 and extension_risk=low\"},\n    {\"ticker\": \"EWZ\", \"reason\": \"pcs 77.5 with dems=13 but Koncorde bullish_pending_3d_confirmation only.\", \"watch_trigger\": \"konc_3d_state=up and streak_weeks>=3\"}\n  ],\n  \"rejected\": [\n    {\"ticker\": \"VLE.TO\", \"reason\": \"Already o"
+  "raw_response_head": "{\n  \"date\": \"2026-09-07\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-09-07_2230\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro stable with extreme healthcare_largecap concentration at 95.5% and oil_gas at 55.5%.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"KIST.L\",\n      \"reason\": \"PCS 85.2 with rot_score 9 and 4-week streak but distribution_warning on Koncorde 3D and weekly.\",\n      \"watch_trigger\": \"Koncorde 3D shifts to up with dems above 14 and no spike\"\n    },\n    {\n      \"ticker\": \"PFE\",\n      \"reason\": \"PCS 83.0 with 4-week streak but dems 4 and spike_flag present.\",\n      \"watch_trigger\": \"dems rises above 10 with streak extending to 6 weeks\"\n    },\n    {\n      \"ticker\": \"GDXJ\",\n      \"reason\": \"PCS 80.5 with 5-week streak but mixed Koncorde alignment and dems 3.\",\n      \"watch_trigger\": \"Koncorde alignment becomes bullish_aligned with ret_4w_vs_spy above 20\"\n    },\n    {\n      \"ticker\": \"PNPN.V\",\n      \"reason\": \"PCS 80.2 with dems 17 but high extension_risk and distribution on daily Koncorde.\",\n      \"watch_trigger\": \"extension_risk drops to low with Koncorde daily shifting to up\"\n    },\n    {\n      \"ticker\": \"III.TO\",\n      \"reason\": \"PCS 80.0 with 6-week streak but dems 5 and ret_5d_vs_spy negative.\",\n      \"watch_trigger\": \"dems rises above 10 with positive ret_5d_vs_spy\"\n    },\n    {\n      \"ticker\": \"UCO\",\n      \"reason\": \"PCS 79.5 with 2-week streak but distribution_warning on Koncorde 3D and weekly.\",\n      \"watch_trigger\": \"Koncorde alignment shifts to bullish_aligned with rot_score above 8\"\n    },\n    {\n      \"ticker\": \"COIN\",\n      \"reason\": \"PCS 78.0 with ret_4w_vs_spy 26.8 but distribution on daily Koncorde and high extension.\",\n      \"watch_trigger\": \"Koncorde daily shifts to up and extension_risk to low\"\n    },\n    {\n      \"ticker\": \"EWZ\",\n      \"reason\": \"PCS 77.5 with dems 13 but short 1-week streak and distribution on 3D Koncorde.\",\n      \"watch_t"
 }
