@@ -7266,7 +7266,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 32.25
+          "high_water_mark": 33.0099983215332
         },
         {
           "ticker": "TK",
@@ -7955,7 +7955,7 @@
             "theme_flow_improving",
             "rsi_sweet_spot"
           ],
-          "current_pcs": 64.0,
+          "current_pcs": 65.0,
           "pcs_review_flag": false,
           "weeks_held": 0.6,
           "review_due": false
@@ -7991,7 +7991,7 @@
             "theme_flow_improving",
             "rsi_sweet_spot"
           ],
-          "current_pcs": 84.0,
+          "current_pcs": 85.0,
           "pcs_review_flag": false,
           "weeks_held": 0.6,
           "review_due": false
@@ -8026,7 +8026,7 @@
             "streak_extending",
             "theme_flow_improving"
           ],
-          "current_pcs": 75.2,
+          "current_pcs": 76.2,
           "pcs_review_flag": false,
           "weeks_held": 0.6,
           "review_due": false
@@ -8062,7 +8062,7 @@
             "rsi_sweet_spot",
             "recent_pick_cooldown_active"
           ],
-          "current_pcs": 71.5,
+          "current_pcs": 72.5,
           "pcs_review_flag": false,
           "weeks_held": 0.6,
           "review_due": false
@@ -8097,7 +8097,7 @@
             "streak_extending",
             "theme_flow_improving"
           ],
-          "current_pcs": 70.0,
+          "current_pcs": 71.0,
           "pcs_review_flag": false,
           "weeks_held": 0.6,
           "review_due": false
@@ -8108,21 +8108,31 @@
   },
   "last_ai_review": {
     "date": "2026-09-08",
-    "market_read": "Bull Maduro stable regime with broad sector participation, but extreme concentration risk in healthcare (95.5% weight) and oil_gas (55.5% weight) limits new entry conviction.",
-    "risk_posture": "cautious",
+    "market_read": "Bull Maduro regime with macro score 91.7 and strong +16.7 weekly delta improving; all 19 open positions maintain healthy streaks and outperformance with no exit triggers firing.",
+    "risk_posture": "normal",
     "should_select": false,
     "watch": [
       {
-        "ticker": "VIT-B.ST",
-        "reason": "PCS 73.5 with rot=8 and 15.8% 4w outperformance, but mixed Koncorde alignment (distribution_warning) and only 1-week streak require confirmation before entry.",
-        "watch_trigger": "Koncorde distribution_warning clears to bullish_aligned or accumulation_setup AND streak extends to 3+ weeks with sustained 4w outperformance above 10%."
+        "ticker": "TK",
+        "reason": "Rot=8 on a 6-week streak with 20.73% 4w outperformance and bullish-aligned Koncorde across all timeframes — among the strongest weekly signals in the non-open set. However, theme_flow score is only 3 out of 24 (us_cyclical flagged theme_very_poor), meaning zero sector-level institutional support, and dems=3 with spike_flag=true confirms daily momentum is absent. PCS of 68.5 barely clears the 68.0 minimum, leaving no margin for deterioration.",
+        "watch_trigger": "Select if theme_flow score rises above 10 signaling sector-level institutional flow turning, or if dems climbs above 10 with spike_flag resolving to false confirming multi-day organic momentum on top of the established weekly streak."
       }
     ],
     "rejected": [
       {
+        "ticker": "VIT-B.ST",
+        "reason": "Koncorde distribution_warning on both daily and weekly timeframes with konc_d_state=distribution and konc_w_state=distribution; only a 1-week streak despite 15.82% 4w outperformance cannot overcome dual-timeframe distribution pressure and the europa theme's low flow score of 14/24.",
+        "rejection_category": "technical_overextension"
+      },
+      {
         "ticker": "KOS",
-        "reason": "Would increase already extreme oil_gas concentration (55.5% MIMO_SHADOW weight) and has negative 13w outperformance (-5.8% vs SPY) with distribution warning across timeframes.",
-        "rejection_category": "macro_conflict"
+        "reason": "Koncorde distribution_warning on daily and 3D timeframes with neutral relative strength (RS component only 11 out of 23), negative 13w return of -5.76% vs SPY contradicting the 8-week streak, and oil_gas already consuming 55.5% of portfolio weight creating critical single-theme concentration.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SLP.L",
+        "reason": "Zero weekly streak with negative 13w return of -2.53% vs SPY, rot_score only 5 with signal status IGNORAR, individual RS component at 15 out of 23 showing outperformance rather than leadership, and silver_gold_miners theme already at 23.5% portfolio weight.",
+        "rejection_category": "weak_relative_strength"
       }
     ]
   }
