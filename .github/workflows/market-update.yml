@@ -170,6 +170,20 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Informe incondicional (no un aviso por umbral cruzado, a diferencia
+      # de Step 9e) -- se envia en CADA run, 2x/dia, hasta que el usuario
+      # pida quitarlo. Vigila la tesis "mientras HY ~265-270 es rotacion, no
+      # crisis; 270->285->300->325 con petroleo/yields altos cambia la
+      # pelicula" (ver scripts/hy_spread_report.py para el detalle).
+      - name: Run pipeline - Step 9e2 HY Spread daily report (Telegram, unconditional)
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/hy_spread_report.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Check if this is the morning run
         id: time_check
         run: |

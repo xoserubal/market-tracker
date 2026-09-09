@@ -4931,6 +4931,62 @@ confirmar `p1_readiness_monitor.py` en su día.
 
 ---
 
+## HY Spread — informe diario incondicional por Telegram (implementado 2026-09-08, hasta nuevo aviso)
+
+El usuario pegó una tesis discrecional propia sobre el spread de high yield
+(`BAMLH0A0HYM2`, el mismo dato que ya alimenta la `confirmation` de
+`duration.html`/`duration_monitor.py`): *"mientras HY esté ~265-270 el
+sistema financiero dice rotación, no crisis. Si empiezas a ver 270→285→
+300→325 mientras petróleo y yields permanecen elevados, la película
+cambia."* A diferencia de `duration_monitor.py` (que solo avisa en una
+transición de fase o un cruce de nivel **nuevo**), pidió explícitamente un
+informe **incondicional**: que el bot mande, después de cada run del
+pipeline (2×/día), dónde está el HY ahora + el histórico de la última
+semana — no una alerta por umbral, un reporte de estado siempre.
+
+**Script nuevo: `scripts/hy_spread_report.py`** (Step 9e2, justo después de
+Step 9e Duration Monitor, `continue-on-error: true`, corre en **ambos**
+pases del pipeline, sin gate de mañana/tarde). Reutiliza los helpers ya
+existentes de `duration_monitor.py` (`_fred_latest`, `_yfinance_price`,
+`LEVELS["core_break_10y"]`) en vez de duplicar el fetch — mismo criterio de
+reuso que `ai_shared.py`/`ratio_signal.py`.
+
+**Mensaje enviado cada run:** valor actual de HY en bps + fecha, valor de
+hace 1 semana (misma semántica `find_closest_at_or_before` ya usada en
+`rotacion.html`/`relative.html`, sin exigir hueco exacto de 7 días) + delta,
+tabla de los últimos ~6 días hábiles, clasificación en la escalera literal
+de la tesis del usuario (`<270` verde "rotación, no crisis" · `270-285`
+primer escalón · `285-300` segundo escalón · `300-325` tercer escalón ·
+`≥325` cuarto escalón "la película cambia"), y contexto de WTI (`CL=F`,
+solo precio, sin umbral — no existe ningún nivel "petróleo elevado"
+calibrado en el proyecto, no se inventó uno) + 10Y yield (reutilizando el
+umbral `core_break_10y=4.60%` ya existente de `duration_monitor.py` para no
+duplicar un segundo umbral de "elevado").
+
+**Deliberadamente sin dedup ni state file** — a diferencia de todos los
+demás scripts `check_*`/`*_monitor.py` del proyecto, este es un reporte de
+estado, no una alerta de evento: se pide expresamente que salga después de
+cada run, así que enviar el mismo tipo de mensaje 2×/día es el
+comportamiento correcto, no un bug a corregir.
+
+**Verificado con datos reales (2026-09-07, `--dry-run`):** HY=268bps (zona
+verde, <270), 1 semana antes 263bps (Δ+5), WTI $94.20, 10Y 4.78% (ya por
+encima del umbral de estrés de `duration_monitor` pese a que HY sigue en
+zona de calma) — confirma que el informe puede mostrar exactamente el tipo
+de divergencia que la tesis del usuario quiere vigilar (yields altos, HY
+todavía tranquilo). YAML del workflow validado con PyYAML tras el cambio
+(44 steps).
+
+**Fuera de alcance / a revisar más adelante:** esto es explícitamente
+temporal ("hasta nuevo aviso") — no tiene fecha de retirada ni condición de
+graduación a alerta-por-evento. Si el usuario decide más adelante que
+prefiere solo avisos al cruzar cada escalón (270/285/300/325) en vez de un
+reporte en cada run, sería un script de tipo `*_monitor.py` con dedup por
+dirección de cruce, mismo patrón que `duration_monitor.py` — no construido
+aquí a propósito, se pidió el informe incondicional.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
