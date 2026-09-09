@@ -7289,7 +7289,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 13.630000114440918
+          "high_water_mark": 13.829999923706055
         },
         {
           "ticker": "VIT-B.ST",
@@ -7358,7 +7358,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 14.010000228881836
+          "high_water_mark": 14.319999694824219
         }
       ],
       "history": [
@@ -8108,31 +8108,41 @@
   },
   "last_ai_review": {
     "date": "2026-09-09",
-    "market_read": "Bull Maduro regime at score 91.67 with strong improving macro delta of +16.67 supports risk-on positioning, but broad healthcare PCS deterioration across PFE, DHR, and ABBV events signals sector-level rotation pressure on the portfolio's dominant theme.",
-    "risk_posture": "cautious",
+    "market_read": "Bull Maduro regime at 91.7 macro_score with +16.67 monthly delta continues improving, supporting cyclical and growth leadership across oil_gas and healthcare themes.",
+    "risk_posture": "normal",
     "should_select": false,
     "watch": [
       {
+        "ticker": "KOS",
+        "reason": "PCS 75.0 with 8-week streak and +15.86% 4w outperformance is strong, but 13w return is negative at -5.95% showing longer-term deterioration, Koncorde alignment is distribution_warning across 3D+daily, and oil_gas already holds 55.5% portfolio weight with high concentration risk.",
+        "watch_trigger": "Koncorde 3D shifting from distribution to up, 13w return turning positive, or oil_gas concentration dropping below 40% would make this a SELECT."
+      },
+      {
         "ticker": "TK",
-        "reason": "TK posts the highest rot_score=9 among all non-open candidates with a 7-week streak, +18.6% 4w and +11.1% 13w outperformance, and fully bullish-aligned Koncorde across all timeframes. However, PCS of 65.0 falls below the MIMO_SHADOW entry threshold of 68.0, and the us_cyclical theme shows very poor theme_flow at 3.0/24.0, which caps composite scoring. Daily dems=3 and spike_flag=true also suggest recent momentum is not organic multi-day flow.",
-        "watch_trigger": "PCS crossing above 68.0 while maintaining rot_score >= 7, streak_weeks >= 4, and Koncorde alignment remaining bullish-aligned or improving. A dems reading above 10 without spike_flag would strengthen the daily confirmation."
+        "reason": "Rotation score 9 (highest possible) on 7-week streak with +18.61% 4w and +11.14% 13w outperformance and bullish-aligned Koncorde is compelling, but PCS 65.0 falls below MIMO_SHADOW min_entry threshold of 68.0 and us_cyclical theme_flow component is only 3.0/24.",
+        "watch_trigger": "PCS crossing above 68 while maintaining rot=9 and streak_weeks >= 7 would trigger SELECT; theme_flow improving above 10 would strengthen conviction."
+      },
+      {
+        "ticker": "VIT-B.ST",
+        "reason": "PCS 63.0 below MIMO_SHADOW min_entry of 68.0 with Koncorde distribution_warning alignment across all timeframes and dems=5 well below the 10 threshold, though rot=7 and 2-week streak with +9.52% 4w outperformance show some underlying strength.",
+        "watch_trigger": "PCS rising above 68 with Koncorde shifting from distribution_warning to at least bullish_pending_3d_confirmation and dems recovering above 10."
       }
     ],
     "rejected": [
       {
-        "ticker": "KOS",
-        "reason": "KOS shows negative 13-week outperformance of -5.95% vs SPY despite recent 4-week strength of +15.86%, indicating deteriorating longer-term leadership. Koncorde alignment is distribution_warning with daily, 3D, and weekly all reading distribution. Oil_gas theme already holds 55.5% portfolio weight with high concentration risk. Dems=4 provides no daily momentum support.",
+        "ticker": "SLP.L",
+        "reason": "Zero streak weeks with rotation score 4 indicates no sustained weekly leadership; PCS 64.5 below min_entry threshold of 68 with spike_flag=true on ret_5d of +2.15% suggesting concentrated single-session gains rather than organic institutional flow.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 53.5 falls below the 62 absolute floor threshold with negative returns on both 4w (-0.59%) and 13w (-4.73%), zero streak weeks, rotation score 4, and distribution_warning alignment indicating structural weakness.",
         "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "SLP.L",
-        "reason": "SLP.L carries an IGNORAR signal with rot_score=4 and zero streak_weeks, meaning weekly momentum has completely stalled. Ret_13w_vs_spy of only 1.32% and ret_4w of 8.69% are weak relative to established portfolio leaders like EXK at 34.5% 13w. Silver_gold_miners already holds 23.5% portfolio weight with high concentration risk.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "VIT-B.ST",
-        "reason": "VIT-B.ST shows distribution_warning across all three Koncorde timeframes (daily distribution, 3D distribution, weekly distribution) with PCS of 63.0 falling below the 68.0 entry threshold. Ret_13w_vs_spy of only 1.85% demonstrates negligible longer-term leadership, and the europa theme_flow of 10.0/24.0 confirms weak sector-level momentum.",
-        "rejection_category": "insufficient_conviction"
+        "ticker": "HFG.DE",
+        "reason": "PCS 33.8 is the lowest in the candidate set with rotation score 2 (below exit threshold), -17.52% 4w and -37.10% 13w returns confirming severe underperformance, zero streak weeks, and distribution_warning across all Koncorde timeframes.",
+        "rejection_category": "weak_relative_strength"
       }
     ]
   }
