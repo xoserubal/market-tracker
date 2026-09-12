@@ -1,212 +1,199 @@
 {
-  "run_id": "2026-09-12_1157",
+  "run_id": "2026-09-12_2157",
   "model": "x-ai/grok-4.3",
   "date": "2026-09-12",
   "summary": {
     "date": "2026-09-12",
-    "run_id": "2026-09-12_1157",
+    "run_id": "2026-09-12_2157",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 37,
-    "input_tokens": 77843,
-    "output_tokens": 8147,
-    "cost_usd": 0.117671,
-    "latency_ms": 63032.0,
+    "candidate_count": 36,
+    "input_tokens": 77151,
+    "output_tokens": 8791,
+    "cost_usd": 0.118416,
+    "latency_ms": 56341.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 1,
-    "quality_score": 83,
+    "hard_rule_violations": 0,
+    "quality_score": 93,
     "selected_count": 0,
-    "watch_count": 18,
-    "rejected_count": 13,
+    "watch_count": 0,
+    "rejected_count": 30,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [
-      "Duplicate ticker: GOLD"
-    ],
+    "violations": [],
     "soft_warnings": [
-      "numeric_hallucination_suspected: WATCH VNOM cited rot_score=8.0 for VNOM (actual=7.0)",
-      "numeric_hallucination_suspected: WATCH VFF cited rot_score=8.0 for VFF (actual=7.0)",
       "hold_below_floor: TK has pcs=60.5 (<62) but action=HOLD — should EXIT",
-      "hold_below_floor: JD has pcs=38.2 (<62) but action=HOLD — should EXIT",
-      "hold_below_floor: SE has pcs=60.8 (<62) but action=HOLD — should EXIT",
-      "hold_below_floor: HFG.DE has pcs=32.8 (<62) but action=HOLD — should EXIT",
       "hold_below_floor: SLP.L has pcs=52.0 (<62) but action=HOLD — should EXIT",
       "hold_below_floor: DHR has pcs=54.8 (<62) but action=HOLD — should EXIT"
     ]
   },
-  "quality_score": 83,
+  "quality_score": 93,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-09-12_1157",
+    "run_id": "2026-09-12_2157",
     "date": "2026-09-12",
     "decision_summary": {
-      "market_read": "Bull Maduro stable with high sector concentrations in oil_gas and healthcare_largecap limiting new entries.",
+      "market_read": "Bull Maduro stable regime with extreme oil_gas and healthcare_largecap concentration risks limiting new entries.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
-    "watch": [
-      {
-        "ticker": "UCO",
-        "reason": "PCS 88.5 but oil_gas already 71.5 percent weight and theme_concentration_risk high",
-        "watch_trigger": "oil_gas weight drops below 50 percent with sustained rot_score above 8"
-      },
-      {
-        "ticker": "TLW.L",
-        "reason": "PCS 80.2 with extreme extension_risk and spike_flag true in already heavy oil_gas theme",
-        "watch_trigger": "extension_risk falls to low and oil_gas concentration eases"
-      },
-      {
-        "ticker": "SU",
-        "reason": "PCS 80.0 but dems 7 and spike_flag true limit conviction in saturated oil_gas",
-        "watch_trigger": "dems rises above 12 with no spike and lower theme weight"
-      },
-      {
-        "ticker": "OXY",
-        "reason": "PCS 77.8 with low dems 9 and high healthcare_largecap overlap risk",
-        "watch_trigger": "dems reaches 14 and oil_gas weight declines"
-      },
-      {
-        "ticker": "EWZ",
-        "reason": "PCS 77.5 but smallcap_em new theme with spike_flag and distribution_warning on Koncorde",
-        "watch_trigger": "Koncorde aligns bullishly across timeframes and dems above 12"
-      },
-      {
-        "ticker": "VNOM",
-        "reason": "PCS 76.0 but short streak_weeks 2 and high oil_gas concentration already",
-        "watch_trigger": "streak_weeks extends to 5 with rot_score 8"
-      },
-      {
-        "ticker": "MLX.AX",
-        "reason": "PCS 75.5 with dems 4 and commodities_metals low theme flow",
-        "watch_trigger": "dems rises above 12 and ret_4w_vs_spy exceeds 15 percent"
-      },
-      {
-        "ticker": "GLNG",
-        "reason": "PCS 75.2 with distribution_warning on Koncorde and spike_flag true",
-        "watch_trigger": "Koncorde 3D state turns up and spike_flag clears"
-      },
-      {
-        "ticker": "III.TO",
-        "reason": "PCS 74.8 with dems 4 and distribution_warning across Koncorde",
-        "watch_trigger": "dems above 12 and Koncorde alignment becomes bullish_aligned"
-      },
-      {
-        "ticker": "VFF",
-        "reason": "PCS 71.2 with dems 6 and cannabis theme low conviction",
-        "watch_trigger": "dems reaches 14 with rot_score 8"
-      },
-      {
-        "ticker": "MOS",
-        "reason": "PCS 69.2 with theme_poor and distribution_warning on Koncorde",
-        "watch_trigger": "theme_flow improves and Koncorde 3D state turns up"
-      },
-      {
-        "ticker": "TAL",
-        "reason": "PCS 68.0 with dems 5 and china_em mixed Koncorde alignment",
-        "watch_trigger": "dems above 12 and ret_13w_vs_spy exceeds 25 percent"
-      },
-      {
-        "ticker": "GOLD",
-        "reason": "PCS 67.8 with theme_poor and high silver_gold_miners concentration already",
-        "watch_trigger": "theme_flow score rises above 10 and streak_weeks reaches 6"
-      },
-      {
-        "ticker": "CRON",
-        "reason": "PCS 63.5 meets threshold but dems=4 and distribution_warning on all Koncorde timeframes limit conviction for entry.",
-        "watch_trigger": "dems rises above 10 with streak_weeks extension and Koncorde shift to accumulation_setup"
-      },
-      {
-        "ticker": "EXK",
-        "reason": "PCS 63.2 with rs_leader status but high silver_gold_miners concentration risk and distribution on daily Koncorde.",
-        "watch_trigger": "theme_concentration_risk drops below high and daily Koncorde moves to accumulation"
-      },
-      {
-        "ticker": "DPM.TO",
-        "reason": "PCS 66.5 with strong 13w outperformance but high concentration in silver_gold_miners and daily distribution reading.",
-        "watch_trigger": "portfolio weight in silver_gold_miners falls below 15 percent and streak_weeks resumes above 3"
-      },
-      {
-        "ticker": "MRK",
-        "reason": "PCS 63.5 with 8-week streak but distribution_warning on Koncorde and healthcare_largecap already at extreme concentration.",
-        "watch_trigger": "healthcare_largecap weight declines below 50 percent and dems exceeds 10 with momentum_accel"
-      },
-      {
-        "ticker": "SLS",
-        "reason": "PCS 62.8 meets floor but streak_weeks=0, dems=4, and Koncorde shows distribution on daily despite 13w strength.",
-        "watch_trigger": "streak_weeks returns to 3+ with dems above 10 and Koncorde alignment improves to bullish_pending_3d_confirmation"
-      }
-    ],
+    "watch": [],
     "rejected": [
       {
-        "ticker": "KOS",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "BTCC-B.TO",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "LCX.V",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "CVE",
-        "reason": "Already open in active_picks_relevant",
+        "ticker": "UCO",
+        "reason": "High oil_gas concentration at 87.5 percent portfolio weight and extreme extension_risk on TNZ.TO peer.",
         "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "VLE.TO",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
+        "reason": "High oil_gas concentration at 87.5 percent portfolio weight and konc_3d_state distribution.",
+        "rejection_category": "technical_overextension"
       },
       {
         "ticker": "TNZ.TO",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
+        "reason": "Extreme extension_risk with dist_sma20_atr_extreme and ret_4w_extended flags.",
+        "rejection_category": "technical_overextension"
       },
       {
         "ticker": "KIST.L",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
+        "reason": "High oil_gas concentration at 87.5 percent and konc_w_state distribution.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "High oil_gas concentration at 87.5 percent and spike_flag true with distribution_warning.",
+        "rejection_category": "technical_overextension"
       },
       {
         "ticker": "MSTR",
-        "reason": "Already open in active_picks_relevant",
+        "reason": "High extension_risk and distribution_warning on Koncorde with momentum_decay.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "High oil_gas concentration at 87.5 percent and distribution_warning on Koncorde.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "Already open position in active_picks_relevant; high crypto concentration.",
         "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TLW.L",
+        "reason": "High extension_risk with ret_4w_extreme and spike_flag.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "SU",
+        "reason": "High oil_gas concentration at 87.5 percent and spike_flag true.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "LCX.V",
+        "reason": "High oil_gas concentration at 87.5 percent and already open in active_picks.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "OXY",
+        "reason": "High oil_gas concentration at 87.5 percent and low dems 9.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "Already open position in active_picks_relevant.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "EWZ",
+        "reason": "High extension_risk with dist_sma20_atr_high and spike_flag.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "VNOM",
+        "reason": "High oil_gas concentration at 87.5 percent and distribution on daily Koncorde.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "pcs_crossed_down event and low dems 4.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "High oil_gas concentration and distribution_warning on Koncorde.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "III.TO",
+        "reason": "distribution_warning on Koncorde and low dems 4.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "VFF",
+        "reason": "Low dems 6 and distribution_warning on Koncorde.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "HUM",
-        "reason": "Already open in active_picks_relevant",
+        "reason": "Already open position in active_picks_relevant.",
         "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "MOS",
+        "reason": "Theme_poor flag and distribution_warning on Koncorde.",
+        "rejection_category": "weak_flow"
       },
       {
         "ticker": "OSCR",
-        "reason": "Already open in active_picks_relevant",
+        "reason": "Already open position in active_picks_relevant and spike_flag.",
         "rejection_category": "better_alternative_available"
       },
       {
-        "ticker": "TMO",
-        "reason": "Already open in active_picks_relevant",
-        "rejection_category": "better_alternative_available"
+        "ticker": "TAL",
+        "reason": "Low dems 5 and distribution_warning on Koncorde.",
+        "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "GOLD",
-        "reason": "PCS below 68 and theme_poor with high existing silver_gold_miners weight",
+        "reason": "pcs 67.8 marginal and theme_poor flag.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "TMO",
+        "reason": "Already open position in active_picks_relevant.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "EXK",
+        "reason": "PCS 63.2 with rot_score 5, streak_weeks 0, ret_4w_vs_spy -3.0, konc_d_state distribution and high theme concentration risk.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "SLS",
+        "reason": "PCS 62.8 with rot_score 5, streak_weeks 0, ret_4w_vs_spy -0.8, dems 4 and konc_d_state distribution.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "MRK",
+        "reason": "PCS 63.5 with rot_score 7 but dems 3, ret_5d_vs_spy -4.4 and konc_d_state distribution despite streak 8.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "CRON",
+        "reason": "PCS 63.5 with rot_score 6, dems 4, ret_5d_vs_spy -2.5 and konc alignment distribution_warning.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "PCS 66.5 with rot_score 4, streak_weeks 0, ret_4w_vs_spy -2.7, dems 4 and konc_d_state distribution.",
         "rejection_category": "insufficient_conviction"
       }
     ],
@@ -215,147 +202,147 @@
         "ticker": "BTCC-B.TO",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "current_pcs 80.5 above 62 and rot_score 8 with streak_weeks 3"
+        "reason": "current_pcs 80.5 below 82 but streak_weeks 3 exceeds 1."
       },
       {
         "ticker": "TMO",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "current_pcs 67.5 above 62 and rot_score 7 with streak_weeks 8"
+        "reason": "current_pcs 67.5 below 75 but streak_weeks 8 exceeds 1."
       },
       {
         "ticker": "SEDANA.ST",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "EXIT",
-        "reason": "current_pcs 59.5 below absolute floor of 62"
+        "reason": "current_pcs 59.5 below absolute floor of 62."
       },
       {
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 63.5 above 62 and rot_score 7 with streak_weeks 8"
+        "reason": "current_pcs 63.5 below 68 but streak_weeks 8 exceeds 1."
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "EXIT",
-        "reason": "current_pcs 66.5 below 68 and streak_weeks 0"
+        "reason": "current_pcs 66.5 below 68 and streak_weeks 0."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 85.0 above 68 and rot_score 9 with streak_weeks 8"
+        "reason": "current_pcs 85.0 above 68."
       },
       {
         "ticker": "SLS",
         "portfolio": "MIMO_SHADOW",
         "action": "EXIT",
-        "reason": "current_pcs 62.8 below 68 and streak_weeks 0"
+        "reason": "current_pcs 62.8 below 68 and streak_weeks 0."
       },
       {
         "ticker": "CRON",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 63.5 above 68 and rot_score 6 with streak_weeks 6"
+        "reason": "current_pcs 63.5 below 68 but streak_weeks 6 exceeds 1."
       },
       {
         "ticker": "EXK",
         "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "current_pcs 63.2 above 68 and rot_score 5 with streak_weeks 0 but above floor"
+        "action": "EXIT",
+        "reason": "current_pcs 63.2 below 68 and streak_weeks 0."
       },
       {
         "ticker": "CVE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 77.8 above 68 and rot_score 7 with streak_weeks 4"
+        "reason": "current_pcs 77.8 above 68."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 88.5 above 68 and rot_score 8 with streak_weeks 5"
+        "reason": "current_pcs 88.5 above 68."
       },
       {
         "ticker": "TNZ.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 86.2 above 68 and rot_score 8 with streak_weeks 4"
+        "reason": "current_pcs 86.2 above 68."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 70.2 above 68 and rot_score 8 with streak_weeks 5"
+        "reason": "current_pcs 70.2 above 68."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 69.2 above 68 and rot_score 8 with streak_weeks 2"
+        "reason": "current_pcs 69.2 above 68."
       },
       {
         "ticker": "LCX.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 79.8 above 68 and rot_score 7 with streak_weeks 3"
+        "reason": "current_pcs 79.8 above 68."
       },
       {
         "ticker": "TK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "current_pcs 60.5 above 62 and rot_score 7 with streak_weeks 7"
+        "reason": "current_pcs 60.5 below 68 but streak_weeks 7 exceeds 1."
       },
       {
         "ticker": "JD",
         "portfolio": "MIRROR_ESPEJO",
-        "action": "HOLD",
-        "reason": "current_pcs 38.2 but no exit condition met per rules"
-      },
-      {
-        "ticker": "SE",
-        "portfolio": "CAVA_MACRO",
-        "action": "HOLD",
-        "reason": "current_pcs 60.8 above 62 and rot_score 4 with streak_weeks 0"
+        "action": "EXIT",
+        "reason": "current_rot_score 1.0 <=2."
       },
       {
         "ticker": "MSTR",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "current_pcs 83.2 above 62 and rot_score 9 with streak_weeks 2"
+        "reason": "current_pcs 83.2 and pcs_min_entry 0."
       },
       {
         "ticker": "KIST.L",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "current_pcs 86.2 above 62 and rot_score 8 with streak_weeks 5"
+        "reason": "current_pcs 86.2 and pcs_min_entry 0."
+      },
+      {
+        "ticker": "UCO",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "current_pcs 88.5 and pcs_min_entry 0."
       },
       {
         "ticker": "HFG.DE",
         "portfolio": "CRUCE_ROJO_D",
-        "action": "HOLD",
-        "reason": "current_pcs 32.8 but no exit condition met per rules"
+        "action": "EXIT",
+        "reason": "current_rot_score 2.0 <=2."
       },
       {
         "ticker": "SLP.L",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "current_pcs 52.0 above 62 and rot_score 5 with streak_weeks 0"
+        "reason": "current_pcs 52.0 and pcs_min_entry 0."
       },
       {
         "ticker": "DHR",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "current_pcs 54.8 above 62 and rot_score 4 with streak_weeks 0"
+        "reason": "current_pcs 54.8 and pcs_min_entry 0."
       },
       {
         "ticker": "KOS",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "current_pcs 81.0 above 62 and rot_score 7 with streak_weeks 8"
+        "reason": "current_pcs 81.0 and pcs_min_entry 0."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-09-12\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-09-12_1157\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro stable with high sector concentrations in oil_gas and healthcare_largecap limiting new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"UCO\",\n      \"reason\": \"PCS 88.5 but oil_gas already 71.5 percent weight and theme_concentration_risk high\",\n      \"watch_trigger\": \"oil_gas weight drops below 50 percent with sustained rot_score above 8\"\n    },\n    {\n      \"ticker\": \"TLW.L\",\n      \"reason\": \"PCS 80.2 with extreme extension_risk and spike_flag true in already heavy oil_gas theme\",\n      \"watch_trigger\": \"extension_risk falls to low and oil_gas concentration eases\"\n    },\n    {\n      \"ticker\": \"SU\",\n      \"reason\": \"PCS 80.0 but dems 7 and spike_flag true limit conviction in saturated oil_gas\",\n      \"watch_trigger\": \"dems rises above 12 with no spike and lower theme weight\"\n    },\n    {\n      \"ticker\": \"OXY\",\n      \"reason\": \"PCS 77.8 with low dems 9 and high healthcare_largecap overlap risk\",\n      \"watch_trigger\": \"dems reaches 14 and oil_gas weight declines\"\n    },\n    {\n      \"ticker\": \"EWZ\",\n      \"reason\": \"PCS 77.5 but smallcap_em new theme with spike_flag and distribution_warning on Koncorde\",\n      \"watch_trigger\": \"Koncorde aligns bullishly across timeframes and dems above 12\"\n    },\n    {\n      \"ticker\": \"VNOM\",\n      \"reason\": \"PCS 76.0 but short streak_weeks 2 and high oil_gas concentration already\",\n      \"watch_trigger\": \"streak_weeks extends to 5 with rot_score 8\"\n    },\n    {\n      \"ticker\": \"MLX.AX\",\n      \"reason\": \"PCS 75.5 with dems 4 and commodities_metals low theme flow\",\n      \"watch_trigger\": \"dems rises above 12 and ret_4w_vs_spy exceeds 15 percent\"\n    },\n    {\n      \"ticker\": \"GLNG\",\n      \"reason\": \"PCS 75.2 with distribution_warning on Koncorde and spike_flag true\",\n      \"watch_trigger\": \"Koncorde 3D state turns u"
+  "raw_response_head": "{\n  \"date\": \"2026-09-12\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-09-12_2157\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro stable regime with extreme oil_gas and healthcare_largecap concentration risks limiting new entries.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [],\n  \"rejected\": [\n    {\"ticker\": \"UCO\", \"reason\": \"High oil_gas concentration at 87.5 percent portfolio weight and extreme extension_risk on TNZ.TO peer.\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"VLE.TO\", \"reason\": \"High oil_gas concentration at 87.5 percent portfolio weight and konc_3d_state distribution.\", \"rejection_category\": \"technical_overextension\"},\n    {\"ticker\": \"TNZ.TO\", \"reason\": \"Extreme extension_risk with dist_sma20_atr_extreme and ret_4w_extended flags.\", \"rejection_category\": \"technical_overextension\"},\n    {\"ticker\": \"KIST.L\", \"reason\": \"High oil_gas concentration at 87.5 percent and konc_w_state distribution.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"WCP.TO\", \"reason\": \"High oil_gas concentration at 87.5 percent and spike_flag true with distribution_warning.\", \"rejection_category\": \"technical_overextension\"},\n    {\"ticker\": \"MSTR\", \"reason\": \"High extension_risk and distribution_warning on Koncorde with momentum_decay.\", \"rejection_category\": \"technical_overextension\"},\n    {\"ticker\": \"KOS\", \"reason\": \"High oil_gas concentration at 87.5 percent and distribution_warning on Koncorde.\", \"rejection_category\": \"macro_conflict\"},\n    {\"ticker\": \"BTCC-B.TO\", \"reason\": \"Already open position in active_picks_relevant; high crypto concentration.\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"TLW.L\", \"reason\": \"High extension_risk with ret_4w_extreme and spike_flag.\", \"rejection_category\": \"technical_overextension\"},\n    {\"ticker\": \"SU\", \"reason\": \"High oil_gas concentration at 87.5 percent and spike_flag true.\", \"rejection_category\": \"technical_o"
 }
