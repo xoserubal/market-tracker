@@ -28,7 +28,7 @@ every-20-min cadence — the option-chain OI that drives both DIY and (presumabl
 ZeroGEX updates at session granularity, not intraday (preregistro 0.3).
 
 Usage:
-    py -3 research/gex_zerogex_pilot_v1/run_diy_calibration.py             # collect today's snapshot (both symbols), no-op outside 15:30-16:15 ET
+    py -3 research/gex_zerogex_pilot_v1/run_diy_calibration.py             # collect today's snapshot (both symbols), no-op outside 15:30-20:00 ET
     py -3 research/gex_zerogex_pilot_v1/run_diy_calibration.py --force     # bypass the time window (manual test)
     py -3 research/gex_zerogex_pilot_v1/run_diy_calibration.py --report    # print/save Fase 2 metrics + verdict
 """
@@ -81,12 +81,26 @@ def is_near_close_now(now_et: datetime) -> bool:
     stale/pre-market snapshot — found the hard way: a manual test run at
     ~05:17 ET (before open) wrote ZeroGEX data ~13h stale for SPX under
     *today's* date, which would have silently blocked the real EOD collection
-    for the rest of the day. Window is wider than the target 15:50-16:00 ET
-    (preregistro 0.3) to tolerate a slow cron/runner, not to loosen intent."""
+    for the rest of the day. Lower bound (15:30 ET) guards against that;
+    upper bound is intentionally generous, not tight around the close.
+
+    FIX 2026-09-13: the original window (15:30-16:15 ET) assumed the
+    */15-minute cron (18:00-20:45 UTC, added in the 2026-08-31 fix to
+    gex-zerogex-fase2.yml) would land inside it. Checked against the actual
+    GitHub Actions run history for that workflow: of 20 runs since the
+    workflow started, **zero** landed before 16:23 ET — GitHub's scheduler
+    throttles/delays high-frequency cron far more than that fix accounted
+    for, consistently firing around 16:2x-16:5x ET and 18:2x-18:5x ET
+    instead. Result: 13 days, zero snapshots collected, the file this script
+    writes to never existed. Safe to widen (per the module docstring: the
+    option-chain OI driving both DIY and ZeroGEX updates at session
+    granularity, not intraday — a snapshot at 18:45 ET reflects the same
+    closing data as one at 16:00 ET). Upper bound moved to 20:00 ET,
+    comfortably covering every observed run time with margin."""
     if now_et.weekday() >= 5:
         return False
     open_t = now_et.replace(hour=15, minute=30, second=0, microsecond=0)
-    close_t = now_et.replace(hour=16, minute=15, second=0, microsecond=0)
+    close_t = now_et.replace(hour=20, minute=0, second=0, microsecond=0)
     return open_t <= now_et <= close_t
 
 
@@ -198,7 +212,7 @@ def collect_snapshot(force: bool = False) -> None:
 
     now_et = datetime.now(ET)
     if not force and not is_near_close_now(now_et):
-        print(f"[{now_et.isoformat()}] fuera de la ventana 15:30-16:15 ET, no se recoge (usa --force para saltarte esto en pruebas manuales).")
+        print(f"[{now_et.isoformat()}] fuera de la ventana 15:30-20:00 ET, no se recoge (usa --force para saltarte esto en pruebas manuales).")
         return
 
     today = date.today().isoformat()
@@ -323,7 +337,7 @@ def generate_report() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--report", action="store_true", help="generate/print the Fase 2 calibration report from collected snapshots")
-    parser.add_argument("--force", action="store_true", help="bypass the 15:30-16:15 ET window check (manual test outside that window)")
+    parser.add_argument("--force", action="store_true", help="bypass the 15:30-20:00 ET window check (manual test outside that window)")
     args = parser.parse_args()
 
     if args.report:
