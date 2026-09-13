@@ -67,6 +67,7 @@ MODEL_PRICING: dict[str, tuple[float, float]] = {
     "x-ai/grok-4.3":               (1.25,  2.50),
     "x-ai/grok-4.2":               (0.0,   0.0),
     "xiaomi/mimo-v2.5-pro":        (0.435, 0.87),
+    "openai/gpt-5.6-sol":          (2.00,  10.00),
 }
 
 PORTFOLIOS: dict[str, dict] = {
@@ -551,11 +552,19 @@ def call_model(
     system: str,
     user_message: str,
     max_tokens: int = 2048,
+    reasoning_effort: str | None = None,
 ) -> tuple[str, int, int, float]:
     """Returns (raw_text, input_tokens, output_tokens, latency_ms).
 
     All models are routed through OpenRouter (openrouter.ai).
     Use OpenRouter model slugs, e.g. "anthropic/claude-haiku-4-5-20251001".
+
+    `reasoning_effort` (optional): forwarded as OpenRouter's `reasoning:
+    {effort: ...}` extra_body param — only meaningful for models that
+    declare `reasoning_effort` in their `supported_parameters` (e.g.
+    openai/gpt-5.6-sol: none/low/medium/high/xhigh/max). Left unset by
+    default so existing callers (Grok/Mimo/Haiku/Sonnet picks engine) see
+    zero behavior change.
     """
     from openai import OpenAI
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
@@ -571,6 +580,7 @@ def call_model(
             "X-Title":      "AI Picks Lab",
         },
     )
+    extra_body = {"reasoning": {"effort": reasoning_effort}} if reasoning_effort else {}
     t0   = time.monotonic()
     resp = client.chat.completions.create(
         model=model,
@@ -579,6 +589,7 @@ def call_model(
             {"role": "system", "content": system},
             {"role": "user",   "content": user_message},
         ],
+        extra_body=extra_body,
     )
     msg  = resp.choices[0].message
     text = msg.content or ""

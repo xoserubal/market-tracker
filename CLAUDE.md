@@ -5496,6 +5496,109 @@ fundación de datos que esa fase necesitaba y no existía.
 
 ---
 
+## Análisis de mercado automatizado — Fase 2 (implementado 2026-09-14)
+
+Cierra la idea planteada por el usuario el día anterior: automatizar el
+análisis que hacía manualmente pegando el "Exportar TODO a LLM" en ChatGPT,
+y guardarlo para poder evaluar su fiabilidad con el tiempo. El usuario pasó
+el system prompt exacto que usaba ("Sol", modelo `openai/gpt-5.6-sol`,
+`reasoning_effort=high`) — guardado verbatim en
+`wiki/PROMPT_MARKET_ANALYST_SOL.md`.
+
+**Decisiones confirmadas con el usuario antes de construir:**
+- Modelo vía OpenRouter (`openai/gpt-5.6-sol`) — reutiliza
+  `OPENROUTER_API_KEY` ya existente, sin credencial nueva. Confirmado que
+  "Sol" es un modelo real (no un GPT personalizado del usuario) consultando
+  el listado público de modelos de OpenRouter — `reasoning_effort` soporta
+  `high` directamente, coincide exacto con el "alto" que pedía el usuario.
+- Cadencia 1×/día. Implementación: sin gate explícito de mañana/tarde — el
+  propio script dedupea por fecha (si ya hay un análisis de hoy, no llama a
+  la API), así que corre en los dos pases del pipeline pero solo gasta una
+  vez, más simple y robusto que replicar el patrón `is_morning` de Mirror
+  Espejo/Insider Activity.
+- Salida: prosa libre (fiel al prompt original) + un bloque JSON al final
+  con el esquema SIGNAL/INTERPRETATION/ACTION/TRIGGER/INVALIDATION +
+  GRADOS DE CONVICCIÓN que el propio prompt ya pedía — sin esto, evaluar
+  fiabilidad más adelante habría significado releer prosa a mano.
+
+### `scripts/market_analysis_llm.py` (nuevo) — Step 9g3 del pipeline
+
+Construye el payload exacto que el usuario pegaba a mano a partir de los
+tres jsonl de captura diaria (`market_macro_daily_snapshot.jsonl`,
+`market_equities_daily_snapshot.jsonl` — ambos de la sección anterior — y
+`portfolio_daily_snapshot.jsonl`), con una tabla por sección agrupando por
+`sections`/por las secciones reales de `portfolio.json`. Usa
+`konc_alignment` (no D/3D/W por separado) como columna Koncorde — resumen
+multi-timeframe ya coherente, más denso en información por token que 3
+columnas separadas, y encaja con el énfasis del propio prompt en "multi-
+timeframe importa, un flip diario aislado es precursor, no confirmación".
+
+**Comparación contra el día anterior — resuelta con datos, no con memoria
+de conversación:** como cada llamada es una API call sin estado (el prompt
+exige "compara contra snapshots previos", que en el uso manual venía de la
+memoria del hilo de ChatGPT), el mensaje de usuario incluye SIEMPRE el
+snapshot completo de hoy y, para cada fila, el delta de `flowScore`/
+`earlyFlow` contra la fila más reciente anterior a hoy (mismo patrón
+`_prev_date`/dedup ya usado en el resto del proyecto) — así el modelo no
+depende de recordar nada fuera del propio mensaje.
+
+Reutiliza `call_model()`/`compute_cost()`/`MODEL_PRICING` de
+`paper_trading.py` (mismo criterio de reuso que `mirror_portfolio.py`).
+`call_model()` ganó un parámetro opcional `reasoning_effort` (pasado como
+`extra_body={"reasoning":{"effort":...}}` a OpenRouter) — sin cambiar el
+comportamiento de ningún llamador existente, que no lo pasa.
+
+**Por defecto es dry-run, al revés que el resto de scripts de picks
+(`mirror_portfolio.py`/`cava_portfolio.py`), donde basta omitir la flag
+para no gastar** — decisión deliberada: es integración nueva con un
+proveedor/modelo que el pipeline nunca había llamado, con coste no trivial
+por llamada (persona larga + `reasoning_effort=high`), así que aquí hace
+falta `--apply` explícito. Salida: `docs/data/market_analysis_llm.jsonl`,
+una fila por día con `prose`, `structured` (el JSON parseado),
+`structured_parse_ok`, tokens y coste.
+
+**Bug real encontrado y corregido en la primera llamada real:**
+`MAX_TOKENS=8000` se quedó corto — la respuesta se cortó literalmente a
+mitad del bloque ```json final (prosa completa de 13.743 caracteres, JSON
+sin cerrar), porque el prompt es largo y con `reasoning_effort=high`
+consume bastante presupuesto antes de llegar a la prosa visible. Subido a
+24000 (peor caso ~$0.24/llamada) — la segunda llamada real completó en
+8177 tokens de salida (bien por debajo del nuevo tope) con JSON válido.
+
+**Segundo detalle real, de entorno, no de lógica:** `_today()` usa
+`datetime.now(timezone.utc).date()` explícito, no `date.today()` local —
+verificado que en la máquina de desarrollo, con hora local ya en el día
+siguiente a UTC (local 2026-09-14, UTC todavía 2026-09-13), `date.today()`
+habría buscado un "hoy" que los scripts Node (que sí usan
+`toISOString()`, siempre UTC) todavía no habían escrito. En GitHub Actions
+esto nunca sería un problema real (el runner ya está en UTC), pero se
+corrigió para no depender de esa coincidencia.
+
+**Verificado con una llamada real completa** (2026-09-13, primera captura,
+sin día previo con el que comparar — el propio análisis lo reconoce
+explícitamente: *"Al ser la primera captura... todavía no es posible
+identificar legítimamente zero-crosses, aceleraciones o cambios de
+liderazgo"*): régimen clasificado `late-cycle rotation` (60% escenario
+central, con el resto de probabilidades desglosado, tal como pide la
+sección ESTILO del prompt), 7 señales estructuradas bien formadas
+(ej. `10Y / TLT` → `DURATION_STRESS`/`CONFIRMED`, `HCC frente a líderes de
+carbón` → `LAGGARD_CANDIDATE`/`EARLY`), cada una con
+signal/interpretation/action/trigger/invalidation/confidence_pct.
+Dedup verificado: una segunda ejecución el mismo día no vuelve a llamar a
+la API. Coste real de la llamada completa: $0.1162 (17216 in / 8177 out
+tokens).
+
+### Explícitamente fuera de alcance de esta Fase 2
+
+La revisión retrospectiva de fiabilidad en sí (comparar `trigger`/
+`invalidation` de cada señal pasada contra lo que realmente ocurrió) —
+necesita semanas/meses de histórico acumulado, mismo criterio que el resto
+de experimentos shadow de este proyecto (P1A/P1B/P1C, Ranking Score, etc.).
+Ningún cambio a PCS/rot_score/carteras reales — esto es una capa de
+análisis narrativo, no toca el motor de picks.
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

@@ -242,6 +242,20 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Fase 2 de la automatizacion del analisis de mercado (2026-09-14,
+      # wiki/PROMPT_MARKET_ANALYST_SOL.md) -- llama a openai/gpt-5.6-sol
+      # (reasoning_effort=high) con el snapshot de hoy + deltas vs ayer,
+      # persiste prosa + JSON estructurado en market_analysis_llm.jsonl.
+      # Dedup interno por fecha (una sola llamada real/dia aunque el
+      # pipeline corra 2x) -- por eso no necesita gate de mañana/tarde,
+      # a diferencia de Mirror Espejo/Insider Activity.
+      - name: Run pipeline - Step 9g3 Market analysis LLM (Sol, GPT-5.6)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python scripts/market_analysis_llm.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 10 paper trading (AI picks)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
