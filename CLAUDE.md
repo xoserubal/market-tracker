@@ -5402,6 +5402,100 @@ penalizar `quality_score`), se puede reconsiderar — mismo camino que siguió
 
 ---
 
+## Captura diaria de Market Tracker — macro + universo amplio (implementado 2026-09-13)
+
+Origen: el usuario pega periódicamente el "Exportar TODO a LLM" de
+`index.html` ("Market Tracker", raíz — distinto de `docs/index.html`, el AI
+Picks Lab) + `portfolio.html` en un chat externo (ChatGPT) para pedir un
+análisis de mercado, con la idea de automatizar ese análisis y poder
+evaluar su fiabilidad con el tiempo. Diagnóstico previo a construir nada:
+la mitad de Portfolio Tracker ya se capturaba automáticamente
+(`portfolio_daily_snapshot.jsonl`, desde 2026-08-20), pero la mitad de
+Market Tracker (macro/ciclo + índices/sectores/regiones/materias primas) no
+se capturaba en ningún sitio del servidor — `index.html` funciona igual que
+`duration.html`/`sentiment.html`: todo se pide en vivo desde el navegador,
+sin persistencia. Sin esa pieza, cualquier automatización del análisis
+partiría de datos que no existen fuera del navegador del usuario. Este
+cambio cierra ese hueco — es la fundación, no el análisis automatizado en
+sí (que queda para una fase posterior, a diseñar con su propio preregistro
+dado el histórico de este proyecto con análisis retrospectivos).
+
+### `shared/market-macro.js` (nuevo) — extracción para evitar drift
+
+`STATUS` (clasificador de lectura macro: vix/dxy/hy_spread/curve_pct/pmi/
+breakeven/net_liq/yield_10y/real_yield_10y/short_rate/m2/fed_bs) y
+`computeUraniumScore()` vivían solo inline en `index.html`. Extraídos a un
+módulo compartido con export dual navegador/Node (mismo patrón exacto que
+`shared/flow-score.js`, que `index.html` ya cargaba) — sin esto, el script
+de captura habría tenido que reimplementar la clasificación por su cuenta,
+con el mismo riesgo de divergencia silenciosa ya vivido con `calcCMF`.
+`index.html` ahora carga `<script src="/shared/market-macro.js">` y ya no
+define `STATUS`/`computeUraniumScore` localmente.
+
+### `scripts/market_daily_snapshot.js` (nuevo) — Step 9g2 del pipeline
+
+Análogo a `portfolio_daily_snapshot.js` pero para el universo de
+`index.html` en vez de `portfolio.json`. Reutiliza `buildQuoteData()`
+(`shared/quote-lib.js`) para los ~64 tickers únicos de `SECTIONS` (índices
+mayores, MAG6, bonos/materias primas, Europa/Asia/Latam, sectores US/EU,
+uranio, energía física, gas natural, carbón) más los 4 tickers Yahoo de
+`MACRO_ITEMS` (VIX/DXY/10Y/3M T-Bill) — mismo dato exacto que ve el
+dashboard, sin recalcular nada por separado. Los 9 indicadores FRED +
+Net Liquidity (`fred3`, combinación WALCL−RRPONTSYD−WTREGEN) se piden
+directamente a la API de FRED con la misma lógica que `/api/fred/:series` y
+`/api/fred3` en `server.js` — duplicado a propósito porque este script
+corre standalone en el pipeline, sin un `server.js` activo al que pedírselo
+(mismo criterio que el resto de scripts Python que llaman a FRED
+directamente, p. ej. `duration_monitor.py`).
+
+**Dos ficheros de salida** (universos distintos, mismo motivo que separar
+`portfolio_daily_snapshot.jsonl` de `shadow_picks.jsonl`):
+- `docs/data/market_equities_daily_snapshot.jsonl` — una fila por
+  ticker/día (dedup por `date+ticker`), mismo shape que
+  `portfolio_daily_snapshot.jsonl` (`buildQuoteData()` crudo +
+  `flowScore`/`earlyFlow`), más `name`/`sections` (un ticker puede
+  pertenecer a varias secciones, p. ej. `BZ=F` en "BONDS / COMMODITIES" y
+  en "ENERGÍA FÍSICA / SPREADS" — una sola fila con `sections: [...]`, no
+  duplicada).
+- `docs/data/market_macro_daily_snapshot.jsonl` — una fila por
+  indicador/día (dedup por `date+id`): los 14 `MACRO_ITEMS` + 2 derivados
+  (`uranium_regime_score`, `brent_wti_spread`), con `value`/`value_date`/
+  `delta_1w..1y`/`reading` (la misma clasificación de `STATUS`).
+
+**Fuera de alcance a propósito, documentado en el propio script:** los 5
+campos manuales/OilPriceAPI de las secciones de energía (`u3o8_spot`,
+`uranium_lt`, `wcs_spot`, `jkm`, `hcc_benchmark`) — los dos primeros viven
+solo en `localStorage` del navegador del usuario (sin fuente server-side
+posible); los tres de OilPriceAPI necesitarían `OILPRICE_API_KEY` como
+GitHub Secret (hoy solo está en el `.env` local, no wireada a ningún step
+del pipeline). Se decidió no bloquear esta captura por esos 5 campos —
+se pueden añadir después si se decide que aportan al análisis automatizado.
+
+**Pipeline:** Step 9g2, justo después de Step 9g (Portfolio daily
+snapshot), `continue-on-error: true`, solo necesita `FRED_API_KEY` (ya
+existente como secret, usado por varios steps más). Corre en los dos runs
+diarios, igual que Step 9g.
+
+**Verificado contra un export manual real del usuario del mismo día**
+(2026-09-13, el mismo pegado por el usuario en el chat que motivó este
+cambio) — coincidencia exacta o casi exacta en todos los valores
+contrastados: VIX 15.84 (export: 15.8), DXY 99.12 (99.1), 10Y 4.975%
+(4.97%), HY spread 270bps (270bps), `uranium_regime_score` 0/5 - Débil
+(0/5 - Débil), `brent_wti_spread` 4.56 (4.56, coincidencia exacta), S&P 500
+Flow=1/Early=4 (idéntico), NVDA Flow=-6.7/Early=3 (idéntico), Gold
+Flow=-2.4/Early=3 (idéntico). 68/68 tickers con quote exitoso, 64 filas de
+equities + 16 filas macro escritas en la primera ejecución real.
+
+**Explícitamente fuera de alcance de este cambio:** el análisis
+automatizado en sí (llamada a un LLM externo pinneado con rúbrica de
+evaluación, almacenamiento del análisis, revisión retrospectiva de
+fiabilidad) — eso es la Fase 2 de la idea original del usuario, pendiente
+de su propio preregistro (qué modelo pinneado, qué rúbrica, qué cadencia,
+llamada fresca vs. con contexto histórico). Este cambio es solo la
+fundación de datos que esa fase necesitaba y no existía.
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

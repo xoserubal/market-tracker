@@ -229,6 +229,19 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Captura diaria del universo de index.html ("Market Tracker" —
+      # macro/ciclo + indices/sectores/regiones/materias primas), analoga a
+      # Step 9g pero para un universo distinto (portfolio.json no cubre
+      # esto). Verificado contra un export manual real del mismo dia --
+      # coincide exacto (VIX, S&P500 Flow/Early, uranium_regime_score,
+      # Brent-WTI spread).
+      - name: Run pipeline - Step 9g2 Market Tracker daily snapshot (macro + broad universe)
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: node scripts/market_daily_snapshot.js
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Run pipeline - Step 10 paper trading (AI picks)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
