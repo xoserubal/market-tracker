@@ -312,6 +312,27 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # P1A/P1C/P1B de la Hoja de ruta consolidada (§3/§4/§5,
+      # wiki/PREREGISTRO_P1A_*.md / _P1C_*.md / _P1B_*.md). Corren en shadow
+      # desde ya (no esperan a su propio umbral de muestra) para que cuando
+      # el aviso de Step 10j diga "listos para primera lectura" ya haya
+      # log acumulado que leer -- si se construyeran despues de ese aviso se
+      # perderian los meses de muestra que tardan en acumularse esos umbrales.
+      - name: Run pipeline - Step 10i3 P1A Profit Protection (shadow)
+        run: python scripts/p1a_profit_protection_v1_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      - name: Run pipeline - Step 10i4 P1C Initial Risk (shadow)
+        run: python scripts/p1c_initial_risk_v1_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      - name: Run pipeline - Step 10i5 P1B Entry Timing capture (shadow)
+        run: python scripts/p1b_entry_timing_v1_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Avisa por Telegram, una sola vez cada uno, cuando P2/P1A+P1C/P1B
       # cumplan el umbral de la hoja de ruta consolidada (o si a los 90 días
       # P1A/P1C todavía no lo ha alcanzado) — para no tener que comprobarlo a

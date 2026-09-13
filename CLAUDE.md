@@ -4339,6 +4339,99 @@ antes de tocar ningún archivo de datos.
 
 ---
 
+## P1A/P1C/P1B — arrancados en paralelo, con retraso corregido (implementado 2026-09-13)
+
+Mismo día que P2 (ver sección anterior), el usuario preguntó si P1A/P1B/P1C
+(los otros tres experimentos de la Hoja de ruta consolidada) "se van a
+disparar solos" — preocupación legítima: `p1_readiness_monitor.py` cuenta
+cierres/SELECTs reales hacia sus umbrales **independientemente de si existe
+código shadow que los evalúe**. Verificado por grep: cero referencias a
+`PROFIT_PROTECTION_V1`/`ENTRY_TIMING_V1`/`INITIAL_RISK_V1` en todo el repo —
+los tres llevaban desde el 30 de agosto sin construirse, pese a que la hoja
+de ruta dice en §1 que "corren en paralelo... desde la firma". Sin
+corregirlo, el aviso de "listos para primera lectura" habría llegado a un
+log vacío, obligando a esperar otros 3-6 meses desde ahí.
+
+Se construyeron los tres el mismo día, con **backfill retroactivo** sobre
+las 2 semanas de captura de P0 ya existentes (2026-08-30→2026-09-13), para
+no perder esa muestra.
+
+### Helper compartido: `scripts/p1_entry_snapshot.py`
+
+`atr_entry`, `pre_entry_low_5d` y `w1_ret_5d_at_entry` — necesarios por
+P1A, P1C y P1B respectivamente — se calculan con un **fetch dedicado a
+yfinance en la fecha de entrada real**, no leyendo el primer día capturado
+por P0. Motivo: P0 solo empezó a capturar el 2026-08-30 — para posiciones
+abiertas antes de esa fecha (p. ej. TMO, entrada 2026-07-25), el primer
+valor de P0 habría sido el de agosto, no el de la entrada real. Cacheado
+por posición/evento en `docs/data/p1_entry_snapshot_cache.json` (commiteado,
+no gitignored — es pequeño y tiene valor como registro, no solo como
+caché de velocidad).
+
+### P1A — `PROFIT_PROTECTION_V1` (§3). Preregistro: `wiki/PREREGISTRO_P1A_PROFIT_PROTECTION_V1.md`
+
+Dos brazos shadow sobre el mismo ámbito que P2 (HC/CFL/ER/MTB/Cava):
+FIXED (armado a MFE≥10%, trailing 8% desde máximo) y ATR (armado a MFE en
+precio ≥2.5·ATR_entry, trailing con ratchet monótono
+`Stop=max(Stop_prev, running_high−2.0·ATR_high)`, donde `ATR_high` solo se
+actualiza en días de nuevo máximo — así una expansión de volatilidad
+durante una caída no afloja el stop). Script:
+`scripts/p1a_profit_protection_v1_shadow.py`, Step 10i3.
+
+### P1C — `INITIAL_RISK_V1` (§5). Preregistro: `wiki/PREREGISTRO_P1C_INITIAL_RISK_V1.md`
+
+Cuatro brazos (A control = suelo real; B ATR stop; C time stop a la sesión
+7; D structure break bajo el mínimo de Low de las 5 sesiones previas a la
+entrada). Script: `scripts/p1c_initial_risk_v1_shadow.py`, Step 10i4.
+**Caveat documentado:** "sesión" en el brazo C es el índice de fila dentro
+del historial de P0, no un conteo real de sesiones NYSE — exacto para
+posiciones abiertas en o después de la firma (lo que cuenta para
+promoción), subestimado para posiciones preexistentes como TMO.
+
+### P1B — `ENTRY_TIMING_V1` (§4). Preregistro: `wiki/PREREGISTRO_P1B_ENTRY_TIMING_V1.md`
+
+A diferencia de P1A/P1C, no es un shadow de reglas de salida — es una
+captura de correlación (H7: sobreextensión de 5 sesiones en la entrada vs.
+`ret_21d` posterior sobre precio, nunca sobre vida de la posición, H9).
+Reutiliza `ret_2w`/`ret_1m` **ya calculados por `update_performance.py`**
+(Step 10b) como `ret_10d`/`ret_21d` — cero fetch nuevo para el outcome.
+**Ámbito distinto al de P1A/P1C, decisión documentada:** el contador de
+`p1_readiness_monitor` cuenta SELECTs sobre las 9 carteras vivas
+(incluye MIRROR_ESPEJO/CRUCE_ROJO_D*), pero este script solo puede analizar
+las que escriben en `shadow_picks.jsonl` (HC/CFL/ER/MTB/Cava/MIMO_SHADOW/
+RANKING_SHADOW_EXPERIMENTAL) — Mirror/Cruce Rojo D no tienen `ret_1m`
+calculado por ese camino. El n del monitor puede ir por delante del n
+realmente analizable aquí; el propio `--report` nunca declara "listo" con
+la cifra del monitor. Script: `scripts/p1b_entry_timing_v1_shadow.py`,
+Step 10i5. Reconstruye su salida entera cada run (no append-only) — mismo
+motivo que `cfl_reentry_cooldown_shadow.py`: el outcome llega asíncrono.
+
+### Verificado (2026-09-13, backfill real)
+
+197 filas/24 posiciones en P1A y P1C; los 4 brazos de P1C dispararon en
+casos **distintos y coherentes** (verificado caso por caso, no solo por
+conteo): `SEDANA.ST` por suelo absoluto (A), `OSCR` por entrar ya bajo su
+soporte de 5 sesiones (D, desde el día 1), `FCX` por ATR stop (B, uno de
+los casos de giveback ya documentados en H2), `VLE.TO` por time stop
+exactamente en sesión 7 (C). P1B: 21 eventos capturados, predictor
+disponible en 21/21, outcome maduro en 0/21 (esperado — hacen falta ~21
+sesiones desde la entrada más temprana, todavía no transcurridas);
+`--report` confirma correctamente "faltan 60 eventos" sin forzar ningún
+cálculo.
+
+### Explícitamente diferido
+
+Libros shadow prospectivos a nivel cartera para P1A/P1C (simulador de
+cartera virtual completo con sizing/slippage/cash/reentrada) — pieza de
+infraestructura bastante mayor que el shadow signal-level ya implementado;
+la propia hoja de ruta admite despliegue en fases. Análisis de
+pérdida-evitada/falsos-positivos por brazo en P1C y whipsaw en P2 (ambos
+necesitan precio real después de cada disparo simulado) — esperan a que
+haya suficiente divergencia acumulada. Combinación P1A/P1C/P2 con
+precedencia (§6.1).
+
+---
+
 ## Situaciones Especiales — condición de precio (implementado 2026-08-30)
 
 Origen: el usuario intentó crear por nota de voz en Telegram *"avisar si TNZ
