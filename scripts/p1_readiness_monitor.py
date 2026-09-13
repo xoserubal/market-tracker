@@ -147,18 +147,23 @@ def evaluate(picks: dict, today: str, state: dict) -> list[str]:
     p1a_ready = n_ops >= P1A_P1C_MIN_OPS and n_events >= P1A_P1C_MIN_EVENTS
     if p1a_ready and "p1a_p1c_ready" not in fired:
         messages.append(
-            f"🟢 <b>P1A/P1C listos para primera lectura</b>\n"
+            f"🟢 <b>P1A/P1C/P2 listos para primera lectura</b>\n"
             f"{n_ops} cierres nuevos post-firma en el ámbito (HC/CFL/ER/MTB/Cava), "
             f"{n_events} eventos independientes — umbral ≥{P1A_P1C_MIN_OPS}/≥{P1A_P1C_MIN_EVENTS} cumplido. "
-            f"Revisa los criterios de éxito en §3/§5 antes de decidir promoción."
+            f"Mismo ámbito y mismo doble-n que P2 (§7 de PREREGISTRO_PCS_FLOOR_FACTORIAL_V1.md) — "
+            f"este aviso cubre los tres a la vez. Corre --report en "
+            f"p1a_profit_protection_v1_shadow.py / p1c_initial_risk_v1_shadow.py / "
+            f"pcs_floor_factorial_v1_shadow.py y revisa los criterios de éxito en §3/§5/§7 "
+            f"antes de decidir promoción."
         )
         fired["p1a_p1c_ready"] = today
     elif d_since >= POTENCIA_CALENDARIO_DAYS and not p1a_ready and "p1a_p1c_90day_checkpoint" not in fired:
         messages.append(
-            f"🟡 <b>P1A/P1C — checkpoint de 90 días, umbral aún no cumplido</b>\n"
+            f"🟡 <b>P1A/P1C/P2 — checkpoint de 90 días, umbral aún no cumplido</b>\n"
             f"{d_since} días desde la firma, {n_ops} cierres / {n_events} eventos "
-            f"(hace falta {P1A_P1C_MIN_OPS}/{P1A_P1C_MIN_EVENTS}). Según la cláusula de "
-            f"potencia calendario (§3): publica el informe intermedio y alarga el plazo — "
+            f"(hace falta {P1A_P1C_MIN_OPS}/{P1A_P1C_MIN_EVENTS}). Mismo ámbito que P2 — la "
+            f"misma cláusula aplica a los tres. Según la cláusula de potencia calendario "
+            f"(§3): publica el informe intermedio y alarga el plazo — "
             f"NO toques ningún parámetro ni mires resultados por brazo todavía."
         )
         fired["p1a_p1c_90day_checkpoint"] = today
@@ -167,11 +172,14 @@ def evaluate(picks: dict, today: str, state: dict) -> list[str]:
     n_select_events = count_p1b(picks)
     if n_select_events >= P1B_MIN_EVENTS and "p1b_ready" not in fired:
         messages.append(
-            f"🟢 <b>P1B lista para primera lectura</b>\n"
-            f"{n_select_events} eventos de SELECT independientes post-firma — umbral "
-            f"≥{P1B_MIN_EVENTS} cumplido. Corre el test primario (Spearman "
-            f"w1_ret_5d↔ret_21d, clusterizado por event_id) — recuerda: ret_21d se mide "
-            f"sobre precio del ticker, nunca sobre la vida de la posición (H9)."
+            f"🟢 <b>P1B — umbral de eventos alcanzado (revisar n real antes de leer)</b>\n"
+            f"{n_select_events} eventos de SELECT independientes post-firma en TODAS las "
+            f"carteras — umbral ≥{P1B_MIN_EVENTS} cumplido. Este conteo incluye "
+            f"MIRROR_ESPEJO/CRUCE_ROJO_D*, que p1b_entry_timing_v1_shadow.py NO puede "
+            f"analizar (no escriben en shadow_picks.jsonl) — corre --report en ese script "
+            f"para ver el n realmente analizable (puede ser menor que {n_select_events}) "
+            f"antes de correr el test primario (Spearman w1_ret_5d↔ret_21d). Recuerda: "
+            f"ret_21d se mide sobre precio del ticker, nunca sobre la vida de la posición (H9)."
         )
         fired["p1b_ready"] = today
 
