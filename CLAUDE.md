@@ -4258,6 +4258,87 @@ encontrado y arreglado aquí también (mismo fix, `reconfigure` a UTF-8).
 
 ---
 
+## P2 — `PCS_FLOOR_FACTORIAL_V1` (implementado 2026-09-13)
+
+Segundo experimento de la "Hoja de ruta consolidada — Auditoría de carteras
+IA" (v1.2, firmada 2026-08-30, wiki/, no commiteada — documento externo) en
+arrancar, tras P0 (`ai_picks_decision_state.py`, ver sección anterior). El
+monitor `p1_readiness_monitor.py` avisó por Telegram el 2026-09-13 ("P2
+lista para arrancar") al cumplirse el gate de calendario de §6 (≥14 días
+desde la firma). Preregistro completo:
+`wiki/PREREGISTRO_PCS_FLOOR_FACTORIAL_V1.md`.
+
+**Qué evalúa:** factorial 2×2 (histéresis × confirmación) + breach severity
+sobre el suelo de PCS ("regla 13" real) — sustituye a una regla conjunta que
+un asesor anterior había propuesto y que no permitía atribuir el efecto a
+cada mecanismo por separado. Motivado por el hallazgo de whipsaw ya
+documentado (SE×2/NVDA, ver sección "PCS-floor whipsaw monitor" más abajo):
+¿cuánto del cierre por suelo de PCS es ruido de un día que una histéresis o
+una confirmación habrían evitado, y cuánto coste en deterioros reales
+introduce ese retraso?
+
+**T_active ya existía desde P0** (`compute_t_active()`,
+`max(62, pcs_min_entry si streak_weeks≤1)`) — P2 no tuvo que añadirlo, solo
+reutilizarlo. Único hueco: `CAVA_MACRO` no es PCS-gated en el esquema de P0
+(sin tiering por streak, `trigger_threshold=None` ahí) pero sí tiene suelo
+real (`pcs<62`) — P2 le asigna `T_active=62` de forma trivial dentro de su
+propio script, sin tocar P0.
+
+**Cuatro brazos, ninguno toca `ai_picks.json`:**
+
+| Brazo | Regla |
+|---|---|
+| A (control) | `mechanical_exit_trigger` de P0, sin cambios (regla 13 real) |
+| B (histéresis) | `PCS < T_active − 1.5`, una sola lectura basta |
+| C (confirmación) | `PCS < T_active` en 2 lecturas consecutivas |
+| D (ambos) | `PCS < T_active − 1.5` en 2 lecturas consecutivas |
+
+Breach severity (`PCS < T_active−3.0` O `rot_score≤2`) fuerza EXIT
+inmediato en B/C/D, saltando histéresis/confirmación — no se aplica como
+override explícito sobre A porque la regla 13 real ya cubre esos dos casos
+por su cuenta.
+
+**Decisiones de implementación no fijadas en el texto original, documentadas
+en el preregistro:** el ámbito de P2 (`HIGH_CONVICTION, CONFIRMED_FLOW_LEADERS,
+EARLY_ROTATION, MACRO_THEMATIC_BENEFICIARIES, CAVA_MACRO` — mismo que P1A/P1C
+§3, importado directamente de `p1_readiness_monitor.P1A_P1C_SCOPE` para que
+no puedan desincronizarse) y la granularidad de "2 lecturas consecutivas"
+(2 días naturales con fila capturada por P0, que ya dedupea a 1 fila/día —
+no 2 corridas del pipeline el mismo día).
+
+**Script: `scripts/pcs_floor_factorial_v1_shadow.py`** (Step 10i2, justo
+después de Step 10i/P0, `continue-on-error: true`). Lee
+`ai_picks_decision_state.jsonl`, evalúa los 4 brazos por posición/día,
+append-only con dedup por `(position_id, date)`. `--report` resume disparos
+por brazo y distribución de severidad. Salida:
+`docs/data/pcs_floor_factorial_v1_shadow.jsonl`.
+
+**Backfill retroactivo ejecutado el mismo día de implementación** sobre las
+15 sesiones de P0 ya capturadas (2026-08-30→2026-09-13): 197 filas, 24
+posiciones. Un solo disparo real hasta ahora — `SEDANA.ST` (CFL), PCS=59.5
+(por debajo del suelo absoluto 62 pero dentro de la zona `marginal`,
+59.5≥59.0), rot_score=6 (no severo por ese lado): brazo A y B dispararon el
+primer día (control no tiene histéresis; 59.5<60.5 ya rompe el buffer de
+B), C y D solo tras la segunda lectura consecutiva de breach — coherente
+con el diseño.
+
+**Diferido explícitamente:** el análisis de whipsaw/pérdida-evitada por
+brazo (necesita precio real después de cada disparo simulado, que puede ser
+anterior al cierre real) queda para cuando haya suficiente divergencia
+brazo-vs-control acumulada — el `--report` actual solo cuenta disparos, no
+reconstruye el contrafactual de precio. La combinación con precedencia
+P1A/P1C/P2 (§6.1 de la hoja de ruta) tampoco aplica todavía porque P1A/P1C
+no están implementados.
+
+**Nota operativa (2026-09-13):** durante la implementación se detectó que
+el repo local llevaba 3 días / 5 commits por detrás de `origin/master` — el
+pipeline en GitHub Actions había seguido corriendo 2×/día sin fallos (todas
+las corridas en verde), era solo el checkout local el que no se había
+sincronizado. Sin relación con P0/P2 — resuelto con un `git pull --ff-only`
+antes de tocar ningún archivo de datos.
+
+---
+
 ## Situaciones Especiales — condición de precio (implementado 2026-08-30)
 
 Origen: el usuario intentó crear por nota de voz en Telegram *"avisar si TNZ

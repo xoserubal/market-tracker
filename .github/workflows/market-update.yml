@@ -302,6 +302,16 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # P2 de la Hoja de ruta consolidada (§6, wiki/PREREGISTRO_PCS_FLOOR_FACTORIAL_V1.md).
+      # Factorial 2x2 (histeresis x confirmacion) + breach severity sobre el
+      # suelo de PCS. Shadow puro, reutiliza las filas de P0 del mismo dia
+      # (trigger_threshold/event_id/mechanical_exit_trigger) -- por eso corre
+      # justo despues de Step 10i.
+      - name: Run pipeline - Step 10i2 PCS floor factorial (P2, shadow)
+        run: python scripts/pcs_floor_factorial_v1_shadow.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Avisa por Telegram, una sola vez cada uno, cuando P2/P1A+P1C/P1B
       # cumplan el umbral de la hoja de ruta consolidada (o si a los 90 días
       # P1A/P1C todavía no lo ha alcanzado) — para no tener que comprobarlo a
