@@ -226,3 +226,35 @@ Tras leer `outputs/fase2_informe.md`, se decide explícitamente entre usuario
 y Claude Code: (a) cancelar y usar DIY, (b) mantener suscripción como fuente
 externa, o (c) descartar el módulo entero. Ninguna integración en dashboard
 se implementa sin esa decisión.
+
+---
+
+## Enmienda 2026-09-13 — recolección real no arrancó hasta hoy
+
+Motivada por error material (§14-style de la Hoja de ruta consolidada: no
+opinión nueva, no resultado parcial): la ventana de aceptación de
+`run_diy_calibration.py` (15:30-16:15 ET, §0.3/§2) nunca coincidió con
+cuándo GitHub realmente dispara el cron de `gex-zerogex-fase2.yml` —
+verificado contra las 20 corridas reales del workflow, ninguna aterrizó
+antes de las 16:23 ET. Resultado: **13 días desde el arranque de Fase 2
+(2026-08-26) sin un solo snapshot real recogido**, pese a que el workflow
+marcaba "success" en cada corrida (el script hacía correctamente el no-op
+fuera de ventana). Detalle completo en CLAUDE.md, "Segundo fix real: la
+ventana seguía sin coincidir con la realidad".
+
+**Fix (2026-09-13):** ventana ensanchada a 15:30-20:00 ET — seguro según
+§0.3 (la OI de opciones que alimenta el cálculo se actualiza a granularidad
+de sesión, no intradía).
+
+**Consecuencia sobre el calendario de §0.1/§2/§4:** el reloj de datos
+reales de Fase 2 arranca el 2026-09-13/14, no el 2026-08-26. La duración
+objetivo (mínimo 10 sesiones, hasta 20 si el calendario lo permite,
+cubriendo VIX expiry/monthly OpEx) se mide desde esa fecha, no desde el
+inicio nominal de la suscripción. El tope duro de gasto (§4, $58/2 meses
+desde 2026-08-19, ~2026-10-19) no se toca — sigue siendo la única condición
+de corte de dinero. `docs/data/reminders.json` → `zerogex_fase2_revision`
+movido de 2026-09-19 a 2026-10-07 (da ~3.5 semanas de datos reales desde el
+fix, dejando ~12 días de margen antes del tope). Recordatorio nuevo,
+`zerogex_fase2_collection_check` (2026-09-17), como comprobación temprana de
+que el fix realmente produjo filas — para no repetir el mismo patrón de
+"esperar semanas para descubrir que sigue vacío".
