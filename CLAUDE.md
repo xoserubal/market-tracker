@@ -1129,6 +1129,18 @@ dispararon aviso de Telegram correctamente (`notify_telegram.py` reportó
 "5 close(s) not yet notified" → "OK"). MIRROR_ESPEJO sigue sin verificar —
 no ha cerrado ninguna posición todavía.
 
+**Gap real encontrado y cerrado 2026-09-13** (auditoría general del
+proyecto, no un aviso nuevo): 8 cierres de MIRROR_ESPEJO anteriores a este
+fix (CORZ 2026-07-08, AMR×2, ASPI, MAI.V, VAL, WCP.TO, ASM.AS 2026-08-02 —
+todos escritos con el código viejo, antes del `"event":"close"` de arriba)
+se quedaron para siempre sin el campo, y por tanto sin aviso de Telegram —
+`_find_unnotified()` los ignoraba en cada run desde entonces, sin error
+visible. Backfill puramente aditivo: añadido `event:"close"` a esas 8 filas
+en `ai_picks.json`, y sus claves pre-sembradas directamente en
+`notify_state.json → closes` para que el backfill no dispare 8 avisos de
+Telegram con 2 meses de retraso — verificado que `_find_unnotified()`
+reporta 0 cierres nuevos tras el cambio.
+
 ---
 
 ## Diagnóstico CONFIRMED_FLOW_LEADERS — fixes + shadow logging (implementado 2026-08-05)
@@ -4680,6 +4692,13 @@ todavía no existe en el `koncorde_data.json` de producción — se generará
 en el próximo run del pipeline (o con `--retry-failed`/un run manual). Debe
 crear la alerta de nuevo: `/kalert QXO d trend_cross_up` (sintaxis exacta)
 o repetir la petición por voz/texto tal cual la formuló.
+
+**Cerrado 2026-09-13** (auditoría general del proyecto — el campo ya existe
+en producción desde hace días, pero la alerta nunca se recreó): añadida
+directamente a `koncorde_bot_alerts.json` en el mismo formato que
+`cmd_kalert_set()` habría escrito, verificada contra `koncorde_alert_conditions.evaluate_conditions()`
+sobre los datos reales de hoy — pendiente (`konc_d_trend_cross="none"` en
+QXO ahora mismo), como se espera.
 
 ---
 
