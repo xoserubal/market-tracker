@@ -4742,6 +4742,43 @@ que Fase 1 concluyó con éxito — mismo bug de clase, pero sin riesgo real
 hoy). Si algún día se relanza Fase 1 a mano contra un checkout limpio sin
 ese fichero, aplicaría el mismo guard.
 
+### Segundo fix real: la ventana seguía sin coincidir con la realidad (2026-09-13)
+
+Detectado en una auditoría general del proyecto pidiendo revisar
+implementaciones pendientes — no por un aviso nuevo del usuario. El fix de
+arriba (2026-08-31) corrigió el bug del `git add` pero no verificó si el
+cron más frecuente realmente caía dentro de la ventana de aceptación del
+script. Comprobado contra el historial real de GitHub Actions (API
+`actions/workflows/.../runs`, 20 corridas desde que existe el workflow):
+**ninguna corrida, ni una sola, aterrizó dentro de 15:30-16:15 ET** —
+GitHub retrasa este cron mucho más de lo que ese fix asumía, disparando
+consistentemente entre las 16:2x-16:5x y las 18:2x-18:5x ET en vez de
+14:00-16:45 ET como pedía la configuración. **Resultado: 13 días desde el
+fix de agosto, `outputs/fase2_calibration.jsonl` seguía sin existir nunca**
+— el workflow marcaba "success" en las 17 corridas posteriores al fix
+porque el script hacía correctamente el no-op fuera de ventana, pero eso
+significa cero snapshots reales acumulados.
+
+**Fix:** ventana de aceptación ensanchada de 15:30-16:15 ET a **15:30-20:00
+ET** en `run_diy_calibration.py` (`is_near_close_now()`) — seguro según el
+propio docstring del módulo: la OI de la cadena de opciones que alimenta
+tanto el cálculo DIY como (presumiblemente) ZeroGEX se actualiza a
+granularidad de sesión, no intradía, así que un snapshot a las 18:45 ET
+refleja el mismo cierre que uno a las 16:00 ET. El límite inferior (15:30
+ET) se mantiene sin cambios — sigue protegiendo contra el caso real ya
+documentado (una corrida manual pre-apertura sembrando datos obsoletos bajo
+la fecha de hoy). Verificado: los 4 timestamps reales más divergentes de la
+API ahora pasan el chequeo.
+
+**Consecuencia sobre el recordatorio `zerogex_fase2_revision`
+(2026-09-19, `docs/data/reminders.json`):** con cero datos acumulados hasta
+hoy, la revisión programada para dentro de 6 días no tendrá ~3.5 semanas de
+calibración que evaluar como pedía el plan original — solo lo que se
+recoja desde ahora. Pendiente de decisión con el usuario: adelantar/atrasar
+esa fecha, o mantenerla y aceptar una lectura con menos datos de los
+previstos (el tope de gasto de $58/2 meses del trial, iniciado ~2026-08-19,
+da margen hasta ~2026-10-19 si hiciera falta estirar el plazo).
+
 ---
 
 ## Ranking Score — Fase 1 (análisis exploratorio) completada (implementado 2026-09-04)
