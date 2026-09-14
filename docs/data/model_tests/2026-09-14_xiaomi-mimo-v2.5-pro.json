@@ -1,0 +1,187 @@
+{
+  "run_id": "2026-09-14_1445",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-09-14",
+  "summary": {
+    "date": "2026-09-14",
+    "run_id": "2026-09-14_1445",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 9,
+    "candidate_count": 32,
+    "input_tokens": 32008,
+    "output_tokens": 11110,
+    "cost_usd": 0.023589,
+    "latency_ms": 262475.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 97,
+    "selected_count": 1,
+    "watch_count": 3,
+    "rejected_count": 5,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": [
+      "KONC_3D_BLUE_DOWNTREND_WARNING: TLW.L selected with konc_3d_blue_down_2_bars=true",
+      "numeric_hallucination_suspected: WATCH SU cited ret_13w_vs_spy=8.23 for KIST.L (actual=29.4704)"
+    ]
+  },
+  "quality_score": 97,
+  "response": {
+    "date": "2026-09-14",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-09-14_1445",
+    "decision_summary": {
+      "market_read": "Bull Maduro macro at score 75 with stable trend supports risk-on positioning, but oil_gas theme holds 87.5% portfolio weight demanding extreme selectivity on any new sector entry.",
+      "risk_posture": "cautious",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "TLW.L",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "high",
+        "reason_short": "Highest 13w outperformance in set at +69% vs SPY on 5-week streak with bullish-aligned Koncorde",
+        "reason_full": "TLW.L delivers the highest 13-week outperformance in the entire candidate set at +69.07% vs SPY, sustained on a 5-week unbroken streak with rot_score=8 and ret_4w of +58.6% confirming accelerating multi-week momentum. Koncorde reads bullish_aligned with 3D and weekly both up, and dems=14 meets the strong daily momentum threshold. Extension risk is high (5 pts) and acknowledged—the stock trades near 52w highs with extreme 4w extension—but the extraordinary sustained outperformance built over months, absence of spike_flag, and bullish structural alignment across 3D and weekly timeframes justify entry despite overextension.",
+        "comparative_edge": "Selected over KIST.L (PCS=86.2, rot=8, streak=5, dems=19) because TLW.L's 13-week outperformance of +69.1% more than doubles KIST.L's +29.5%, and bullish_aligned Koncorde versus KIST.L's mixed alignment (weekly in distribution) provides stronger structural confirmation despite 6 points lower PCS.",
+        "key_supporting_factors": [
+          "13-week outperformance of +69.07% vs SPY is the highest in the entire candidate set, demonstrating extraordinary sustained institutional conviction.",
+          "Ret_4w of +58.59% on a 5-week unbroken streak with rot_score=8 confirms accelerating momentum that has built over months, not a single spike.",
+          "Koncorde bullish_aligned with 3D up and weekly up provides the strongest multi-timeframe structural confirmation available in this universe.",
+          "Dems=14 with outperform_d10=6 and spike_flag=false confirms daily momentum flow is reinforcing the established weekly trend without concentration risk."
+        ],
+        "key_risks_or_contradictions": [
+          "Extension risk high (5 pts) with dist_sma20_atr_high and ret_4w_extreme flags; the stock is up 58.6% in 4 weeks which increases near-term reversal probability.",
+          "Oil_gas theme already holds 87.5% portfolio weight—adding TLW.L further concentrates an already extreme single-sector bet requiring close monitoring.",
+          "Konc_d_state=distribution signals tactical daily caution even though 3D and weekly structural readings remain bullish."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 86.2 with rot=8, streak=5, and outstanding dems=19, but Koncorde weekly reads distribution yielding mixed alignment—stronger than most peers but structural caution persists alongside extreme oil_gas concentration at 87.5%.",
+        "watch_trigger": "Koncorde alignment shifting from mixed to bullish_aligned (weekly moving from distribution to up) would confirm structural improvement warranting entry."
+      },
+      {
+        "ticker": "SU",
+        "reason": "Dems=15 with momentum_accel=true and extension_risk=medium on bullish_pending_3d_confirmation, but PCS 80.0 ranks below TLW.L and KIST.L, and ret_13w of +8.23% is modest versus TLW.L's +69.07%.",
+        "watch_trigger": "ret_13w_vs_spy climbing above +15% on sustained weekly streak while maintaining dems >= 14 would elevate relative strength above peer threshold."
+      },
+      {
+        "ticker": "OXY",
+        "reason": "Cleanest risk profile among oil_gas candidates with extension_risk=low and bullish_pending_3d_confirmation, but PCS 77.8 and ret_13w of +7.44% are the weakest among oil_gas leaders under consideration.",
+        "watch_trigger": "PCS climbing above 82 with rot_score increasing to 8 and ret_13w exceeding +15% would confirm the signal has strengthened to match higher-ranked peers."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "UCO",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a leveraged commodity derivative tracking crude oil futures, which violates the rule against selecting commodities and futures directly.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "Koncorde alignment is distribution_warning with konc_d_state and konc_3d_state both reading distribution, extension_risk=high with 4 pts, and crypto theme already holds 28.5% portfolio weight—multiple compounding caution signals.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "Koncorde distribution_warning with both daily and 3D reading distribution, and ret_13w_vs_spy of only +0.64% shows virtually no longer-term outperformance despite 8-week streak—the weekly momentum has stalled.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "EWZ",
+        "reason": "iShares MSCI Brazil ETF is a country-level macro index proxy; selecting it directly violates the rule against macro indices despite its eligible status and PCS 77.5.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "Rotation score 4 with zero streak weeks and ret_4w_vs_spy of -2.70% despite strong 13w return of +33.08%—current weekly momentum has reversed with dems=4 and signal marked IGNORAR.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "MRK",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 63.5 is below entry threshold but 8-week streak with rot=7 and ret_4w of +9.34% sustains weekly leadership; no exit trigger met."
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 67.5 near threshold on 8-week streak with rot=7; Koncorde mixed alignment warrants monitoring but weekly metrics remain intact."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 85.0 with rot=9 and 8-week streak remains one of the strongest positions despite konc_alignment=distribution_warning."
+      },
+      {
+        "ticker": "CRON",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 63.5 below threshold but 6-week streak and rot=6 keep weekly structure intact; distribution_warning across timeframes warrants close watch."
+      },
+      {
+        "ticker": "CVE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 77.8 with rot=7 and 4-week streak; bullish_aligned Koncorde confirms structural integrity despite ret_4w moderating to +10.81%."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 88.5 with rot=8 and 5-week streak; ret_4w accelerating to +20.41% confirms strong momentum despite konc_3d_state distribution."
+      },
+      {
+        "ticker": "TNZ.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 86.2 with ret_4w of +31.03% and 4-week streak; bullish_aligned Koncorde and dems=17 sustain the strongest daily momentum signal."
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 70.2 above entry threshold with rot=8 and 5-week streak; bullish_aligned Koncorde confirms structural support."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 80.5 with rot=8 and 3-week streak; bullish_pending_3d_confirmation with ret_4w of +22.29% sustains crypto leadership signal."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 69.2 above min entry with rot=8 and 2-week streak building; bullish_pending_3d_confirmation and ret_4w of +11.73% remain constructive."
+      },
+      {
+        "ticker": "LCX.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 79.8 with rot=7 and 3-week streak; bullish_aligned Koncorde and ret_4w of +11.80% confirm structural accumulation."
+      },
+      {
+        "ticker": "GOLD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 67.8 near threshold but rot=10 is highest in set with 5-week streak and bullish_aligned Koncorde; key diversifier from 87.5% oil_gas concentration."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-09-14\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-09-14_1445\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro macro at score 75 with stable trend supports risk-on positioning, but oil_gas theme holds 87.5% portfolio weight demanding extreme selectivity on any new sector entry.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"TLW.L\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"Highest 13w outperformance in set at +69% vs SPY on 5-week streak with bullish-aligned Koncorde\",\n      \"reason_full\": \"TLW.L delivers the highest 13-week outperformance in the entire candidate set at +69.07% vs SPY, sustained on a 5-week unbroken streak with rot_score=8 and ret_4w of +58.6% confirming accelerating multi-week momentum. Koncorde reads bullish_aligned with 3D and weekly both up, and dems=14 meets the strong daily momentum threshold. Extension risk is high (5 pts) and acknowledged—the stock trades near 52w highs with extreme 4w extension—but the extraordinary sustained outperformance built over months, absence of spike_flag, and bullish structural alignment across 3D and weekly timeframes justify entry despite overextension.\",\n      \"comparative_edge\": \"Selected over KIST.L (PCS=86.2, rot=8, streak=5, dems=19) because TLW.L's 13-week outperformance of +69.1% more than doubles KIST.L's +29.5%, and bullish_aligned Koncorde versus KIST.L's mixed alignment (weekly in distribution) provides stronger structural confirmation despite 6 points lower PCS.\",\n      \"key_supporting_factors\": [\n        \"13-week outperformance of +69.07% vs SPY is the highest in the entire candidate set, demonstrating extraordinary sustained institutional conviction.\",\n        \"Ret_4w of +58.59% on a 5-week unbroken streak with rot_score=8 confirms accelerating momentum that has built over months, not a single spike.\",\n       "
+}
