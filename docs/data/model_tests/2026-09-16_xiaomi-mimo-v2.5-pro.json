@@ -1,98 +1,191 @@
 {
-  "run_id": "2026-09-16_1307",
+  "run_id": "2026-09-16_2238",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-09-16",
   "summary": {
     "date": "2026-09-16",
-    "run_id": "2026-09-16_1307",
+    "run_id": "2026-09-16_2238",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
     "candidate_count": 33,
-    "input_tokens": 36831,
-    "output_tokens": 9123,
-    "cost_usd": 0.023958,
-    "latency_ms": 172101.0,
+    "input_tokens": 37584,
+    "output_tokens": 10538,
+    "cost_usd": 0.025517,
+    "latency_ms": 184507.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 96,
-    "selected_count": 1,
-    "watch_count": 1,
-    "rejected_count": 5,
+    "quality_score": 100,
+    "selected_count": 2,
+    "watch_count": 17,
+    "rejected_count": 3,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": []
+    "soft_warnings": [
+      "KONC_3D_BLUE_DOWNTREND_WARNING: MLX.AX selected with konc_3d_blue_down_2_bars=true",
+      "numeric_hallucination_suspected: SELECT MLX.AX cited dems=8.0 for MLX.AX (actual=13)"
+    ]
   },
-  "quality_score": 96,
+  "quality_score": 100,
   "response": {
     "date": "2026-09-16",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-09-16_1307",
+    "run_id": "2026-09-16_2238",
     "decision_summary": {
-      "market_read": "Bull Maduro regime at 91.67 with strong improving trend (+16.67 delta_1w) supports risk-on positioning in energy and rotation themes.",
+      "market_read": "Bull Maduro regime with macro score 91.7 and 1-month delta +22.92, strongly favoring cyclical and commodity themes; oil_gas dominates the candidate set with 14 top-PCS names.",
       "risk_posture": "aggressive",
       "should_select_picks": true
     },
     "selected": [
       {
-        "ticker": "KOS",
+        "ticker": "SU",
         "portfolio": "MIMO_SHADOW",
         "signal_type": "confirmed_leader",
         "confidence": "high",
-        "reason_short": "PCS=90 rot=9 on 8-week streak with zero extension risk and bullish-aligned Koncorde",
-        "reason_full": "KOS leads the entire candidate set at PCS 90.0 with rotation score 9 and an unbroken 8-week streak delivering +24.1% 4-week and +21.1% 13-week outperformance vs SPY. Extension risk is zero with no overextension flags, and Koncorde is fully bullish-aligned across daily, 3D, and weekly timeframes with green at 116.19. Oil_gas theme concentration at 95.5% is extreme and acknowledged—the portfolio is heavily tilted toward energy—but no non-held candidate matches KOS's combination of peak PCS, highest rotation score, longest streak, and clean risk profile.",
-        "comparative_edge": "Selected over KIST.L (PCS=90, rot=9) because KOS has 8-week streak vs KIST.L's 6, zero extension risk vs medium (2 pts), and bullish-aligned Koncorde vs KIST.L's distribution_warning across 3D and weekly timeframes—cleaner confirmation at identical PCS.",
+        "reason_short": "PCS 84.5 with rot=6, 4-week streak, and bullish-aligned Koncorde on zero extension risk",
+        "reason_full": "SU crosses into MIMO_SHADOW at PCS 84.5 with a 4-week unbroken streak delivering +12.3% 4w and +20.7% 13w outperformance vs SPY, plus 6 of the last 10 days outperforming the benchmark. Extension risk is zero with no overextension flags, making this the cleanest high-PCS oil_gas entry available. Koncorde reads fully bullish-aligned (daily up, 3D up, weekly up) with green at 97.35 confirming structural accumulation. Oil_gas concentration at 103.5% is extreme and acknowledged—this is a sector overweight—but no non-held candidate matches SU's combination of high PCS, clean risk, and sustained institutional flow.",
+        "comparative_edge": "Selected over MLX.AX (PCS=81.0, rot=8, 8-week streak, dems=13, spike_flag=true, extension_risk=medium) because SU has zero extension risk versus MLX.AX's medium with spike_flag, PCS 84.5 vs 81.0, and 6/10 outperforming days vs MLX.AX's 3-day streak despite its longer weekly streak.",
         "key_supporting_factors": [
-          "PCS 90.0 is the highest composite score in the candidate set, confirming peak signal strength across all scoring components.",
-          "Rotation score 9 on an 8-week unbroken streak with +21.1% 13-week outperformance demonstrates the strongest sustained institutional leadership.",
-          "Zero extension risk with no overextension flags offers the cleanest entry among all PCS 85+ non-held candidates.",
-          "Koncorde fully bullish-aligned across daily, 3D, and weekly with green at 116.19 confirms multi-timeframe structural accumulation."
+          "PCS 84.5 with zero extension risk offers the cleanest high-PCS entry among all non-held oil_gas candidates.",
+          "4-week streak with 20.7% 13w outperformance and 6/10 outperforming days confirms sustained institutional accumulation.",
+          "Koncorde fully bullish-aligned across daily, 3D, and weekly timeframes with green at 97.35 confirms structural support.",
+          "Rot_score 6 with component D_flow at 13.0 and E_early at 7.0 shows balanced breadth across flow and acceleration metrics."
         ],
         "key_risks_or_contradictions": [
-          "Oil_gas theme already holds 95.5% portfolio weight—adding KOS pushes single-sector concentration even higher, amplifying sector-specific drawdown risk.",
-          "Dems=12 falls below the 14 early rotation threshold, so daily flow data cannot independently drive conviction; weekly metrics must lead.",
-          "Dist_52w_high at -7.49% means the stock is approaching yearly highs, increasing potential for profit-taking resistance near the peak."
+          "Oil_gas already holds 103.5% portfolio weight—adding SU deepens extreme single-sector concentration requiring close monitoring.",
+          "Dems=6 falls below 10, so daily flow data cannot independently drive conviction; weekly metrics must lead the signal.",
+          "Dist_52w_high at -0.26% means SU trades at yearly highs, increasing potential for profit-taking resistance near the peak."
+        ]
+      },
+      {
+        "ticker": "MLX.AX",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "confirmed_leader",
+        "confidence": "medium",
+        "reason_short": "PCS 81.0 rot=8 with 34.9% 13w outperformance diversifies into commodities metals away from extreme oil_gas weight",
+        "reason_full": "MLX.AX enters at PCS 81.0 with rotation score 8 and an 8-week unbroken streak delivering +34.9% 13-week outperformance vs SPY—one of the deepest institutional conviction signals in the candidate set. Commodities metals theme has low portfolio concentration risk, providing crucial diversification from the extreme 103.5% oil_gas weight dominating MIMO_SHADOW. Extension risk is medium with spike_flag acknowledged, but outperform_d10=6 confirms multi-day continuation beyond the spike, and Koncorde 3D reads up with green at 118.59 supporting the structural setup. Dems=13 just below the 14 threshold means daily flow is strong but not independently confirming—weekly metrics drive the conviction.",
+        "comparative_edge": "Selected over VNOM (PCS=80.5, rot=7, oil_gas, extension_risk=extreme with 7 pts, spike_flag=true, DEMS=8) because MLX.AX offers commodities_metals diversification vs VNOM's oil_gas addition, rot=8 vs 7, 8-week streak vs shorter, and medium extension vs extreme—comparatively safer entry in a less-concentrated theme.",
+        "key_supporting_factors": [
+          "PCS 81.0 with rot=8 and 8-week streak demonstrates the longest sustained rotation among all non-held non-energy candidates.",
+          "13-week outperformance of 34.92% vs SPY confirms deep institutional conviction built over multiple months.",
+          "Commodities metals theme has low portfolio concentration, diversifying from the extreme 103.5% oil_gas overweight.",
+          "Koncorde 3D green at 118.59 with trend at 104.23 confirms structural accumulation on the intermediate timeframe."
+        ],
+        "key_risks_or_contradictions": [
+          "Spike_flag=true means recent gains may concentrate in fewer sessions; outperform_d10=6 confirms continuation but reversal risk exists.",
+          "Extension risk medium (2 pts) with spike_flag acknowledged—the stock has run 6.67% in 5 days and may need to consolidate.",
+          "Dems=13 falls just below the 14 threshold, so daily momentum is strong but not independently at the confirmed entry level."
         ]
       }
     ],
     "watch": [
       {
+        "ticker": "KOS",
+        "reason": "Already a MIMO_SHADOW position at PCS 90.0 with rot=9 and 8-week streak—peak signal strength but cannot re-select an open holding.",
+        "watch_trigger": "Exit KOS from MIMO_SHADOW when current_streak_weeks drops to 1 or current_pcs falls below 68, then re-evaluate for re-entry on fresh rotation signal."
+      },
+      {
         "ticker": "KIST.L",
-        "reason": "PCS=90 and rot=9 match KOS but Koncorde shows distribution_warning with 3D and weekly both in distribution state, medium extension risk (2 pts), and spike_flag=true adding to caution. Would need structural confirmation before entry.",
-        "watch_trigger": "Would SELECT if konc_3d_state and konc_w_state shift from distribution to up, confirming structural accumulation aligned with the PCS signal, and spike_flag clears on subsequent weekly close."
+        "reason": "Grok open position at PCS 90.0 with rot=9 and 6-week streak, but konc_3d_state=distribution and konc_w_state=distribution yield distribution_warning alignment with medium extension risk (2 pts).",
+        "watch_trigger": "Select for MIMO_SHADOW if Koncorde 3D shifts from distribution to up AND extension_flags clear, confirming the weekly leadership metrics with clean structural alignment."
+      },
+      {
+        "ticker": "TNZ.TO",
+        "reason": "Already a MIMO_SHADOW position at PCS 87.2 with rot=8, 5-week streak, and +38.6% 4w outperformance—strongest held position by recent momentum.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_rot_score drops below 3 or current_streak_weeks falls to 0, then re-evaluate for re-entry."
+      },
+      {
+        "ticker": "LCX.V",
+        "reason": "Already a MIMO_SHADOW position at PCS 84.8 with rot=7 and 4-week streak—holding well but lower rotation than top peers.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_pcs falls below 68 or current_rot_score drops below 3."
+      },
+      {
+        "ticker": "CVE",
+        "reason": "Already a MIMO_SHADOW position at PCS 82.8 with rot=7 and 5-week streak showing accelerating momentum (streak grew from 2 to 5 weeks since entry).",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_rot_score drops below 3 or current_pcs falls below 68."
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "Already a MIMO_SHADOW position at PCS 82.5 with rot=7 and 8-week streak—the longest streak in the portfolio—but konc_d_state=distribution signals tactical daily caution.",
+        "watch_trigger": "Exit from MIMO_SHADOW if konc_3d_state shifts from up to distribution AND current_rot_score drops below 3."
+      },
+      {
+        "ticker": "VLE.TO",
+        "reason": "Already a MIMO_SHADOW position at PCS 82.5 with rot=7 and 6-week streak, but extension_risk is extreme (7 pts) with spike_flag=true and dist_sma20_atr_high.",
+        "watch_trigger": "Exit from MIMO_SHADOW if extension_flags accumulate (e.g., outperform_d10 drops below 4) or current_pcs falls below 68."
+      },
+      {
+        "ticker": "TLW.L",
+        "reason": "Already a MIMO_SHADOW position at PCS 81.2 with rot=8 and extraordinary +66.1% 4w outperformance, but extension_risk medium (3 pts) and konc_d_state=distribution.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_rot_score drops below 3 or current_streak_weeks falls to 0."
+      },
+      {
+        "ticker": "TMO",
+        "reason": "Already a MIMO_SHADOW position at PCS 72.5 with rot=7, 8-week streak, dems=16 (strongest daily momentum in the set), and outperform_d10=8; konc_d_state=distribution and konc_w_state=distribution create mixed alignment.",
+        "watch_trigger": "Add more MIMO_SHADOW exposure if konc_alignment shifts from mixed to bullish_aligned AND PCS rises above 78."
+      },
+      {
+        "ticker": "MRK",
+        "reason": "Already a MIMO_SHADOW position at PCS 72.5 with rot=7 and 8-week streak, but konc_d_state=distribution and dems=4 suggest weak daily flow.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_rot_score drops below 3 or current_pcs falls below 68."
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Already a MIMO_SHADOW position at PCS 71.2 with rot=8 and 6-week streak; konc_3d_blue at 9.14 is the weakest 3D reading among held positions.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_pcs falls below 68 or current_rot_score drops below 3."
+      },
+      {
+        "ticker": "CRON",
+        "reason": "Already a MIMO_SHADOW position at PCS 72.5 with rot=7 and 7-week streak, but konc_alignment=distribution_warning with distribution across all three timeframes.",
+        "watch_trigger": "Exit from MIMO_SHADOW if konc_3d_state remains distribution for 2 additional weeks, or if current_pcs falls below 68."
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "Already a MIMO_SHADOW position at PCS 75.2 with rot=8 and 3-week streak; spike_flag=true and ret_4w_vs_spy of only 1.5% despite strong 13w suggests near-term momentum has stalled.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_streak_weeks drops to 0 or current_pcs falls below 68."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "Already a MIMO_SHADOW position at PCS 73.0 with rot=7 and 4-week streak; konc_3d_state=distribution flags structural caution despite bullish-aligned daily and weekly.",
+        "watch_trigger": "Exit from MIMO_SHADOW if konc_3d_state remains distribution for 2 additional weeks or current_pcs falls below 68."
+      },
+      {
+        "ticker": "GOLD",
+        "reason": "Already a MIMO_SHADOW position at PCS 72.8 with rot=10 (highest in the set) and 6-week streak; ret_5d_vs_spy=-3.99 shows a recent pullback but weekly metrics remain strong.",
+        "watch_trigger": "Exit from MIMO_SHADOW if current_rot_score drops below 3 or current_streak_weeks falls to 0."
+      },
+      {
+        "ticker": "UCO",
+        "reason": "Grok open position at PCS 82.5 with rot=7, but konc_3d_state=distribution and konc_w_state=distribution yield distribution_warning; extension_risk extreme (7 pts) with spike_flag=true.",
+        "watch_trigger": "Select for MIMO_SHADOW if konc_3d_state shifts from distribution to up AND extension_flags clear to fewer than 2."
+      },
+      {
+        "ticker": "DHR",
+        "reason": "Grok open position at PCS 67.8 with rot=6 and 1-week streak; VIGILAR signal with spike_flag=true and konc_alignment=distribution_warning is insufficient for MIMO_SHADOW entry at this threshold.",
+        "watch_trigger": "Select for MIMO_SHADOW if PCS rises above 70, signal upgrades to EN_RADAR, and konc_3d_state shifts to up."
       }
     ],
     "rejected": [
       {
-        "ticker": "SU",
-        "reason": "PCS=84.5 with rot=6 and extension_risk=high (5 pts: spike_flag, rsi_high, dist_sma20_atr_high). KOS dominates on every metric: PCS 90 vs 84.5, rot=9 vs 6, streak=8 vs 4, zero vs high extension risk. SU offers no incremental edge over the KOS selection.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "FRU.TO",
-        "reason": "PCS=83 with rot=8 but only 1-week streak, konc_d_state=distribution, and spike_flag=true. KOS at PCS=90 with rot=9, 8-week streak, zero extension, and fully bullish-aligned Koncorde provides categorically stronger oil_gas exposure with no tradeoff.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "UCO",
-        "reason": "ProShares Ultra Bloomberg Crude Oil is a leveraged crude oil futures ETF—a commodity derivative that violates the hard rule against selecting futures and commodities directly. Additionally, extension_risk=extreme (7 pts) and konc_alignment=distribution_warning compound the disqualification.",
-        "rejection_category": "not_tradable"
-      },
-      {
         "ticker": "MSTR",
-        "reason": "PCS dropped from 82.2 to 74.2 this week, 13-week return is negative at -1.8% vs SPY, dems=3 with ret_5d=-4.0% shows collapsing daily momentum. Koncorde shows distribution_warning across all timeframes including 3D and weekly. Signal is actively deteriorating.",
-        "rejection_category": "weak_relative_strength"
+        "reason": "Distribution_warning across konc_3d_state and konc_w_state with extension_risk high (5 pts); ret_4w_vs_spy=+41.7% shows extreme 4-week extension with momentum_decay flag indicating the move is exhausting.",
+        "rejection_category": "technical_overextension"
       },
       {
-        "ticker": "DHR",
-        "reason": "PCS=67.8 sits below the 68.0 minimum entry threshold for MIMO_SHADOW. Streak is only 1 week with dems=4 (weak daily flow) and konc_alignment=distribution_warning. Even if PCS crosses 68, the weekly and daily signals lack the strength to justify entry versus the existing healthcare_largecap positions.",
+        "ticker": "PLTR",
+        "reason": "PCS of 60.8 falls well below the MIMO_SHADOW entry threshold of 68; VIGILAR signal with outperform_d10 of only 5.36 and no acceleration provides insufficient conviction for portfolio entry.",
         "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "Distribution_warning across konc_3d_state and konc_w_state with weak theme_flow component at 8/24; ret_4w_vs_spy=-2.12% shows the recent weekly trend has reversed despite longer-term 13w strength.",
+        "rejection_category": "weak_flow"
       }
     ],
     "open_picks_review": [
@@ -100,81 +193,87 @@
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=72.5 above 68 threshold, rot=7, 8-week streak with +8.9% 4w outperformance. Konc_3d_state=up supports continued hold despite konc_d_state=distribution as tactical noise."
+        "reason": "current_pcs=72.5 above 68 floor, streak extended to 8 weeks, rot_score=7 remains above threshold; daily distribution is tactical noise within bullish structural setup."
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=72.5 above threshold, rot=7, 8-week streak with +11.6% 4w and +34.9% 13w outperformance. Konc_3d_state=up with momentum_accel=true on 5-day streak_days confirms daily flow building."
+        "reason": "current_pcs=72.5 above 68 floor, streak extended to 8 weeks with dems=16 (strongest daily momentum in set) and outperform_d10=8; mixed Koncorde alignment noted but weekly metrics remain strong."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=82.5 well above threshold, rot=7, 8-week streak with +15.9% 4w outperformance and dems=14 meeting strong daily momentum threshold. konc_d_state=distribution noted but 3D and weekly remain up."
+        "reason": "current_pcs=82.5 well above threshold, 8-week streak is the longest in the portfolio with ret_4w=+15.9%; konc_d_state=distribution acknowledged as tactical daily noise."
       },
       {
         "ticker": "CRON",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=72.5 above 68 threshold with 7-week streak and rot=7, but triple distribution_warning across all Koncorde timeframes (D=distribution, 3D=distribution, W=distribution) warrants close monitoring. Will EXIT if streak breaks or PCS drops below 68."
+        "reason": "current_pcs=72.5 above 68 floor, 7-week streak with rot=7; distribution_warning alignment is concerning but streak duration and 13w outperformance of +21.1% justify continued hold."
       },
       {
         "ticker": "CVE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=82.8 well above threshold, rot=7, 5-week streak with +12.3% 4w outperformance. Koncorde bullish_pending_3d_confirmation with 3D up and daily up; spike_flag noted."
+        "reason": "current_pcs=82.8 well above threshold, streak extended from 2 to 5 weeks since entry with ret_4w=+12.3%; Koncorde bullish-aligned with rot=7 confirms sustained leadership."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=82.5 well above threshold, rot=7, 6-week streak with +26.3% 4w outperformance. Extension_risk=extreme (6 pts) acknowledged but weekly momentum continues building with dems=17 and momentum_accel=true."
+        "reason": "current_pcs=82.5 well above threshold, streak extended to 6 weeks with ret_4w=+26.3% (highest among held positions); extreme extension risk (7 pts) monitored but streak duration and outperformance justify hold."
       },
       {
         "ticker": "TNZ.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=87.2 is peak score among held positions, rot=8, 5-week streak with +38.6% 4w outperformance. Extension_risk=extreme (9 pts) and spike_flag=true acknowledged—holding with tight monitoring for weekly reversal."
+        "reason": "current_pcs=87.2 second-highest in the portfolio, rot=8 with 5-week streak and ret_4w=+38.6% confirming extraordinary momentum; bullish-aligned Koncorde supports continuation."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=71.2 above 68 threshold, rot=8 (tied highest among holdings), 6-week streak. Low extension risk and bullish_pending_3d_confirmation on Koncorde supports continued hold."
+        "reason": "current_pcs=71.2 above 68 floor, rot=8 with 6-week streak; ret_4w=+4.4% shows consolidation after strong 13w run but streak and rotation confirm the structural uptrend is intact."
       },
       {
         "ticker": "BTCC-B.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=73.0 above 68 threshold, rot=7, 4-week streak with +23.6% 4w outperformance. Konc_3d_state=distribution noted as caution but PCS crossed down from 81.5—will EXIT if streak breaks or PCS drops below 68."
+        "reason": "current_pcs=73.0 above 68 floor, streak extended to 4 weeks with ret_4w=+23.6%; konc_3d_state=distribution noted but daily and weekly both read up with strong flow metrics."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=75.2 above threshold, rot=8, 3-week streak. Ret_4w of +1.5% is modest but rot=8 and streak extending confirm weekly leadership. Extension risk low."
+        "reason": "current_pcs=75.2 above 68 floor, streak extended to 3 weeks with rot=8; ret_4w=+1.5% is weak but 13w outperformance of +10.7% and bullish-aligned Koncorde support continued hold."
       },
       {
         "ticker": "LCX.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=84.8 well above threshold, rot=7, 4-week streak with +19.1% 4w outperformance. Konc_3d_state=up with bullish_pending_3d_confirmation; extension_risk=high (4 pts) acknowledged."
+        "reason": "current_pcs=84.8 well above threshold, streak extended to 4 weeks with ret_4w=+19.1%; rot=7 and bullish-aligned Koncorde with strong daily momentum at dems=9."
       },
       {
         "ticker": "GOLD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=72.8 above threshold, rot=10 is the highest among all holdings, 6-week streak with +11.1% 4w outperformance. Bullish-aligned Koncorde and low extension risk support continued hold."
+        "reason": "current_pcs=72.8 above 68 floor, rot=10 is the highest in the entire candidate set with 6-week streak; ret_5d=-4.0% is a pullback but weekly structure remains fully bullish-aligned."
       },
       {
         "ticker": "TLW.L",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS=81.2 above threshold, rot=8, 6-week streak with extraordinary +66.1% 4w outperformance (highest in set). Extension_risk=medium and konc_d_state=distribution noted but 3D and weekly remain up with streak intact."
+        "reason": "current_pcs=81.2 well above threshold, rot=8 with 6-week streak and ret_4w=+66.1% (extraordinary outperformance); medium extension risk and konc_d_state=distribution acknowledged."
+      },
+      {
+        "ticker": "KOS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs=90.0 is the highest composite score in the candidate set, rot=9 with 8-week streak and zero extension risk; fully bullish-aligned Koncorde confirms peak structural leadership."
       }
     ]
   },
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-09-16\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-09-16_1307\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime at 91.67 with strong improving trend (+16.67 delta_1w) supports risk-on positioning in energy and rotation themes.\",\n    \"risk_posture\": \"aggressive\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"KOS\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS=90 rot=9 on 8-week streak with zero extension risk and bullish-aligned Koncorde\",\n      \"reason_full\": \"KOS leads the entire candidate set at PCS 90.0 with rotation score 9 and an unbroken 8-week streak delivering +24.1% 4-week and +21.1% 13-week outperformance vs SPY. Extension risk is zero with no overextension flags, and Koncorde is fully bullish-aligned across daily, 3D, and weekly timeframes with green at 116.19. Oil_gas theme concentration at 95.5% is extreme and acknowledged—the portfolio is heavily tilted toward energy—but no non-held candidate matches KOS's combination of peak PCS, highest rotation score, longest streak, and clean risk profile.\",\n      \"comparative_edge\": \"Selected over KIST.L (PCS=90, rot=9) because KOS has 8-week streak vs KIST.L's 6, zero extension risk vs medium (2 pts), and bullish-aligned Koncorde vs KIST.L's distribution_warning across 3D and weekly timeframes—cleaner confirmation at identical PCS.\",\n      \"key_supporting_factors\": [\n        \"PCS 90.0 is the highest composite score in the candidate set, confirming peak signal strength across all scoring components.\",\n        \"Rotation score 9 on an 8-week unbroken streak with +21.1% 13-week outperformance demonstrates the strongest sustained institutional leadership.\",\n        \"Zero extension risk with no overextension flags offers the cleanest entry among all PCS 85+ non-held candidates.\",\n        \"Koncorde fully bullish-aligned across daily, 3D, and weekly with gree"
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-09-16\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-09-16_2238\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 91.7 and 1-month delta +22.92, strongly favoring cyclical and commodity themes; oil_gas dominates the candidate set with 14 top-PCS names.\",\n    \"risk_posture\": \"aggressive\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"SU\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"PCS 84.5 with rot=6, 4-week streak, and bullish-aligned Koncorde on zero extension risk\",\n      \"reason_full\": \"SU crosses into MIMO_SHADOW at PCS 84.5 with a 4-week unbroken streak delivering +12.3% 4w and +20.7% 13w outperformance vs SPY, plus 6 of the last 10 days outperforming the benchmark. Extension risk is zero with no overextension flags, making this the cleanest high-PCS oil_gas entry available. Koncorde reads fully bullish-aligned (daily up, 3D up, weekly up) with green at 97.35 confirming structural accumulation. Oil_gas concentration at 103.5% is extreme and acknowledged—this is a sector overweight—but no non-held candidate matches SU's combination of high PCS, clean risk, and sustained institutional flow.\",\n      \"comparative_edge\": \"Selected over MLX.AX (PCS=81.0, rot=8, 8-week streak, dems=13, spike_flag=true, extension_risk=medium) because SU has zero extension risk versus MLX.AX's medium with spike_flag, PCS 84.5 vs 81.0, and 6/10 outperforming days vs MLX.AX's 3-day streak despite its longer weekly streak.\",\n      \"key_supporting_factors\": [\n        \"PCS 84.5 with zero extension risk offers the cleanest high-PCS entry among all non-held oil_gas candidates.\",\n        \"4-week streak with 20.7% 13w outperformance and 6/10 outperforming days confirms sustained institutional accumulation.\",\n        \"Koncorde fully bullish-aligned across daily, 3D, and weekly timeframes with green at 97.35 confirms stru"
 }
