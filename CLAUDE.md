@@ -5599,6 +5599,122 @@ análisis narrativo, no toca el motor de picks.
 
 ---
 
+## Relative Flow Lab v2 — auditoría de Fase 6 (instrumentación) y Fase 4/5a (calibración) (2026-09-17)
+
+Revisión pedida por el usuario sobre dos huecos ya anotados como pendientes
+en su momento: la instrumentación de uso de Fase 6 (2026-08-11, nunca
+revisada tras implementarse) y los umbrales fijados "a ojo" de Fase 4 (Top 3
+Flow In/Out) y Fase 5a (matriz cross-módulos), nunca contrastados contra
+rendimiento real. Con evidencia real reunida, se tomaron 3 decisiones
+explícitas con el usuario — dos de ellas "no tocar código todavía",
+documentadas aquí para que no haya que repetir el análisis.
+
+### 1. Instrumentación de uso — 5 semanas reales (`state_ux_instrumentation.json`)
+
+38 page_loads acumulados (2026-08-10→2026-09-13). Tasas por semana sobre
+page_loads, no conteos absolutos (mismo espíritu que "Principio: métrica
+primaria para estrategias con exposición intermitente" más arriba — aplicado
+aquí a un panel de uso, no a una estrategia de trading, pero la misma idea
+de no leer conteos absolutos sin su denominador):
+
+| Semana | loads | toggle_unfiltered_top | copy_for_llm | export_all_to_llm | matrix_hover | matrix_click |
+|---|---|---|---|---|---|---|
+| 08-10 | 6 | 4 (0.67) | — | — | 3 (0.50) | 0 |
+| 08-17 | 6 | — | — | 2 (0.33) | 3 (0.50) | 0 |
+| 08-24 | 15 | — | 3 (0.20) | — | 2 (0.13) | 0 |
+| 08-31 | 5 | — | — | — | 3 (0.60) | 0 |
+| 09-07 | 6 | — | — | 1 (0.17) | 4 (0.67) | 0 |
+
+**Toggle "Sin filtro" (Top 3 Flow In/Out, Fase 4):** los 4 clics caen todos
+en la semana de su propia implementación/verificación (2026-08-11) — no se
+puede descartar que sean artefactos de esa verificación con CDP, no uso
+orgánico. Cero clics en las 4 semanas siguientes. **Decisión con el
+usuario: no tocar, esperar más semanas** — 4 semanas de datos (con la
+primera semana potencialmente contaminada) es insuficiente para concluir
+que nadie lo usará nunca. Revisar de nuevo más adelante.
+
+**Matriz cross-módulos (Fase 5a):** `cross_module_matrix_hover` presente en
+15/38 loads (39%), de forma consistente las 5 semanas — sí se mira casi
+siempre que se abre la página. Pero `cross_module_matrix_click` = 0 en las
+5 semanas, y **el motivo no era desinterés sino diseño**: el `onClick`
+estaba en la fila de la tabla sin ninguna acción asociada (matriz
+"se recalcula en vivo... sin histéresis o suavizado", sin detalle/expansión
+por fila) — 0 clics no informaba de nada real, solo confirmaba que no había
+nada que clicar. **Decisión con el usuario: quitar el tracking del click**
+(implementado en este cambio, ver más abajo) — se mantiene el hover, que sí
+es señal útil.
+
+### 2. Calibración de umbrales — backtest reconstruido, no los 17 días de producción
+
+`docs/data/relative_flow_history_reconstructed.jsonl` (163MB, gitignored,
+congelado en 2026-08-08 desde el backtest ya cerrado de
+`wiki/RELATIVE_FLOW_LAB_HALLAZGOS.md`) todavía existía en local, así que se
+pudo aplicar `coherentFlowDirection()` (Fase 4) y los buckets del leg RFL
+de la matriz de Fase 5a (`bucketFromReturn`/`bucketFromFlowChange`)
+literalmente, sobre 215.393 filas evaluables (post burn-in, 1998-2026,
+45 pares) — no solo sobre los 17 días reales de `relative_flow_history` en
+`state.json`, insuficientes para cualquier conclusión.
+
+**Hallazgo: no es "sin señal" (como el score↔alfa pooled ya cerrado,
+r≈-0.009/+0.003/+0.012) — es señal invertida y significativa a 1-4
+semanas, que se diluye a 3 meses:**
+
+| Horizonte | "in" (entrante) | "out" (saliente) | t (in vs out) |
+|---|---|---|---|
+| fwd_alpha_1w | -0.05% | +0.06% | -5.98 |
+| fwd_alpha_1m | +0.03% | +0.11% | -2.33 |
+| fwd_alpha_3m | +0.08% | +0.25% | -2.74 |
+
+Confirmado por separado en dev y test (mismo signo en ambos splits). El
+mismo patrón en el leg RFL de la matriz de Fase 5a: bucket BULLISH da alfa
+1w -0.16% vs BEARISH +0.17% (t=-7.59), inversión que se diluye a 3 meses
+(t=-1.03, no significativo). Lectura más probable: reversión a la media de
+corto plazo en ratios ya "calientes" — mismo patrón ya visto para una señal
+distinta en el Family Falsification Test (`wiki/PREREGISTRO_RELATIVE_FLOW_FAMILY_TEST_V1.md`,
+"la señal invertida funciona sustancialmente mejor... en cobre/platino/
+paladio/XLE").
+
+**Decisión con el usuario: solo documentar aquí, no tocar código.** Es un
+análisis post-hoc, no preregistrado, sobre un dataset congelado no
+sincronizado con producción — mismo criterio que el resto del proyecto
+(preregistro antes de actuar, no antes de observar). **No se ha invertido
+ninguna etiqueta ni umbral** — `coherentFlowDirection()`,
+`bucketFromReturn`/`bucketFromFlowChange` y el resto de Fase 4/5a siguen
+exactamente igual que antes de este análisis.
+
+### Cambios de código aplicados en este cambio
+
+1. **`relative.html` — `relative_flow_history` ahora persiste también
+   `trend`** (Up/Down/Mixed), no solo `date/score/signal/flowChange/type`.
+   Sin este campo, el hallazgo de arriba nunca podría haberse verificado
+   contra los datos que sí persiste producción — solo fue posible por el
+   backtest congelado, que puede desaparecer o quedar desactualizado
+   cualquier día. Aditivo puro: no cambia ninguna lectura existente de
+   `rowsByType`/`QuestionBlock`/Δ1W, solo añade un campo nuevo a cada
+   entrada diaria sembrada desde hoy en adelante (las ~17 entradas ya
+   guardadas por ratio no lo tienen retroactivamente — no se ha hecho
+   backfill, mismo criterio que el resto de campos nuevos añadidos a series
+   temporales ya en marcha en este proyecto).
+2. **`relative.html` + `server.js` — quitado el tracking de
+   `cross_module_matrix_click`.** `onClick` eliminado de la fila de la
+   tabla en la sección "Coherencia Cross-Módulos"; `UX_VALID_WIDGETS` en
+   `server.js` pasa de `["cross_module_matrix_hover",
+   "cross_module_matrix_click"]` a solo `["cross_module_matrix_hover"]` —
+   un evento con ese nombre que llegara desde una versión de página en
+   caché queda simplemente ignorado por el whitelist (mismo
+   comportamiento ya diseñado en Fase 6 para nombres no reconocidos:
+   `400`, nunca se escribe una clave arbitraria).
+
+### Pendiente (explícito, sin fecha)
+
+Revisar el toggle "Sin filtro" cuando haya más semanas de datos limpios
+(sin la contaminación de la semana de implementación). Si en el futuro se
+quisiera investigar más a fondo la inversión de Fase 4/5a con intención de
+actuar sobre ella, necesitaría su propio preregistro (dev/test, criterio de
+promoción) — no basta con este análisis descriptivo.
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

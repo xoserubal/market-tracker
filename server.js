@@ -753,7 +753,7 @@ app.get("/api/state", (_req, res) => {
 // a la vez con datos ya computados, no un contador compartido).
 const UX_INSTRUMENTATION_FILE = path.join(__dirname, "state_ux_instrumentation.json");
 const UX_VALID_BUTTONS = new Set(["copy_for_llm", "export_all_to_llm", "toggle_unfiltered_top"]);
-const UX_VALID_WIDGETS = new Set(["cross_module_matrix_hover", "cross_module_matrix_click"]);
+const UX_VALID_WIDGETS = new Set(["cross_module_matrix_hover"]);
 const UX_RETENTION_WEEKS = 12; // ~3 meses, mismo espíritu que el cap de 70 entradas (~10 semanas) de rotation_history
 
 function isoWeekStartMonday(d) {

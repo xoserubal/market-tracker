@@ -723,7 +723,7 @@ function RelativeFlowLab() {
     const today = new Date().toISOString().slice(0, 10);
     const newHistory = { ...(appState.relative_flow_history || {}) };
     flatRows.forEach(r => {
-      const entry = { date: today, score: r.score, signal: classify(r).label, flowChange: r.flowChange, type: r.type };
+      const entry = { date: today, score: r.score, signal: classify(r).label, flowChange: r.flowChange, type: r.type, trend: r.trend };
       const hist = newHistory[r.id] || [];
       const last = hist[hist.length - 1];
       if (!last || last.date !== today) {
@@ -1232,8 +1232,7 @@ function RelativeFlowLab() {
                 const cb = bucketStyle(r.cycleRead), fb = bucketStyle(r.flujosRead), rb = bucketStyle(r.rflRead);
                 const cs = coherenceStyle(r.coherence);
                 return (
-                  <tr key={r.sector} style={{background: idx % 2 ? "#f8f9fb" : "white"}}
-                    onClick={() => trackUxEvent("widget_interaction", "cross_module_matrix_click")}>
+                  <tr key={r.sector} style={{background: idx % 2 ? "#f8f9fb" : "white"}}>
                     <td className="name" data-tip={r.cyclePhase}>{r.sector}</td>
                     <td>
                       <span style={{color:cb.fg,fontWeight:700}}>{cb.label}</span>
