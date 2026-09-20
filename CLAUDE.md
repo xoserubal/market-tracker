@@ -5714,6 +5714,65 @@ dimensionamiento por confirmaciones, B2). Ninguno se ha tocado.
 
 ---
 
+## Sistema Trullás — glosario de estados + desglose de Tier por fila (implementado 2026-09-21)
+
+El usuario reportó que faltaba información contextual en `trullas.html`
+para entender lo que muestra, y preguntó si el algoritmo recalcula el
+universo completo en cada run. Segunda pregunta: **sí** —
+`trullas_signal_calculator.py` no tiene estado incremental; en cada run
+(2×/día) vuelve a descargar ~3 años de OHLCV y a recalcular pivotes/MACD/
+RSI/tier desde cero para los 118 tickers de `portfolio.json` + posiciones
+abiertas en `TRULLAS_SHADOW`.
+
+Para la primera, se preguntó explícitamente qué faltaba en vez de adivinar
+(la página ya tenía la nota de metodología y la explicación de la zona
+23-25%, así que "falta contexto" podía referirse a varias cosas
+distintas) — el usuario señaló dos: qué significa cada badge de estado, y
+por qué un ticker es T1/T2/T3.
+
+**Decisión de diseño — glosario estático (`<details>`/`<summary>`), no
+tooltips de hover.** `rotacion.html`/`duration.html` ya tienen un
+componente `Tip`/`ThTip` de tooltip flotante en hover, pero hover no
+existe en pantalla táctil — y esta página se acaba de hacer instalable
+como PWA para el móvil (ver sección "PWA — Market Tracker instalable en el
+móvil" más arriba). Un glosario desplegable nativo (`<details>`, cero JS)
+funciona igual en escritorio y móvil sin construir una interacción
+tap-vs-hover distinta por plataforma.
+
+**`STATE_META` gana un campo `tooltip` por estado** (11 entradas), texto
+tomado literalmente de la lógica real de `scripts/trullas_lib.py`
+(`evaluate_pivot_pair()`/`find_entry_executable()`), no una paráfrasis
+aproximada — p. ej. `no_macd_divergence` explica que MACD es un filtro
+obligatorio y que si falla, RSI/Volumen ni se llegan a consultar.
+Renderizado en un bloque `<details>` nuevo bajo la explicación de la zona
+de entrada, listando badge + explicación de cada estado, más la regla
+exacta del Tier.
+
+**Desglose por fila junto al badge de Tier, siempre visible (no en
+tooltip):** `R✓/✗ V✓/✗` bajo cada `T{n}` en la tabla — usa `rsi_div`/
+`vol_div`, campos que el backend ya calculaba y guardaba en
+`trullas_signals.json` pero que la página nunca mostraba. Resuelve
+directamente la pregunta "por qué T1/T2/T3": el sistema tiene una regla no
+obvia (Volumen solo cuenta si RSI también confirma — una señal con
+`vol_div=True` pero `rsi_div=False` se queda en T1, no sube a T2), y sin
+este desglose no había forma de distinguir "T1 porque nada confirmó" de
+"T1 porque solo confirmó Volumen, que no cuenta sin RSI".
+
+**Verificado:** sintaxis JSX transpila sin errores (`@babel/standalone` en
+Node). `trullas_signals.json` real confirma que `rsi_div`/`vol_div` ya
+tienen datos reales y coherentes con la regla (ej. `FDR.AX` tier=2 con
+`rsi_div=True, vol_div=False` — T2 correcto, RSI solo). Servido por el
+servidor real del usuario sin reinicio (cambio puramente de archivo
+estático) — confirmado por `curl` que el glosario y los 11 tooltips
+llegan al HTML servido. **Verificación con navegador headless NO
+completada** — Edge headless volvió a fallar al lanzar en este entorno
+(mismo problema ya documentado en la sección de la PWA, sin diagnosticar
+la causa exacta); se optó por la verificación estática + datos reales de
+arriba, proporcional al riesgo del cambio (JSX aditivo, sin lógica nueva
+más allá de leer campos que ya existían en el JSON).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
@@ -6377,6 +6436,117 @@ Revisar el toggle "Sin filtro" cuando haya más semanas de datos limpios
 quisiera investigar más a fondo la inversión de Fase 4/5a con intención de
 actuar sobre ella, necesitaría su propio preregistro (dev/test, criterio de
 promoción) — no basta con este análisis descriptivo.
+
+---
+
+## PWA — Market Tracker instalable en el móvil (implementado 2026-09-21)
+
+El usuario preguntó si se podría hacer accesible desde el móvil "de manera
+sencilla" todo el sistema (Market Tracker y sus 9 pestañas + AI Picks Lab).
+Se descartó una app nativa o un rebuild de las páginas (10 dashboards ya
+muy desarrollados, cada uno con sus propias tablas/verificaciones — un
+rebuild nativo habría sido semanas de trabajo para duplicar algo que ya
+funciona) a favor de reutilizar el sitio existente al 100%: convertirlo en
+**PWA instalable** (manifest + iconos + service worker mínimo, sin tocar
+ninguna página funcionalmente) más **Tailscale** para el acceso remoto
+cuando no se está en la misma red local — decisión confirmada con el
+usuario antes de construir.
+
+**Limitación explícita aclarada con el usuario antes de empezar:**
+`server.js` es un proceso Node en su propio PC — ni la PWA ni Tailscale
+hacen que el servidor exista si el PC está apagado, solo abren un camino
+de red hasta él. El usuario eligió explícitamente "PWA + Tailscale ahora,
+PC debe estar encendido" frente a migrar a un hosting siempre-activo
+(alcance mayor: credenciales/API keys fuera del equipo, coste mensual si
+es VPS) — esa opción queda aparte si hiciera falta más adelante.
+
+### 1. Iconos (`icons/`, nuevo)
+
+Generados con Pillow (`PIL`, instalado ad-hoc — no había ninguna
+herramienta de imagen en el repo) porque no existía ningún icono en todo
+el proyecto (ni favicon). Diseño: fondo azul marino `#0b3d63` + 4 velas
+japonesas ascendentes (glifo dibujado con primitivas, sin depender de
+ninguna fuente tipográfica instalada), la última en verde. Primera
+composición quedó descentrada hacia la esquina superior derecha (cada vela
+con su propia línea base ascendente, efecto "escalera"); corregida a una
+única línea base compartida (estilo gráfico de barras clásico) tras
+revisar visualmente el render — necesario sobre todo para el icono
+`maskable`, que el SO puede recortar a círculo.
+
+6 tamaños: `icon-192.png`/`icon-512.png` (purpose `any`),
+`icon-maskable-512.png` (purpose `maskable`, con más margen de seguridad),
+`apple-touch-icon.png` (180×180, iOS home screen), `favicon-32.png`/
+`favicon-16.png` (pestaña del navegador). ~22KB en total.
+
+### 2. `manifest.json` + `sw.js` (nuevos, en la raíz)
+
+`manifest.json`: `name`/`short_name` "Market Tracker"/"Market" (el nombre
+que ya usa el propio `<title>` de `index.html` y que aparece en el título
+de `docs/index.html`), `start_url: "/index.html"`, `scope: "/"` (cubre
+también `docs/index.html`, AI Picks Lab), `display: "standalone"`.
+
+`sw.js`: service worker deliberadamente mínimo — **no cachea HTML, `/api/*`
+ni `/docs/data/*`**. Este sitio muestra datos de mercado en vivo; servir
+una versión cacheada sin ningún aviso de "obsoleto" habría ido en contra
+de la disciplina de staleness que ya sigue el resto del proyecto (ver
+`duration.html` → `staleInfo()`, sección "Fix: datos obsoletos sin avisar"
+más arriba). Solo cachea assets realmente estáticos (`/shared/*.js`,
+`/icons/*`, el propio manifest) con un patrón stale-while-revalidate;
+cualquier otra petición se deja pasar sin interceptar. Instalado con
+`self.skipWaiting()`/`clients.claim()` para que una actualización del
+worker se active sin tener que cerrar todas las pestañas a mano.
+
+### 3. Las 10 páginas — mismo bloque de tags en cada `<head>`, sin tocar lógica
+
+`index.html`, `portfolio.html`, `relative.html`, `cycle.html`,
+`rotacion.html`, `duration.html`, `sentiment.html`, `positioning.html`,
+`trullas.html` y `docs/index.html` ganan, justo después de `<title>`:
+`<link rel="manifest">`, `theme-color`, favicons, `apple-touch-icon` +
+metas `apple-mobile-web-app-capable`/`mobile-web-app-capable`, y un script
+inline de una línea que registra `/sw.js` (`.catch(() => {})` — mismo
+patrón fire-and-forget que el resto del proyecto, un fallo de registro no
+debe romper la página). Cero cambios en el JSX/lógica de cada página —
+edición puramente de `<head>`.
+
+`express.static(__dirname)` en `server.js` ya servía cualquier archivo
+nuevo bajo la raíz sin reinicio — no hizo falta tocar `server.js` ni
+reiniciar el proceso del usuario para que `manifest.json`/`sw.js`/`icons/*`
+quedaran servidos.
+
+### Verificado
+
+`manifest.json` válido (`JSON.parse` limpio), `sw.js` sin errores de
+sintaxis (`node --check`). Las 10 páginas confirmadas contra el servidor
+real del usuario ya en marcha (sin reinicio): `curl` a cada una devuelve
+`200` y contiene exactamente 1 `<link rel="manifest">`/1 registro de
+`serviceWorker`/1 `apple-touch-icon`, sin duplicados ni ausencias.
+`manifest.json`/`sw.js`/`icons/icon-512.png` servidos con `200` y
+content-type razonable (`application/json`, `application/javascript`).
+
+**Verificación con navegador headless NO completada en esta sesión** —
+Edge headless (mismo patrón Puppeteer/CDP usado en el resto del proyecto)
+falló al lanzar en este entorno concreto (`Code: 0`, stderr vacío, tras
+varios intentos con perfiles nuevos) — no se pudo aislar la causa exacta
+en el tiempo disponible (posible contención de recursos: ~27 procesos
+`msedge.exe` ya corriendo en la máquina del usuario). Se optó por la
+verificación estática + HTTP de arriba en su lugar, proporcional al riesgo
+real del cambio (adición de tags `<head>` estáticos, sin JSX ni lógica
+nueva más allá del propio `sw.js`, que sí se comprobó por sintaxis).
+**Pendiente:** confirmar visualmente en el móvil real del usuario que
+Chrome/Safari ofrecen "Añadir a pantalla de inicio"/"Instalar app" y que
+el icono se ve bien — no verificado en este cambio.
+
+### Pendiente (siguiente paso, explícito, no incluido en este cambio)
+
+**Tailscale** para acceso remoto (fuera de la LAN) — instalación y login
+interactivo (cuenta personal, autorización del móvil) son pasos que el
+usuario debe hacer él mismo, no automatizables desde aquí. **Pase de CSS
+para móvil, página por página** — ninguna de las 10 páginas se ha
+verificado nunca a ancho de teléfono; varias fuerzan `min-width` en su
+contenedor principal (ej. `index.html` tiene `.wrap { min-width: 960px;
+overflow-x: auto; }`) — hoy funcionan en móvil solo con scroll horizontal,
+no rotas, pero incómodas. Evaluar cuáles priorizar cuando el usuario las
+use en el móvil real y diga cuáles le resultan más molestas.
 
 ---
 

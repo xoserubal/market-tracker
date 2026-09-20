@@ -4,6 +4,15 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Trullás — Market Tracker</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0b3d63"/>
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32"/>
+  <link rel="icon" href="/icons/favicon-16.png" sizes="16x16"/>
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});}</script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
@@ -69,18 +78,45 @@ const TIER_STYLE = {
 // Estados del calculador (scripts/trullas_signal_calculator.py) agrupados
 // por prioridad de lectura — lo más accionable primero. El orden aquí es
 // también el orden de visualización por defecto de la tabla.
+// `tooltip`: explicación exacta de la condición que dispara cada estado,
+// tomada literalmente de scripts/trullas_lib.py (evaluate_pivot_pair() /
+// find_entry_executable()) -- no una paráfrasis aproximada. Se muestra en
+// el glosario desplegable de abajo (no en hover -- esta página ahora
+// también se usa desde el móvil vía la PWA, donde hover no existe).
 const STATE_META = {
-  entry_today:               { rank: 0, label: 'Entrada hoy',            ...C.green,  group: 'Accionable' },
-  waiting_pullback_below_zone:{ rank: 1, label: 'Esperando retroceso',   ...C.blue,   group: 'Divergencia activa' },
-  waiting_pullback_ran_ahead: { rank: 2, label: 'Ya rebasó la zona',     ...C.yellow, group: 'Divergencia activa' },
-  entry_in_past:             { rank: 3, label: 'Señal reciente (pasada)',...C.orange, group: 'Divergencia activa' },
-  expired_no_pullback:       { rank: 4, label: 'Expirada',               ...C.neutral,group: 'Cerrada' },
-  invalidated:               { rank: 5, label: 'Invalidada',             ...C.red,    group: 'Cerrada' },
-  no_macd_divergence:        { rank: 6, label: 'Sin divergencia MACD',   ...C.neutral,group: 'Sin setup' },
-  no_lower_low:              { rank: 7, label: 'Sin mínimo más bajo',    ...C.neutral,group: 'Sin setup' },
-  swing_too_small:           { rank: 8, label: 'Swing < 3%',             ...C.neutral,group: 'Sin setup' },
-  no_pivots_yet:             { rank: 9, label: 'Sin pivotes',            ...C.neutral,group: 'Sin setup' },
-  insufficient_history:      { rank: 10,label: 'Histórico insuficiente', ...C.neutral,group: 'Sin setup' },
+  entry_today:               { rank: 0, label: 'Entrada hoy',            ...C.green,
+    tooltip: 'La APERTURA de hoy cae dentro de la zona de entrada (23-25% de retroceso Fibonacci desde el pivote 2). Accionable hoy mismo — el único estado que TRULLAS_SHADOW convierte en posición real.',
+    group: 'Accionable' },
+  waiting_pullback_below_zone:{ rank: 1, label: 'Esperando retroceso',   ...C.blue,
+    tooltip: 'Divergencia MACD ya confirmada entre pivote1 y pivote2 (gate obligatorio superado), pero ninguna apertura desde entonces ha llegado todavía a la zona 23-25%. Puede entrar en cualquier sesión dentro de la ventana de 15 desde el pivote2, o seguir cayendo hasta romper el stop (el propio pivote2) y quedar invalidada.',
+    group: 'Divergencia activa' },
+  waiting_pullback_ran_ahead: { rank: 2, label: 'Ya rebasó la zona',     ...C.yellow,
+    tooltip: 'Misma divergencia confirmada que arriba, pero la apertura de HOY ya está por encima del techo de la zona (25%) — el precio se alejó sin retroceder primero. La orden límite sigue activa (dentro de las 15 sesiones), pero cada sesión sin volver a bajar hace menos probable que llegue a rellenarse.',
+    group: 'Divergencia activa' },
+  entry_in_past:             { rank: 3, label: 'Señal reciente (pasada)',...C.orange,
+    tooltip: 'Hubo un fill (apertura dentro de 23-25%) en una sesión ANTERIOR a hoy, dentro de la ventana de 15 desde el pivote2 — la señal "Entrada hoy" ya ocurrió en el pasado. Se muestra solo como contexto histórico, no es accionable ahora.',
+    group: 'Divergencia activa' },
+  expired_no_pullback:       { rank: 4, label: 'Expirada',               ...C.neutral,
+    tooltip: 'Pasaron las 15 sesiones desde el pivote2 sin que ninguna apertura llegara a la zona 23-25% ni rompiera el stop — la señal caduca sin haberse podido ejecutar.',
+    group: 'Cerrada' },
+  invalidated:               { rank: 5, label: 'Invalidada',             ...C.red,
+    tooltip: 'Alguna apertura, dentro de la ventana de 15 sesiones, cayó por debajo del stop (el propio pivote2) antes de llegar a la zona de entrada — el patrón queda invalidado sin llegar a operar.',
+    group: 'Cerrada' },
+  no_macd_divergence:        { rank: 6, label: 'Sin divergencia MACD',   ...C.neutral,
+    tooltip: 'El precio hace un mínimo más bajo (pivote2 < pivote1) pero el MACD en pivote2 NO es mayor que en pivote1. MACD es un filtro obligatorio: si falla, ni RSI ni Volumen llegan a consultarse — no hay señal aunque esos dos sí confirmasen.',
+    group: 'Sin setup' },
+  no_lower_low:              { rank: 7, label: 'Sin mínimo más bajo',    ...C.neutral,
+    tooltip: 'El pivote más reciente (2) no es más bajo en precio que el anterior (1) — condición previa a cualquier chequeo de divergencia; sin esto ni se evalúa MACD.',
+    group: 'Sin setup' },
+  swing_too_small:           { rank: 8, label: 'Swing < 3%',             ...C.neutral,
+    tooltip: 'La caída entre pivote1 y pivote2 es menor al 3% — se descarta como ruido antes de evaluar MACD/RSI/Volumen.',
+    group: 'Sin setup' },
+  no_pivots_yet:             { rank: 9, label: 'Sin pivotes',            ...C.neutral,
+    tooltip: 'Todavía no hay 2 mínimos confirmados como pivote en el histórico descargado. Un mínimo necesita 5 sesiones posteriores sin otro más bajo para confirmarse como pivote (fractal de 5 barras) — es normal en tickers con poco historial o en medio de una tendencia sin mínimos claros.',
+    group: 'Sin setup' },
+  insufficient_history:      { rank: 10,label: 'Histórico insuficiente', ...C.neutral,
+    tooltip: 'Hay 2 pivotes, pero el MACD todavía no tiene valor válido en uno de ellos (el indicador tarda ~35 barras en calcularse por primera vez) — no se puede evaluar la divergencia todavía en ese punto de la serie.',
+    group: 'Sin setup' },
 };
 const ACTIVE_STATES = new Set(['entry_today', 'waiting_pullback_below_zone', 'waiting_pullback_ran_ahead', 'entry_in_past']);
 
@@ -294,7 +330,29 @@ function TrullasPage() {
       <div className="section-sub">
         Zona de entrada = 23-25% de retroceso Fibonacci desde el segundo pivote (mínimo más reciente) sobre el swing
         pivote1→pivote2. TP = 38.2%. Stop = ruptura del pivote de origen (precio vuelve a caer por debajo del segundo mínimo).
+        Universo recalculado ENTERO desde cero en cada run del pipeline (2×/día) — no hay estado incremental.
       </div>
+      <details style={{ marginBottom: 12, fontSize: 10.5, color: '#475467', border: '1px solid #e6e8eb', borderRadius: 6, padding: '6px 10px', background: '#fbfcfd' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#344054', fontSize: 11 }}>
+          ℹ️ Qué significa cada estado y cómo se calcula el Tier (T1/T2/T3)
+        </summary>
+        <div style={{ marginTop: 8, lineHeight: 1.6 }}>
+          <b>Estados</b> (de más a menos accionable):
+          <ul style={{ margin: '4px 0 10px 18px' }}>
+            {Object.entries(STATE_META).map(([k, m]) => (
+              <li key={k} style={{ marginBottom: 4 }}>
+                <span className="badge" style={{ background: m.bg, color: m.fg, marginRight: 4 }}>{m.label}</span>
+                {m.tooltip}
+              </li>
+            ))}
+          </ul>
+          <b>Tier</b>: MACD es un filtro obligatorio — si no hay divergencia MACD, no hay señal y RSI/Volumen ni se
+          consultan. Con MACD ya confirmado: <b>T1</b> = solo MACD. <b>T2</b> = MACD + RSI (RSI en pivote2 &gt; pivote1).
+          <b> T3</b> = MACD + RSI + Volumen (volumen en pivote2 &gt; pivote1) — <u>Volumen solo cuenta si RSI también
+          confirma</u>; una señal con Volumen a favor pero RSI en contra se queda en T1, no sube a T2. En la tabla,
+          bajo cada badge de Tier se muestra el desglose real de esa fila (R✓/✗ = RSI confirmó o no, V✓/✗ = Volumen).
+        </div>
+      </details>
       {loading ? <div className="loading">Cargando…</div> : (
         <table>
           <thead>
@@ -317,7 +375,16 @@ function TrullasPage() {
                   <td><b>{r.ticker}</b></td>
                   <td style={{ color: '#98a2b3', fontSize: 10 }}>{r.section || '—'}</td>
                   <td><span className="badge" style={{ background: m.bg, color: m.fg }}>{m.label}</span></td>
-                  <td>{tier ? <span className="tier-badge" style={{ background: tier.bg, color: '#fff' }}>T{r.tier}</span> : '—'}</td>
+                  <td>
+                    {tier ? (
+                      <div>
+                        <span className="tier-badge" style={{ background: tier.bg, color: '#fff' }}>T{r.tier}</span>
+                        <div style={{ fontSize: 9, color: '#98a2b3', marginTop: 2 }}>
+                          R{r.rsi_div ? '✓' : '✗'} V{r.vol_div ? '✓' : '✗'}
+                        </div>
+                      </div>
+                    ) : '—'}
+                  </td>
                   <td className="num">{fmtPrice(r.price)}</td>
                   <td className="num">{r.rsi14 ?? '—'}</td>
                   <td className="num">{r.macd_hist ?? '—'}</td>
