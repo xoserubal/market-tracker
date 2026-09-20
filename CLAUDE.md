@@ -5636,6 +5636,84 @@ Detalle completo en `research/trullas_divergence_backtest_v1/README.md`.
 
 ---
 
+## Sistema Trullás — corrección de V1_OPEN: la ejecución real cuesta más de lo reportado (2026-09-21)
+
+Un tercer asesor externo revisó los hallazgos anteriores. Documento en
+general bien calibrado (mucho mejor que la primera ronda) — dos catches
+reales verificados antes de aceptarlos, no dados por buenos a ciegas:
+
+**1. Error propio corregido: "34% de confirmación real" en el README del
+detector anticipado era un error de redacción** — mezclaba esa cifra con
+el complementario del % de cierre por stop (100-66=34), una estadística
+distinta de la tasa de confirmación real (23-26%, la correcta, ya
+reportada en la tabla de arriba de ese mismo documento). Corregido en
+`research/trullas_early_detector_v1/README.md`.
+
+**2. Bug real y grande en `V1_OPEN` (la comparación homogénea del turno
+anterior): rellenaba a la apertura de la sesión siguiente SIN comprobar si
+esa apertura era una entrada válida.** Verificado contra datos reales antes
+de corregir: de las 82 operaciones originales, **solo 34 (41%) tenían la
+apertura siguiente realmente dentro de la zona 23-25%** — 41 (50%) abrían
+ya por encima de la zona (perseguir un precio que la regla dice que no hay
+que perseguir) y 7 (8.5%) abrían ya por debajo del stop (un trade que nace
+invalidado). Más de la mitad de lo reportado como "V1 con ejecución
+realista" no debería haberse contado como operación.
+
+**`V1_EXECUTABLE`** (nuevo, `research/trullas_early_detector_v1/backtest.py`):
+orden límite real, activa desde que confirma la divergencia hasta que
+expira la ventana de 15 sesiones, evaluada día a día por la apertura,
+exigiendo la misma zona 23-25% que la regla original (una primera versión
+del fix aceptaba cualquier apertura ≤ entry_high, lo que colaba entradas
+casi al mismo mínimo — perfil de riesgo distinto, corregido antes de
+reportar nada).
+
+| Variante | n | media | win% | Sharpe-like |
+|---|---:|---:|---:|---:|
+| V1 original (fill al mismo cierre — el que sigue operando `TRULLAS_SHADOW`) | 82 | +2.47% | 69.5% | 0.293 |
+| V1_OPEN_NAIVE (con el bug) | 82 | +1.98% | 64.6% | 0.234 |
+| **V1_EXECUTABLE (corregido)** | **54** | **+1.27%** | 66.7% | **0.151** |
+
+**El coste real de una ejecución honesta es mayor del reportado antes: no
+son 82 operaciones ejecutables, son 54, y el Sharpe-like cae a casi la
+mitad (0.293→0.151).** La dirección sigue siendo positiva — no invalida el
+sistema — pero es notablemente más débil que el número que se venía
+citando.
+
+**Aplicado a producción el mismo día, con aprobación explícita del
+usuario** (a diferencia del resto de esta ronda, que queda diferido — ver
+abajo): `find_entry_executable()` (orden límite real por apertura, zona
+23-25% estricta) sustituye a `find_entry_v1()` (fill al mismo cierre) tanto
+en `scripts/trullas_signal_calculator.py` como en
+`scripts/trullas_shadow_portfolio.py` (que ahora usa `c["open"]`, no
+`c["price"]`, como precio de entrada). `research/trullas_early_detector_v1/backtest.py`
+se refactorizó para llamar a la misma función compartida en vez de tener su
+propio bucle — verificado sin regresión (n=54/mean=1.27% idéntico antes y
+después del refactor). Campo nuevo `open` añadido a
+`trullas_signals.json`/`trullas_signals_history.jsonl`. Verificado contra
+datos reales de producción tras el cambio: 118/118 tickers calculados,
+distribución de `signal_state` coherente (p. ej. EOSE pasó a
+`waiting_pullback_ran_ahead` con `open=4.02` muy por encima de su zona
+3.063-3.065), dry-run de la cartera sin errores. Sin posiciones abiertas
+en `TRULLAS_SHADOW` en el momento del cambio, así que no hubo ninguna
+posición legacy que reconciliar.
+
+**Otra corrección del mismo asesor, incorporada:** V1 (82 señales, exige
+retroceso a la zona 23-25%) y B0 (2.722 candidatos, sin exigir ningún
+retroceso) no son las mismas oportunidades comparadas con distinto lag —
+son poblaciones de señales distintas y más laxas en B0. La conclusión de
+que B0/B1 no compensan el riesgo se sostiene igual (se evalúa en términos
+absolutos, no relativos a V1), pero no debe leerse como "B0 es V1 cinco
+sesiones antes con peor resultado" — matizado en el README.
+
+**Explícitamente diferido, a la espera de que el usuario decida sobre la
+corrección de ejecución antes de seguir invirtiendo en ello:** el resto del
+documento del tercer asesor (auditoría completa de las 82/54 operaciones
+con esquema de 30+ campos, estudio A/B/C/D de si RSI/Volumen aportan valor
+predictivo con presupuesto de riesgo constante, simulación de
+dimensionamiento por confirmaciones, B2). Ninguno se ha tocado.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

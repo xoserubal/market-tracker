@@ -13,13 +13,20 @@ cartera acumula muestra real en paralelo mientras el usuario usa la pestaña
 trullas.html de forma discrecional — no es una recomendación de trading.
 
 Entrada: scripts/trullas_signal_calculator.py marca signal_state="entry_today"
-para un ticker cuando su cierre de HOY es el primer cierre, dentro de la
-ventana de 15 sesiones desde el segundo pivote, que cae en la zona de
+para un ticker cuando su APERTURA de HOY es la primera apertura, dentro de
+la ventana de 15 sesiones desde el segundo pivote, que cae en la zona de
 retroceso 23-25% de Fibonacci de una divergencia alcista confirmada por
 MACD (obligatorio) + opcionalmente RSI/Volumen (niveles de confianza
-T1/T2/T3, ver docstring del calculador). Se guarda `tier_at_entry` para
-poder analizar más adelante si T3 (máxima confianza) rinde mejor que el
-resto, tal como sugiere el propio método de Trullás.
+T1/T2/T3, ver docstring del calculador). El fill se hace a esa apertura
+(`c["open"]`), no al cierre — corregido 2026-09-21 a raíz de una revisión
+externa que encontró que el modelo anterior (fill al mismo cierre que
+genera la señal) sobreestimaba el resultado real ejecutable: solo el 41%
+de las señales del backtest tenían una apertura siguiente realmente válida
+en la zona; el resto ya la había rebasado o roto el stop (ver CLAUDE.md,
+"corrección de V1_OPEN", y research/trullas_early_detector_v1/README.md).
+Se guarda `tier_at_entry` para poder analizar más adelante si T3 (máxima
+confianza) rinde mejor que el resto, tal como sugiere el propio método de
+Trullás.
 
 Salida — igual que el backtest ganador, contra los valores YA CONGELADOS al
 momento de la entrada (`tp_at_entry`/`stop_at_entry`), no contra un pivote
@@ -171,7 +178,7 @@ def run(apply: bool) -> int:
             ptf["positions"].append({
                 "ticker": tk,
                 "entry_date": today,
-                "entry_price": c["price"],
+                "entry_price": c["open"],  # apertura, no cierre -- ver docstring del módulo
                 "size_pct": SIZE_PCT,
                 "tier_at_entry": c["tier"],
                 "rsi_div_at_entry": c["rsi_div"],
@@ -187,7 +194,7 @@ def run(apply: bool) -> int:
                 "stop_at_entry": c["stop"],
             })
             n_added += 1
-            print(f"  [{NAME}] SELECT {tk}: tier={c['tier']} entry={c['price']:.4f} "
+            print(f"  [{NAME}] SELECT {tk}: tier={c['tier']} entry={c['open']:.4f} "
                   f"tp={c['tp']:.4f} stop={c['stop']:.4f}")
 
     summary = {

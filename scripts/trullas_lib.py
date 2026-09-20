@@ -177,6 +177,41 @@ def find_entry_v1(close: np.ndarray, entry_low: float, entry_high: float, stop: 
     return {"outcome": "no_entry_yet", "idx": None}
 
 
+def find_entry_executable(open_: np.ndarray, entry_low: float, entry_high: float, stop: float,
+                           start_idx: int, max_idx_exclusive: int) -> dict:
+    """Orden límite real (corregido 2026-09-21 a raíz de una revisión
+    externa, ver CLAUDE.md — reemplaza al modelo `find_entry_v1` de fill al
+    mismo cierre que genera la señal, que sobreestimaba el resultado real
+    ejecutable). Evalúa cada sesión por su APERTURA, no su cierre — es el
+    único precio sobre el que se puede actuar de verdad con la cadencia de
+    este pipeline (decisiones una vez al día sobre datos ya cerrados, sin
+    monitorización intradía).
+
+    Rellena si entry_low <= open <= entry_high (la misma zona 23-25% que
+    exige la regla original — NO cualquier apertura por debajo del techo:
+    una primera versión de este fix aceptaba eso y colaba entradas casi al
+    mismo mínimo, un perfil de riesgo distinto, corregido antes de usarse).
+    Invalidada si open <= stop. Si la apertura está fuera de la zona (por
+    encima o por debajo) sin haber invalidado, la orden sigue activa y se
+    prueba la sesión siguiente — no se persigue el precio por encima ni se
+    acepta uno por debajo de la zona.
+
+    Verificado contra 82 señales reales de V1 antes de adoptarlo: con
+    find_entry_v1 + fill ingenuo a la apertura siguiente, solo 34/82 (41%)
+    tenían una apertura siguiente realmente válida — 41 (50%) ya habían
+    rebasado la zona y 7 (8.5%) ya habían roto el stop. find_entry_executable
+    filtra esos casos correctamente en vez de rellenar a un precio que la
+    regla original no habría aceptado.
+
+    Devuelve {"outcome": "entry"|"invalidated"|"no_entry_yet", "idx": int|None}."""
+    for j in range(start_idx, max_idx_exclusive):
+        if open_[j] <= stop:
+            return {"outcome": "invalidated", "idx": j}
+        if entry_low <= open_[j] <= entry_high:
+            return {"outcome": "entry", "idx": j}
+    return {"outcome": "no_entry_yet", "idx": None}
+
+
 # ── Detector anticipado (B0/B1) — investigación, no en producción ──────────
 # Añadido 2026-09-20 a raíz de la propuesta de un asesor externo: identificar
 # un posible mínimo ANTES de que el pivote fractal se confirme 5 sesiones

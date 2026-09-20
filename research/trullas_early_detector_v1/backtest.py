@@ -74,10 +74,12 @@ def load_cache():
     return {t: pd.DataFrame(v) for t, v in raw.items()}
 
 
-def simulate_v1_open(ticker, df):
-    """V1, mismo gate/entrada que el Modelo B validado, pero fill a APERTURA
-    de la sesión siguiente al día que confirma la entrada (no al mismo
-    cierre) -- para comparar de tú a tú contra B0/B1."""
+def simulate_v1_open_naive(ticker, df):
+    """V1_OPEN (naive) -- mismo gate/entrada que el Modelo B validado, fill
+    a la APERTURA de la sesión siguiente al día que confirma la entrada,
+    SIN comprobar si esa apertura sigue siendo una entrada válida. Se
+    conserva solo para mostrar el tamaño del problema que corrige
+    simulate_v1_executable() -- ver README, "Corrección de V1_OPEN"."""
     close = df["Close"].to_numpy()
     open_ = df["Open"].to_numpy()
     vol = df["Volume"].to_numpy()
@@ -102,6 +104,93 @@ def simulate_v1_open(ticker, df):
         fill_idx = signal_idx + 1
         if fill_idx >= n:
             continue  # sin sesión siguiente disponible en los datos
+        entry_price = open_[fill_idx]  # sin comprobar elegibilidad -- a propósito, ver docstring
+
+        exit_idx, exit_reason = None, None
+        scan_end = min(fill_idx + tl.TIME_STOP_BARS, n)
+        for k in range(fill_idx, scan_end):
+            if close[k] <= stop:
+                exit_idx, exit_reason = k, "stop"
+                break
+            if close[k] >= tp:
+                exit_idx, exit_reason = k, "tp"
+                break
+        if exit_idx is None:
+            exit_idx, exit_reason = scan_end - 1, "time_stop"
+        exit_price = close[exit_idx]
+
+        trades.append({
+            "variant": "V1_OPEN_NAIVE", "ticker": ticker, "tier": ev["tier"],
+            "signal_date": str(dates[signal_idx]), "entry_date": str(dates[fill_idx]),
+            "entry_price": float(entry_price), "exit_date": str(dates[exit_idx]),
+            "exit_price": float(exit_price), "exit_reason": exit_reason,
+            "holding_days": int(exit_idx - fill_idx),
+            "ret_pct": float((exit_price - entry_price) / entry_price * 100),
+        })
+    return trades
+
+
+def simulate_v1_executable(ticker, df):
+    """V1_EXECUTABLE -- corrige el hueco señalado por un asesor externo
+    (2026-09-21) en V1_OPEN_NAIVE: ahí se rellenaba a la apertura del día
+    siguiente SIN comprobar si esa apertura seguía siendo una entrada
+    válida. Verificado contra datos reales antes de corregir: 41/82 (50%)
+    de esos "trades" abrían ya por ENCIMA de entry_high (perseguir un precio
+    que la propia regla de Fibonacci dice que no hay que perseguir) y 7/82
+    (8.5%) abrían ya por DEBAJO del stop (un trade que nace invalidado).
+    Solo 34/82 (41%) eran realmente ejecutables tal cual.
+
+    Modelo: orden límite real, activa desde que la divergencia MACD
+    confirma (b+1) hasta que expira la ventana de entrada
+    (ENTRY_WINDOW_BARS sesiones) -- consistente con la cadencia real de
+    este proyecto (decisiones una vez al día sobre datos ya cerrados, sin
+    monitorización intradía, ver Modelo A ya descartado). Cada sesión se
+    evalúa por su APERTURA (no por el cierre + fill al día siguiente, que
+    era el paso intermedio artificial de V1_OPEN_NAIVE):
+
+      open <= stop                    -> invalidada, sin operación
+      entry_low <= open <= entry_high -> fill aquí
+      open < entry_low O open > entry_high -> sigue esperando; se prueba
+                                          el día siguiente dentro de la
+                                          ventana (no se persigue el precio
+                                          por encima, ni se acepta un precio
+                                          por debajo de la zona -- eso ya no
+                                          sería "la misma señal" de Trullás,
+                                          sería comprar mucho más cerca del
+                                          mínimo, un perfil de riesgo
+                                          distinto que no es lo que V1
+                                          especifica)
+
+    Primera versión de este fix aceptaba cualquier open <= entry_high
+    (incluidos gaps muy por debajo de entry_low, cerca del stop) razonando
+    que una orden límite rellena "a precio igual o mejor" -- son 3.4x más
+    operaciones (n=282) con win=90.4%, resultado que no sobrevivió una
+    revisión: esas entradas cerca del stop son un perfil de riesgo
+    completamente distinto (comprar un re-test del mínimo, no un retroceso
+    superficial), no lo que V1 especifica. Corregido a la zona estricta.
+    """
+    close = df["Close"].to_numpy()
+    open_ = df["Open"].to_numpy()
+    vol = df["Volume"].to_numpy()
+    dates = df["Date"].to_numpy()
+    macd_arr, _, _ = tl.macd_full(df["Close"])
+    macd_arr = macd_arr.to_numpy()
+    rsi_arr = tl.rsi(df["Close"]).to_numpy()
+    n = len(close)
+
+    pivots = tl.find_pivots_low(close)
+    trades = []
+    for a, b in zip(pivots, pivots[1:]):
+        ev = tl.evaluate_pivot_pair(close, macd_arr, rsi_arr, vol, a, b)
+        if not ev.get("qualifies"):
+            continue
+        entry_low, entry_high, tp, stop = ev["entry_low"], ev["entry_high"], ev["tp"], ev["stop"]
+
+        window_end = min(b + 1 + tl.ENTRY_WINDOW_BARS, n)
+        scan = tl.find_entry_executable(open_, entry_low, entry_high, stop, b + 1, window_end)
+        if scan["outcome"] != "entry":
+            continue  # invalidada o nunca rellenó dentro de la ventana
+        fill_idx = scan["idx"]
         entry_price = open_[fill_idx]
 
         exit_idx, exit_reason = None, None
@@ -118,11 +207,10 @@ def simulate_v1_open(ticker, df):
         exit_price = close[exit_idx]
 
         trades.append({
-            "variant": "V1_OPEN", "ticker": ticker, "tier": ev["tier"],
-            "signal_date": str(dates[signal_idx]), "entry_date": str(dates[fill_idx]),
-            "entry_price": float(entry_price), "exit_date": str(dates[exit_idx]),
-            "exit_price": float(exit_price), "exit_reason": exit_reason,
-            "holding_days": int(exit_idx - fill_idx),
+            "variant": "V1_EXECUTABLE", "ticker": ticker, "tier": ev["tier"],
+            "entry_date": str(dates[fill_idx]), "entry_price": float(entry_price),
+            "exit_date": str(dates[exit_idx]), "exit_price": float(exit_price),
+            "exit_reason": exit_reason, "holding_days": int(exit_idx - fill_idx),
             "ret_pct": float((exit_price - entry_price) / entry_price * 100),
         })
     return trades
@@ -249,25 +337,32 @@ def main():
     data = load_cache()
     print(f"Universo (caché V1): {len(data)} tickers\n")
 
-    v1_open, b0, b1 = [], [], []
+    v1_open_naive, v1_executable, b0, b1 = [], [], [], []
     for t, df in data.items():
         try:
-            v1_open.extend(simulate_v1_open(t, df))
+            v1_open_naive.extend(simulate_v1_open_naive(t, df))
+            v1_executable.extend(simulate_v1_executable(t, df))
             b0.extend(simulate_early(t, df, "B0"))
             b1.extend(simulate_early(t, df, "B1"))
         except Exception as e:
             print(f"[error sim] {t}: {e}")
 
-    with open(OUT_DIR / "trades_v1_open.json", "w", encoding="utf-8") as f:
-        json.dump(v1_open, f, indent=2)
+    with open(OUT_DIR / "trades_v1_open_naive.json", "w", encoding="utf-8") as f:
+        json.dump(v1_open_naive, f, indent=2)
+    with open(OUT_DIR / "trades_v1_executable.json", "w", encoding="utf-8") as f:
+        json.dump(v1_executable, f, indent=2)
     with open(OUT_DIR / "trades_b0.json", "w", encoding="utf-8") as f:
         json.dump(b0, f, indent=2)
     with open(OUT_DIR / "trades_b1.json", "w", encoding="utf-8") as f:
         json.dump(b1, f, indent=2)
 
-    print("--- Comparación principal (misma disciplina de ejecución: fill a apertura siguiente) ---")
+    print("--- Corrección de V1_OPEN (elegibilidad de la apertura siguiente) ---")
     summary_rows = []
-    summary_rows.append(summarize(v1_open, "V1_OPEN (baseline homogéneo)"))
+    summary_rows.append(summarize(v1_open_naive, "V1_OPEN_NAIVE (sin comprobar elegibilidad -- con bug)"))
+    summary_rows.append(summarize(v1_executable, "V1_EXECUTABLE (orden límite real, corregido)"))
+    print()
+
+    print("--- Comparación principal (misma disciplina de ejecución) ---")
     summary_rows.append(summarize(b0, "B0 (anticipado, sin RVOL)"))
     summary_rows.append(summarize(b1, f"B1 (anticipado, RVOL>={tl.EARLY_VOLUME_SPIKE_THRESHOLD})"))
     print()

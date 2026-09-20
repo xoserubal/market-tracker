@@ -7,14 +7,24 @@ Validado en research/trullas_divergence_backtest_v1/ (backtest 2026-09-20,
 118 tickers, 2019→hoy): entrada solo en divergencias ALCISTAS en mínimos —
 MACD es el filtro obligatorio (sin divergencia MACD no hay señal, el resto
 no se consulta), RSI y Volumen confirman → 3 niveles de confianza (T1=solo
-MACD, T2=+RSI, T3=+RSI+Volumen). Ejecución EOD (fill al cierre del día en
-que el precio retrocede a la zona 23-25% de Fibonacci desde el segundo
-pivote), TP en el 38.2%, stop en la ruptura del pivote de origen,
-time-stop a 20 sesiones si no se toca ni TP ni stop. Es el mejor punto de
-todo lo probado en el backtest — ver
+MACD, T2=+RSI, T3=+RSI+Volumen). TP en el 38.2%, stop en la ruptura del
+pivote de origen, time-stop a 20 sesiones si no se toca ni TP ni stop. Es
+el mejor punto de todo lo probado en el backtest — ver
 research/trullas_divergence_backtest_v1/README.md para la comparativa
 completa (bate a "dejar correr hasta cruce MACD" y a cualquier otro nivel
 de la escalera Fibonacci).
+
+**Ejecución — corregida 2026-09-21** (ver CLAUDE.md, "corrección de
+V1_OPEN"): orden límite real, evaluada por la APERTURA de cada sesión (no
+el cierre) desde que confirma la divergencia hasta que expira la ventana
+de 15 sesiones — rellena si `entry_low <= open <= entry_high`. El modelo
+original (fill al mismo cierre que genera la señal) sobreestimaba el
+resultado real ejecutable: verificado contra las 82 señales del backtest,
+solo el 41% tenían una apertura siguiente realmente válida dentro de la
+zona; el resto ya había rebasado la zona (50%) o roto el stop (8.5%).
+`find_entry_executable()` en `trullas_lib.py` filtra esos casos
+correctamente. Coste medido en el backtest: n 82→54, Sharpe-like
+0.293→0.151 (ver `research/trullas_early_detector_v1/README.md`).
 
 Toda la matemática de indicadores/pivotes/gate de divergencia vive en
 scripts/trullas_lib.py, compartida con el backtest — no una copia paralela
@@ -125,6 +135,7 @@ def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | N
     close = df["close"].to_numpy()
     dates = [str(d.date()) for d in df.index]
     vol = df["volume"].to_numpy()
+    open_ = df["open"].to_numpy()
     n = len(close)
 
     macd_s, sig_s, hist_s = tl.macd_full(df["close"])
@@ -135,6 +146,7 @@ def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | N
     result: dict = {
         "ticker": ticker,
         "price": float(close[-1]),
+        "open": float(open_[-1]),
         "price_date": dates[-1],
         "volume": float(vol[-1]),
         "rvol20": None if rvol20 is None else round(rvol20, 2),
@@ -187,7 +199,10 @@ def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | N
                    tp=round(tp, 4), stop=round(stop, 4))
 
     window_end = min(b + 1 + tl.ENTRY_WINDOW_BARS, n)
-    scan = tl.find_entry_v1(close, entry_low, entry_high, stop, b + 1, window_end)
+    # find_entry_executable() (no find_entry_v1) -- corregido 2026-09-21:
+    # orden límite real evaluada por APERTURA, no relleno ingenuo al mismo
+    # cierre que genera la señal. Ver CLAUDE.md, "corrección de V1_OPEN".
+    scan = tl.find_entry_executable(open_, entry_low, entry_high, stop, b + 1, window_end)
 
     if scan["outcome"] == "invalidated":
         result["signal_state"] = "invalidated"
@@ -204,7 +219,9 @@ def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | N
             # ventana"): si el precio ya rebasó la zona de entrada, lo más
             # probable es que ya no vuelva a retroceder tan abajo — distinto
             # de "todavía no ha rebotado lo suficiente desde el mínimo".
-            if close[-1] > entry_high:
+            # Referencia la apertura de hoy (open_[-1]), no el cierre --
+            # coherente con que la entrada ahora se decide por apertura.
+            if open_[-1] > entry_high:
                 result["signal_state"] = "waiting_pullback_ran_ahead"
             else:
                 result["signal_state"] = "waiting_pullback_below_zone"
@@ -267,7 +284,7 @@ def run() -> int:
             out[tk] = sig
             history_rows.append({
                 "date": sig["price_date"], "ticker": tk,
-                "price": sig["price"], "volume": sig["volume"], "rvol20": sig["rvol20"],
+                "price": sig["price"], "open": sig["open"], "volume": sig["volume"], "rvol20": sig["rvol20"],
                 "macd": sig["macd"], "macd_signal": sig["macd_signal"], "macd_hist": sig["macd_hist"],
                 "rsi14": sig["rsi14"],
                 "pivot1_date": sig["pivot1_date"], "pivot1_close": sig["pivot1_close"],

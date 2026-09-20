@@ -746,8 +746,8 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, i
   md += `| ${f(summary.cost)} | ${f(summary.value)} | ${f(summary.pl)} | ${fp(summary.plPct)} | ${f(summary.dailyPL)} |\n\n`;
   portfolio.sections.forEach(sec => {
     md += `## ${sec.name}\n`;
-    md += `| Ticker | Acciones | Coste Avg | Precio | Valor | P&L | P&L% | 1D | 2D | 3D | 1W | 1M | 3M | YTD | 1Y | Vol 1D | Vol 2D | Vol 3D | RSI | MACD | ATR% | Konc D (blue/green/trend) | Konc 3D | Konc W | Flow | Early | Lectura | Notas | Patrón Konc. (D/3D/W) |\n`;
-    md += `|--------|--------:|----------:|-------:|------:|----:|-----:|---:|---:|---:|---:|---:|---:|---:|---:|-------:|-------:|-------:|----:|:----:|-----:|:---|:---|:---|----:|-----:|:---|:---|:---|\n`;
+    md += `| Ticker | Acciones | Coste Avg | Precio | Valor | P&L | P&L% | 1D | 2D | 3D | 1W | 1M | 3M | YTD | 1Y | Vol 1D | Vol 2D | Vol 3D | RSI | MACD | MACD 0 | ATR% | Konc D (blue/green/trend) | Konc 3D | Konc W | Flow | Early | Lectura | Notas | Patrón Konc. (D/3D/W) |\n`;
+    md += `|--------|--------:|----------:|-------:|------:|----:|-----:|---:|---:|---:|---:|---:|---:|---:|---:|-------:|-------:|-------:|----:|:----:|-----:|-----:|:---|:---|:---|----:|-----:|:---|:---|:---|\n`;
     sec.items.forEach(item => {
       const p       = prices[item.ticker];
       const value   = p?.price != null ? item.shares * p.price : null;
@@ -760,6 +760,8 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, i
       const konc3D  = p ? `blue ${fmtKonc(p.konc_3d_blue, p.konc_3d_blue_delta1)} / green ${fmtKonc(p.konc_3d_green, p.konc_3d_green_delta1)} / trend ${fmtKonc(p.konc_3d_trend, p.konc_3d_trend_delta1)} (${koncStateLbl(p.konc_3d_state)})` : '—';
       const koncW   = p ? `blue ${fmtKonc(p.konc_w_blue,  p.konc_w_blue_delta1)} / green ${fmtKonc(p.konc_w_green,  p.konc_w_green_delta1)} / trend ${fmtKonc(p.konc_w_trend,  p.konc_w_trend_delta1)} (${koncStateLbl(p.konc_w_state)})`  : '—';
       const macd    = p?.macdBull == null ? '—' : p.macdBull ? '▲' : '▼';
+      const macd0Trend = p?.macdLineDelta5 == null || p.macdLineDelta5 === 0 ? '' : (p.macdLineDelta5 > 0 ? '↑' : '↓');
+      const macd0   = p?.macdLineBull == null ? '—' : `${p.macdLineBull ? '+' : ''}${p.macdLine}${macd0Trend}`;
       const notes   = (item.notes || '—').replace(/\|/g, '/').replace(/\n/g, ' ');
       const kpFlag  = (tf, v, d) => v ? `${tf}:✅${d||''}` : null;
       const koncPattern = [kpFlag('D', item.koncPatternD, item.koncPatternDDate),
@@ -770,7 +772,7 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, i
           + `| ${value != null ? f(value) : '—'} | ${pl != null ? f(pl) : '—'} | ${fp(plPct)} `
           + `| ${fr(p?.d1)} | ${fr(p?.d2)} | ${fr(p?.d3)} | ${fr(p?.w1)} | ${fr(p?.m1)} | ${fr(p?.m3)} | ${fr(p?.ytd)} | ${fr(p?.y1)} `
           + `| ${fv(p?.vol1d)} | ${fv(p?.vol2d)} | ${fv(p?.vol3d)} `
-          + `| ${p?.rsi != null ? p.rsi : '—'} | ${macd} | ${p?.atrPct != null ? p.atrPct + '%' : '—'} `
+          + `| ${p?.rsi != null ? p.rsi : '—'} | ${macd} | ${macd0} | ${p?.atrPct != null ? p.atrPct + '%' : '—'} `
           + `| ${koncD} | ${konc3D} | ${koncW} `
           + `| ${flow != null ? flow.toFixed(1) : '—'} | ${early != null ? early.toFixed(1) : '—'} | ${lectura} | ${notes} | ${koncPattern} |\n`;
     });
@@ -1743,6 +1745,7 @@ function Portfolio() {
                     <th title="Mini-gráfico Koncorde — últimas 5 sesiones (azul/verde/tendencia-EMA15). Área+línea, misma escala que el 0.">📈</th>
                     <th title="Marca manual por timeframe: has comprobado que el posicionamiento del azul de Koncorde en ESTE timeframe (D en la fila principal, 3D y W en sus sub-filas) anticipa los giros alcistas/bajistas de esta acción. Guarda la fecha en que la marcaste, para saber qué periodo revisar más adelante y ampliar la validación.">🔮</th>
                     <th title="MACD histograma (12,26,9) — ▲ alcista / ▼ bajista">MACD</th>
+                    <th title="Línea MACD (EMA12−EMA26) por encima (+) o por debajo (−) de 0 — distinto de la columna MACD: esa mira el histograma (línea vs su señal EMA9), esta mira la línea en sí vs cero. Flecha ↑/↓ = tendencia de la línea en las últimas 5 sesiones.">MACD 0</th>
                     <th title="ATLAS Mini (Blai5): estrechamiento significativo de Bollinger Bands(20). dbb=sqrt((BBup-BBlow)/BBup)×20, señal si dbb ≤ EMA(dbb,120)×0.8. No da dirección, solo avisa de posible movimiento brusco próximo — combinar con MACD.">ATLAS</th>
                     <th title="ATR(14) normalizado por precio — volatilidad/fuerza del movimiento">ATR%</th>
                     <th title="Flow Score: momentum + RSI/MACD + ATR + Koncorde + tendencia">Flow</th>
@@ -1904,6 +1907,26 @@ function Portfolio() {
                             : p.macdBull ? <span style={{color:'#1a7a1a'}}>▲</span>
                                          : <span style={{color:'#c0392b'}}>▼</span>}
                         </td>
+                        {/* MACD línea vs 0 — distinto del histograma de la columna anterior.
+                            La flecha es la tendencia de la línea en las últimas 5 sesiones
+                            (hoy vs hace 5 sesiones, calculada sobre el histórico de precio ya
+                            descargado — no depende de acumular capturas propias día a día,
+                            a diferencia de TrendArrow). Un solo nivel (↑/↓), sin escalonar por
+                            magnitud — primera pasada, sin calibrar. */}
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10}}
+                          title={p?.macdLine!=null ? `Línea MACD (EMA12−EMA26) = ${p.macdLine}` : undefined}>
+                          {isLoad ? dot : p?.macdLineBull==null ? <span style={{color:'#aaa'}}>—</span>
+                            : <span style={{color: p.macdLineBull ? '#1a7a1a' : '#c0392b'}}>
+                                {p.macdLineBull ? '+' : ''}{p.macdLine}
+                                {p.macdLineDelta5 != null && p.macdLineDelta5 !== 0 && (
+                                  <span
+                                    title={`Tendencia línea MACD, últimas 5 sesiones: ${p.macdLineDelta5>=0?'+':''}${p.macdLineDelta5}`}
+                                    style={{marginLeft:3, fontWeight:700, color: p.macdLineDelta5 > 0 ? '#0d7a2e' : '#c0392b'}}>
+                                    {p.macdLineDelta5 > 0 ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </span>}
+                        </td>
                         {/* ATLAS Mini — estrechamiento de Bollinger, no da dirección */}
                         <td style={{textAlign:'center',fontSize:11}}
                           title={p?.atlasDbb!=null ? `dbb=${p.atlasDbb} · umbral=${p.atlasFactor} · atl=${p.atlasAtl}` : undefined}>
@@ -2018,7 +2041,7 @@ function Portfolio() {
                                 : 'Marcar si compruebas que el patrón Koncorde 3D (azul) predice los giros de esta acción'}
                             style={{cursor:'pointer'}}/>
                         </td>
-                        <td colSpan={7} style={{padding:0}}/>
+                        <td colSpan={8} style={{padding:0}}/>
                       </tr>
                       {/* ── Sub-row W ── */}
                       <tr style={{background:subBg2}}>
@@ -2052,7 +2075,7 @@ function Portfolio() {
                                 : 'Marcar si compruebas que el patrón Koncorde W (azul) predice los giros de esta acción'}
                             style={{cursor:'pointer'}}/>
                         </td>
-                        <td colSpan={7} style={{padding:0}}/>
+                        <td colSpan={8} style={{padding:0}}/>
                       </tr>
                     </React.Fragment>
                   );

@@ -81,7 +81,7 @@ function getInsiderActivityData() {
 // ── MACD (12, 26, 9) ─────────────────────────────────────────────────────
 function calcMACD(closes) {
   const c = closes.filter(x => x != null);
-  if (c.length < 35) return { macdHist: null, macdBull: null };
+  if (c.length < 35) return { macdHist: null, macdBull: null, macdLine: null, macdLineBull: null, macdLineDelta5: null };
 
   // EMA series usando SMA como semilla
   const emaFull = (data, period) => {
@@ -96,7 +96,7 @@ function calcMACD(closes) {
   const ema26 = emaFull(c, 26); // arr[0] = EMA en c[25]
   // ema12[14] y ema26[0] corresponden ambos a c[25]
   const macdLine = ema26.map((v, i) => ema12[i + 14] - v);
-  if (macdLine.length < 9) return { macdHist: null, macdBull: null };
+  if (macdLine.length < 9) return { macdHist: null, macdBull: null, macdLine: null, macdLineBull: null, macdLineDelta5: null };
 
   // Señal: EMA(9) del MACD line
   const k9 = 2 / 10;
@@ -104,7 +104,22 @@ function calcMACD(closes) {
   for (let i = 9; i < macdLine.length; i++) signal = macdLine[i] * k9 + signal * (1 - k9);
 
   const hist = macdLine[macdLine.length - 1] - signal;
-  return { macdHist: +hist.toPrecision(4), macdBull: hist >= 0 };
+  const lastMacdLine = macdLine[macdLine.length - 1];
+  // macdBull = histograma (línea MACD vs su señal) ≥ 0 — cruce clásico, momentum del momento.
+  // macdLineBull = la línea MACD en sí ≥ 0 — un concepto distinto (¿está el EMA12-EMA26 en
+  // territorio positivo o negativo?), pedido aparte por el usuario 2026-09-21. No confundir.
+  // macdLineDelta5 = tendencia de la línea en las últimas 5 sesiones (hoy vs hace 5 sesiones)
+  // — calculada aquí sobre los 3 años de cierres ya descargados, no depende de que se acumulen
+  // 5 días de captura propia (a diferencia de TrendArrow en portfolio.html, que sí usa
+  // signals_history.json día a día). Pedido por el usuario 2026-09-21, sin calibrar todavía
+  // ningún umbral de magnitud — un solo nivel de flecha (sube/baja), no escalonado.
+  const macdLineDelta5 = macdLine.length >= 6
+    ? +(lastMacdLine - macdLine[macdLine.length - 6]).toPrecision(4) : null;
+  return {
+    macdHist: +hist.toPrecision(4), macdBull: hist >= 0,
+    macdLine: +lastMacdLine.toPrecision(4), macdLineBull: lastMacdLine >= 0,
+    macdLineDelta5,
+  };
 }
 
 // ── ATLAS Mini (Blai5) — estrechamiento significativo de Bollinger Bands ──
