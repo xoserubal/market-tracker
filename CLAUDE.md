@@ -6094,6 +6094,69 @@ de experimentos shadow de este proyecto (P1A/P1B/P1C, Ranking Score, etc.).
 Ningún cambio a PCS/rot_score/carteras reales — esto es una capa de
 análisis narrativo, no toca el motor de picks.
 
+### Botón en Market Tracker + comprobación de mercado abierto (implementado 2026-09-21)
+
+Dos peticiones del usuario sobre esta Fase 2, atendidas el mismo día.
+
+**1. Botón "🤖 Análisis LLM" en `index.html`, solo lectura.** Antes de
+construir se preguntó explícitamente si debía mostrar el informe ya
+generado o disparar una llamada nueva bajo demanda (con coste real cada
+vez) — el usuario eligió la opción sin coste. Nueva ruta
+`GET /api/market-analysis` en `server.js` (lee
+`docs/data/market_analysis_llm.jsonl`, nunca escribe ni llama a ningún
+modelo) devuelve `{latest, history}` (hasta 30 días). El modal
+(`MarketAnalysisModal`) muestra régimen de mercado, prosa (mini-renderizador
+Markdown sin dependencias — headers `##`, `**bold**`, listas — suficiente
+para lo que produce el prompt) y las señales estructuradas con badges de
+convicción (paleta ya usada en el resto del proyecto). El usuario pidió
+después poder elegir qué día ver — añadidos "pills" de fecha (más reciente
+primero) que cambian qué entrada del array `history` se muestra, sin
+petición nueva al servidor.
+
+**Hallazgo real durante la verificación, no un bug de la app:** un primer
+intento de comprobar que el botón de cerrar funcionaba dio "el modal sigue
+en el DOM tras cerrar" en varias rondas de test — resultó ser un fallo del
+propio script de verificación, no de la app: el `<script type="text/babel">`
+vive dentro de `<body>` (patrón de todas las páginas del proyecto), así que
+`document.body.innerHTML.includes(...)` encuentra el texto en el **código
+fuente del script**, no en el DOM renderizado. Contar los divs
+`position:fixed` reales (1→0 tras cerrar) o mirar `#root` en vez de `body`
+confirmó que el cierre siempre funcionó correctamente.
+
+**2. El LLM no debía correr en días sin mercado abierto.** Verificado antes
+de arreglarlo: **3 de los 8 análisis ya generados corrieron en fin de
+semana** (2026-09-13 domingo, 19 sábado, 20 domingo — ver commit
+`docs/data/market_analysis_llm.jsonl`), gastando ~$0.35 en re-analizar
+datos ya vistos el día anterior, porque el script nunca comprobaba el día
+de la semana — solo dedupeaba por fecha de calendario, y la fecha de
+calendario avanza igual en fin de semana.
+
+`scripts/market_analysis_llm.py` gana `_is_market_open_day()`, dos
+filtros, sin calendario de festivos hardcodeado (evita mantenimiento y el
+sesgo de cubrir solo festivos de EE.UU.):
+1. Fin de semana (UTC) — barato, cubre la inmensa mayoría de los días sin
+   mercado.
+2. Si no es fin de semana: ¿avanzó el `asOf` (fecha de la vela real, ya
+   capturado en `market_equities_daily_snapshot.jsonl` por
+   `market_daily_snapshot.js`) de un índice de referencia (`^GSPC`, no un
+   ETF, evita ruido de dividendos) desde el último análisis ya registrado?
+   Si sigue siendo la misma sesión, no hay dato nuevo — probable festivo.
+   Este segundo filtro es el que cubre festivos sin necesitar un
+   calendario propio.
+
+**Verificado retroactivamente contra las 8 fechas reales ya generadas**
+(simulando `datetime.now()` para cada una y pasándole solo el historial
+que habría existido ese día): las 3 fechas de fin de semana detectadas
+correctamente como cerradas. Además, **el segundo filtro encontró un caso
+real no relacionado con fin de semana** — 2026-09-15 (martes) salió
+`open=False` porque `^GSPC` seguía en la vela del 2026-09-14, confirmando
+que el filtro de sesión-nueva aporta cobertura real más allá de los fines
+de semana, no solo en teoría.
+
+`--force` (nuevo flag) salta la comprobación para pruebas manuales — mismo
+patrón que otros scripts del proyecto. `--apply` sigue siendo necesario
+aparte para gastar crédito real; ambos flags son independientes.
+
 ---
 
 ## Relative Flow Lab v2 — auditoría de Fase 6 (instrumentación) y Fase 4/5a (calibración) (2026-09-17)

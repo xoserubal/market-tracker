@@ -43,6 +43,7 @@ de explícito aquí que en el resto de scripts de picks, que ya llevan meses
 en producción.
     py -3 scripts/market_analysis_llm.py             # dry-run (construye el payload, no llama a la API)
     py -3 scripts/market_analysis_llm.py --apply     # llama de verdad (gasta credito de OpenRouter)
+    py -3 scripts/market_analysis_llm.py --apply --force  # salta la comprobacion de mercado abierto (ver _is_market_open_day)
     py -3 scripts/market_analysis_llm.py --report    # resume el jsonl existente
 """
 from __future__ import annotations
@@ -150,6 +151,54 @@ def _today() -> str:
 def _prev_date(dates: set[str], today: str) -> str | None:
     earlier = sorted(d for d in dates if d < today)
     return earlier[-1] if earlier else None
+
+
+# Índice de referencia para detectar si hubo sesión de mercado nueva —
+# no un ETF (evita ruido de dividendos/roll de contrato).
+MARKET_OPEN_BENCHMARK = "^GSPC"
+
+
+def _is_market_open_day(today: str, existing: list[dict]) -> tuple[bool, str]:
+    """Comprueba si hoy hubo mercado abierto, SIN calendario de festivos
+    hardcodeado (evita mantenimiento y el sesgo de solo cubrir festivos de
+    EE.UU.) — descubierto 2026-09-21: 3 de los 8 análisis ya generados
+    corrieron en fin de semana (2026-09-13 domingo, 2026-09-19 sábado,
+    2026-09-20 domingo), gastando ~$0.35 en analizar datos ya vistos el
+    día anterior, porque el script nunca comprobaba el día de la semana.
+
+    Dos filtros, en orden de coste creciente:
+    1. Fin de semana (UTC) — barato, cubre la inmensa mayoría de los días
+       sin mercado sin tocar ningún fichero.
+    2. Si no es fin de semana: ¿avanzó el `asOf` (fecha de la última vela
+       real, ya capturado por market_daily_snapshot.js en
+       market_equities_daily_snapshot.jsonl) desde el último análisis ya
+       registrado? Si sigue siendo la misma sesión que la última vez,
+       no hay nada nuevo que analizar — probable festivo. Este segundo
+       filtro es el que cubre festivos sin necesitar un calendario propio
+       que mantener (ni asume solo festivos de EE.UU.)."""
+    dow = datetime.now(timezone.utc).weekday()
+    if dow >= 5:
+        return False, f"fin de semana (UTC weekday={dow})"
+
+    rows = _load_jsonl(MARKET_EQUITIES)
+    today_row = next((r for r in rows if r.get("ticker") == MARKET_OPEN_BENCHMARK and r.get("date") == today), None)
+    if today_row is None or not today_row.get("asOf"):
+        # Sin dato de referencia todavía (p. ej. Step 9g2 no ha corrido hoy) —
+        # no bloquea, se deja pasar en vez de fallar a ciegas.
+        return True, "sin dato de referencia para comprobar sesión nueva, se permite"
+
+    if not existing:
+        return True, "primer análisis, sin historial previo contra el que comparar"
+    last_analysis = max(existing, key=lambda r: r["date"])
+    last_row = next((r for r in rows if r.get("ticker") == MARKET_OPEN_BENCHMARK and r.get("date") == last_analysis["date"]), None)
+    if last_row is None or not last_row.get("asOf"):
+        return True, "sin dato de referencia del último análisis, se permite"
+
+    today_as_of, last_as_of = today_row["asOf"][:10], last_row["asOf"][:10]
+    if today_as_of == last_as_of:
+        return False, (f"sin sesión nueva desde el último análisis ({last_analysis['date']}): "
+                        f"{MARKET_OPEN_BENCHMARK} sigue en la vela del {today_as_of} — probable festivo")
+    return True, f"sesión nueva detectada: {MARKET_OPEN_BENCHMARK} avanzó de {last_as_of} a {today_as_of}"
 
 
 def _fmt(v, suffix: str = "", none: str = "—") -> str:
@@ -285,12 +334,18 @@ def extract_json_block(text: str) -> dict | None:
         return None
 
 
-def run(dry_run: bool) -> int:
+def run(dry_run: bool, force: bool = False) -> int:
     today = _today()
     existing = _load_jsonl(OUT_PATH)
     if any(r["date"] == today for r in existing):
         print(f"Ya hay un análisis registrado para hoy ({today}) — nada que hacer (dedup).")
         return 0
+
+    market_open, reason = _is_market_open_day(today, existing)
+    if not market_open and not force:
+        print(f"Mercado cerrado hoy ({today}) — {reason}. No se llama al LLM (usa --force para saltarte esto).")
+        return 0
+    print(f"Comprobación de mercado abierto: {reason}" + (" (ignorada por --force)" if not market_open and force else ""))
 
     if not PROMPT_PATH.exists():
         print(f"Falta {PROMPT_PATH}")
@@ -352,4 +407,4 @@ if __name__ == "__main__":
     if "--report" in sys.argv:
         print_report()
     else:
-        sys.exit(run(dry_run="--apply" not in sys.argv))
+        sys.exit(run(dry_run="--apply" not in sys.argv, force="--force" in sys.argv))

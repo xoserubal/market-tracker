@@ -641,6 +641,25 @@ app.get("/api/portfolio-history", (req, res) => {
   res.json({ rows, count: rows.length });
 });
 
+// ── Análisis de mercado LLM — solo lectura, nunca dispara una llamada nueva ──
+// Lee docs/data/market_analysis_llm.jsonl (escrito por
+// scripts/market_analysis_llm.py, Step 9g3 del pipeline, 1 llamada real/día
+// con dedup interno por fecha). El botón "🤖 Análisis LLM" de index.html
+// solo muestra lo que ya hay ahí — decisión explícita del usuario
+// 2026-09-21, para no gastar una llamada de pago cada vez que se pulsa.
+const MARKET_ANALYSIS_FILE = path.join(__dirname, "docs", "data", "market_analysis_llm.jsonl");
+
+app.get("/api/market-analysis", (_req, res) => {
+  try {
+    if (!fs.existsSync(MARKET_ANALYSIS_FILE)) return res.json({ latest: null, history: [] });
+    const rows = fs.readFileSync(MARKET_ANALYSIS_FILE, "utf8")
+      .split("\n").filter(l => l.trim())
+      .map(l => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean);
+    res.json({ latest: rows[rows.length - 1] || null, history: rows.slice(-30) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get("/api/portfolio", (_req, res) => {
   try {
     const data = fs.existsSync(PORTFOLIO_FILE)

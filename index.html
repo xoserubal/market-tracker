@@ -402,6 +402,155 @@ function MacroPulse({ macroData, macroLoading }) {
   );
 }
 
+// ── Análisis de mercado LLM — modal de solo lectura ─────────────────────────
+// Muestra docs/data/market_analysis_llm.jsonl (scripts/market_analysis_llm.py,
+// 1 llamada real/día con dedup por fecha en el pipeline). Este modal nunca
+// dispara una llamada nueva — decisión explícita del usuario 2026-09-21.
+
+const CONVICTION_STYLE = {
+  CONFIRMED:   { bg:'#c8e6c9', fg:'#1b5e20' },
+  EARLY:       { bg:'#e3f2fd', fg:'#1565c0' },
+  WATCH:       { bg:'#fff9c4', fg:'#e65100' },
+  EXTENDED:    { bg:'#ffe0b2', fg:'#bf360c' },
+  INVALIDATED: { bg:'#ffcdd2', fg:'#b71c1c' },
+};
+const convictionStyle = c => CONVICTION_STYLE[c] || { bg:'#f0f0f0', fg:'#555' };
+
+// Renderizador mínimo, sin dependencias, para la prosa del informe (usa
+// ## headers, **bold** y listas con "-"/"*" — suficiente para lo que
+// produce el prompt, no un parser Markdown completo).
+function renderMiniMarkdown(text) {
+  if (!text) return null;
+  const inlineBold = s => s.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <b key={i}>{part.slice(2, -2)}</b>
+      : part
+  );
+  const lines = text.split('\n');
+  const blocks = [];
+  let listBuf = [];
+  const flushList = () => {
+    if (listBuf.length) {
+      blocks.push(<ul key={'ul'+blocks.length} style={{margin:'4px 0 8px 18px',padding:0}}>
+        {listBuf.map((li, i) => <li key={i} style={{marginBottom:3}}>{inlineBold(li)}</li>)}
+      </ul>);
+      listBuf = [];
+    }
+  };
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) { flushList(); return; }
+    const headerM = trimmed.match(/^(#{2,4})\s+(.*)$/);
+    if (headerM) {
+      flushList();
+      const level = headerM[1].length;
+      const style = level === 2 ? {fontSize:14,fontWeight:800,margin:'12px 0 6px'}
+                  : level === 3 ? {fontSize:12,fontWeight:700,margin:'10px 0 5px'}
+                  : {fontSize:11,fontWeight:700,margin:'8px 0 4px'};
+      blocks.push(<div key={i} style={{...style,color:'#222'}}>{inlineBold(headerM[2])}</div>);
+      return;
+    }
+    const liM = trimmed.match(/^[-*]\s+(.*)$/);
+    if (liM) { listBuf.push(liM[1]); return; }
+    flushList();
+    blocks.push(<p key={i} style={{margin:'4px 0',lineHeight:1.5}}>{inlineBold(trimmed)}</p>);
+  });
+  flushList();
+  return blocks;
+}
+
+function MarketAnalysisModal({ history, selectedDate, onSelectDate, loading, error, onClose }) {
+  const data = (history || []).find(r => r.date === selectedDate) || null;
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',
+      display:'flex',alignItems:'flex-start',justifyContent:'center',zIndex:50,padding:'24px 12px',overflowY:'auto'}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'white',borderRadius:8,maxWidth:820,width:'100%',
+        padding:'20px 24px',boxShadow:'0 8px 30px rgba(0,0,0,.3)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+          <div style={{fontSize:16,fontWeight:800,color:'#111'}}>🤖 Análisis de mercado LLM</div>
+          <button onClick={onClose} style={{border:'none',background:'none',fontSize:18,cursor:'pointer',color:'#888'}}>✕</button>
+        </div>
+        {!loading && !error && history && history.length > 0 && (
+          <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:14,paddingBottom:12,borderBottom:'1px solid #eee'}}>
+            {[...history].reverse().map(r => (
+              <button key={r.date} onClick={() => onSelectDate(r.date)}
+                title={r.structured?.market_regime?.label || ''}
+                style={{fontSize:10,padding:'3px 9px',borderRadius:12,cursor:'pointer',
+                  border:'1px solid ' + (r.date===selectedDate ? '#00695c' : '#ddd'),
+                  background: r.date===selectedDate ? '#00695c' : '#fff',
+                  color: r.date===selectedDate ? '#fff' : '#555',
+                  fontWeight: r.date===selectedDate ? 700 : 400}}>
+                {r.date}
+              </button>
+            ))}
+          </div>
+        )}
+        {loading && <div style={{padding:'30px 0',textAlign:'center',color:'#888',fontSize:12}}>Cargando…</div>}
+        {!loading && error && <div style={{padding:'20px',background:'#fff5f5',border:'1px solid #fcc',
+          borderRadius:6,color:'#c0392b',fontSize:12}}>{error}</div>}
+        {!loading && !error && !data && history && history.length > 0 && (
+          <div style={{padding:'20px 0',textAlign:'center',color:'#888',fontSize:12}}>Elige un día de la lista de arriba.</div>
+        )}
+        {!loading && !error && data && (
+          <>
+            <div style={{fontSize:10,color:'#888',marginBottom:10}}>
+              {data.date}{data.prev_date ? ` (vs ${data.prev_date})` : ''} · {data.model}
+              {data.reasoning_effort ? ` · reasoning=${data.reasoning_effort}` : ''}
+              {data.cost_usd != null ? ` · $${data.cost_usd.toFixed(3)}` : ''}
+              {!data.structured_parse_ok && (
+                <span style={{color:'#bf360c',fontWeight:700}}> · ⚠ JSON estructurado no parseó — solo prosa</span>
+              )}
+            </div>
+
+            {data.structured?.market_regime && (
+              <div style={{background:'#f7f7f9',border:'1px solid #e0e0e0',borderRadius:6,padding:'10px 14px',marginBottom:14}}>
+                <div style={{fontSize:9,textTransform:'uppercase',letterSpacing:.4,color:'#888',marginBottom:3}}>Régimen de mercado</div>
+                <div style={{fontSize:14,fontWeight:800,color:'#222'}}>
+                  {data.structured.market_regime.label}
+                  {data.structured.market_regime.confidence_pct != null &&
+                    <span style={{fontSize:11,fontWeight:600,color:'#888',marginLeft:8}}>{data.structured.market_regime.confidence_pct}% confianza</span>}
+                </div>
+                {data.structured.market_regime.rationale &&
+                  <div style={{fontSize:11,color:'#555',marginTop:4}}>{data.structured.market_regime.rationale}</div>}
+              </div>
+            )}
+
+            <div style={{fontSize:12,color:'#333'}}>{renderMiniMarkdown(data.prose)}</div>
+
+            {Array.isArray(data.structured?.signals) && data.structured.signals.length > 0 && (
+              <>
+                <div style={{fontSize:14,fontWeight:800,margin:'16px 0 8px',color:'#222'}}>
+                  Señales estructuradas ({data.structured.signals.length})
+                </div>
+                {data.structured.signals.map((s, i) => {
+                  const cs = convictionStyle(s.conviction);
+                  return (
+                    <div key={i} style={{border:'1px solid #e6e6e6',borderRadius:6,padding:'10px 14px',marginBottom:8}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,flexWrap:'wrap'}}>
+                        <span style={{fontWeight:700,fontSize:12,color:'#222'}}>{s.subject}</span>
+                        <span style={{fontSize:9,fontWeight:700,padding:'1px 8px',borderRadius:10,background:cs.bg,color:cs.fg}}>{s.conviction}</span>
+                        {s.event_type && <span style={{fontSize:9,color:'#999'}}>{s.event_type}</span>}
+                        {s.confidence_pct != null && <span style={{fontSize:9,color:'#999',marginLeft:'auto'}}>{s.confidence_pct}% confianza</span>}
+                      </div>
+                      {s.signal && <div style={{fontSize:11,color:'#333',marginBottom:4}}>{s.signal}</div>}
+                      {s.interpretation && <div style={{fontSize:11,color:'#555',fontStyle:'italic',marginBottom:6}}>{s.interpretation}</div>}
+                      <div style={{fontSize:10,color:'#666',display:'grid',gridTemplateColumns:'auto 1fr',rowGap:3,columnGap:6}}>
+                        {s.action       && <><b style={{color:'#00695c'}}>Acción:</b><span>{s.action}</span></>}
+                        {s.trigger      && <><b style={{color:'#1565c0'}}>Trigger:</b><span>{s.trigger}</span></>}
+                        {s.invalidation && <><b style={{color:'#b71c1c'}}>Invalidación:</b><span>{s.invalidation}</span></>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main MarketTracker component ─────────────────────────────────────────
 function MarketTracker() {
   const [rows,        setRows]        = React.useState({});
@@ -421,8 +570,34 @@ function MarketTracker() {
   const [prevSnapshot] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem('ticker_snapshot') || '{}'); } catch { return {}; }
   });
+  const [analysisHistory,   setAnalysisHistory]   = React.useState([]);
+  const [selectedAnalysisDate, setSelectedAnalysisDate] = React.useState(null);
+  const [showAnalysisModal,setShowAnalysisModal]= React.useState(false);
+  const [analysisLoading,  setAnalysisLoading]  = React.useState(false);
+  const [analysisError,    setAnalysisError]    = React.useState(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); };
+
+  // Solo lectura — nunca dispara una llamada nueva al LLM (esa corre 1x/día
+  // en el pipeline, Step 9g3, con coste real). Muestra el informe ya
+  // generado en docs/data/market_analysis_llm.jsonl. Trae hasta 30 días de
+  // histórico para poder elegir qué día ver, no solo el más reciente.
+  const openMarketAnalysis = async () => {
+    setShowAnalysisModal(true);
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    try {
+      const r = await fetch('/api/market-analysis?t=' + Date.now());
+      const d = await r.json();
+      if (!d.latest) setAnalysisError('Todavía no hay ningún informe generado — el pipeline lo produce una vez al día.');
+      setAnalysisHistory(d.history || []);
+      setSelectedAnalysisDate(d.latest ? d.latest.date : null);
+    } catch (e) {
+      setAnalysisError('Error al cargar el informe: ' + e.message);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
   const setManualPrice = (key, val) => {
     const next = {...manualPrices, [key]: val};
     setManualPrices(next);
@@ -602,6 +777,10 @@ function MarketTracker() {
           <button onClick={copyAllForLLM}
             style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#37474f',color:'white'}}>
             🗂️ Exportar TODO a LLM
+          </button>
+          <button onClick={openMarketAnalysis}
+            style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,cursor:'pointer',background:'#00695c',color:'white'}}>
+            🤖 Análisis LLM
           </button>
           <button onClick={refresh} disabled={loading.size>0||macroLoading.size>0}
             style={{padding:'4px 12px',fontSize:11,border:'none',borderRadius:3,
@@ -884,6 +1063,16 @@ function MarketTracker() {
       <div style={{marginTop:8,fontSize:9,color:'#bbb',textAlign:'right'}}>
         Yahoo Finance (may be delayed 15 min) · FRED (1-day lag) · Not financial advice
       </div>
+      {showAnalysisModal && (
+        <MarketAnalysisModal
+          history={analysisHistory}
+          selectedDate={selectedAnalysisDate}
+          onSelectDate={setSelectedAnalysisDate}
+          loading={analysisLoading}
+          error={analysisError}
+          onClose={() => setShowAnalysisModal(false)}
+        />
+      )}
     </div>
   );
 }
