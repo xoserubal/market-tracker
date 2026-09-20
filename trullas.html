@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trullás — Market Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
+    .wrap { background: white; min-width: 960px; min-height: 100vh; padding: 16px 20px; overflow-x: auto; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; color: #111; line-height: 1; }
+    .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
+    .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    button { border: none; border-radius: 3px; padding: 5px 12px; cursor: pointer; font-size: 11px; font-weight: 600; color: white; }
+    button:disabled { cursor: default; opacity: 0.65; }
+    .btn-copy { background: #1a6b3c; }
+    .btn-export { background: #37474f; }
+    .btn-refresh { background: #3a6ca0; }
+    .btn-toggle { background: #6d4c00; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a6b3c; color: white; padding: 10px 22px; border-radius: 20px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 10; }
+
+    .section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #344054;
+      margin: 18px 0 4px; padding-bottom: 4px; border-bottom: 2px solid #e6e8eb; }
+    .section-sub { font-size: 10px; color: #98a2b3; margin-bottom: 10px; font-style: italic; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat-card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 12px; }
+    .stat-card .n { font-size: 20px; font-weight: 700; font-family: Consolas, monospace; }
+    .stat-card .lbl { font-size: 10px; color: #667085; margin-top: 2px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef0f2; white-space: nowrap; }
+    th { font-size: 9px; text-transform: uppercase; color: #98a2b3; letter-spacing: .3px; background: #354f73; color: #fff; position: sticky; top: 0; }
+    tbody tr:hover { background: #fafbfc; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .tier-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9.5px; font-weight: 800; }
+
+    .gap-note { border: 1px solid #ffe0b2; background: #fff8ef; color: #8a5200; border-radius: 6px; padding: 8px 12px; font-size: 10px; margin-bottom: 10px; }
+    .footer-note { font-size: 9px; color: #98a2b3; margin-top: 14px; font-style: italic; }
+    .loading { font-size: 11px; color: #98a2b3; padding: 20px 0; text-align: center; }
+    .num { font-family: Consolas, monospace; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const C = {
+  green:  { bg: '#c8e6c9', fg: '#1b5e20' },
+  yellow: { bg: '#fff9c4', fg: '#e65100' },
+  orange: { bg: '#ffe0b2', fg: '#bf360c' },
+  red:    { bg: '#ffcdd2', fg: '#b71c1c' },
+  neutral:{ bg: '#f0f0f0', fg: '#555' },
+  blue:   { bg: '#e3f2fd', fg: '#1565c0' },
+};
+
+const TIER_STYLE = {
+  3: { bg: '#1b5e20', fg: '#fff', label: 'T3 · MACD+RSI+Vol' },
+  2: { bg: '#e65100', fg: '#fff', label: 'T2 · MACD+RSI' },
+  1: { bg: '#90a4ae', fg: '#fff', label: 'T1 · solo MACD' },
+};
+
+// Estados del calculador (scripts/trullas_signal_calculator.py) agrupados
+// por prioridad de lectura — lo más accionable primero. El orden aquí es
+// también el orden de visualización por defecto de la tabla.
+const STATE_META = {
+  entry_today:               { rank: 0, label: 'Entrada hoy',            ...C.green,  group: 'Accionable' },
+  waiting_pullback_below_zone:{ rank: 1, label: 'Esperando retroceso',   ...C.blue,   group: 'Divergencia activa' },
+  waiting_pullback_ran_ahead: { rank: 2, label: 'Ya rebasó la zona',     ...C.yellow, group: 'Divergencia activa' },
+  entry_in_past:             { rank: 3, label: 'Señal reciente (pasada)',...C.orange, group: 'Divergencia activa' },
+  expired_no_pullback:       { rank: 4, label: 'Expirada',               ...C.neutral,group: 'Cerrada' },
+  invalidated:               { rank: 5, label: 'Invalidada',             ...C.red,    group: 'Cerrada' },
+  no_macd_divergence:        { rank: 6, label: 'Sin divergencia MACD',   ...C.neutral,group: 'Sin setup' },
+  no_lower_low:              { rank: 7, label: 'Sin mínimo más bajo',    ...C.neutral,group: 'Sin setup' },
+  swing_too_small:           { rank: 8, label: 'Swing < 3%',             ...C.neutral,group: 'Sin setup' },
+  no_pivots_yet:             { rank: 9, label: 'Sin pivotes',            ...C.neutral,group: 'Sin setup' },
+  insufficient_history:      { rank: 10,label: 'Histórico insuficiente', ...C.neutral,group: 'Sin setup' },
+};
+const ACTIVE_STATES = new Set(['entry_today', 'waiting_pullback_below_zone', 'waiting_pullback_ran_ahead', 'entry_in_past']);
+
+function stateMeta(s) { return STATE_META[s] || { rank: 99, label: s || '—', ...C.neutral, group: 'Sin setup' }; }
+function fmtPrice(v) { return v == null ? '—' : v.toFixed(v < 10 ? 4 : 2); }
+function fmtPct(v) { return v == null ? '—' : v.toFixed(1) + '%'; }
+
+function useToast() {
+  const [toast, setToast] = React.useState(null);
+  const show = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
+  return [toast, show];
+}
+
+function TrullasPage() {
+  const [signals, setSignals] = React.useState({});
+  const [shadowPositions, setShadowPositions] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [updated, setUpdated] = React.useState(null);
+  const [showAll, setShowAll] = React.useState(false);
+  const [toast, showToast] = useToast();
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('/api/trullas-signals?t=' + Date.now()).then(r => r.json()).catch(() => ({ date: null, tickers: {} })),
+      fetch('/docs/data/ai_picks.json?t=' + Date.now()).then(r => r.json()).catch(() => ({ portfolios: {} })),
+    ]).then(([sig, picks]) => {
+      setSignals(sig.tickers || {});
+      setShadowPositions((picks.portfolios || {}).TRULLAS_SHADOW?.positions || []);
+      setLoading(false);
+      setUpdated(sig.date || null);
+    });
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const rows = React.useMemo(() => {
+    const list = Object.values(signals);
+    list.sort((a, b) => {
+      const ra = stateMeta(a.signal_state).rank, rb = stateMeta(b.signal_state).rank;
+      if (ra !== rb) return ra - rb;
+      const ta = a.tier || 0, tb = b.tier || 0;
+      if (ta !== tb) return tb - ta;
+      const sa = a.swing_pct || 0, sb = b.swing_pct || 0;
+      return sb - sa;
+    });
+    return list;
+  }, [signals]);
+
+  const visibleRows = showAll ? rows : rows.filter(r => ACTIVE_STATES.has(r.signal_state));
+
+  const counts = React.useMemo(() => {
+    const c = {};
+    rows.forEach(r => { c[r.signal_state] = (c[r.signal_state] || 0) + 1; });
+    return c;
+  }, [rows]);
+
+  const buildTrullasMarkdown = () => {
+    const lines = [];
+    lines.push('# Trullás — Divergencias MACD/Volumen/RSI + Fibonacci');
+    lines.push(`Actualizado: ${updated || '—'}`);
+    lines.push('');
+    lines.push('Regla validada en research/trullas_divergence_backtest_v1/: entrada solo en ' +
+      'divergencias alcistas en mínimos, MACD obligatorio + RSI/Volumen confirman (T1/T2/T3), ' +
+      'fill a cierre en zona 23-25% de Fibonacci, TP 38.2%, stop en ruptura del pivote de origen, ' +
+      'time-stop 20 sesiones. Cartera TRULLAS_SHADOW la opera en modo shadow (sin capital real).');
+    lines.push('');
+    lines.push(`## Posiciones abiertas en TRULLAS_SHADOW (${shadowPositions.length})`);
+    if (shadowPositions.length) {
+      lines.push('| Ticker | Entrada | Precio entrada | TP | Stop | Tier |');
+      lines.push('|---|---|---:|---:|---:|---|');
+      shadowPositions.forEach(p => {
+        lines.push(`| ${p.ticker} | ${p.entry_date} | ${fmtPrice(p.entry_price)} | ${fmtPrice(p.tp_at_entry)} | ${fmtPrice(p.stop_at_entry)} | T${p.tier_at_entry} |`);
+      });
+    } else {
+      lines.push('Sin posiciones abiertas.');
+    }
+    lines.push('');
+    lines.push('## Señales activas (accionables o en curso)');
+    lines.push('| Ticker | Estado | Tier | Precio | Zona entrada | TP | Stop | Swing% | Pivote1 | Pivote2 |');
+    lines.push('|---|---|---|---:|---|---:|---:|---:|---|---|');
+    rows.filter(r => ACTIVE_STATES.has(r.signal_state)).forEach(r => {
+      const m = stateMeta(r.signal_state);
+      lines.push(`| ${r.ticker} | ${m.label} | ${r.tier ? 'T' + r.tier : '—'} | ${fmtPrice(r.price)} | ` +
+        `${r.entry_low != null ? fmtPrice(r.entry_low) + '-' + fmtPrice(r.entry_high) : '—'} | ${fmtPrice(r.tp)} | ` +
+        `${fmtPrice(r.stop)} | ${fmtPct(r.swing_pct)} | ${r.pivot1_date || '—'} @ ${fmtPrice(r.pivot1_close)} | ` +
+        `${r.pivot2_date || '—'} @ ${fmtPrice(r.pivot2_close)} |`);
+    });
+    return lines.join('\n');
+  };
+
+  React.useEffect(() => {
+    if (!updated) return;
+    localStorage.setItem('llm_export_trullas', buildTrullasMarkdown());
+    localStorage.setItem('llm_export_trullas_ts', Date.now().toString());
+  }, [updated, signals, shadowPositions]);
+
+  const copyMarkdown = () => {
+    navigator.clipboard.writeText(buildTrullasMarkdown()).then(() => showToast('Copiado para LLM'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',      label: 'Market Tracker' },
+      { key: 'llm_export_portfolio',   label: 'Portfolio' },
+      { key: 'llm_export_cycle',       label: 'Cycle' },
+      { key: 'llm_export_relative',    label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',    label: 'Flujos & Rotación' },
+      { key: 'llm_export_duration',    label: 'Duration' },
+      { key: 'llm_export_sentiment',   label: 'Sentiment' },
+      { key: 'llm_export_positioning', label: 'Positioning' },
+      { key: 'llm_export_trullas',     label: 'Trullás' },
+    ];
+    const now = Date.now();
+    const found = [], missing = [], stale = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) {
+        found.push(label);
+        const ts = parseInt(localStorage.getItem(key + '_ts') || '0');
+        const hours = ts ? Math.round((now - ts) / 3600000) : null;
+        if (!ts || hours > 23) stale.push(hours != null ? `${label} (${hours}h)` : label);
+        return md;
+      }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    const exportDate = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+    const header = `**Exportado:** ${exportDate}` +
+      (stale.length ? `\n⚠️ **Secciones desactualizadas (>24h):** ${stale.join(', ')} — Abre esas pestañas para refrescar\n` : '\n');
+    const combined = header + '\n---\n\n' + sections.join('\n\n---\n\n');
+    navigator.clipboard.writeText(combined)
+      .then(() => {
+        if (stale.length) showToast(`⚠️ ${stale.length} secc. desactualizadas: ${stale.join(', ')}`);
+        else if (missing.length) showToast(`✅ ${found.length}/${parts.length} pestañas — Falta: ${missing.join(', ')}`);
+        else showToast('✅ Todas las pestañas copiadas (datos frescos)');
+      })
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  return (
+    <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
+      <div className="topbar">
+        <div>
+          <div className="title-row">
+            <h1>Trullás</h1>
+            <a href="/index.html" className="nav-link" style={{ color: '#1a6b3c', borderColor: '#1a6b3c' }}>Market Tracker</a>
+            <a href="/portfolio.html" className="nav-link" style={{ color: '#3a6ca0', borderColor: '#3a6ca0' }}>Portfolio</a>
+            <a href="/relative.html" className="nav-link" style={{ color: '#7b1fa2', borderColor: '#7b1fa2' }}>Relative Flow</a>
+            <a href="/cycle.html" className="nav-link" style={{ color: '#7f0000', borderColor: '#7f0000' }}>Cycle</a>
+            <a href="/rotacion.html" className="nav-link" style={{ color: '#e65100', borderColor: '#e65100' }}>Flujos & Rotación</a>
+            <a href="/duration.html" className="nav-link" style={{ color: '#37474f', borderColor: '#37474f' }}>Duration</a>
+            <a href="/sentiment.html" className="nav-link" style={{ color: '#00695c', borderColor: '#00695c' }}>Sentiment</a>
+            <a href="/positioning.html" className="nav-link" style={{ color: '#5d4037', borderColor: '#5d4037' }}>Positioning</a>
+          </div>
+          <div className="meta">Divergencias MACD/Volumen/RSI + ejecución Fibonacci (sistema Trullás) — decisión discrecional; TRULLAS_SHADOW la opera en paralelo sin capital real</div>
+        </div>
+        <div className="actions">
+          <button className="btn-toggle" onClick={() => setShowAll(s => !s)}>{showAll ? 'Solo activas' : `Ver todos (${rows.length})`}</button>
+          <button className="btn-refresh" onClick={load} disabled={loading}>{loading ? 'Cargando…' : 'Refrescar'}</button>
+          <button className="btn-copy" onClick={copyMarkdown}>Copy for LLM</button>
+          <button className="btn-export" onClick={copyAllForLLM}>🗂️ Exportar TODO a LLM</button>
+        </div>
+      </div>
+
+      <div className="gap-note">
+        Validado en <code>research/trullas_divergence_backtest_v1/</code> (118 tickers, 2019→hoy) antes de construir
+        esta pestaña — TP fijo al 38.2% de Fibonacci fue el mejor punto de todo lo probado (bate a dejar correr la
+        tendencia hasta cruce MACD, y a cualquier otro nivel de la escalera Fibonacci). Con n=82 señales en 6.5 años,
+        <b> esto es información para decisión discrecional, no una recomendación con edge confirmado</b> — la cartera
+        TRULLAS_SHADOW opera la misma regla en paralelo sin capital real mientras se acumula más muestra.
+      </div>
+
+      <div className="section-title">Resumen</div>
+      <div className="card-grid">
+        {Object.keys(STATE_META).map(s => (
+          counts[s] ? (
+            <div className="stat-card" key={s}>
+              <div className="n" style={{ color: stateMeta(s).fg }}>{counts[s]}</div>
+              <div className="lbl">{stateMeta(s).label}</div>
+            </div>
+          ) : null
+        ))}
+      </div>
+
+      {shadowPositions.length > 0 && (
+        <React.Fragment>
+          <div className="section-title">TRULLAS_SHADOW — posiciones abiertas ({shadowPositions.length})</div>
+          <table>
+            <thead><tr>
+              <th>Ticker</th><th>Entrada</th><th>Precio entrada</th><th>TP</th><th>Stop</th><th>Tier</th>
+            </tr></thead>
+            <tbody>
+              {shadowPositions.map(p => (
+                <tr key={p.ticker}>
+                  <td><b>{p.ticker}</b></td>
+                  <td>{p.entry_date}</td>
+                  <td className="num">{fmtPrice(p.entry_price)}</td>
+                  <td className="num">{fmtPrice(p.tp_at_entry)}</td>
+                  <td className="num">{fmtPrice(p.stop_at_entry)}</td>
+                  <td><span className="tier-badge" style={{ background: TIER_STYLE[p.tier_at_entry]?.bg, color: '#fff' }}>T{p.tier_at_entry}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </React.Fragment>
+      )}
+
+      <div className="section-title">{showAll ? `Universo completo (${visibleRows.length})` : `Señales activas (${visibleRows.length})`}</div>
+      <div className="section-sub">
+        Zona de entrada = 23-25% de retroceso Fibonacci desde el segundo pivote (mínimo más reciente) sobre el swing
+        pivote1→pivote2. TP = 38.2%. Stop = ruptura del pivote de origen (precio vuelve a caer por debajo del segundo mínimo).
+      </div>
+      {loading ? <div className="loading">Cargando…</div> : (
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th><th>Sección</th><th>Estado</th><th>Tier</th><th>Precio</th><th>RSI14</th>
+              <th>MACD hist</th><th>Swing%</th><th>Pivote1</th><th>Pivote2</th>
+              <th>Zona entrada</th><th>TP 38.2%</th><th>Stop</th><th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map(r => {
+              const m = stateMeta(r.signal_state);
+              const tier = TIER_STYLE[r.tier];
+              const detail = r.signal_state === 'entry_today' ? '¡Fill hoy!'
+                : r.bars_remaining_in_window != null ? `${r.bars_remaining_in_window} sesiones restantes`
+                : r.entry_signal_date ? `señal: ${r.entry_signal_date}`
+                : '—';
+              return (
+                <tr key={r.ticker}>
+                  <td><b>{r.ticker}</b></td>
+                  <td style={{ color: '#98a2b3', fontSize: 10 }}>{r.section || '—'}</td>
+                  <td><span className="badge" style={{ background: m.bg, color: m.fg }}>{m.label}</span></td>
+                  <td>{tier ? <span className="tier-badge" style={{ background: tier.bg, color: '#fff' }}>T{r.tier}</span> : '—'}</td>
+                  <td className="num">{fmtPrice(r.price)}</td>
+                  <td className="num">{r.rsi14 ?? '—'}</td>
+                  <td className="num">{r.macd_hist ?? '—'}</td>
+                  <td className="num">{fmtPct(r.swing_pct)}</td>
+                  <td style={{ fontSize: 10 }}>{r.pivot1_date ? `${r.pivot1_date} @ ${fmtPrice(r.pivot1_close)}` : '—'}</td>
+                  <td style={{ fontSize: 10 }}>{r.pivot2_date ? `${r.pivot2_date} @ ${fmtPrice(r.pivot2_close)}` : '—'}</td>
+                  <td className="num">{r.entry_low != null ? `${fmtPrice(r.entry_low)}-${fmtPrice(r.entry_high)}` : '—'}</td>
+                  <td className="num">{fmtPrice(r.tp)}</td>
+                  <td className="num">{fmtPrice(r.stop)}</td>
+                  <td style={{ fontSize: 10, color: '#667085' }}>{detail}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      <div className="footer-note">
+        Datos: scripts/trullas_signal_calculator.py (Step 9c4 del pipeline, 2×/día) sobre el universo de
+        Portfolio Tracker (portfolio.json). Cartera TRULLAS_SHADOW (Step 9c5) es 100% mecánica, sin IA en
+        ningún punto — misma regla exacta validada en el backtest, en modo shadow. Ver CLAUDE.md.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<TrullasPage />);
+</script>
+</body>
+</html>

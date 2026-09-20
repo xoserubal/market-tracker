@@ -546,6 +546,18 @@ app.get("/api/cot/:contract", async (req, res) => {
 // ── Portfolio CRUD ────────────────────────────────────────────────────────
 const PORTFOLIO_FILE = path.join(__dirname, "portfolio.json");
 
+// ── Trullás signals (scripts/trullas_signal_calculator.py, Step 9c4) ──────
+const TRULLAS_SIGNALS_FILE = path.join(__dirname, "docs", "data", "trullas_signals.json");
+
+app.get("/api/trullas-signals", (_req, res) => {
+  try {
+    const data = fs.existsSync(TRULLAS_SIGNALS_FILE)
+      ? JSON.parse(fs.readFileSync(TRULLAS_SIGNALS_FILE, "utf8"))
+      : { date: null, tickers: {} };
+    res.json(data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Signals History ───────────────────────────────────────────────────────
 const SIGNALS_FILE = path.join(__dirname, "signals_history.json");
 

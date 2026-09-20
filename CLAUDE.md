@@ -5217,6 +5217,425 @@ aquí a propósito, se pidió el informe incondicional.
 
 ---
 
+## Sistema Trullás (divergencias MACD/Volumen/RSI + Fibonacci) — backtest inicial (2026-09-20)
+
+Origen: el usuario propuso un sistema nuevo de trading basado en el método de
+David Trullás (MACD como filtro obligatorio de divergencia, Volumen y RSI
+como confirmación, ejecución vía retroceso de Fibonacci 23-25%/TP 38%), con
+dos piezas: una pestaña nueva en market-tracker (estilo `portfolio.html`,
+datos adaptados a este sistema) para decisiones discrecionales del usuario, y
+una cartera nueva en AI Picks Lab conectada a esa pestaña, gestionada por IA
+con instrucciones a ir refinando. Acordado con el usuario: backtestear la
+señal primero, antes de construir nada — mismo criterio que Cruce Rojo D,
+Mirror Espejo, Cava Macro.
+
+**Backtest:** `research/trullas_divergence_backtest_v1/` (script + README con
+la metodología completa). Universo Portfolio Tracker (118 tickers), diario,
+2019→hoy. Solo largos (divergencias alcistas en mínimos) — decisión explícita,
+ninguna cartera de este proyecto opera cortos.
+
+**Resultado — dos modelos de ejecución, conclusión muy distinta según cuál:**
+- **Modelo A (fills intradía, toca la zona 23-25%/38%/stop con High/Low):**
+  aparenta edge (win 76.5%, media +0.78%/trade, n=514) pero **se invierte con
+  un coste de transacción realista** (≥1pp ida+vuelta → media -0.22%, win
+  40.5%) y **no es ejecutable con la arquitectura actual** (exige orden
+  límite intradía a un precio exacto; todo el pipeline de este proyecto
+  decide y ejecuta a cierre, 2×/día). Descartado.
+- **Modelo B (fills solo a cierre diario, el mismo patrón de ejecución que
+  usa el resto del pipeline):** perfil bastante mejor y mucho más resistente
+  a costes (media +2.47%→+1.47% de 0 a 1pp de coste, win 69.5%→67.1%), pero
+  **n=82 señales en 6.5 años sobre 118 tickers (n=16 en el nivel de máxima
+  confianza MACD+RSI+Volumen)** — muy por debajo del umbral que este proyecto
+  ya se exige antes de prometer nada (~40-150 eventos, ver
+  `wiki/PREREGISTRO_PCS_FLOOR_FACTORIAL_V1.md`/`PREREGISTRO_RANKING_SCORE_V0.md`).
+
+**Decisiones tomadas para poder backtestear, no especificadas por el texto
+original de Trullás (documentadas en el docstring de `backtest.py` para no
+perderlas):** pivotes por fractal de 5 barras sobre `close`; swing mínimo 3%
+para filtrar ruido; stop = ruptura del mínimo que originó la divergencia
+(≈23-25% de riesgo por 13-15% de objetivo — asimétrico en contra del trade,
+no probado con un stop más ajustado todavía); ventana de 15 sesiones para que
+el precio retroceda a la zona de entrada antes de que la señal expire;
+time-stop a 20 sesiones si ni TP ni stop se tocan.
+
+**Variante pedida por el usuario — dejar correr la tendencia hasta cruce
+MACD bajista, en vez de TP fijo al 38% (misma entrada exacta):** produce más
+retorno medio (+4.25% vs +2.47%, ≈+72% relativo) pero con un perfil de
+riesgo bastante peor — mediana negativa (-1.52% vs +2.77%, la mayoría de
+operaciones individuales pierden, el promedio lo salvan pocas grandes),
+win rate 41.5% vs 69.5%, volatilidad casi el doble (std 17.4 vs 8.4), peor
+caso -31% vs -19%. En términos ajustados a riesgo (media/std) el Fibonacci
+TP 38% es ligeramente mejor (0.293 vs 0.245) pese a menor retorno bruto.
+Ambos modelos dependen de un puñado de operaciones grandes (el top-5 de 82
+explica 60-64% de la suma total de retornos) — con n=82 ninguna de las dos
+medias es todavía fiable. Detalle en
+`research/trullas_divergence_backtest_v1/README.md`.
+
+**Variante pedida por el usuario — escalera completa de niveles Fibonacci
+(38.2/50/61.8/78.6/100%) como TP fijo, misma entrada/stop:** empeora de
+forma monótona al alejar el TP — win rate 69.5%→45.1%, % cierre por stop
+30%→54%, Sharpe-like 0.293→0.150. **El 38.2% original es el mejor punto de
+todo el barrido probado hasta ahora** (mejor incluso que dejar correr hasta
+el cruce MACD, Sharpe 0.245). Detalle en
+`research/trullas_divergence_backtest_v1/README.md`.
+
+**Recomendación (pendiente de decisión del usuario, nada construido aún de
+la pestaña ni de la cartera):** si se construye, hacerlo sobre el modelo B
+con TP fijo al 38.2% (el único ejecutable, el único que sobrevive a costes,
+y el mejor de todos los puntos de salida probados hasta ahora), y lanzar la
+cartera IA en modo shadow desde el primer día (mismo patrón que Ranking
+Score shadow/P1A/P1B/P1C) — con n=82 no hay base para operar capital real,
+solo para acumular muestra en paralelo mientras la pestaña se usa de forma
+discrecional.
+
+---
+
+## Sistema Trullás — pestaña + cartera shadow construidas (implementado 2026-09-20)
+
+Continuación directa de la sección anterior. Tras validar el backtest (TP
+fijo al 38.2% de Fibonacci, ganador de todo el barrido probado), el usuario
+pidió construir sobre esa regla exacta — "después ya iremos probando cosas
+a mayores". Alcance de esta primera versión: la regla mecánica ya validada,
+sin capa de IA todavía (ver decisión de arquitectura más abajo).
+
+### Decisión de arquitectura — 100% mecánica, sin IA (por ahora)
+
+La propuesta original del usuario incluía "una IA tomando decisiones de
+compra, venta... según las instrucciones que le demos". Pero la regla que
+se validó en el backtest (gate MACD binario, confirmación RSI/Volumen
+binaria, entrada/TP/stop en niveles de precio exactos) no deja ningún
+margen de juicio subjetivo que una IA pudiera aportar — a diferencia de
+MIRROR_ESPEJO, donde Grok sí juzga si un giro de Koncorde "parece creíble"
+más allá del disparador mecánico. Se construyó como **cartera 100%
+mecánica, sin llamada a ningún modelo**, mismo patrón que CRUCE_ROJO_D —
+"las instrucciones que le demos" quedan codificadas exactamente, sin
+riesgo de alucinación ni coste de API. Añadir una capa de juicio con IA
+(p. ej. para descartar señales de baja calidad, ponderar contexto macro, o
+afinar el timing dentro de la ventana de entrada) queda para una iteración
+posterior — "cosas a mayores" explícitamente diferido, no descartado.
+
+### `scripts/trullas_signal_calculator.py` (nuevo, Step 9c4)
+
+Calcula el estado de señal Trullás para cada ticker de `portfolio.json`
+(118 tickers) + los abiertos en `TRULLAS_SHADOW` (para que una posición
+siga teniendo señal aunque el ticker salga de portfolio.json, mismo
+criterio que `koncorde_calculator.py` con `left_universe`). Descarga ~3
+años de OHLCV vía yfinance (`auto_adjust=False`, con el mismo fix de escala
+GBX/GBp de `.L` que el backtest y `cruce_rojo_d_portfolio.py`), calcula
+MACD(12,26,9)/RSI(14)/pivotes fractales de 5 barras — **parámetros
+idénticos a los del backtest**, a propósito, para que la señal en vivo sea
+trazable al resultado ya validado, no una variante sin probar.
+
+Para cada ticker, replica exactamente la lógica de entrada del backtest
+(escaneo hacia delante desde el segundo pivote, hasta 15 sesiones, buscando
+el primer cierre dentro de la zona 23-25%) y devuelve un `signal_state` de
+10 valores posibles: `entry_today` (el cierre de HOY es el primero que cae
+en zona → señal accionable), `waiting_pullback_below_zone`/
+`waiting_pullback_ran_ahead` (divergencia confirmada, todavía sin
+retroceso — separadas para que la pestaña distinga "puede que baje a la
+zona" de "ya se fue, poco probable que vuelva", útil para lectura
+discrecional aunque no cambia la elegibilidad mecánica), `expired_no_pullback`,
+`invalidated` (rompió el pivote de origen antes de entrar), `entry_in_past`
+(la entrada ya ocurrió, stale para operar hoy — solo relevante en el
+bootstrap, antes de que este sistema existiera), y 5 estados de "sin setup"
+(`no_macd_divergence`, `no_lower_low`, `swing_too_small`, `no_pivots_yet`,
+`insufficient_history`).
+
+Para tickers con posición abierta en `TRULLAS_SHADOW`, calcula también
+`bars_held_since_entry` — contando barras reales en la propia serie
+descargada entre `entry_date` y hoy, no aritmética de calendario (evita el
+error de fin de semana/festivo que tendría contar días naturales) — para
+que el time-stop de 20 sesiones de la cartera se aplique con precisión.
+
+Salida: `docs/data/trullas_signals.json`, servido vía `/api/trullas-signals`
+(nueva ruta en `server.js`, mismo patrón que `/api/portfolio`).
+
+### `scripts/trullas_shadow_portfolio.py` (nuevo, Step 9c5) — cartera `TRULLAS_SHADOW`
+
+Mismo patrón exacto que `cruce_rojo_d_portfolio.py`: entra en cualquier
+ticker con `signal_state=="entry_today"` (todos los tiers, no solo T3 —
+para maximizar acumulación de muestra shadow; el `tier_at_entry` queda
+registrado en cada posición para poder analizar más adelante si T3 rinde
+mejor, como sugiere el propio método de Trullás). Tamaño 5% fijo, sin
+límite de posiciones (mismo criterio que MIRROR_ESPEJO/CRUCE_ROJO_D).
+
+**Salida contra valores congelados en la entrada, no recalculados**: al
+abrir, se guarda `tp_at_entry`/`stop_at_entry` (y pivotes/swing/tier) del
+momento exacto de la señal — los días siguientes, según se forman pivotes
+nuevos, el `entry_low`/`tp`/`stop` *en vivo* de `trullas_signals.json` ya
+no describen el mismo swing que originó la entrada. La cartera comprueba
+siempre contra el valor congelado, nunca contra el estado actual del
+calculador. Tres motivos de cierre, en el mismo orden que el backtest
+ganador: `stop_pivot_break` (precio ≤ stop) → `tp_fib_38.2` (precio ≥ TP)
+→ `time_stop_20d` (`bars_held_since_entry>=20`). `"event":"close"` desde el
+primer commit (evita el bug ya repetido con CAVA_MACRO/MIRROR_ESPEJO).
+
+Lanzada en modo **shadow explícito** — acordado en la ronda de preguntas
+previa a construir: con n=82 en el backtest, muy por debajo del umbral que
+este proyecto se exige antes de operar capital real (~40-150 eventos), la
+cartera acumula muestra real en paralelo mientras la pestaña se usa de
+forma discrecional. No es una recomendación de trading.
+
+### `trullas.html` (nuevo) — pestaña discrecional
+
+Página nueva, mismo patrón que `positioning.html` (React+Babel standalone,
+sin build step, fetch client-side). Tabla principal con las señales
+activas por defecto (`entry_today`/`waiting_pullback_*`/`entry_in_past`),
+toggle "Ver todos" para el universo completo de 118 tickers, tarjetas de
+resumen por `signal_state`, sección de posiciones abiertas de
+`TRULLAS_SHADOW` (leídas vía fetch directo a `/docs/data/ai_picks.json`,
+servido estático — no hizo falta ninguna ruta nueva para esto), y el mismo
+patrón `buildXMarkdown()`/`localStorage llm_export_trullas`/"Copy for
+LLM"/"🗂️ Exportar TODO a LLM" que el resto de páginas del proyecto.
+
+Nav pill "Trullás" (`#ad1457`) añadida a las 9 páginas raíz existentes
+(`index.html`, `portfolio.html`, `relative.html`, `cycle.html`,
+`rotacion.html`, `duration.html`, `sentiment.html`, `positioning.html`, y la
+propia `trullas.html` enlaza a las otras 8), y `llm_export_trullas` sumada
+al array `parts` compartido de exportación a LLM en las 9 páginas.
+
+### Registro en AI Picks Lab / Telegram
+
+`TRULLAS_SHADOW` añadida a `PTF_LABELS` (`docs/index.html`, "Trullás
+(shadow)") — fuera de `GROK_PTFS`/`MIMO_PTFS` del mini-panel de overview
+(no tiene modelo, mismo criterio que `CRUCE_ROJO_D`) y fuera de
+`PTF_THRESHOLDS` (no usa PCS) — y a `_PORTFOLIO_LABELS` en
+`paper_trading.py`/`notify_telegram.py`, desde el primer commit, para no
+repetir el hueco ya visto con CAVA_MACRO.
+
+### Pipeline (`.github/workflows/market-update.yml`)
+
+Steps 9c4 (calculador) y 9c5 (cartera), justo después de Step 9c3 (Cruce
+Rojo D) — ambos `continue-on-error: true`, corren en los dos pases del día
+(coste mínimo, sin llamada a ningún modelo, mismo criterio que Cruce Rojo D).
+
+### Verificado
+
+`trullas_signal_calculator.py` corrido contra datos reales de producción:
+118/118 tickers descargados, 0 `entry_today` el día de implementación
+(esperado — señal naturalmente rara, ~12-13/año sobre todo el universo),
+2 `waiting_pullback`, 1 `entry_in_past`, 1 `invalidated`, 1
+`expired_no_pullback` — los 4 casos revisados a mano contra los valores
+crudos (pivotes/zona/precio) para confirmar que la clasificación es
+coherente. `trullas_shadow_portfolio.py --apply` registró la cartera vacía
+en `ai_picks.json` (0 candidatos el día de implementación, consistente).
+Sintaxis JSX de las 9 páginas (incluida `trullas.html`) verificada con
+`@babel/standalone` en Node — sin errores. Verificación end-to-end con Edge
+headless vía CDP (Puppeteer, proceso temporal en el scratchpad de la
+sesión, sin instalar nada en el repo) contra un `server.js` real: ruta
+`/api/trullas-signals` responde con datos reales; `trullas.html` renderiza
+8 tarjetas de resumen y 3 filas activas por defecto (coincide exacto con
+los `signal_state` reales de ese día); toggle "Ver todos" expande a 118
+filas sin error; `index.html`/`portfolio.html`/`positioning.html` cargan
+sin errores nuevos de consola tras añadirles el nav pill (el único warning
+visto en `index.html` es de `validateDOMNesting` preexistente, confirmado
+por `git diff` que no está en las líneas tocadas por este cambio).
+
+### Fuera de alcance (explícito)
+
+Capa de juicio con IA sobre la señal mecánica (diferido, no descartado —
+"cosas a mayores"). Backtest sobre un universo más amplio que Portfolio
+Tracker. Refinar el stop (pendiente desde la ronda de backtest — ruptura
+del pivote es ~23-25% de riesgo por 13-15% de objetivo, asimétrico, no
+probado con un stop más ajustado). Promoción de `TRULLAS_SHADOW` a capital
+real — espera a acumular ≥40-150 eventos, mismo criterio que el resto de
+experimentos shadow del proyecto.
+
+---
+
+## Sistema Trullás — revisión de un asesor externo + librería compartida + histórico diario (implementado 2026-09-20)
+
+El usuario pasó a un segundo asesor externo una especificación técnica muy
+extensa (implementación completa del sistema Trullás con detector anticipado
+de mínimos vía volumen extraordinario, escalado de posiciones por riesgo,
+esquema de eventos de 15+ campos, máquina de estados de 12 nodos, dashboard
+propio). Antes de tocar código, se hizo una revisión crítica de esa
+propuesta — mismo patrón que otras rondas de asesor externo en este proyecto
+([[feedback_external_advisor_review]]): valorar lo bueno, señalar lo que
+asume incorrectamente sobre el código real, y recortar a una Fase 1
+verificable en vez de implementar el documento completo de una vez.
+
+**Hallazgo propio, no señalado por el asesor:** comparar V1 contra un futuro
+detector B0/B1/B2 con la disciplina de ejecución que el propio asesor exige
+para el detector nuevo (fill a apertura del día siguiente, nunca al mismo
+cierre que generó la señal) sería injusto para V1, porque **`TRULLAS_SHADOW`
+ya tiene ese mismo problema de realismo de ejecución** — entra al mismo
+cierre que confirma `entry_today`. Cualquier backtest comparativo futuro
+tendría que aplicar la misma disciplina a los dos lados. Pendiente, no
+resuelto en este cambio.
+
+**Lo que sí se implementó ahora — dos piezas señaladas como prioritarias por
+el usuario, acotadas a propósito para no intentar el documento completo de
+una sola vez:**
+
+### 1. `scripts/trullas_lib.py` (nuevo) — cierra el riesgo de deriva señalado
+
+El asesor tenía razón: `backtest.py` y `trullas_signal_calculator.py` tenían
+cada uno su propia copia de `ema`/`rsi`/`find_pivots_low` — mismo patrón de
+deriva ya sufrido en este proyecto (`calcCMF` duplicado antes de
+`calcAtlasMini`, `HARD_RULES` duplicadas antes de `ai_shared.py`). Extraída
+la matemática de indicadores (`ema`, `macd_full`, `rsi`, `find_pivots_low`),
+la lógica de "gate" de divergencia (`evaluate_pivot_pair` — MACD obligatorio,
+RSI/Volumen confirman, calcula tier y niveles Fibonacci) y el escaneo de
+entrada (`find_entry_v1`) a un módulo único, con los parámetros
+(`PIVOT_WINDOW`, `MIN_SWING_PCT`, niveles Fibonacci, etc.) como constantes
+de una sola fuente de verdad. `scripts/trullas_signal_calculator.py` y
+`research/trullas_divergence_backtest_v1/backtest.py` importan ambos de
+aquí — ninguno mantiene su propia copia.
+
+**Corrección de parámetro encontrada en el propio proceso:** el TP de
+Fibonacci tenía dos valores ligeramente distintos entre archivos (`0.38` en
+el backtest original del Modelo A, `0.382` en las pruebas posteriores de
+Modelo B/escalera Fibonacci y en el sistema en vivo) — unificado a `0.382`
+(el valor real del nivel). Efecto sobre resultados ya reportados: Modelo B
+idéntico (ya usaba 0.382); Modelo A se mueve de forma marginal (mean
+0.78%→0.80%, best 36.64%→37.12%) — sin cambio de ninguna conclusión.
+
+**Segundo hueco cerrado de paso:** el Modelo B (el que de verdad implementa
+producción — fills EOD, TP 38.2%) solo existía como comandos sueltos de
+terminal, nunca como script guardado — a diferencia del Modelo A, que sí
+tenía `backtest.py`. Ahora `simulate_model_b_eod()` en `backtest.py` usa
+literalmente `find_entry_v1()`, la misma función que
+`trullas_signal_calculator.py` llama en producción — el backtest y el motor
+en vivo comparten la función de entrada, no solo los parámetros.
+
+**Verificado — regresión cero:** re-ejecutado `backtest.py` contra la
+misma caché de OHLCV ya descargada (`ohlcv_cache.json`, 118 tickers,
+2019→hoy). Modelo B: n=82, mean=2.47%, median=2.77%, win=69.5%,
+worst=-19.4%, T3 n=16/mean=4.14%/win=75% — **idéntico byte a byte** a los
+números ya reportados y documentados antes del refactor. Modelo A: cambios
+solo marginales, explicados exactamente por la corrección 0.38→0.382.
+`trullas_signal_calculator.py` re-ejecutado contra datos reales de
+producción: misma distribución de `signal_state` que antes del refactor
+(82 `no_lower_low`, 20 `no_macd_divergence`, 11 `swing_too_small`, 1 cada
+uno de `expired_no_pullback`/`invalidated`/`entry_in_past`, 2
+`waiting_pullback_*`) — confirma que la extracción no cambió ningún
+comportamiento.
+
+### 2. Persistencia histórica diaria — `docs/data/trullas_signals_history.jsonl` (nuevo)
+
+Pedido explícito del usuario: "hay que guardar datos históricos que nos
+permitan después hacer estudios y simulaciones retrospectivas sobre
+nuestros propios datos" — antes de este cambio, `trullas_signals.json` se
+**sobrescribía** en cada run (solo el snapshot de HOY, sin histórico).
+
+Una fila por `(ticker, fecha)`, append-only, dedup — mismo patrón exacto que
+`koncorde_signals_history.jsonl`/`mirror_signals.jsonl`/
+`portfolio_daily_snapshot.jsonl` ya establecido en este proyecto. Campos:
+precio, volumen, **`rvol20`** (volumen relativo a la media de las 20
+sesiones anteriores, excluyendo la sesión actual), MACD línea/señal/
+histograma, RSI14, pivotes, `swing_pct`, `macd_div`/`rsi_div`/`vol_div`/
+`tier`, niveles de entrada/TP/stop, `signal_state`.
+
+**`rvol20` se calcula y persiste aunque hoy no alimenta ninguna señal ni
+decisión** — sembrado a propósito para la hipótesis de detección anticipada
+que planteó el asesor externo (mínimo provisional + volumen extraordinario +
+divergencia MACD provisional, antes de que el pivote fractal confirme 5
+sesiones después): si más adelante se decide investigarla, ya habrá
+histórico acumulado en vez de tener que esperar meses desde cero. No se
+implementó ninguna lógica de detección anticipada todavía — solo el dato
+que la haría investigable.
+
+**Verificado:** primera ejecución escribió 118 filas nuevas; segunda
+ejecución el mismo día escribió 0 (dedup confirmado). `rvol20` verificado
+con valores reales plausibles (EOSE 0.95, AMR 1.8 — sin anomalías).
+
+### Explícitamente fuera de alcance de este cambio
+
+Todo lo demás del documento del asesor externo quedó fuera de esta ronda en
+su momento (detector anticipado B0/B1/B2, escalado de posiciones por
+presupuesto de riesgo, esquema de eventos con `pivot_id`/`early_event_id`,
+máquina de estados de 12 nodos, sección nueva del dashboard, homogeneizar
+la ejecución de V1) — el detector anticipado (B0/B1) y la homogeneización
+de ejecución se investigaron el mismo día, ver sección siguiente. El resto
+sigue sin tocar.
+
+---
+
+## Sistema Trullás — detector anticipado (B0/B1): hipótesis NO respaldada (2026-09-20)
+
+Continuación directa de la sección anterior, mismo día — el usuario pidió
+investigar la hipótesis del asesor externo (detección de mínimos antes de
+la confirmación fractal, vía volumen extraordinario + divergencia MACD
+provisional). Backtest completo en
+`research/trullas_early_detector_v1/` (script + README con el detalle
+completo — esta entrada resume el resultado).
+
+**Extendido `scripts/trullas_lib.py`** con las primitivas del detector
+(`reference_confirmed_pivot_asof`, `evaluate_early_candidate_b0`) — ninguna
+se usa en producción (`trullas_signal_calculator.py`/
+`trullas_shadow_portfolio.py`), solo en la investigación.
+
+**Tres variantes comparadas, todas con la MISMA disciplina de ejecución**
+(fill a apertura de la sesión siguiente a la señal — corrige la asimetría
+que yo mismo había señalado como pendiente: comparar un detector "realista"
+contra un V1 que entra al mismo cierre que generó la señal habría sido
+injusto para V1):
+
+| Variante | n | media | mediana | win% | Sharpe-like | % stop |
+|---|---:|---:|---:|---:|---:|---:|
+| V1_OPEN (baseline homogéneo) | 82 | +1.98% | +1.77% | 64.6% | 0.234 | 30.5% |
+| B0 (anticipado, sin RVOL) | 2722 | +0.34% | -0.55% | 40.2% | 0.045 | 66.4% |
+| B1 (anticipado, RVOL≥4.0) | 141 | -0.15% | -0.12% | 36.2% | -0.016 | 66.0% |
+
+**Resultado: hipótesis NO respaldada.** B1 (la variante que el asesor
+proponía llevar a producción) tiene media y Sharpe-like negativos. B0 (el
+control sin filtro de volumen) tampoco muestra ventaja real. Barrido de
+umbral RVOL (2x a 7x) descriptivo, sin ninguno mostrando un Sharpe-like
+consistentemente positivo — no hay un punto ganador escondido.
+
+**Mecanismo, no solo el número:** solo el 23-26% de los candidatos B0/B1
+llegan a confirmarse como pivote fractal real con la divergencia todavía
+sostenida — el resto es falsa alarma (aparece un mínimo más bajo antes de
+poder confirmarse, o la divergencia se diluye). Esto se refleja en el % de
+cierre por stop: 66% en B0/B1 frente a 30.5% en V1_OPEN. El volumen
+extraordinario no discrimina entre "esto es el suelo" y "esto sigue
+cayendo" — exactamente la advertencia que el propio asesor externo hacía en
+su sección 8.1, confirmada empíricamente.
+
+**Hallazgo colateral — coste real de la ejecución homogénea:** re-simular
+V1 con fill a apertura siguiente (en vez del mismo cierre, como opera hoy
+`TRULLAS_SHADOW` en producción) cuesta de verdad: media 2.47%→1.98%, win
+69.5%→64.6%. Sigue siendo un resultado sólido, pero confirma que la
+ejecución "al mismo cierre" que usa la cartera en producción hoy es una
+idealización que sobreestima el resultado real esperable. **No se ha
+tocado `trullas_shadow_portfolio.py`** — la cartera sigue entrando al mismo
+cierre; este hallazgo queda documentado, no aplicado, a la espera de que el
+usuario decida si quiere ese cambio (afectaría a una cartera ya en marcha).
+
+**No se construye B2** (confirmación por reacción del precio) — con B0/B1
+ya mostrando que el problema de fondo es "entrar sin confirmación", no la
+ausencia de un trigger de reacción concreto, añadir esa variante no habría
+cambiado la conclusión.
+
+**Nada de esto se lleva a producción** — mismo patrón que otras hipótesis
+descartadas en este proyecto tras contrastarlas con datos (Capitulación
+Precursores, Relative Flow Family Test): idea intuitiva que no sobrevive a
+una prueba controlada. `trullas_signals_history.jsonl` (la persistencia
+diaria del turno anterior) no se usó para este backtest — se reutilizó el
+histórico yfinance multi-año ya cacheado en
+`research/trullas_divergence_backtest_v1/ohlcv_cache.json`, igual que el
+backtest original; el log diario propio queda para un tipo de estudio
+distinto (vigilar deriva de la señal en vivo con el tiempo), no descartado
+por este resultado.
+
+**Adenda — sensibilidad de `PIVOT_WINDOW` (2026-09-20, mismo día):** el
+usuario preguntó si acortar la ventana de confirmación del pivote (2/3/4
+sesiones en vez de 5) mejoraría el resultado. Script
+`research/trullas_divergence_backtest_v1/pivot_window_sensitivity.py`,
+mismo Modelo B validado, todo fijo salvo `PIVOT_WINDOW`. **Tampoco ayuda**
+— 5 sesiones sigue siendo la mejor de las cuatro en media/win/Sharpe-like
+sobre el conjunto completo de señales (2.47%/69.5%/0.293); 3 sesiones es la
+peor con diferencia (colapsa en el subconjunto T3, media +0.04%). 4
+sesiones queda muy cerca de 5 (incluso marginalmente mejor en T3, pero con
+n=12-17 por ventana eso es ruido, no señal fiable). Lectura consistente con
+el hallazgo del detector anticipado de arriba: menos confirmación no
+mejora la calidad de la señal, ni eliminándola del todo (B0/B1) ni
+acortándola parcialmente. No se cambia `PIVOT_WINDOW` en producción.
+Detalle completo en `research/trullas_divergence_backtest_v1/README.md`.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
