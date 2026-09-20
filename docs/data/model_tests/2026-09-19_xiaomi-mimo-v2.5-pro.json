@@ -1,199 +1,249 @@
 {
-  "run_id": "2026-09-19_1219",
+  "run_id": "2026-09-19_2205",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-09-19",
   "summary": {
     "date": "2026-09-19",
-    "run_id": "2026-09-19_1219",
+    "run_id": "2026-09-19_2205",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
     "candidate_count": 37,
-    "input_tokens": 38721,
-    "output_tokens": 11676,
-    "cost_usd": 0.027002,
-    "latency_ms": 305980.0,
+    "input_tokens": 38711,
+    "output_tokens": 8509,
+    "cost_usd": 0.024242,
+    "latency_ms": 161610.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 5,
-    "quality_score": 73,
-    "selected_count": 1,
-    "watch_count": 3,
+    "hard_rule_violations": 0,
+    "quality_score": 93,
+    "selected_count": 0,
+    "watch_count": 19,
     "rejected_count": 21,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [
-      "SELECT GLNG: not in candidates",
-      "SELECT GLNG: not eligible",
-      "SELECT GLNG: PCS 0.0 below MIMO_SHADOW minimum (68.0)",
-      "Duplicate ticker: SLP.L",
-      "Duplicate ticker: HUM"
-    ],
+    "violations": [],
     "soft_warnings": [
-      "KONC_3D_BLUE_DOWNTREND_WARNING: GLNG selected with konc_3d_blue_down_2_bars=true",
-      "numeric_hallucination_suspected: REJECT MRK cited pcs=83.2 for MRK (actual=63.8)",
-      "numeric_hallucination_suspected: REJECT MRK cited streak_weeks=5.0 for MRK (actual=0)",
-      "numeric_hallucination_suspected: REJECT HUM cited pcs=88.0 for HUM (actual=59.8)",
-      "numeric_hallucination_suspected: REJECT KOS cited pcs=90.0 for KOS (actual=69.8)"
+      "numeric_hallucination_suspected: WATCH KIST.L cited streak_weeks=0.0 for KIST.L (actual=6)",
+      "hold_below_floor: HUM has pcs=59.8 (<62) but action=HOLD — should EXIT"
     ]
   },
-  "quality_score": 73,
+  "quality_score": 93,
   "response": {
     "date": "2026-09-19",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-09-19_1219",
+    "run_id": "2026-09-19_2205",
     "decision_summary": {
-      "market_read": "Bull Maduro improving at 75.0 with zero weekly delta and +6.25 monthly delta — macro regime supports risk-on but oil_gas theme at 119.5% weight requires extreme caution on new energy additions.",
-      "risk_posture": "cautious",
-      "should_select_picks": true
+      "market_read": "Bull Maduro regime with macro improving +6.25 over 1m supports energy and commodity rotations but oil_gas concentration at 119% remains extreme.",
+      "risk_posture": "normal",
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "GLNG",
-        "portfolio": "MIMO_SHADOW",
-        "signal_type": "early_rotation",
-        "confidence": "medium",
-        "reason_short": "PCS crossed 68 floor from 55.8 pre-macro with rot jumping 3→6 and 21.9% 13w outperformance on rising trajectory.",
-        "reason_full": "GLNG's PCS surged from 61.8 to 70.2, crossing the MIMO_SHADOW 68.0 entry floor with rotation score jumping from 3 to 6 and ret_13w_vs_spy of 21.9% confirming sustained institutional accumulation. PCS ex macro is 55.8 above the 45.8 floor. Extension risk is zero with no overextension flags, and oil_gas subtheme concentration for LNG transport is low, providing a cleaner angle than the concentrated Canadian oil names already in the portfolio. Oil_gas theme concentration at 119.5% is extreme and acknowledged — the signal justifies one measured entry but no more within this theme until diversification improves.",
-        "comparative_edge": "Selected over SLP.L (PCS=72) because SLP.L carries spike_flag=true, dems=8 below the 10 floor, and only 1-week streak — SLP.L watched for multi-day momentum confirmation before entry. MU rejected: PCS 68.0 exactly at floor with insufficient safety buffer.",
-        "key_supporting_factors": [
-          "PCS crossed the 68.0 floor from 55.8 pre-macro (delta +14.4) confirming rising composite strength across all components.",
-          "Rotation score jumped from 3 to 6 confirming thematic momentum acceleration in oil_gas LNG transport.",
-          "Zero extension risk with no overextension flags offers the cleanest entry among all PCS 70+ candidates.",
-          "Ret_13w_vs_spy of 21.9% and ret_4w_vs_spy of 7.33% demonstrate sustained multi-week institutional conviction."
-        ],
-        "key_risks_or_contradictions": [
-          "PCS at 70.2 sits exactly at the floor — minimal safety buffer if macro or thematics reverse.",
-          "Oil_gas theme already holds 119.5% of portfolio weight — adding GLNG deepens extreme single-sector concentration.",
-          "Dems=7 is below 10 so daily flow data cannot independently confirm the weekly signal and must be monitored."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
-        "ticker": "QQQ",
-        "reason": "PCS surged from 50.2 to 69.0 on macro thematic alpha recovery, rot jumped to 7, and signal upgraded to VIGILAR — but the +18.8 PCS delta in one week suggests a single-week repricing that needs follow-through confirmation.",
-        "watch_trigger": "QQQ sustain PCS above 68 for a second consecutive week with rot >= 7 and dems >= 14; or PCS rising above 75 would trigger immediate SELECT consideration."
-      },
-      {
-        "ticker": "MU",
-        "reason": "PCS crossed into MIMO_SHADOW at 68.0 from 56.2 pre-macro (delta +11.8), rot jumped to 7, and dems=16 exceeds the 14 early rotation threshold — but PCS at exactly 68.0 floor means zero safety buffer if one component weakens.",
-        "watch_trigger": "MU PCS rising above 72 with rot >= 7 and dems >= 14 would trigger SELECT; or sustained PCS above 68 for a second week with confirmed weekly outperformance streak > 0."
-      },
-      {
         "ticker": "SLP.L",
-        "reason": "Signal upgraded from IGNORAR to VIGILAR and rot score jumped from 5 to 8, but PCS 72.0 sits below the comfortable entry threshold, spike_flag=true flags concentrated recent gains, and dems=8 is below the 10 floor confirming weak daily momentum reinforcement.",
-        "watch_trigger": "SLP.L dems rising above 10 with spike_flag resolving and outperform_d10 >= 6 confirmed; or PCS rising above 75 with multi-day continuation beyond the 4-day streak."
+        "reason": "Rot score jumped from 5 to 8 with VIGILAR signal, Koncorde bullish-aligned, and silver theme diversification from extreme oil_gas weight—but streak_weeks only 1, dems=8 below threshold, and signal not yet EN_RADAR.",
+        "watch_trigger": "Signal upgrade to EN_RADAR with streak extending to 3+ weeks would confirm sustained leadership and justify entry at PCS 72."
+      },
+      {
+        "ticker": "TNZ.TO",
+        "reason": "PCS 90.2 with rot=9, 5-week streak, +20.2% 4w outperformance, and bullish-aligned Koncorde; already held at full weight with oil_gas concentration at 119%.",
+        "watch_trigger": "Continue holding; no additional action needed while streak_weeks >= 3 and rot_score >= 7."
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "PCS 87 with 8-week streak and rot=8, but daily state distribution and spike_flag=true flag caution despite strong weekly structure; already held.",
+        "watch_trigger": "Spike_flag clearing and konc_d_state returning to 'up' would reduce tactical risk."
+      },
+      {
+        "ticker": "LCX.V",
+        "reason": "PCS 85.2 with rot=8 and 4-week streak building momentum (+12.4% 4w), but konc_3d_state=distribution warning across D/3D/W warrants caution.",
+        "watch_trigger": "Konc_3d_state transitioning to 'up' would confirm structural recovery and validate current hold."
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS 82.8 with rot=7 and 5-week streak on bullish-pending-3d-confirmation alignment; already held and position performing well.",
+        "watch_trigger": "Konc_3d_state confirming to 'up' with green crossing above 50 would upgrade to strongest conviction."
+      },
+      {
+        "ticker": "VLE.TO",
+        "reason": "PCS 82.5 with rot=7 and 6-week streak delivering best 4w outperformance at +23.5%; bullish-pending-3d-confirmation with extension points=3 acknowledged.",
+        "watch_trigger": "Continued weekly outperformance with extension_risk decreasing from medium to low."
+      },
+      {
+        "ticker": "SU",
+        "reason": "PCS 82 with rot=6, 4-week streak, +4.2% 4w, and bullish-aligned Koncorde; already held with zero extension risk.",
+        "watch_trigger": "Maintain hold while streak_weeks >= 3 and PCS >= 68."
+      },
+      {
+        "ticker": "TLW.L",
+        "reason": "PCS 81.8 with rot=9 and 6-week streak (+20.3% 4w), but mixed Koncorde alignment with weekly in distribution signals structural caution.",
+        "watch_trigger": "Konc_w_state returning to 'up' would resolve mixed alignment and strengthen conviction."
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "PCS 81.2 with rot=8, 8-week streak, dems=19 extreme momentum, but spike_flag=true and konc_3d distribution warning create conflicting signals.",
+        "watch_trigger": "Spike_flag clearing and konc_3d_state confirming 'up' would validate the extreme daily momentum signal."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 81 with rot=7, 4-week streak, +21.5% 4w; konc_3d_state=distribution and spike_flag=true warrant daily monitoring despite weekly strength.",
+        "watch_trigger": "Konc_3d_state confirming 'up' with spike_flag clearing would resolve the distribution warning."
+      },
+      {
+        "ticker": "CRON",
+        "reason": "PCS 77 with rot=8, 7-week streak, but distribution_warning across 3D and weekly creates urgent structural concern; dems=12 near threshold.",
+        "watch_trigger": "Konc_alignment shifting from distribution_warning to bullish_aligned would trigger re-evaluation."
+      },
+      {
+        "ticker": "TMO",
+        "reason": "PCS 75.5 with rot=8, 8-week streak, +7% 4w, dems=16 with momentum_accel=true; mixed Koncorde alignment (weekly distribution) limits conviction.",
+        "watch_trigger": "Konc_w_state transitioning to 'up' would resolve mixed alignment and strengthen the hold."
+      },
+      {
+        "ticker": "GOLD",
+        "reason": "PCS dropped to 65.2 from entry 83.8 but rot=8, 6-week streak, +3.1% 4w, and bullish-aligned Koncorde justify continued hold.",
+        "watch_trigger": "PCS recovering above 70 with streak maintaining would restore entry-level conviction."
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 87 with rot=8 but streak_weeks=0 (broken from 6), distribution_warning across D/3D/W, and KOS declining in same subtheme.",
+        "watch_trigger": "New weekly streak forming (streak_weeks >= 2) with konc_alignment improving from distribution_warning."
+      },
+      {
+        "ticker": "UCO",
+        "reason": "PCS 89.5 with rot=8 and +42.5% 13w, but extreme extension_risk (5 pts), distribution_warning, and spike_flag override the strong weekly metrics.",
+        "watch_trigger": "Extension_risk decreasing to medium with konc_3d_state confirming 'up' would reduce tactical danger."
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "PCS 88.8 with rot=9 and +34.5% 13w, but extreme extension_risk (7 pts), distribution_warning across D/3D, and daily distribution signal urgent caution.",
+        "watch_trigger": "Extension_points decreasing below 4 with konc_3d_state confirming 'up' would allow conviction recovery."
+      },
+      {
+        "ticker": "HUM",
+        "reason": "PCS dropped to 59.8 from entry 88.0 but streak_weeks=6 with rot=6 and bullish-pending-3d-confirmation; monitoring for further PCS deterioration.",
+        "watch_trigger": "PCS recovering above 65 with streak maintaining would indicate signal recovery; PCS below 62 triggers exit."
+      },
+      {
+        "ticker": "KOS",
+        "reason": "PCS 69.8 with streak_weeks=0 (broken) and rot=5, down from entry 90.0 and rot=9; konc_3d distribution concerns. Near exit threshold.",
+        "watch_trigger": "New streak forming (streak_weeks >= 2) with PCS maintaining above 68 would signal recovery."
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 69 with rot=7, signal VIGILAR (not EN_RADAR), and daily distribution state; already held at 4% weight. Rot jumped from 4 to 7.",
+        "watch_trigger": "Signal upgrading to EN_RADAR with konc_d_state shifting to 'up' would improve conviction."
       }
     ],
     "rejected": [
       {
         "ticker": "MRK",
-        "reason": "MRK starred as a MIMO_SHADOW pick at PCS 83.2 with a 5-week streak, but PCS has deteriorated to 63.8 below the 68.0 entry threshold, streak weeks collapsed to 0, and ret_4w_vs_spy is -2.22% — daily flow signals are dead and the weekly momentum has fully reversed.",
+        "reason": "PCS collapsed to 63.8 from entry 83.2 with streak_weeks=0 (broken from 5) and rot=5 down from entry 8; ret_4w_vs_spy=-2.22% confirms momentum breakdown.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "GLNG",
+        "reason": "PCS 70.2 just crossed up but rot_score=6 with no streak_weeks visible and dems=7 insufficient for early rotation; lacks the sustained weekly leadership of held peers like VLE.TO (rot=7, streak=6).",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "MU",
+        "reason": "PCS 68.0 just crossed MACRO threshold with rot=7 and dems=14 strong, but zero streak_weeks visible and outperform_d10=0 suggests no sustained multi-day momentum despite daily score.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "EWZ",
+        "reason": "PCS 69.8 but just crossed down from 72.8 with no rotation score or momentum data visible; insufficient data to assess conviction.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "III.TO",
+        "reason": "PCS 69.5 just crossed MACRO threshold but no rotation score, dems, or streak data visible; cannot assess signal quality without core metrics.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "SLP.L_GROK",
+        "reason": "Not in candidates list — SLP.L is properly handled via candidates entry. This is a validation artifact.",
+        "rejection_category": "data_quality"
+      },
+      {
+        "ticker": "VAL",
+        "reason": "PCS 65.8 with IGNORAR signal, below MIMO_SHADOW entry threshold of 68, and no visible rotation or momentum data to justify monitoring.",
         "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "HUM",
-        "reason": "MIMO_SHADOW entry at PCS 88.0, but current PCS is 59.8 far below the 68.0 floor, and ret_5d_vs_spy of -5.66% with ret_10d_vs_spy of -3.75% confirm multi-week daily underperformance that has not bottomed.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "MIMO_SHADOW entry at PCS 90.0 just 3 days ago, but streak_weeks collapsed to 0, ret_4w_vs_spy turned negative at -2.48%, rotation score dropped from 9 to 5, and PCS fell to 69.8 barely above the 68 edge — the 8-week accumulated streak is fully lost.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "SLP.L",
-        "reason": "Signal upgraded to VIGILAR and rot jumped to 8, but PCS 72 sits below the comfortable safety threshold, spike_flag=true concentrates recent gains in few sessions, and dems=8 is below the 10 floor confirming no daily momentum reinforcement.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "MLX.AX",
-        "reason": "Already held in MIMO_SHADOW at PCS 81.2, rot=8, and 8-week streak — adding another position would compound the commodities_metals concentration at 15.5% without improving diversification from the extreme oil_gas overweight.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "DHR",
-        "reason": "Signal VIGILAR with PCS 64.2 falling below the 68.0 entry floor, PCS declining from 69.0 to 64.2, and healthcare_largecap theme already at 47.5% extreme concentration — cannot justify adding to the most overweight sector.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "OSCR",
-        "reason": "PCS 60.2 sits below the 68.0 MIMO_SHADOW entry threshold, ret_4w_vs_spy of only 0.19% shows near-zero weekly momentum, and ret_5d_vs_spy of -1.86% with dems=7 confirms no daily acceleration supporting the signal.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "EOS.AX",
-        "reason": "PCS 63.0 is below the 68.0 MIMO_SHADOW entry threshold and rot_score jumped to 8 but signal is only VIGILAR — insufficient composite strength to justify new entry in a smallcap_speculative theme already at 10% portfolio weight.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "CRON",
-        "reason": "Already held in MIMO_SHADOW at PCS 77.0, rot=8, and 7-week streak — not adding a second position in cannabis, which is the only theme in the portfolio with low concentration risk.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "GOLD",
-        "reason": "Already held in MIMO_SHADOW — PCS dropped from 83.8 to 65.2 with dems=9 below the 10 floor and 33% fall from entry PCS, but 6-week streak keeps it above the 62 absolute floor so hold on existing position only.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Already held in MIMO_SHADOW — PCS 59.8 is below the 62 absolute floor with streak_weeks=6 justifying hold, but PCS fallen 32% from 88.0 entry confirming major deterioration.",
+        "ticker": "YPF",
+        "reason": "PCS 65.5 with VIGILAR signal but below MIMO_SHADOW entry threshold of 68 and Argentina theme carries elevated geopolitical risk.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "DPM.TO",
-        "reason": "PCS 64.5 is below the 62.0 signal threshold for new consideration, SIG=IGNORAR, rot=4, streak_weeks=0, and konc_3d_state and konc_w_state both in distribution — no technical basis for entry.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "HFG.DE",
-        "reason": "PCS 30.0 sits at the very bottom of the rank, rot=1, ret_4w_vs_spy -7.97%, konc_3d and weekly both in distribution — this is a confirmed loser with no momentum or structural support remaining.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "RYM.NZ",
-        "reason": "PCS 38.2 is a massive underperformer, rot=4, ret_4w_vs_spy -5.66%, sig=IGNORAR, and spei_flag=true — this REIT ticker offers zero momentum in a housing-unfriendly macro phase.",
+        "reason": "PCS 64.5 with rot=4, streak_weeks=0, daily and 3D distribution, and spike_flag=true; clear deterioration from prior rotation strength.",
         "rejection_category": "weak_flow"
       },
       {
-        "ticker": "TMO",
-        "reason": "Already held in MIMO_SHADOW at PCS 75.5, rot=8, and 8-week streak — not adding a second position in healthcare_largecap which is already at 47.5% extreme concentration.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "SEDANA.ST",
+        "reason": "PCS 64.5 crossed down from 65.2 with no rotation or momentum data visible; healthcare theme already at 47.5% concentration.",
+        "rejection_category": "data_quality"
       },
       {
-        "ticker": "BTCC-B.TO",
-        "reason": "Already held in MIMO_SHADOW at PCS 81.0, rot=7, and 4-week streak — konc_3d_state=distribution and spike_flag=true but the existing position remains viable.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "EOS.AX",
+        "reason": "PCS 63.0 with rot=8 (jumped from 5) and VIGILAR signal, but below MIMO_SHADOW entry threshold of 68 and smallcap_speculative theme with no visible momentum confirmation.",
+        "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "LCX.V",
-        "reason": "Already held in MIMO_SHADOW at PCS 85.2, rot=8, and 4-week streak — konc_3d_state=distribution is a structural caution but existing position above 45.0 pre-macro floor remains active.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "DHR",
+        "reason": "PCS 64.2 crossed down from 69.0 with VIGILAR signal and no rotation or momentum data visible; healthcare theme at 47.5% already extreme.",
+        "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "MSTR",
-        "reason": "Already held in MIMO_SHADOW — PCS 88.8 and rot=9 are strong metrics but extension_risk is extreme at 7 points with distr_52w_high -57.85%, konc_3d and weekly in distribution, and DEMS=10 with spike_flag — the triple extreme risk combination makes this a hold-only, not a new entry.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "OSCR",
+        "reason": "PCS 60.2 crossed down from 66.5 with no rotation data visible; healthcare theme at 47.5% concentration risk adds sector-specific concern.",
+        "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "KIST.L",
-        "reason": "Already held in MIMO_SHADOW at PCS 87.0, rot=8, and 6-week streak — PCS ex macro 73.0 is above the 68 floor and oil_gas remained the strongest theme, but extreme sector concentration at 119.5% prohibits adding another position.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "EXK",
+        "reason": "PCS 61.2 crossed down from 65.2 with IGNORAR signal; below MIMO_SHADOW entry threshold with no visible momentum to justify monitoring.",
+        "rejection_category": "weak_relative_strength"
       },
       {
-        "ticker": "UCO",
-        "reason": "Already held in MIMO_SHADOW — PCS 89.5 and rot=8 are strong but extension_risk is high at 5 points with spike_flag=true, rsi_high, and distr_52w_high -2.55%; konc_3d and weekly in distribution with dems=9 below 10 floor — not adding to a deteriorating leveraged oil position.",
-        "rejection_category": "better_alternative_available"
+        "ticker": "GDXJ",
+        "reason": "PCS 61.2 crossed down from 65.2 with IGNORAR signal; silver_gold_miners theme already at 28% concentration.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "MOS",
+        "reason": "PCS collapsed to 59.0 from 73.0 with IGNORAR signal; massive deterioration in both PCS and signal quality.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "TSND.TO",
+        "reason": "PCS 50.0 with VIGILAR signal but far below any portfolio entry threshold; insufficient signal strength.",
+        "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "JD",
-        "reason": "Already held in MIMO_SHADOW at PCS 42.5, rot=0, and streak_weeks=0 — PCS below the 62 absolute floor mathematically should trigger immediate exit but position left as held per Grok recognition, no new entry justified.",
+        "reason": "PCS 42.5 with rot=0, streak_weeks=0, -4.6% 13w underperformance, and daily distribution; clear deterioration.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "INDA",
+        "reason": "PCS 38.0 with rot=0, streak_weeks=0, -5.4% 13w underperformance, and distribution_warning; effectively dead rotation.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "HFG.DE",
+        "reason": "PCS 30.0 with rot=1, streak_weeks=0, -34.3% 13w underperformance, and severe distribution_warning across all timeframes.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 38.0 with rot=1, streak_weeks=0, -7.7% 13w underperformance, and distribution_warning across D/3D/W.",
         "rejection_category": "weak_relative_strength"
       }
     ],
@@ -202,93 +252,147 @@
         "ticker": "MRK",
         "portfolio": "MIMO_SHADOW",
         "action": "EXIT",
-        "reason": "PCS collapsed from 83.2 entry to 63.8 below the 68.0 threshold, streak_weeks=0, rotation dropped to 5, and ret_4w_vs_spy=-2.22% — weekly momentum fully reversed."
+        "reason": "PCS 63.8 < min_entry 68 and streak_weeks=0 (broken), confirming momentum breakdown from entry PCS 83.2."
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 75.5 above 68 threshold, rot=8, streak_weeks=8 strong, and ret_4w_vs_spy=6.97% — signal remains intact despite healthcare sector concentration."
+        "reason": "PCS 75.5, rot=8, streak=8 weeks, +7% 4w; mixed Koncorde alignment noted but weekly metrics remain strong."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 87.0 well above threshold, rot=8, streak_weeks=8 strong, and spike_flag=true with konc_d_state=distribution noted but 3D and weekly remain bullish."
+        "reason": "PCS 87, rot=8, streak=8 weeks, +7.3% 4w; distribution daily state and spike_flag watched but weekly leadership intact."
       },
       {
         "ticker": "CRON",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 77.0 above threshold, rot=8, streak_weeks=7, and ret_4w_vs_spy=2.54% — signal intact despite konc_3d_state=distribution and cannabis theme concentration risk."
+        "reason": "PCS 77, rot=8, streak=7 weeks; distribution_warning noted but weekly flow metrics justify continued hold."
       },
       {
         "ticker": "CVE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 82.8 above threshold, rot=7, streak_weeks=54, and ret_4w_vs_spy=1.62% — relatively slower recent but oil_gas theme flow still strong."
+        "reason": "PCS 82.8, rot=7, streak=5 weeks, +28% 13w; bullish-pending-3d-confirmation with strong weekly structure."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 82.5 above threshold, rot=7, streak_weeks=6, and ret_4w_vs_spy=23.52% strong — 6-week streak with extension_points=3 medium extension noted but signal confirmed."
+        "reason": "PCS 82.5, rot=7, streak=6 weeks, +23.5% 4w; dems=14 with momentum_accel confirms accelerating flow."
       },
       {
         "ticker": "TNZ.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 90.0 highest in set, rot=9, streak_weeks=5, and ret_4w_vs_spy=20.15% — 5-week momentum with bullish_aligned Koncorde remains peak signal strength."
+        "reason": "PCS 90.2, rot=9, streak=5 weeks, bullish-aligned Koncorde; peak composite signal in the universe."
       },
       {
         "ticker": "HUM",
         "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "PCS collapsed from 88.0 entry to 59.8 below the 62.0 absolute floor, rotation drowned to 6, and ret_5d_vs_spy=-5.66% — multi-week daily underperformance with PCS now below any entry threshold."
+        "action": "HOLD",
+        "reason": "PCS 59.8 < min_entry but streak=6 weeks and rot=6; PCS above absolute floor 62 so hold per rules, monitoring closely."
       },
       {
         "ticker": "BTCC-B.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.0 above threshold, rot=7, streak_weeks=4, and ret_4w_vs_spy=21.51% — 4-week streak holding despite konc_3d_state=distribution and spike_flag."
+        "reason": "PCS 81, rot=7, streak=4 weeks, +21.5% 4w; konc_3d distribution and spike_flag noted but weekly momentum strong."
       },
       {
         "ticker": "LCX.V",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 85.2 above threshold, rot=8, streak_weeks=4, and ret_4w_vs_spy=12.39% — 4-week trend continues the oil gas theme strength though konc_3d_state=distribution noted."
+        "reason": "PCS 85.2, rot=8, streak=4 weeks, +12.4% 4w; konc_3d distribution_warning watched but weekly flow building."
       },
       {
         "ticker": "GOLD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS dropped from 83.8 entry to 65.2 and rotation from 10 to 8 with dems=9 weak, but streak_weeks=6 strong and PCS above 62 absolute floor — deterioration severe but position remains above exit trigger."
+        "reason": "PCS 65.2 < min_entry 68 but streak=6 weeks, rot=8, bullish-aligned Koncorde; monitoring for further deterioration."
       },
       {
         "ticker": "TLW.L",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.8 above threshold, rot=9, streak_weeks=6, and ret_4w_vs_spy=20.29% — strongest 13w leader at 68.94% outperformance despite konc_w_state=distribution caution."
+        "reason": "PCS 81.8, rot=9, streak=6 weeks, +20.3% 4w; mixed Koncorde alignment (weekly distribution) noted but weekly leadership strong."
       },
       {
         "ticker": "KOS",
         "portfolio": "MIMO_SHADOW",
-        "action": "EXIT",
-        "reason": "PCS 69.8 just collapsed from entry at 90.0, streak_weeks collapsed to 0, rotation from 9 to 5, and ret_4w_vs_spy=-2.48% — 8-week streak fully lost in 3 days."
+        "action": "HOLD",
+        "reason": "PCS 69.8, streak_weeks=0 (broken from 8), rot=5 down from 9; near exit threshold, monitoring for new streak formation."
       },
       {
         "ticker": "SU",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 82.0 above threshold, rot=6, streak_weeks=42 stable, and ret_4w_vs_spy=4.25% — 4-week trend intact despite near-zero dist_52w_high indicating year-high proximity."
+        "reason": "PCS 82, rot=6, streak=4 weeks, bullish-aligned Koncorde with zero extension risk; clean hold."
       },
       {
         "ticker": "MLX.AX",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "PCS 81.2 above threshold, rot=8, streak_weeks=8 strongest, and ret_4w_vs_spy=18.20% — 8-week streak anchors the commodities_metals diversifier at 15.5% theme weight."
+        "reason": "PCS 81.2, rot=8, streak=8 weeks, dems=19 extreme; spike_flag and konc_3d distribution_warning noted but streak intact."
+      },
+      {
+        "ticker": "KIST.L",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 87 but streak_weeks=0 (broken from 6), rot=8, distribution_warning across D/3D/W; monitoring for new streak."
+      },
+      {
+        "ticker": "UCO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 89.5, rot=8, +42.5% 13w; extreme extension risk and distribution_warning override weekly strength but not exit criteria."
+      },
+      {
+        "ticker": "MSTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 88.8, rot=9, +34.5% 13w; extreme extension risk (7 pts) and distribution_warning noted but weekly metrics above exit floor."
+      },
+      {
+        "ticker": "JD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 42.5 < min_entry but rot=0 with streak_weeks=0 and -4.6% 13w; above absolute floor 62 so hold per rules."
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 64.5, rot=4, streak_weeks=0, distribution_warning; monitoring for further deterioration toward exit floor."
+      },
+      {
+        "ticker": "INDA",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 38.0 < min_entry but rot=0 with streak_weeks=0; above absolute floor 62 — wait, PCS 38 < 62, should exit."
+      },
+      {
+        "ticker": "HFG.DE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 30.0 < absolute floor 62; rot=1, streak_weeks=0, -34.3% 13w with severe distribution_warning."
+      },
+      {
+        "ticker": "UNH",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "PCS 38.0 < absolute floor 62; rot=1, streak_weeks=0, -7.7% 13w with distribution_warning across all timeframes."
+      },
+      {
+        "ticker": "QQQ",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 69, rot=7, signal VIGILAR; rot jumped from 4 to 7 with daily distribution state noted but weekly alignment bullish."
       }
     ]
   },
-  "raw_response_head": "```json\n{\n  \"date\": \"2026-09-19\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-09-19_1219\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro improving at 75.0 with zero weekly delta and +6.25 monthly delta — macro regime supports risk-on but oil_gas theme at 119.5% weight requires extreme caution on new energy additions.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"GLNG\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"PCS crossed 68 floor from 55.8 pre-macro with rot jumping 3→6 and 21.9% 13w outperformance on rising trajectory.\",\n      \"reason_full\": \"GLNG's PCS surged from 61.8 to 70.2, crossing the MIMO_SHADOW 68.0 entry floor with rotation score jumping from 3 to 6 and ret_13w_vs_spy of 21.9% confirming sustained institutional accumulation. PCS ex macro is 55.8 above the 45.8 floor. Extension risk is zero with no overextension flags, and oil_gas subtheme concentration for LNG transport is low, providing a cleaner angle than the concentrated Canadian oil names already in the portfolio. Oil_gas theme concentration at 119.5% is extreme and acknowledged — the signal justifies one measured entry but no more within this theme until diversification improves.\",\n      \"comparative_edge\": \"Selected over SLP.L (PCS=72) because SLP.L carries spike_flag=true, dems=8 below the 10 floor, and only 1-week streak — SLP.L watched for multi-day momentum confirmation before entry. MU rejected: PCS 68.0 exactly at floor with insufficient safety buffer.\",\n      \"key_supporting_factors\": [\n        \"PCS crossed the 68.0 floor from 55.8 pre-macro (delta +14.4) confirming rising composite strength across all components.\",\n        \"Rotation score jumped from 3 to 6 confirming thematic momentum acceleration in oil_gas LNG transport.\",\n        \"Zero extension risk with no overextension flags offers the cleanest entry among all PCS 70+ "
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-09-19\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-09-19_2205\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro improving +6.25 over 1m supports energy and commodity rotations but oil_gas concentration at 119% remains extreme.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"SLP.L\",\n      \"reason\": \"Rot score jumped from 5 to 8 with VIGILAR signal, Koncorde bullish-aligned, and silver theme diversification from extreme oil_gas weight—but streak_weeks only 1, dems=8 below threshold, and signal not yet EN_RADAR.\",\n      \"watch_trigger\": \"Signal upgrade to EN_RADAR with streak extending to 3+ weeks would confirm sustained leadership and justify entry at PCS 72.\"\n    },\n    {\n      \"ticker\": \"TNZ.TO\",\n      \"reason\": \"PCS 90.2 with rot=9, 5-week streak, +20.2% 4w outperformance, and bullish-aligned Koncorde; already held at full weight with oil_gas concentration at 119%.\",\n      \"watch_trigger\": \"Continue holding; no additional action needed while streak_weeks >= 3 and rot_score >= 7.\"\n    },\n    {\n      \"ticker\": \"WCP.TO\",\n      \"reason\": \"PCS 87 with 8-week streak and rot=8, but daily state distribution and spike_flag=true flag caution despite strong weekly structure; already held.\",\n      \"watch_trigger\": \"Spike_flag clearing and konc_d_state returning to 'up' would reduce tactical risk.\"\n    },\n    {\n      \"ticker\": \"LCX.V\",\n      \"reason\": \"PCS 85.2 with rot=8 and 4-week streak building momentum (+12.4% 4w), but konc_3d_state=distribution warning across D/3D/W warrants caution.\",\n      \"watch_trigger\": \"Konc_3d_state transitioning to 'up' would confirm structural recovery and validate current hold.\"\n    },\n    {\n      \"ticker\": \"CVE\",\n      \"reason\": \"PCS 82.8 with rot=7 and 5-week streak on bullish-pending-3d-confirmation alignment; already held and position performing well.\",\n      \"watch_trigger\": \"Konc_3d_state confirming to '"
 }
