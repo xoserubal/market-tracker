@@ -459,8 +459,57 @@ function renderMiniMarkdown(text) {
   return blocks;
 }
 
-function MarketAnalysisModal({ history, selectedDate, onSelectDate, loading, error, onClose }) {
+// Combina varios días del informe LLM en un único Markdown para pegar en
+// otro LLM — mismo espíritu que "Exportar TODO a LLM", pero eligiendo días
+// concretos de este informe en vez de secciones del dashboard.
+function buildCombinedAnalysisMarkdown(history, selectedDates) {
+  const selected = (history || [])
+    .filter(r => selectedDates.has(r.date))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  let md = `# Análisis de mercado LLM — ${selected.length} día(s) seleccionado(s)\n\n`;
+  selected.forEach(r => {
+    md += `## ${r.date}${r.prev_date ? ` (vs ${r.prev_date})` : ''}\n\n`;
+    const regime = r.structured?.market_regime;
+    if (regime) {
+      md += `**Régimen:** ${regime.label}` + (regime.confidence_pct != null ? ` (${regime.confidence_pct}% confianza)` : '') + '\n\n';
+      if (regime.rationale) md += `${regime.rationale}\n\n`;
+    }
+    if (r.prose) md += `${r.prose}\n\n`;
+    const signals = r.structured?.signals;
+    if (Array.isArray(signals) && signals.length) {
+      md += `### Señales estructuradas (${signals.length})\n\n`;
+      signals.forEach(s => {
+        md += `- **${s.subject}** [${s.conviction}${s.event_type ? ', ' + s.event_type : ''}]`
+            + (s.confidence_pct != null ? ` (${s.confidence_pct}%)` : '') + '\n';
+        if (s.signal)         md += `  - Señal: ${s.signal}\n`;
+        if (s.interpretation) md += `  - Interpretación: ${s.interpretation}\n`;
+        if (s.action)         md += `  - Acción: ${s.action}\n`;
+        if (s.trigger)        md += `  - Trigger: ${s.trigger}\n`;
+        if (s.invalidation)   md += `  - Invalidación: ${s.invalidation}\n`;
+      });
+      md += '\n';
+    }
+    md += '---\n\n';
+  });
+  return md;
+}
+
+function MarketAnalysisModal({ history, selectedDate, onSelectDate, loading, error, onClose, showToast }) {
   const data = (history || []).find(r => r.date === selectedDate) || null;
+  const [selectedForExport, setSelectedForExport] = React.useState(() => new Set());
+  const toggleExportDate = (date) => {
+    setSelectedForExport(prev => {
+      const next = new Set(prev);
+      next.has(date) ? next.delete(date) : next.add(date);
+      return next;
+    });
+  };
+  const copySelected = () => {
+    const md = buildCombinedAnalysisMarkdown(history, selectedForExport);
+    navigator.clipboard.writeText(md)
+      .then(() => showToast && showToast(`✅ ${selectedForExport.size} día(s) copiados para LLM`))
+      .catch(() => showToast && showToast('❌ Error al copiar'));
+  };
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',
       display:'flex',alignItems:'flex-start',justifyContent:'center',zIndex:50,padding:'24px 12px',overflowY:'auto'}}>
@@ -471,18 +520,40 @@ function MarketAnalysisModal({ history, selectedDate, onSelectDate, loading, err
           <button onClick={onClose} style={{border:'none',background:'none',fontSize:18,cursor:'pointer',color:'#888'}}>✕</button>
         </div>
         {!loading && !error && history && history.length > 0 && (
-          <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:14,paddingBottom:12,borderBottom:'1px solid #eee'}}>
-            {[...history].reverse().map(r => (
-              <button key={r.date} onClick={() => onSelectDate(r.date)}
-                title={r.structured?.market_regime?.label || ''}
-                style={{fontSize:10,padding:'3px 9px',borderRadius:12,cursor:'pointer',
-                  border:'1px solid ' + (r.date===selectedDate ? '#00695c' : '#ddd'),
-                  background: r.date===selectedDate ? '#00695c' : '#fff',
-                  color: r.date===selectedDate ? '#fff' : '#555',
-                  fontWeight: r.date===selectedDate ? 700 : 400}}>
-                {r.date}
+          <div style={{marginBottom:14,paddingBottom:12,borderBottom:'1px solid #eee'}}>
+            <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:8}}>
+              {[...history].reverse().map(r => (
+                <span key={r.date} title={r.structured?.market_regime?.label || ''}
+                  style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,padding:'2px 8px 2px 5px',borderRadius:12,
+                    border:'1px solid ' + (r.date===selectedDate ? '#00695c' : '#ddd'),
+                    background: r.date===selectedDate ? '#00695c' : '#fff'}}>
+                  <input type="checkbox" checked={selectedForExport.has(r.date)}
+                    onClick={e=>e.stopPropagation()}
+                    onChange={() => toggleExportDate(r.date)}
+                    style={{cursor:'pointer',width:11,height:11,margin:0}} />
+                  <button onClick={() => onSelectDate(r.date)}
+                    style={{border:'none',background:'none',cursor:'pointer',padding:0,fontSize:10,
+                      color: r.date===selectedDate ? '#fff' : '#555',
+                      fontWeight: r.date===selectedDate ? 700 : 400}}>
+                    {r.date}
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <button onClick={copySelected} disabled={selectedForExport.size===0}
+                style={{fontSize:10,padding:'4px 10px',borderRadius:4,border:'none',cursor: selectedForExport.size===0 ? 'default' : 'pointer',
+                  background: selectedForExport.size===0 ? '#ccc' : '#1a6b3c',color:'white',fontWeight:600}}>
+                📋 Copiar {selectedForExport.size > 0 ? `${selectedForExport.size} día(s)` : 'seleccionados'} para LLM
               </button>
-            ))}
+              {selectedForExport.size > 0 && (
+                <button onClick={() => setSelectedForExport(new Set())}
+                  style={{fontSize:10,padding:'4px 8px',borderRadius:4,border:'1px solid #ddd',background:'#fff',color:'#888',cursor:'pointer'}}>
+                  Limpiar selección
+                </button>
+              )}
+              <span style={{fontSize:9,color:'#aaa'}}>Marca varios días con la casilla para combinarlos en un único copiado.</span>
+            </div>
           </div>
         )}
         {loading && <div style={{padding:'30px 0',textAlign:'center',color:'#888',fontSize:12}}>Cargando…</div>}
@@ -1071,6 +1142,7 @@ function MarketTracker() {
           loading={analysisLoading}
           error={analysisError}
           onClose={() => setShowAnalysisModal(false)}
+          showToast={showToast}
         />
       )}
     </div>

@@ -6113,6 +6113,20 @@ después poder elegir qué día ver — añadidos "pills" de fecha (más recient
 primero) que cambian qué entrada del array `history` se muestra, sin
 petición nueva al servidor.
 
+**Selección múltiple para copiar varios días combinados (mismo día,
+petición aparte):** cada "pill" gana una casilla independiente del clic de
+"ver este día" (`toggleExportDate`, estado local del modal, se resetea
+solo al cerrar y reabrir al ser un componente que se desmonta). Botón
+"📋 Copiar N día(s) para LLM" (deshabilitado con 0 seleccionados) construye
+un Markdown combinado (`buildCombinedAnalysisMarkdown`) — un `##` por día
+en orden cronológico, con régimen/prosa/señales de cada uno — y lo copia al
+portapapeles con el mismo `showToast` que ya usa el resto de la página
+(pasado como prop al modal). Verificado con clics reales de ratón (no
+`.click()` sintético — mismo criterio que el resto del proyecto para
+checkboxes bajo CDP, ver hallazgo de `portfolio.html` en una sesión
+anterior): 3 casillas marcadas → botón pasa a "Copiar 3 día(s)" →
+portapapeles con exactamente 3 secciones `##`, ordenadas correctamente.
+
 **Hallazgo real durante la verificación, no un bug de la app:** un primer
 intento de comprobar que el botón de cerrar funcionaba dio "el modal sigue
 en el DOM tras cerrar" en varias rondas de test — resultó ser un fallo del
