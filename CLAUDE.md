@@ -6171,6 +6171,97 @@ de semana, no solo en teoría.
 patrón que otros scripts del proyecto. `--apply` sigue siendo necesario
 aparte para gastar crédito real; ambos flags son independientes.
 
+### Memoria entre días + FXPO.L en cuarentena + watchlist vs. posiciones (implementado 2026-09-21)
+
+El usuario pegó una propuesta externa de 19 secciones para convertir el
+informe diario en una "bitácora analítica longitudinal" (registro
+persistente de hipótesis con IDs, 8 estados, condiciones de confirmación/
+invalidación, MFE/MAE por señal, capa determinista de validación de
+etiquetas, eliminación de porcentajes de confianza, etc.). Antes de
+implementar nada se hizo una revisión crítica — mismo patrón que el resto
+de rondas de asesor externo de este proyecto
+([[feedback_external_advisor_review]]): valorar lo que acierta, señalar
+conflictos con decisiones de diseño ya tomadas, y recortar a un primer paso
+barato en vez de construir el documento completo sobre un feature de 9
+días de vida con ~9 análisis generados.
+
+**Dos conflictos reales identificados antes de tocar código:**
+1. Eliminar porcentajes de confianza (§7 de la propuesta) choca con el
+   propio prompt de Sol (`wiki/PROMPT_MARKET_ANALYST_SOL.md`, verbatim,
+   pide explícitamente "GRADOS DE CONVICCIÓN"/`confidence_pct`) —
+   aplicarlo habría exigido reescribir el prompt original, perdiendo la
+   fidelidad que fue la decisión de diseño de la propia Fase 2.
+2. Quién decide el estado de cada hipótesis (`WEAKENING`/`CONFIRMED`/
+   `INVALIDATED`) no queda especificado en la propuesta — si lo decide el
+   propio Sol día a día, el problema de fondo (mala calibración) no se
+   arregla, solo se envuelve en una etiqueta que parece objetiva.
+
+**Recorte acordado con el usuario — 3 cambios baratos, sin backend de
+hipótesis nuevo:**
+
+**1. Memoria explícita de los últimos 3 días, no solo deltas numéricos.**
+`build_recent_analysis_digest()` (nuevo, `scripts/market_analysis_llm.py`)
+lee las últimas `RECENT_ANALYSIS_DAYS=3` filas de
+`market_analysis_llm.jsonl` (fecha < hoy) y construye una tabla markdown
+por día con `subject`/`conviction`/`signal`/`trigger`/`invalidation` de
+cada señal estructurada ya guardada — no la prosa completa (10-14k
+caracteres/día, habría inflado el payload sin aportar nada que Sol no haya
+resumido ya en su propio JSON). Insertada al principio del mensaje de
+usuario, con instrucción explícita en el addendum operativo: revisar cada
+señal previa relevante (¿se fortaleció, debilitó o invalidó?) antes de
+escribir sobre temas nuevos, en vez de sustituirla en silencio.
+
+**Deliberadamente NO es el registro persistente de hipótesis de la
+propuesta original** (sin IDs, sin máquina de 8 estados, sin condiciones de
+confirmación/invalidación estructuradas aparte de lo que Sol ya genera) —
+mismo criterio de observar-antes-de-construir que el resto del proyecto
+(Koncorde Research Log, `extension_risk`, etc.): si con esto la
+continuidad narrativa sigue siendo mala tras unas semanas, se justificará
+construir el backend completo — no antes.
+
+**2. `KNOWN_BAD_TICKERS = {"FXPO.L"}`.** El caso que la propia propuesta
+señalaba (§14, "la anomalía recurrente de FXPO.L") es real y verificado en
+producción: `m1`/`m3`/`fromLow` de FXPO.L en
+`portfolio_daily_snapshot.jsonl` leen +9000% de forma sostenida (el mismo
+bug de escala GBX/GBp de Yahoo ya documentado en la sección "Cartera
+CRUCE_ROJO_D" de este archivo — persistente desde 2026-05-18, nunca
+revertido). Excluido solo de lo que le llega a Sol
+(`build_equities_table()`/`build_portfolio_table()`), no de la captura
+server-side (`market_daily_snapshot.js`/`portfolio_daily_snapshot.js`) —
+esos ficheros alimentan otros dashboards con su propio criterio de
+visualización, tocar la captura habría sido un cambio de alcance mayor que
+el acordado.
+
+**3. Watchlist ≠ posiciones reales, en el addendum operativo (no en el
+prompt verbatim de Sol).** Párrafo nuevo aclarando que los tickers de
+Portfolio Tracker son watchlist curada, no posiciones verificadas (`shares:0`
+en todo `portfolio.json` hoy) — Sol no debe afirmar que el usuario tiene
+comprado un ticker, ni dar instrucciones de venta de una cantidad
+concreta, ni asumir liquidez total por ausencia de datos de posición; debe
+usar lenguaje condicional ("si tienes posición en X..."). Mismo bug de
+fondo ya visto dos veces en este proyecto por confundir "existe en los
+datos" con "es una decisión real" (CAVA_MACRO invisible en dashboard,
+MIRROR_ESPEJO sin aviso Telegram).
+
+**Verificado con datos reales:** `build_recent_analysis_digest()` contra el
+histórico real recogió correctamente los 3 días previos a "hoy"
+(2026-09-17/18/19 al probar el 20), con tabla de señales bien formada por
+día. `FXPO.L` confirmado presente en `portfolio_daily_snapshot.jsonl` con
+fecha de hoy (para descartar que la ausencia en el mensaje fuera trivial
+por falta de dato) y confirmado ausente del mensaje de usuario final tras
+el filtro. Addenda del system prompt verificada con ambos párrafos nuevos
+presentes (`watchlist curada`, instrucción de revisar `ANÁLISIS
+ANTERIORES`). `py_compile` limpio.
+
+**Fuera de alcance de este cambio (queda para más adelante, si los datos lo
+justifican):** el resto de las 19 secciones de la propuesta — separación
+formal evento/hipótesis/señal con campos propios, capa determinista de
+validación de etiquetas (`FLOW_ACCEL_P90`/`MULTIMODULE_CONFIRMATION`/etc.),
+amplitud de aceleración vs. amplitud de liderazgo como campos calculados,
+detección de indicadores correlacionados como el mismo factor, MFE/MAE por
+señal, escenarios condicionales estructurados, capa de cuarentena de datos
+genérica (más allá del ticker único ya conocido).
+
 ---
 
 ## Relative Flow Lab v2 — auditoría de Fase 6 (instrumentación) y Fase 4/5a (calibración) (2026-09-17)

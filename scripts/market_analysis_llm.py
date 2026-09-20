@@ -28,6 +28,21 @@ pegó el usuario, sin modificar — el addendum de formato de salida vive
 aquí, no en ese archivo, para que quede claro qué es "el prompt original"
 y qué es "requisito operativo añadido para poder automatizarlo".
 
+Revisión 2026-09-21 (recorte de una propuesta externa de 19 secciones —
+"registro persistente de hipótesis con IDs/estados/MFE-MAE" completo — a un
+primer paso barato, mismo criterio de observar-antes-de-construir del resto
+del proyecto): en vez de un backend de hipótesis con máquina de estados,
+`build_recent_analysis_digest()` simplemente le pasa a Sol sus propias
+señales estructuradas de los últimos RECENT_ANALYSIS_DAYS días y le pide
+explícitamente que las revise antes de escribir. Sin esto, cada llamada era
+una API call sin estado con memoria cero de lo que ya había dicho. Si tras
+unas semanas la continuidad narrativa sigue siendo mala aun con esto, se
+justificará el registro persistente de la propuesta original — no antes.
+También se excluye `KNOWN_BAD_TICKERS` (FXPO.L, anomalía de escala
+GBX/GBp confirmada) y se aclaró en el addendum que Portfolio Tracker es
+watchlist, no posiciones reales verificadas — dos riesgos concretos que la
+propuesta señalaba con precedente real en este mismo repo.
+
 Reutiliza call_model()/compute_cost()/MODEL_PRICING de paper_trading.py
 (mismo criterio de reuso que mirror_portfolio.py/cava_portfolio.py) —
 call_model() ganó un parámetro opcional `reasoning_effort` para esto, sin
@@ -85,6 +100,21 @@ MAX_TOKENS = 24000  # persona larga + reasoning_effort=high consumen mucho antes
 # cortaba a mitad del bloque ```json final (13743 chars de prosa completa,
 # JSON sin cerrar). Con margen amplio, peor caso ~$0.24/llamada ($10/M out).
 
+# Tickers con anomalía de escala confirmada (bug GBX/GBp de Yahoo -- el
+# mismo ya documentado en CLAUDE.md para el backtest de Cruce Rojo D:
+# persistente desde 2026-05-18, nunca revertido, confirmado de nuevo aquí
+# el 2026-09-21 -- m1/m3/fromLow de FXPO.L en portfolio_daily_snapshot.jsonl
+# leen +9000% de forma sostenida). Se excluyen SOLO de lo que le llega a
+# Sol, no de la captura server-side (market_daily_snapshot.js/
+# portfolio_daily_snapshot.js) -- esos ficheros los consumen otros
+# dashboards con su propio criterio de visualización, y tocar la captura
+# habría sido un cambio de alcance mayor que el acordado.
+KNOWN_BAD_TICKERS = {"FXPO.L"}
+
+# Cuántos análisis previos (días naturales con captura, no sesiones NYSE)
+# se le pasan a Sol como memoria explícita antes del snapshot de hoy.
+RECENT_ANALYSIS_DAYS = 3
+
 OUTPUT_FORMAT_ADDENDUM = """
 
 ---
@@ -92,9 +122,22 @@ OUTPUT_FORMAT_ADDENDUM = """
 # ADENDA OPERATIVA — FORMATO DE SALIDA (no forma parte del prompt original del usuario)
 
 Esta llamada es automatizada (sin memoria de conversación) — el mensaje del
-usuario incluye el snapshot de HOY y, cuando existe, el snapshot del día
-anterior más una tabla de deltas ya calculada, para que puedas comparar sin
-tener que recordar nada de fuera de este mensaje.
+usuario incluye el snapshot de HOY, una tabla de deltas contra el día
+anterior, y una sección "ANÁLISIS ANTERIORES" con tus propias señales
+estructuradas de los últimos días. Revisa siempre esa sección antes de
+escribir: para cada señal previa que siga siendo relevante, di
+explícitamente si se ha fortalecido, debilitado, confirmado o invalidado.
+No la sustituyas en silencio por una oportunidad nueva sin comentar qué
+pasó con la anterior.
+
+IMPORTANTE sobre "cartera": los tickers de la sección PORTFOLIO TRACKER son
+una watchlist curada por el usuario, NO posiciones reales verificadas — hoy
+por hoy `portfolio.json` no registra unidades ni coste real en ningún
+ticker. No afirmes que el usuario tiene comprado un ticker concreto, no des
+instrucciones de venta de una cantidad o peso específico, y no asumas que
+está en liquidez total solo porque no haya datos de posición. Usa lenguaje
+condicional ("si tienes posición en X...") para cualquier recomendación de
+gestión de cartera real.
 
 Después de tu análisis completo en prosa (sigue todas las instrucciones del
 ROL/PRINCIPIO CENTRAL/etc. de arriba, en español, con la estructura
@@ -237,7 +280,7 @@ def build_macro_table(today: str, prev: str | None) -> str:
 
 def build_equities_table(today: str, prev: str | None) -> str:
     rows = _load_jsonl(MARKET_EQUITIES)
-    today_rows = [r for r in rows if r["date"] == today]
+    today_rows = [r for r in rows if r["date"] == today and r["ticker"] not in KNOWN_BAD_TICKERS]
     prev_by_ticker = {r["ticker"]: r for r in rows if prev and r["date"] == prev} if prev else {}
     if not today_rows:
         return "_(sin datos de mercado capturados hoy)_\n"
@@ -269,7 +312,7 @@ def build_equities_table(today: str, prev: str | None) -> str:
 
 def build_portfolio_table(today: str, prev: str | None) -> str:
     rows = _load_jsonl(PORTFOLIO_SNAP)
-    today_rows = {r["ticker"]: r for r in rows if r["date"] == today}
+    today_rows = {r["ticker"]: r for r in rows if r["date"] == today and r["ticker"] not in KNOWN_BAD_TICKERS}
     prev_by_ticker = {r["ticker"]: r for r in rows if prev and r["date"] == prev} if prev else {}
     if not today_rows:
         return "_(sin datos de Portfolio Tracker capturados hoy)_\n"
@@ -309,6 +352,57 @@ def build_portfolio_table(today: str, prev: str | None) -> str:
     return "\n".join(out)
 
 
+def build_recent_analysis_digest(today: str, n: int = RECENT_ANALYSIS_DAYS) -> str:
+    """Memoria explícita de los últimos `n` análisis ya guardados (fecha <
+    hoy), como pide el punto acordado con el usuario 2026-09-21: cada
+    llamada a Sol es una API call sin estado, así que sin esto el modelo no
+    tiene forma de saber qué dijo ayer o antier salvo lo que se le repita
+    aquí. Deliberadamente NO es el registro persistente de hipótesis con
+    IDs/estados de la propuesta original del usuario (§2/§16) -- eso se
+    dejó para más adelante, cuando haya semanas de histórico que digan si
+    hace falta. Esto es solo pasarle a Sol su propia salida estructurada de
+    los últimos días y pedirle que la revise antes de escribir hoy.
+
+    Solo se incluyen los campos estructurados (subject/conviction/signal/
+    trigger/invalidation), no la prosa completa (~10-14k caracteres por
+    día) -- inflaría el payload sin aportar nada que Sol no haya resumido
+    ya él mismo en el JSON."""
+    rows = [r for r in _load_jsonl(OUT_PATH) if r["date"] < today]
+    if not rows:
+        return ""
+    rows.sort(key=lambda r: r["date"])
+    recent = rows[-n:]
+
+    out = ["## ANÁLISIS ANTERIORES — revisa esto ANTES de escribir el de hoy\n",
+           "Estas son tus propias señales de los últimos días. Para cada una que "
+           "siga siendo relevante, di explícitamente si se ha fortalecido, "
+           "debilitado o invalidado antes de introducir temas nuevos -- no la "
+           "sustituyas en silencio por otra oportunidad distinta.\n"]
+    for r in recent:
+        structured = r.get("structured")
+        out.append(f"### {r['date']}")
+        if not structured:
+            prose_excerpt = (r.get("prose") or "")[:400]
+            out.append(f"_(sin JSON estructurado ese día -- extracto de la prosa)_\n{prose_excerpt}...\n")
+            continue
+        regime = structured.get("market_regime") or {}
+        out.append(f"Régimen: **{regime.get('label', '—')}** — {regime.get('rationale', '')}\n")
+        signals = structured.get("signals") or []
+        if not signals:
+            out.append("_(sin señales con contenido registradas ese día)_\n")
+            continue
+        out.append("| Subject | Convicción | Signal | Trigger | Invalidation |")
+        out.append("|---|---|---|---|---|")
+        for s in signals:
+            out.append(
+                f"| {s.get('subject', '—')} | {s.get('conviction', '—')} | "
+                f"{(s.get('signal') or '—')[:120]} | {(s.get('trigger') or '—')[:120]} | "
+                f"{(s.get('invalidation') or '—')[:120]} |"
+            )
+        out.append("")
+    return "\n".join(out)
+
+
 def build_user_message(today: str) -> tuple[str, str | None]:
     macro_dates = {r["date"] for r in _load_jsonl(MARKET_MACRO)}
     prev = _prev_date(macro_dates, today)
@@ -318,6 +412,9 @@ def build_user_message(today: str) -> tuple[str, str | None]:
         msg += f"_(comparando contra el snapshot de {prev} — el más reciente disponible antes de hoy)_\n"
     else:
         msg += "_(no hay snapshot previo todavia — primera captura, sin deltas)_\n"
+    digest = build_recent_analysis_digest(today)
+    if digest:
+        msg += "\n" + digest
     msg += "\n## MACRO / CICLO\n" + build_macro_table(today, prev)
     msg += "\n## MERCADOS (Market Tracker)\n" + build_equities_table(today, prev)
     msg += "\n## PORTFOLIO TRACKER\n" + build_portfolio_table(today, prev)
