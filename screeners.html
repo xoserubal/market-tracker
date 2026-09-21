@@ -45,6 +45,7 @@
     .screener-tab .n { font-size: 15px; font-weight: 800; font-family: Consolas, monospace; }
     .screener-tab .lbl { font-size: 10px; font-weight: 600; margin-top: 1px; }
     .screener-desc { font-size: 11px; color: #475467; margin: 8px 0 6px; line-height: 1.5; }
+    .filter-hint { font-size: 10px; color: #98a2b3; margin: 2px 0 6px; }
 
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
     .stat-card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 12px; }
@@ -79,8 +80,12 @@ const C = {
 
 function fmtPrice(v) { return v == null ? '—' : v.toFixed(v < 10 ? 4 : 2); }
 
-function statusMeta(screener, status) {
-  const m = screener.statuses[status];
+// Metadata de estado (label + colores) de UN filtro concreto — cada filtro
+// tiene su propio vocabulario de estados (screener.filters[i].statuses),
+// ya no hay un único "statuses" por screener como antes de que los filtros
+// se pudieran combinar.
+function filterStatusMeta(filter, status) {
+  const m = filter.statuses[status];
   if (!m) return { label: status || '—', ...C.neutral };
   return { label: m.label, ...C[m.badge] };
 }
@@ -98,10 +103,20 @@ function ScreenerPage() {
   const [updated, setUpdated] = React.useState(null);
   const [activeId, setActiveId] = React.useState(SCREENERS[0].id);
   const [showAll, setShowAll] = React.useState(false);
-  // Filtros opcionales "toggle" por screener (ej. SMA50>SMA200 del MACD) —
-  // marcas informativas que el usuario enciende/apaga para estrechar la
-  // vista SIN tocar evaluate()/pass del screener (ver extraFilters en
-  // shared/screener-lib.js). Reseteados al cambiar de pestaña de screener.
+  // Filtros PRIMARIOS activos del screener actual — pedido 2026-09-22: se
+  // pueden combinar (checkboxes, no un selector de uno solo). Un ticker es
+  // candidato solo si cumple TODOS los filtros activos a la vez (AND, ver
+  // runScreenerFilters en shared/screener-lib.js). Arranca con los filtros
+  // marcados defaultActive:true del screener inicial.
+  const [activeFilters, setActiveFilters] = React.useState(() => defaultActiveFilterIds(SCREENERS[0]));
+  const toggleFilter = (id) => setActiveFilters(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  // Marcas opcionales "toggle" (ej. SMA50>SMA200) — NO afectan a quién es
+  // candidato, solo estrechan qué filas se muestran ya evaluadas (ver
+  // extraFilters en shared/screener-lib.js). Distinto de activeFilters.
   const [activeExtraFilters, setActiveExtraFilters] = React.useState(() => new Set());
   const toggleExtraFilter = (id) => setActiveExtraFilters(prev => {
     const next = new Set(prev);
@@ -138,37 +153,82 @@ function ScreenerPage() {
 
   React.useEffect(() => { load(); }, [load]);
 
-  // Resultados de TODOS los screeners registrados (no solo el activo) —
-  // necesarios para los contadores de las pestañas y para el export a LLM,
-  // que incluye un resumen de cada screener aunque no esté seleccionado.
-  const resultsByScreener = React.useMemo(() => {
+  const activeScreener = getScreener(activeId) || SCREENERS[0];
+  const activeFilterDefs = (activeScreener.filters || []).filter(f => activeFilters.has(f.id));
+
+  // Contador de cada pestaña de screener — usa los filtros POR DEFECTO de
+  // CADA screener (no la selección en vivo, que solo existe para el activo)
+  // para que el número de la pestaña sea estable independientemente de qué
+  // filtros tengas marcados en el screener que estás mirando ahora mismo.
+  const defaultCountByScreener = React.useMemo(() => {
     const out = {};
     SCREENERS.forEach(s => {
-      const rows = runScreener(s, quotes).map(r => ({ ...r, section: tickerSection[r.ticker] || '—' }));
-      rows.sort((a, b) => {
-        if (a.pass !== b.pass) return a.pass ? -1 : 1;
-        if (a.sortValue == null && b.sortValue == null) return a.ticker.localeCompare(b.ticker);
-        if (a.sortValue == null) return 1;
-        if (b.sortValue == null) return -1;
-        return a.sortValue - b.sortValue;
-      });
-      out[s.id] = rows;
+      out[s.id] = runScreenerFilters(s, defaultActiveFilterIds(s), quotes).filter(r => r.pass).length;
     });
     return out;
-  }, [quotes, tickerSection]);
+  }, [quotes]);
 
-  const activeScreener = getScreener(activeId) || SCREENERS[0];
-  const activeRows = resultsByScreener[activeScreener.id] || [];
+  // Cuántos tickers pasarían CADA filtro por sí solo (sin combinar) — se
+  // muestra junto a cada casilla de filtro, para que el usuario sepa qué
+  // aporta cada uno antes de sumarlo.
+  const soloCountByFilter = React.useMemo(() => {
+    const out = {};
+    (activeScreener.filters || []).forEach(f => {
+      out[f.id] = runScreenerFilters(activeScreener, new Set([f.id]), quotes).filter(r => r.pass).length;
+    });
+    return out;
+  }, [activeScreener, quotes]);
+
+  const activeRows = React.useMemo(() => {
+    const rows = runScreenerFilters(activeScreener, activeFilters, quotes)
+      .map(r => ({ ...r, section: tickerSection[r.ticker] || '—' }));
+    rows.sort((a, b) => {
+      if (a.pass !== b.pass) return a.pass ? -1 : 1;
+      if (a.sortValue == null && b.sortValue == null) return a.ticker.localeCompare(b.ticker);
+      if (a.sortValue == null) return 1;
+      if (b.sortValue == null) return -1;
+      return a.sortValue - b.sortValue;
+    });
+    return rows;
+  }, [activeScreener, activeFilters, quotes, tickerSection]);
+
   let visibleRows = showAll ? activeRows : activeRows.filter(r => r.pass);
   (activeScreener.extraFilters || []).forEach(f => {
     if (activeExtraFilters.has(f.id)) visibleRows = visibleRows.filter(r => f.predicate(r.q, r));
   });
 
-  const statusCounts = React.useMemo(() => {
-    const c = {};
-    activeRows.forEach(r => { c[r.status] = (c[r.status] || 0) + 1; });
-    return c;
-  }, [activeRows]);
+  // Columnas de la tabla: unión de las columnas de todos los filtros
+  // activos, sin duplicar cabeceras iguales (ej. "RSI14" aparece en más de
+  // un filtro — el mismo dato, se muestra una sola vez).
+  const mergedColumns = React.useMemo(() => {
+    const seen = new Set();
+    const cols = [];
+    activeFilterDefs.forEach(f => {
+      f.columns.forEach(c => {
+        if (seen.has(c.header)) return;
+        seen.add(c.header);
+        cols.push({ ...c, filterId: f.id });
+      });
+    });
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScreener, activeFilters]);
+
+  // Recuento de estados, uno por filtro activo (cada filtro tiene su propio
+  // vocabulario de estados) — usado por las tarjetas de resumen.
+  const statusCountsByFilter = React.useMemo(() => {
+    const out = {};
+    activeFilterDefs.forEach(f => {
+      const c = {};
+      activeRows.forEach(r => {
+        const fr = r.results[f.id];
+        if (fr) c[fr.status] = (c[fr.status] || 0) + 1;
+      });
+      out[f.id] = c;
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRows, activeFilters]);
 
   const buildScreenerMarkdown = () => {
     const lines = [];
@@ -176,22 +236,35 @@ function ScreenerPage() {
     lines.push(`Actualizado: ${updated ? updated.toLocaleString('es-ES') : '—'}`);
     lines.push('');
     lines.push('Pestaña de screeners técnicos extensibles sobre el universo de Portfolio Tracker ' +
-      '(portfolio.json) — cada screener es una regla independiente (shared/screener-lib.js), ' +
-      'calculada en vivo sobre los mismos datos que /api/quote/:symbol (RSI, MACD, SMAs, ATR…). ' +
-      'Ninguno de estos screeners toca PCS, rot_score ni ninguna cartera — es lectura discrecional.');
+      '(portfolio.json) — cada screener agrupa filtros independientes y combinables ' +
+      '(shared/screener-lib.js), calculados en vivo sobre los mismos datos que /api/quote/:symbol ' +
+      '(RSI, MACD, SMAs, ATR…). Un ticker es candidato de un screener si cumple TODOS los filtros ' +
+      'activos a la vez. Ninguno de estos screeners toca PCS, rot_score ni ninguna cartera — es ' +
+      'lectura discrecional.');
     lines.push('');
     SCREENERS.forEach(s => {
-      const rows = resultsByScreener[s.id] || [];
+      const isActive = s.id === activeScreener.id;
+      const filterIds = isActive ? activeFilters : defaultActiveFilterIds(s);
+      const filterDefs = (s.filters || []).filter(f => filterIds.has(f.id));
+      const rows = runScreenerFilters(s, filterIds, quotes)
+        .map(r => ({ ...r, section: tickerSection[r.ticker] || '—' }));
       const candidates = rows.filter(r => r.pass);
       lines.push(`## ${s.label} (${candidates.length} candidato${candidates.length === 1 ? '' : 's'})`);
-      lines.push(s.description);
+      lines.push(`Filtros activos: ${filterDefs.length ? filterDefs.map(f => f.label).join(' + ') : 'ninguno'}`);
       lines.push('');
       if (candidates.length) {
-        const header = ['Ticker', 'Sección', 'Precio', ...s.columns.map(c => c.header)];
+        const seen = new Set();
+        const cols = [];
+        filterDefs.forEach(f => f.columns.forEach(c => {
+          if (seen.has(c.header)) return;
+          seen.add(c.header);
+          cols.push({ ...c, filterId: f.id });
+        }));
+        const header = ['Ticker', 'Sección', 'Precio', ...cols.map(c => c.header)];
         lines.push('| ' + header.join(' | ') + ' |');
         lines.push('|' + header.map(() => '---').join('|') + '|');
         candidates.forEach(r => {
-          const cells = [r.ticker, r.section, fmtPrice(r.q?.price), ...s.columns.map(c => c.format(c.get(r.q, r)))];
+          const cells = [r.ticker, r.section, fmtPrice(r.q?.price), ...cols.map(c => c.format(c.get(r.q, r.results[c.filterId])))];
           lines.push('| ' + cells.join(' | ') + ' |');
         });
       } else {
@@ -207,7 +280,7 @@ function ScreenerPage() {
     localStorage.setItem('llm_export_screeners', buildScreenerMarkdown());
     localStorage.setItem('llm_export_screeners_ts', Date.now().toString());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updated, quotes, tickerSection]);
+  }, [updated, quotes, tickerSection, activeId, activeFilters]);
 
   const copyMarkdown = () => {
     navigator.clipboard.writeText(buildScreenerMarkdown()).then(() => showToast('Copiado para LLM'));
@@ -283,32 +356,55 @@ function ScreenerPage() {
       </div>
 
       <div className="gap-note">
-        Pestaña de screeners técnicos extensibles — cada uno es una regla independiente definida en
-        <code> shared/screener-lib.js</code> (ticker, sección, precio + columnas propias de cada regla), calculada
-        en vivo sobre el mismo dato que ya sirve <code>/api/quote/:symbol</code> al resto del dashboard. Añadir un
-        screener nuevo no toca esta página — solo el registro. Ninguno de estos screeners alimenta PCS, rot_score
-        ni ninguna cartera: es lectura discrecional, sin histórico todavía (fase de observación).
+        Pestaña de screeners técnicos extensibles — cada screener agrupa varios <b>filtros</b> independientes,
+        combinables (activa uno, varios, o todos: un ticker es candidato solo si cumple TODOS los filtros que
+        tengas marcados), definidos en <code>shared/screener-lib.js</code>, calculados en vivo sobre el mismo
+        dato que ya sirve <code>/api/quote/:symbol</code> al resto del dashboard. Añadir un screener o un filtro
+        nuevo no toca esta página — solo el registro. Ninguno de estos screeners alimenta PCS, rot_score ni
+        ninguna cartera: es lectura discrecional, sin histórico todavía (fase de observación).
       </div>
 
       <div className="section-title">Screeners ({SCREENERS.length})</div>
       <div className="screener-tabs">
         {SCREENERS.map(s => {
-          const n = (resultsByScreener[s.id] || []).filter(r => r.pass).length;
           const active = s.id === activeScreener.id;
           return (
             <button
               key={s.id}
               className="screener-tab"
-              onClick={() => { setActiveId(s.id); setActiveExtraFilters(new Set()); }}
+              onClick={() => {
+                setActiveId(s.id);
+                setActiveFilters(defaultActiveFilterIds(s));
+                setActiveExtraFilters(new Set());
+              }}
               style={active ? { borderColor: s.color, background: '#fff', boxShadow: `0 0 0 1px ${s.color}` } : {}}
             >
-              <div className="n" style={{ color: s.color }}>{n}</div>
+              <div className="n" style={{ color: s.color }}>{defaultCountByScreener[s.id] ?? 0}</div>
               <div className="lbl">{s.shortLabel}</div>
             </button>
           );
         })}
       </div>
       <div className="screener-desc"><b>{activeScreener.label}:</b> {activeScreener.description}</div>
+
+      <div className="filter-hint">Filtros — actívalos o combínalos (AND). El número junto a cada uno es cuántos tickers lo cumplen por sí solo:</div>
+      <div className="screener-tabs">
+        {(activeScreener.filters || []).map(f => {
+          const on = activeFilters.has(f.id);
+          return (
+            <button
+              key={f.id}
+              className="screener-tab"
+              onClick={() => toggleFilter(f.id)}
+              title={f.description}
+              style={on ? { borderColor: activeScreener.color, background: '#fff', boxShadow: `0 0 0 1px ${activeScreener.color}` } : { opacity: 0.55 }}
+            >
+              <div className="n" style={{ color: activeScreener.color }}>{on ? '✓ ' : ''}{soloCountByFilter[f.id] ?? 0}</div>
+              <div className="lbl">{f.shortLabel || f.label}</div>
+            </button>
+          );
+        })}
+      </div>
 
       {activeScreener.extraFilters && activeScreener.extraFilters.length > 0 && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '2px 0 10px', flexWrap: 'wrap' }}>
@@ -333,38 +429,50 @@ function ScreenerPage() {
         </div>
       )}
 
-      <div className="card-grid">
-        {Object.entries(activeScreener.statuses).map(([id, m]) => (
-          statusCounts[id] ? (
-            <div className="stat-card" key={id}>
-              <div className="n" style={{ color: C[m.badge].fg }}>{statusCounts[id]}</div>
-              <div className="lbl">{m.label}</div>
-            </div>
-          ) : null
-        ))}
-      </div>
+      {activeFilterDefs.map(f => (
+        <React.Fragment key={f.id}>
+          {activeFilterDefs.length > 1 && <div className="section-sub" style={{ marginTop: 8 }}>{f.label}</div>}
+          <div className="card-grid">
+            {Object.entries(f.statuses).map(([id, m]) => (
+              (statusCountsByFilter[f.id] && statusCountsByFilter[f.id][id]) ? (
+                <div className="stat-card" key={id}>
+                  <div className="n" style={{ color: C[m.badge].fg }}>{statusCountsByFilter[f.id][id]}</div>
+                  <div className="lbl">{m.label}</div>
+                </div>
+              ) : null
+            ))}
+          </div>
+        </React.Fragment>
+      ))}
 
       <div className="section-title">{showAll ? `Universo completo (${visibleRows.length})` : `Candidatos (${visibleRows.length})`}</div>
-      <div className="section-sub">Recalculado en vivo al cargar la página o pulsar "Refrescar" — sin histórico persistido todavía.</div>
-      <details style={{ marginBottom: 12, fontSize: 10.5, color: '#475467', border: '1px solid #e6e8eb', borderRadius: 6, padding: '6px 10px', background: '#fbfcfd' }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#344054', fontSize: 11 }}>
-          ℹ️ Reglas y estados de "{activeScreener.label}"
-        </summary>
-        <div style={{ marginTop: 8, lineHeight: 1.6 }}>
-          <b>Reglas (todas deben cumplirse):</b>
-          <ul style={{ margin: '4px 0 10px 18px' }}>
-            {activeScreener.rulesText.map((t, i) => <li key={i} style={{ marginBottom: 3 }}>{t}</li>)}
-          </ul>
-          <b>Estados:</b>
-          <ul style={{ margin: '4px 0 0 18px' }}>
-            {Object.entries(activeScreener.statuses).map(([id, m]) => (
-              <li key={id} style={{ marginBottom: 4 }}>
-                <span className="badge" style={{ background: C[m.badge].bg, color: C[m.badge].fg, marginRight: 4 }}>{m.label}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </details>
+      <div className="section-sub">
+        {activeFilterDefs.length === 0
+          ? 'Ningún filtro activo — selecciona al menos uno arriba para ver candidatos.'
+          : `Candidato = cumple los ${activeFilterDefs.length} filtro${activeFilterDefs.length === 1 ? '' : 's'} activo${activeFilterDefs.length === 1 ? '' : 's'} a la vez. Recalculado en vivo al cargar la página o pulsar "Refrescar" — sin histórico persistido todavía.`}
+      </div>
+
+      {activeFilterDefs.map(f => (
+        <details key={f.id} style={{ marginBottom: 8, fontSize: 10.5, color: '#475467', border: '1px solid #e6e8eb', borderRadius: 6, padding: '6px 10px', background: '#fbfcfd' }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#344054', fontSize: 11 }}>
+            ℹ️ Reglas y estados de "{f.label}"
+          </summary>
+          <div style={{ marginTop: 8, lineHeight: 1.6 }}>
+            <b>Reglas (todas deben cumplirse):</b>
+            <ul style={{ margin: '4px 0 10px 18px' }}>
+              {f.rulesText.map((t, i) => <li key={i} style={{ marginBottom: 3 }}>{t}</li>)}
+            </ul>
+            <b>Estados:</b>
+            <ul style={{ margin: '4px 0 0 18px' }}>
+              {Object.entries(f.statuses).map(([id, m]) => (
+                <li key={id} style={{ marginBottom: 4 }}>
+                  <span className="badge" style={{ background: C[m.badge].bg, color: C[m.badge].fg, marginRight: 4 }}>{m.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      ))}
 
       {loading ? <div className="loading">Cargando…</div> : (
         <table>
@@ -373,28 +481,36 @@ function ScreenerPage() {
               <th title="Símbolo tal como aparece en Portfolio Tracker (portfolio.json).">Ticker</th>
               <th title="Sección de Portfolio Tracker en la que está este ticker (Cartera, Watchlist, etc.).">Sección</th>
               <th title="Último cierre disponible (Yahoo Finance, vía /api/quote/:symbol).">Precio</th>
-              <th title="Resultado de aplicar las reglas de este screener — ver el desplegable de abajo para el detalle de cada estado.">Estado</th>
-              {activeScreener.columns.map(c => <th key={c.header} title={c.tooltip}>{c.header}</th>)}
+              <th title="Resultado de cada filtro activo — ver los desplegables de arriba para el detalle de cada estado.">Estado</th>
+              {mergedColumns.map(c => <th key={c.header} title={c.tooltip}>{c.header}</th>)}
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map(r => {
-              const m = statusMeta(activeScreener, r.status);
-              return (
-                <tr key={r.ticker}>
-                  <td><b>{r.ticker}</b></td>
-                  <td style={{ color: '#98a2b3', fontSize: 10 }}>{r.section}</td>
-                  <td className="num">{fmtPrice(r.q?.price)}</td>
-                  <td><span className="badge" style={{ background: m.bg, color: m.fg }}>{m.label}</span></td>
-                  {activeScreener.columns.map(c => (
-                    <td key={c.header} className="num">{c.format(c.get(r.q, r))}</td>
-                  ))}
-                </tr>
-              );
-            })}
+            {visibleRows.map(r => (
+              <tr key={r.ticker}>
+                <td><b>{r.ticker}</b></td>
+                <td style={{ color: '#98a2b3', fontSize: 10 }}>{r.section}</td>
+                <td className="num">{fmtPrice(r.q?.price)}</td>
+                <td>
+                  {activeFilterDefs.map(f => {
+                    const fr = r.results[f.id];
+                    if (!fr) return null;
+                    const m = filterStatusMeta(f, fr.status);
+                    return (
+                      <span key={f.id} className="badge" style={{ background: m.bg, color: m.fg, marginRight: 4 }}>
+                        {activeFilterDefs.length > 1 ? `${f.shortLabel || f.label}: ` : ''}{m.label}
+                      </span>
+                    );
+                  })}
+                </td>
+                {mergedColumns.map(c => (
+                  <td key={c.header} className="num">{c.format(c.get(r.q, r.results[c.filterId]))}</td>
+                ))}
+              </tr>
+            ))}
             {!visibleRows.length && (
-              <tr><td colSpan={4 + activeScreener.columns.length} style={{ textAlign: 'center', color: '#98a2b3', padding: '16px 0' }}>
-                Sin candidatos ahora mismo.
+              <tr><td colSpan={4 + mergedColumns.length} style={{ textAlign: 'center', color: '#98a2b3', padding: '16px 0' }}>
+                {activeFilterDefs.length === 0 ? 'Selecciona al menos un filtro.' : 'Sin candidatos ahora mismo.'}
               </td></tr>
             )}
           </tbody>
@@ -403,8 +519,8 @@ function ScreenerPage() {
 
       <div className="footer-note">
         Datos: /api/quote/:symbol (shared/quote-lib.js), en vivo, sobre el universo de Portfolio Tracker
-        (portfolio.json). Reglas: shared/screener-lib.js — añadir un screener nuevo es añadir una entrada al
-        array SCREENERS, sin tocar esta página. Ver CLAUDE.md.
+        (portfolio.json). Reglas: shared/screener-lib.js — añadir un filtro o un screener nuevo es añadir una
+        entrada al registro, sin tocar esta página. Ver CLAUDE.md.
       </div>
     </div>
   );

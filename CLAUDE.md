@@ -6774,6 +6774,71 @@ filtro "Solo con SMA50 > SMA200". Ningún cambio en `shared/quote-lib.js` —
 28 candidatos a 14 (todos con ✓ en la columna SMA50>200), y al desactivarlo
 vuelve exactamente a 28. Cero errores de consola.
 
+### Segunda adenda — filtros combinables: se restaura "cerca de cruzar 0" como pieza sumable, no como alternativa (2026-09-22, mismo día)
+
+El usuario pidió recuperar también la regla original completa (tendencia +
+línea MACD cerca de cruzar 0, `evalMacdZeroCrossUp`, sustituida por
+completo en el rediseño de arriba) — pero explícitamente **como otro
+filtro seleccionable, combinable con el resto** ("que se puedan sumar
+filtros"), no como una segunda alternativa excluyente. Esto generalizó el
+registro de `shared/screener-lib.js` de "un `evaluate()` por screener" a
+"un array `filters[]` por screener, con checkboxes AND-combinables en la UI".
+
+**Contrato nuevo del registro:** `screener.filters` = array de
+`{id, label, shortLabel, defaultActive, description, rulesText, statuses,
+columns, evaluate(q)}` — cada `evaluate()` devuelve exactamente lo mismo
+que antes (`{status, pass, sortValue, detail}`), scoped a ESE filtro en
+solitario. `runScreenerFilters(screener, activeFilterIds, quotesByTicker)`
+(nuevo, sustituye a `runScreener`) evalúa solo los filtros del Set
+`activeFilterIds` y compone `pass` = AND de todos ellos — sin ningún filtro
+activo, `pass=false` para todos (nunca se interpreta como "sin filtro,
+mostrar todo"). `defaultActiveFilterIds(screener)` da el estado inicial
+(hoy: solo `hist_cross_confirmed` marcado, igual que el comportamiento de
+esta mañana, para no cambiar la experiencia por defecto).
+
+`evalMacdZeroCrossUp` se restauró **literalmente** (mismo código exacto de
+la implementación original de ayer, no una reescritura) como el filtro
+`line_near_zero_up` — con su propio conjunto de estados/columnas/reglas,
+separado del filtro `hist_cross_confirmed`. A diferencia de la marca
+SMA50>200 (`extraFilters`, puramente informativa, nunca afecta a `pass`),
+este filtro SÍ trae su propia condición de tendencia como parte del gate —
+es la diferencia de diseño entre "esto es contexto" y "esto es una regla
+que se puede combinar con otras reglas".
+
+**UI (`screeners.html`):** segunda fila de pastillas tipo `screener-tab`
+(checkboxes, no radio) bajo la pestaña de screener, una por
+`screener.filters`, mostrando el conteo de candidatos de ESE filtro en
+solitario junto al nombre — para que el usuario vea qué aporta cada uno
+antes de sumarlo. Columnas de la tabla = unión de las columnas de todos los
+filtros activos, deduplicadas por cabecera (ej. "RSI14" aparece en los dos
+filtros, se muestra una sola vez). Celda "Estado" = un badge por filtro
+activo (con prefijo del nombre del filtro solo si hay más de uno activo, 
+para no ensuciar el caso más común de un solo filtro). Glosario de
+reglas/estados: un `<details>` por filtro activo, en vez de uno fijo por
+screener. 0 filtros activos → mensaje explícito ("Selecciona al menos un
+filtro"), nunca una tabla vacía sin explicación.
+
+**Verificado en producción real** (Edge headless, clics reales sobre el
+DOM vía `querySelector`, no `.click()` en botones mal-targeteados por CSS
+frágil — un primer intento con `:nth-of-type(2)` falló silenciosamente,
+corregido buscando el segundo `.screener-tabs` directamente):
+- Solo "Cruce histograma confirmado" (por defecto): 28 candidatos — idéntico
+  al estado de la adenda anterior, sin regresión.
+- Sumando "Línea MACD cerca de cruzar 0" (ambos activos, AND): **3
+  candidatos** (HIMS, URI, LLY) — exactamente el mismo trío que encontraba
+  el screener original de ayer en solitario, confirmando que la
+  intersección es coherente (el histograma casi siempre ya ha cruzado en
+  los tickers que están "cerca" de que también cruce la línea).
+- Solo "Cerca de cruzar 0" (desactivando el otro): 3 candidatos, columnas
+  y valores idénticos a la implementación original de ayer — confirma que
+  la restauración es literal, sin deriva de comportamiento.
+- 0 filtros activos: 1 fila con el mensaje "Selecciona al menos un
+  filtro", sin errores.
+- Export a LLM verificado con ambos filtros activos: refleja exactamente
+  la combinación AND vista en pantalla (3 candidatos, columnas de los dos
+  filtros unidas, RSI14 sin duplicar). Cero errores de consola en toda la
+  verificación.
+
 ---
 
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
