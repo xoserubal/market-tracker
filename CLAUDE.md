@@ -6550,6 +6550,111 @@ use en el móvil real y diga cuáles le resultan más molestas.
 
 ---
 
+## Screener — pestaña de screeners técnicos extensibles (implementado 2026-09-21)
+
+El usuario pidió una pestaña nueva para marcar, sobre el universo de tickers
+que sigue el sistema, cuáles están en tendencia alcista y próximos a cruzar
+la línea MACD por encima de 0 — y explícitamente que fuera un marco
+**extensible**, donde "podremos ir introduciendo screeners específicos cada
+uno con sus reglas", no una pantalla de un solo uso.
+
+**Decisión de arquitectura — registro + página, sin pipeline nuevo.**
+`shared/quote-lib.js → calcMACD()` ya devolvía desde el día anterior
+(commit `cca8cb3e`, columna "MACD 0" de `portfolio.html`) exactamente los
+campos que hacían falta: `macdLine` (la línea EMA12−EMA26 en sí, distinta
+del histograma que ya usaba `macdBull`), `macdLineBull` (línea ≥ 0) y
+`macdLineDelta5` (tendencia de la línea en las últimas 5 sesiones). Con eso
+ya disponible vía `/api/quote/:symbol`, no hizo falta ningún script de
+pipeline ni ninguna captura diaria nueva — la pestaña calcula todo en vivo,
+mismo patrón que `positioning.html`/`duration.html`/`sentiment.html` y que
+la propia tabla "Cartera" de `portfolio.html` (fetch de `/api/quote/:symbol`
+por cada ticker del universo de Portfolio Tracker, sin límite manual de
+concurrencia — el propio navegador ya lo throttla, y este patrón ya está
+en producción sin problemas para ~118 tickers).
+
+**`shared/screener-lib.js` (nuevo)** — registro extensible: un array
+`SCREENERS`, cada entrada con `id`/`label`/`description`/`rulesText`
+(texto para el glosario)/`statuses` (badges) y una función pura
+`evaluate(quote) -> {status, pass, sortValue, detail}`, más un array
+`columns` (cada una con `header`+`get`+`format`) para las columnas
+específicas de esa regla en la tabla. Añadir un screener nuevo es añadir
+una entrada a este array — no toca `screeners.html` en absoluto, salvo que
+el screener necesite datos que `buildQuoteData()` no calcule todavía (en
+cuyo caso el patrón a seguir sería el mismo que Trullás: un script de
+pipeline aparte que precalcule y persista, con su propia ruta `/api/...`).
+Dual export navegador/Node (mismo patrón que `shared/flow-score.js`):
+`<script src="/shared/screener-lib.js">` en el `<head>` para uso directo
+como globals en el JSX, y `module.exports` para un futuro script Node
+standalone.
+
+**Primer screener: `macd_zero_cross_up`.**
+```
+Tendencia alcista:  precio > SMA200  Y  SMA50 > SMA200
+MACD todavía abajo: macdLine < 0  (macdLineBull === false)
+Con impulso:        macdLineDelta5 > 0  (la línea sube vs hace 5 sesiones)
+Cerca del cruce:    |macdLine| / ATR14_abs ≤ 1.0
+```
+La distancia a cero se normaliza en unidades de ATR14 (mismo criterio que
+`dist_sma20_atr` en `pcs_calculator.py`/`extension_risk`) en vez de un
+valor absoluto de MACD, que no es comparable entre tickers de precios muy
+distintos (p. ej. MACD=-19.87 en URI, precio ~1030, vs MACD=-0.55 en HIMS,
+precio ~29 — ambos a una distancia similar en términos de ATR). Umbral de
+proximidad (≤1×ATR) y ventana de impulso (5 sesiones) sin calibrar contra
+rendimiento posterior — primera pasada, fase de observación, mismo criterio
+que el resto de señales nuevas del proyecto (`extension_risk`, ATLAS Mini,
+Koncorde…). Se calcula también, informativamente y sin formar parte del
+gate, una extrapolación lineal de "sesiones estimadas para el cruce" al
+ritmo de las últimas 5 sesiones.
+
+**`screeners.html` (nuevo)** — mismo esqueleto que `trullas.html`: pestañas
+por screener (hoy solo una, con contador de candidatos), tarjetas de
+resumen por estado, tabla de candidatos (toggle "Ver todos" para el
+universo completo con su estado), glosario desplegable de reglas/estados
+(`<details>`, no tooltips de hover — mismo motivo que el glosario de
+Trullás: la PWA se usa también desde el móvil), y el mismo patrón
+`buildScreenerMarkdown()`/`localStorage llm_export_screeners`/"Copy for
+LLM"/"🗂️ Exportar TODO a LLM" que el resto de páginas. Nav pill "Screener"
+(`#00838f`) añadida a las 9 páginas raíz existentes, y
+`llm_export_screeners` sumado al array `parts` compartido de exportación a
+LLM en las 10 páginas (ahora 10 entradas).
+
+**Sin histórico persistido todavía** — a diferencia de casi todo lo demás
+en este proyecto, no se creó ningún `docs/data/screener_*.jsonl`. No hacía
+falta: `docs/data/portfolio_daily_snapshot.jsonl` (Step 9g del pipeline) ya
+captura a diario `macdLine`/`macdLineBull`/`macdLineDelta5`/`sma50`/
+`sma200`/`atrAbs` para todo el universo desde el día en que se añadieron
+esos campos a `calcMACD()` — si en el futuro se quiere estudiar si este
+screener anticipa rendimiento, ese histórico ya existe y solo haría falta
+re-ejecutar `evaluate()` sobre cada fila, sin necesidad de haber logueado
+nada nuevo desde el principio.
+
+**Verificado end-to-end** (Edge headless vía CDP directo — Puppeteer en el
+scratchpad de la sesión, sin instalar nada en el repo — contra el
+`server.js` real del usuario ya en marcha, sin reiniciar: no hizo falta,
+son archivos estáticos nuevos que `express.static` ya sirve): las 10
+páginas transpilan sin errores (`@babel/standalone`); los 9 nav pills
+apuntan a `/screeners.html` exactamente una vez cada uno; `screeners.html`
+carga el universo real (119 tickers de `portfolio.json`), evalúa el
+screener y encuentra 3 candidatos reales del día (`HIMS` dist=0.34×ATR,
+`LLY` dist=0.38×ATR, `URI` dist=0.67×ATR) — cifra cruzada por partida doble
+contra un script Node aparte que reevalúa `runScreener()` directamente
+sobre `/api/quote/:symbol` sin pasar por la UI, coincidencia exacta;
+distribución completa sobre el universo (58 ya cruzados, 47 sin tendencia
+alcista, 11 sin impulso, 3 candidatos) plausible y sin ningún bucket vacío
+sospechoso; toggle "Ver todos" expande correctamente a 119 filas; "Copy for
+LLM" copia una tabla Markdown real con las columnas específicas del
+screener; glosario desplegable renderiza las 4 reglas + 5 estados. Cero
+errores de consola en toda la verificación.
+
+**Fuera de alcance (explícito):** ningún cambio a PCS, `rot_score`, ninguna
+cartera ni `HARD_RULES` — es lectura discrecional pura, igual que
+`positioning.html`/`duration.html`. Histórico/backtest de este screener
+concreto (posible más adelante, reutilizando `portfolio_daily_snapshot.jsonl`
+como se explica arriba). Screeners adicionales — quedan para cuando el
+usuario los pida, siguiendo el mismo patrón de registro.
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

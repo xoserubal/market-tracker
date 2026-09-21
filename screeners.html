@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Screener — Market Tracker</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0b3d63"/>
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32"/>
+  <link rel="icon" href="/icons/favicon-16.png" sizes="16x16"/>
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});}</script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <script src="/shared/screener-lib.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
+    .wrap { background: white; min-width: 960px; min-height: 100vh; padding: 16px 20px; overflow-x: auto; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; color: #111; line-height: 1; }
+    .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
+    .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    button { border: none; border-radius: 3px; padding: 5px 12px; cursor: pointer; font-size: 11px; font-weight: 600; color: white; }
+    button:disabled { cursor: default; opacity: 0.65; }
+    .btn-copy { background: #1a6b3c; }
+    .btn-export { background: #37474f; }
+    .btn-refresh { background: #3a6ca0; }
+    .btn-toggle { background: #6d4c00; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a6b3c; color: white; padding: 10px 22px; border-radius: 20px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 10; }
+
+    .section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #344054;
+      margin: 18px 0 4px; padding-bottom: 4px; border-bottom: 2px solid #e6e8eb; }
+    .section-sub { font-size: 10px; color: #98a2b3; margin-bottom: 10px; font-style: italic; }
+
+    .screener-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+    .screener-tab { border: 1.5px solid #d0d5dd; border-radius: 8px; padding: 8px 14px; cursor: pointer; background: #fafbfc;
+      font-size: 12px; font-weight: 700; color: #344054; text-align: left; }
+    .screener-tab .n { font-size: 15px; font-weight: 800; font-family: Consolas, monospace; }
+    .screener-tab .lbl { font-size: 10px; font-weight: 600; margin-top: 1px; }
+    .screener-desc { font-size: 11px; color: #475467; margin: 8px 0 6px; line-height: 1.5; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat-card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 10px 12px; }
+    .stat-card .n { font-size: 20px; font-weight: 700; font-family: Consolas, monospace; }
+    .stat-card .lbl { font-size: 10px; color: #667085; margin-top: 2px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef0f2; white-space: nowrap; }
+    th { font-size: 9px; text-transform: uppercase; color: #98a2b3; letter-spacing: .3px; background: #354f73; color: #fff; position: sticky; top: 0; }
+    th[title] { cursor: help; border-bottom: 1px dotted rgba(255,255,255,.6); }
+    tbody tr:hover { background: #fafbfc; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+
+    .gap-note { border: 1px solid #ffe0b2; background: #fff8ef; color: #8a5200; border-radius: 6px; padding: 8px 12px; font-size: 10px; margin-bottom: 10px; }
+    .footer-note { font-size: 9px; color: #98a2b3; margin-top: 14px; font-style: italic; }
+    .loading { font-size: 11px; color: #98a2b3; padding: 20px 0; text-align: center; }
+    .num { font-family: Consolas, monospace; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const C = {
+  green:  { bg: '#c8e6c9', fg: '#1b5e20' },
+  yellow: { bg: '#fff9c4', fg: '#e65100' },
+  orange: { bg: '#ffe0b2', fg: '#bf360c' },
+  red:    { bg: '#ffcdd2', fg: '#b71c1c' },
+  neutral:{ bg: '#f0f0f0', fg: '#555' },
+  blue:   { bg: '#e3f2fd', fg: '#1565c0' },
+};
+
+function fmtPrice(v) { return v == null ? '—' : v.toFixed(v < 10 ? 4 : 2); }
+
+function statusMeta(screener, status) {
+  const m = screener.statuses[status];
+  if (!m) return { label: status || '—', ...C.neutral };
+  return { label: m.label, ...C[m.badge] };
+}
+
+function useToast() {
+  const [toast, setToast] = React.useState(null);
+  const show = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
+  return [toast, show];
+}
+
+function ScreenerPage() {
+  const [tickerSection, setTickerSection] = React.useState({});
+  const [quotes, setQuotes] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const [updated, setUpdated] = React.useState(null);
+  const [activeId, setActiveId] = React.useState(SCREENERS[0].id);
+  const [showAll, setShowAll] = React.useState(false);
+  const [toast, showToast] = useToast();
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    let sections = [];
+    try {
+      const port = await fetch('/api/portfolio?t=' + Date.now()).then(r => r.json());
+      sections = port.sections || [];
+    } catch (e) { /* universo vacío si falla — la tabla queda vacía, no rompe la página */ }
+
+    const secMap = {};
+    sections.forEach(s => (s.items || []).forEach(i => { if (i.ticker && !(i.ticker in secMap)) secMap[i.ticker] = s.name; }));
+    setTickerSection(secMap);
+
+    const tickers = Object.keys(secMap);
+    const map = {};
+    await Promise.allSettled(tickers.map(async ticker => {
+      try {
+        const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`);
+        const d = await r.json();
+        if (!d.error) map[ticker] = d;
+      } catch (e) { /* ticker individual fallido — el resto sigue */ }
+    }));
+    setQuotes(map);
+    setUpdated(new Date());
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  // Resultados de TODOS los screeners registrados (no solo el activo) —
+  // necesarios para los contadores de las pestañas y para el export a LLM,
+  // que incluye un resumen de cada screener aunque no esté seleccionado.
+  const resultsByScreener = React.useMemo(() => {
+    const out = {};
+    SCREENERS.forEach(s => {
+      const rows = runScreener(s, quotes).map(r => ({ ...r, section: tickerSection[r.ticker] || '—' }));
+      rows.sort((a, b) => {
+        if (a.pass !== b.pass) return a.pass ? -1 : 1;
+        if (a.sortValue == null && b.sortValue == null) return a.ticker.localeCompare(b.ticker);
+        if (a.sortValue == null) return 1;
+        if (b.sortValue == null) return -1;
+        return a.sortValue - b.sortValue;
+      });
+      out[s.id] = rows;
+    });
+    return out;
+  }, [quotes, tickerSection]);
+
+  const activeScreener = getScreener(activeId) || SCREENERS[0];
+  const activeRows = resultsByScreener[activeScreener.id] || [];
+  const visibleRows = showAll ? activeRows : activeRows.filter(r => r.pass);
+
+  const statusCounts = React.useMemo(() => {
+    const c = {};
+    activeRows.forEach(r => { c[r.status] = (c[r.status] || 0) + 1; });
+    return c;
+  }, [activeRows]);
+
+  const buildScreenerMarkdown = () => {
+    const lines = [];
+    lines.push('# Screener — Market Tracker');
+    lines.push(`Actualizado: ${updated ? updated.toLocaleString('es-ES') : '—'}`);
+    lines.push('');
+    lines.push('Pestaña de screeners técnicos extensibles sobre el universo de Portfolio Tracker ' +
+      '(portfolio.json) — cada screener es una regla independiente (shared/screener-lib.js), ' +
+      'calculada en vivo sobre los mismos datos que /api/quote/:symbol (RSI, MACD, SMAs, ATR…). ' +
+      'Ninguno de estos screeners toca PCS, rot_score ni ninguna cartera — es lectura discrecional.');
+    lines.push('');
+    SCREENERS.forEach(s => {
+      const rows = resultsByScreener[s.id] || [];
+      const candidates = rows.filter(r => r.pass);
+      lines.push(`## ${s.label} (${candidates.length} candidato${candidates.length === 1 ? '' : 's'})`);
+      lines.push(s.description);
+      lines.push('');
+      if (candidates.length) {
+        const header = ['Ticker', 'Sección', 'Precio', ...s.columns.map(c => c.header)];
+        lines.push('| ' + header.join(' | ') + ' |');
+        lines.push('|' + header.map(() => '---').join('|') + '|');
+        candidates.forEach(r => {
+          const cells = [r.ticker, r.section, fmtPrice(r.q?.price), ...s.columns.map(c => c.format(c.get(r.q, r)))];
+          lines.push('| ' + cells.join(' | ') + ' |');
+        });
+      } else {
+        lines.push('Sin candidatos hoy.');
+      }
+      lines.push('');
+    });
+    return lines.join('\n');
+  };
+
+  React.useEffect(() => {
+    if (!updated) return;
+    localStorage.setItem('llm_export_screeners', buildScreenerMarkdown());
+    localStorage.setItem('llm_export_screeners_ts', Date.now().toString());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updated, quotes, tickerSection]);
+
+  const copyMarkdown = () => {
+    navigator.clipboard.writeText(buildScreenerMarkdown()).then(() => showToast('Copiado para LLM'));
+  };
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market',      label: 'Market Tracker' },
+      { key: 'llm_export_portfolio',   label: 'Portfolio' },
+      { key: 'llm_export_cycle',       label: 'Cycle' },
+      { key: 'llm_export_relative',    label: 'Relative Flow' },
+      { key: 'llm_export_rotacion',    label: 'Flujos & Rotación' },
+      { key: 'llm_export_duration',    label: 'Duration' },
+      { key: 'llm_export_sentiment',   label: 'Sentiment' },
+      { key: 'llm_export_positioning', label: 'Positioning' },
+      { key: 'llm_export_trullas',     label: 'Trullás' },
+      { key: 'llm_export_screeners',   label: 'Screener' },
+    ];
+    const now = Date.now();
+    const found = [], missing = [], stale = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) {
+        found.push(label);
+        const ts = parseInt(localStorage.getItem(key + '_ts') || '0');
+        const hours = ts ? Math.round((now - ts) / 3600000) : null;
+        if (!ts || hours > 23) stale.push(hours != null ? `${label} (${hours}h)` : label);
+        return md;
+      }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    const exportDate = new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' });
+    const header = `**Exportado:** ${exportDate}` +
+      (stale.length ? `\n⚠️ **Secciones desactualizadas (>24h):** ${stale.join(', ')} — Abre esas pestañas para refrescar\n` : '\n');
+    const combined = header + '\n---\n\n' + sections.join('\n\n---\n\n');
+    navigator.clipboard.writeText(combined)
+      .then(() => {
+        if (stale.length) showToast(`⚠️ ${stale.length} secc. desactualizadas: ${stale.join(', ')}`);
+        else if (missing.length) showToast(`✅ ${found.length}/${parts.length} pestañas — Falta: ${missing.join(', ')}`);
+        else showToast('✅ Todas las pestañas copiadas (datos frescos)');
+      })
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  return (
+    <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
+      <div className="topbar">
+        <div>
+          <div className="title-row">
+            <h1>Screener</h1>
+            <a href="/index.html" className="nav-link" style={{ color: '#1a6b3c', borderColor: '#1a6b3c' }}>Market Tracker</a>
+            <a href="/portfolio.html" className="nav-link" style={{ color: '#3a6ca0', borderColor: '#3a6ca0' }}>Portfolio</a>
+            <a href="/relative.html" className="nav-link" style={{ color: '#7b1fa2', borderColor: '#7b1fa2' }}>Relative Flow</a>
+            <a href="/cycle.html" className="nav-link" style={{ color: '#7f0000', borderColor: '#7f0000' }}>Cycle</a>
+            <a href="/rotacion.html" className="nav-link" style={{ color: '#e65100', borderColor: '#e65100' }}>Flujos & Rotación</a>
+            <a href="/duration.html" className="nav-link" style={{ color: '#37474f', borderColor: '#37474f' }}>Duration</a>
+            <a href="/sentiment.html" className="nav-link" style={{ color: '#00695c', borderColor: '#00695c' }}>Sentiment</a>
+            <a href="/positioning.html" className="nav-link" style={{ color: '#5d4037', borderColor: '#5d4037' }}>Positioning</a>
+            <a href="/trullas.html" className="nav-link" style={{ color: '#ad1457', borderColor: '#ad1457' }}>Trullás</a>
+          </div>
+          <div className="meta">
+            {updated ? `Actualizado: ${updated.toLocaleTimeString('es-ES')}` : '—'} · universo Portfolio Tracker ({Object.keys(tickerSection).length} tickers)
+          </div>
+        </div>
+        <div className="actions">
+          <button className="btn-toggle" onClick={() => setShowAll(s => !s)}>{showAll ? 'Solo candidatos' : `Ver todos (${activeRows.length})`}</button>
+          <button className="btn-refresh" onClick={load} disabled={loading}>{loading ? 'Cargando…' : 'Refrescar'}</button>
+          <button className="btn-copy" onClick={copyMarkdown}>Copy for LLM</button>
+          <button className="btn-export" onClick={copyAllForLLM}>🗂️ Exportar TODO a LLM</button>
+        </div>
+      </div>
+
+      <div className="gap-note">
+        Pestaña de screeners técnicos extensibles — cada uno es una regla independiente definida en
+        <code> shared/screener-lib.js</code> (ticker, sección, precio + columnas propias de cada regla), calculada
+        en vivo sobre el mismo dato que ya sirve <code>/api/quote/:symbol</code> al resto del dashboard. Añadir un
+        screener nuevo no toca esta página — solo el registro. Ninguno de estos screeners alimenta PCS, rot_score
+        ni ninguna cartera: es lectura discrecional, sin histórico todavía (fase de observación).
+      </div>
+
+      <div className="section-title">Screeners ({SCREENERS.length})</div>
+      <div className="screener-tabs">
+        {SCREENERS.map(s => {
+          const n = (resultsByScreener[s.id] || []).filter(r => r.pass).length;
+          const active = s.id === activeScreener.id;
+          return (
+            <button
+              key={s.id}
+              className="screener-tab"
+              onClick={() => setActiveId(s.id)}
+              style={active ? { borderColor: s.color, background: '#fff', boxShadow: `0 0 0 1px ${s.color}` } : {}}
+            >
+              <div className="n" style={{ color: s.color }}>{n}</div>
+              <div className="lbl">{s.shortLabel}</div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="screener-desc"><b>{activeScreener.label}:</b> {activeScreener.description}</div>
+
+      <div className="card-grid">
+        {Object.entries(activeScreener.statuses).map(([id, m]) => (
+          statusCounts[id] ? (
+            <div className="stat-card" key={id}>
+              <div className="n" style={{ color: C[m.badge].fg }}>{statusCounts[id]}</div>
+              <div className="lbl">{m.label}</div>
+            </div>
+          ) : null
+        ))}
+      </div>
+
+      <div className="section-title">{showAll ? `Universo completo (${visibleRows.length})` : `Candidatos (${visibleRows.length})`}</div>
+      <div className="section-sub">Recalculado en vivo al cargar la página o pulsar "Refrescar" — sin histórico persistido todavía.</div>
+      <details style={{ marginBottom: 12, fontSize: 10.5, color: '#475467', border: '1px solid #e6e8eb', borderRadius: 6, padding: '6px 10px', background: '#fbfcfd' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#344054', fontSize: 11 }}>
+          ℹ️ Reglas y estados de "{activeScreener.label}"
+        </summary>
+        <div style={{ marginTop: 8, lineHeight: 1.6 }}>
+          <b>Reglas (todas deben cumplirse):</b>
+          <ul style={{ margin: '4px 0 10px 18px' }}>
+            {activeScreener.rulesText.map((t, i) => <li key={i} style={{ marginBottom: 3 }}>{t}</li>)}
+          </ul>
+          <b>Estados:</b>
+          <ul style={{ margin: '4px 0 0 18px' }}>
+            {Object.entries(activeScreener.statuses).map(([id, m]) => (
+              <li key={id} style={{ marginBottom: 4 }}>
+                <span className="badge" style={{ background: C[m.badge].bg, color: C[m.badge].fg, marginRight: 4 }}>{m.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
+
+      {loading ? <div className="loading">Cargando…</div> : (
+        <table>
+          <thead>
+            <tr>
+              <th title="Símbolo tal como aparece en Portfolio Tracker (portfolio.json).">Ticker</th>
+              <th title="Sección de Portfolio Tracker en la que está este ticker (Cartera, Watchlist, etc.).">Sección</th>
+              <th title="Último cierre disponible (Yahoo Finance, vía /api/quote/:symbol).">Precio</th>
+              <th title="Resultado de aplicar las reglas de este screener — ver el desplegable de abajo para el detalle de cada estado.">Estado</th>
+              {activeScreener.columns.map(c => <th key={c.header} title={c.tooltip}>{c.header}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map(r => {
+              const m = statusMeta(activeScreener, r.status);
+              return (
+                <tr key={r.ticker}>
+                  <td><b>{r.ticker}</b></td>
+                  <td style={{ color: '#98a2b3', fontSize: 10 }}>{r.section}</td>
+                  <td className="num">{fmtPrice(r.q?.price)}</td>
+                  <td><span className="badge" style={{ background: m.bg, color: m.fg }}>{m.label}</span></td>
+                  {activeScreener.columns.map(c => (
+                    <td key={c.header} className="num">{c.format(c.get(r.q, r))}</td>
+                  ))}
+                </tr>
+              );
+            })}
+            {!visibleRows.length && (
+              <tr><td colSpan={4 + activeScreener.columns.length} style={{ textAlign: 'center', color: '#98a2b3', padding: '16px 0' }}>
+                Sin candidatos ahora mismo.
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      )}
+
+      <div className="footer-note">
+        Datos: /api/quote/:symbol (shared/quote-lib.js), en vivo, sobre el universo de Portfolio Tracker
+        (portfolio.json). Reglas: shared/screener-lib.js — añadir un screener nuevo es añadir una entrada al
+        array SCREENERS, sin tocar esta página. Ver CLAUDE.md.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ScreenerPage />);
+</script>
+</body>
+</html>
