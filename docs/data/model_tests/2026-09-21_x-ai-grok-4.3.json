@@ -1,0 +1,403 @@
+{
+  "run_id": "2026-09-21_1454",
+  "model": "x-ai/grok-4.3",
+  "date": "2026-09-21",
+  "summary": {
+    "date": "2026-09-21",
+    "run_id": "2026-09-21_1454",
+    "model": "x-ai/grok-4.3",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 3,
+    "candidate_count": 38,
+    "input_tokens": 72251,
+    "output_tokens": 8150,
+    "cost_usd": 0.110689,
+    "latency_ms": 59869.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 93,
+    "selected_count": 0,
+    "watch_count": 11,
+    "rejected_count": 20,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: WATCH PLTR cited ret_13w_vs_spy=1.0 for PLTR (actual=36.0182)",
+      "numeric_hallucination_suspected: WATCH META cited ret_4w_vs_spy=81.8 for META (actual=22.6379)",
+      "numeric_hallucination_suspected: WATCH META cited dems=2.0 for META (actual=10)",
+      "numeric_hallucination_suspected: WATCH III.TO cited ret_13w_vs_spy=7.0 for III.TO (actual=26.0275)",
+      "numeric_hallucination_suspected: WATCH VFF cited ret_13w_vs_spy=75.8 for VFF (actual=46.4358)",
+      "numeric_hallucination_suspected: WATCH TAL cited ret_13w_vs_spy=73.0 for TAL (actual=26.2539)",
+      "numeric_hallucination_suspected: REJECT SMCI cited dems=80.2 for SMCI (actual=11)",
+      "numeric_hallucination_suspected: REJECT AMD cited dems=78.5 for AMD (actual=19)",
+      "numeric_hallucination_suspected: REJECT COIN cited dems=77.8 for COIN (actual=13)",
+      "numeric_hallucination_suspected: REJECT NVDA cited ret_13w_vs_spy=1.0 for NVDA (actual=3.3589)",
+      "hold_below_floor: JD has pcs=42.5 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: UNH has pcs=38.0 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: RYM.NZ has pcs=38.2 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: INDA has pcs=38.0 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: FDR.AX has pcs=47.8 (<62) but action=HOLD — should EXIT",
+      "hold_below_floor: HFG.DE has pcs=30.0 (<62) but action=HOLD — should EXIT"
+    ]
+  },
+  "quality_score": 93,
+  "response": {
+    "model": "x-ai/grok-4.3",
+    "run_id": "2026-09-21_1454",
+    "date": "2026-09-21",
+    "decision_summary": {
+      "market_read": "Bull Maduro Improving regime but extreme oil_gas 124.5% and healthcare 39.5% concentration.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "PLTR",
+        "reason": "pcs 85 streak 1 ret_13w 36 but weekly metrics weak for HIGH_CONVICTION",
+        "watch_trigger": "streak_weeks >=3 with rot_score >=8"
+      },
+      {
+        "ticker": "META",
+        "reason": "pcs 81.8 ret_4w 22.6 streak 2 dems 10 but extension extreme",
+        "watch_trigger": "extension_risk drops to low and streak >=3"
+      },
+      {
+        "ticker": "III.TO",
+        "reason": "pcs 72.5 rot 7 ret_13w 26 streak 8 copper theme low concentration",
+        "watch_trigger": "pcs >=75 and rot_score >=8"
+      },
+      {
+        "ticker": "VFF",
+        "reason": "pcs 75.8 ret_13w 46.4 streak 4 cannabis low concentration",
+        "watch_trigger": "dems >=10 and streak >=5"
+      },
+      {
+        "ticker": "TAL",
+        "reason": "pcs 73 ret_13w 26.3 streak 8 china_em low concentration",
+        "watch_trigger": "ret_4w_vs_spy >=10 and rot_score >=8"
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 69.0 with rot_score 7 and outperform_d10 7 but medium extension risk and dems 11 borderline for EARLY_ROTATION.",
+        "watch_trigger": "dems rise above 14 with no spike_flag and continued 4w outperformance above 2 percent"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "PCS 69.8 with rot_score 5 but current_pcs 69.8 below entry thresholds and distribution_warning on 3D.",
+        "watch_trigger": "rot_score rise to 7+ with streak_weeks at least 2 and 3D alignment turning bullish"
+      },
+      {
+        "ticker": "GOLD",
+        "reason": "PCS 65.2 with rot_score 8 and 6-week streak but theme concentration high and dems only 4.",
+        "watch_trigger": "dems exceed 10 with momentum_accel true and subtheme concentration risk falling to low"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "PCS 64.5 with ret_13w_vs_spy 26.6 but streak_weeks 0 and distribution_warning on 3D.",
+        "watch_trigger": "streak_weeks reach 3+ with rot_score above 6 and 3D state shifting to up"
+      },
+      {
+        "ticker": "MRK",
+        "reason": "PCS 63.8 with ret_13w_vs_spy 27.5 but dems 5 and theme_weak flag.",
+        "watch_trigger": "dems rise to 10+ with rot_score at least 7 and theme_flow component improving"
+      },
+      {
+        "ticker": "DHR",
+        "reason": "PCS 64.2 with ret_13w_vs_spy 17.5 but distribution_warning on weekly and dems 11 with short streak.",
+        "watch_trigger": "streak_weeks extend to 3+ with weekly alignment turning bullish_aligned"
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "UCO",
+        "reason": "already open in MIMO_SHADOW",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "already open; extreme extension and distribution_warning",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "WCP.TO",
+        "reason": "already open in MIMO_SHADOW",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "already open in CAVA_MACRO",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "LCX.V",
+        "reason": "already open in multiple portfolios",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "already open in MIMO_SHADOW and CAVA_MACRO",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "VLE.TO",
+        "reason": "already open in MIMO_SHADOW and CAVA_MACRO",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "SU",
+        "reason": "already open in MIMO_SHADOW",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TLW.L",
+        "reason": "already open in MIMO_SHADOW",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "already open in MIMO_SHADOW and CONFIRMED_FLOW_LEADERS",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "already open in multiple portfolios",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "SMCI",
+        "reason": "pcs 80.2 dems 11 streak 2 distribution_warning on 3D and W",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "AMD",
+        "reason": "pcs 78.5 dems 19 but streak 2 and distribution_warning",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "COIN",
+        "reason": "pcs 77.8 dems 13 streak 3 distribution_warning on 3D and W",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "PNPN.V",
+        "reason": "pcs 77.2 streak 1 ret_10d_vs_spy -18.54",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "CRON",
+        "reason": "already open in MIMO_SHADOW",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TMO",
+        "reason": "already open in MIMO_SHADOW and CAVA_MACRO",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "pcs 72.8 streak 1 ret_13w 3.36 distribution_warning",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SLP.L",
+        "reason": "already open in RANKING_SHADOW_EXPERIMENTAL",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TNZ.TO",
+        "reason": "already open in MIMO_SHADOW and CAVA_MACRO",
+        "rejection_category": "better_alternative_available"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "HIGH_CONVICTION",
+        "action": "HOLD",
+        "reason": "current_pcs 81.0 >82 min but streak 4 rot 7"
+      },
+      {
+        "ticker": "MLX.AX",
+        "portfolio": "CONFIRMED_FLOW_LEADERS",
+        "action": "HOLD",
+        "reason": "current_pcs 81.2 >75 min streak 8 rot 8"
+      },
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 75.5 >68 min streak 8 rot 8"
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 87.0 >68 min streak 8 rot 8"
+      },
+      {
+        "ticker": "CRON",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 77.0 >68 min streak 7 rot 8"
+      },
+      {
+        "ticker": "CVE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 82.8 >68 min streak 5 rot 7"
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 82.5 >68 min streak 6 rot 7"
+      },
+      {
+        "ticker": "TNZ.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 90.2 >68 min streak 5 rot 9"
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "current_pcs 59.8 <62 absolute floor"
+      },
+      {
+        "ticker": "LCX.V",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 85.2 >68 min streak 4 rot 8"
+      },
+      {
+        "ticker": "GOLD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 65.2 <68 min but rot 8 streak 6"
+      },
+      {
+        "ticker": "TLW.L",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 81.8 >68 min streak 6 rot 9"
+      },
+      {
+        "ticker": "KOS",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 69.8 >68 min streak 0 rot 5"
+      },
+      {
+        "ticker": "SU",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "current_pcs 82.0 >68 min streak 4 rot 6"
+      },
+      {
+        "ticker": "JD",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "current_pcs 42.5 no pcs_min rule violation"
+      },
+      {
+        "ticker": "UNH",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "current_pcs 38.0 no pcs_min rule violation"
+      },
+      {
+        "ticker": "RYM.NZ",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "current_pcs 38.2 no pcs_min rule violation"
+      },
+      {
+        "ticker": "EWW",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "EXIT",
+        "reason": "left_universe=true"
+      },
+      {
+        "ticker": "LEU",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "EXIT",
+        "reason": "left_universe=true"
+      },
+      {
+        "ticker": "INDA",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "current_pcs 38.0 no pcs_min rule violation"
+      },
+      {
+        "ticker": "FDR.AX",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "current_pcs 47.8 no pcs_min rule violation"
+      },
+      {
+        "ticker": "MRK",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "current_pcs 63.8 no pcs_min rule violation"
+      },
+      {
+        "ticker": "MSTR",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "current_pcs 88.8 no pcs_min rule violation"
+      },
+      {
+        "ticker": "KIST.L",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "current_pcs 87.0 no pcs_min rule violation"
+      },
+      {
+        "ticker": "UCO",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "current_pcs 89.5 no pcs_min rule violation"
+      },
+      {
+        "ticker": "QQQ",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "current_pcs 69.0 no pcs_min rule violation"
+      },
+      {
+        "ticker": "HFG.DE",
+        "portfolio": "CRUCE_ROJO_D",
+        "action": "HOLD",
+        "reason": "current_pcs 30.0 no pcs_min rule violation"
+      },
+      {
+        "ticker": "SLP.L",
+        "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
+        "action": "HOLD",
+        "reason": "current_pcs 72.0 no pcs_min rule violation"
+      },
+      {
+        "ticker": "DPM.TO",
+        "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
+        "action": "HOLD",
+        "reason": "current_pcs 64.5 no pcs_min rule violation"
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
+        "action": "HOLD",
+        "reason": "current_pcs 64.2 no pcs_min rule violation"
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-09-21\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-09-21_1454\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime but extreme oil_gas 124.5% and healthcare 39.5% concentration.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"PLTR\", \"reason\": \"pcs 85 streak 1 ret_13w 36 but weekly metrics weak for HIGH_CONVICTION\", \"watch_trigger\": \"streak_weeks >=3 with rot_score >=8\"},\n    {\"ticker\": \"META\", \"reason\": \"pcs 81.8 ret_4w 22.6 streak 2 dems 10 but extension extreme\", \"watch_trigger\": \"extension_risk drops to low and streak >=3\"},\n    {\"ticker\": \"III.TO\", \"reason\": \"pcs 72.5 rot 7 ret_13w 26 streak 8 copper theme low concentration\", \"watch_trigger\": \"pcs >=75 and rot_score >=8\"},\n    {\"ticker\": \"VFF\", \"reason\": \"pcs 75.8 ret_13w 46.4 streak 4 cannabis low concentration\", \"watch_trigger\": \"dems >=10 and streak >=5\"},\n    {\"ticker\": \"TAL\", \"reason\": \"pcs 73 ret_13w 26.3 streak 8 china_em low concentration\", \"watch_trigger\": \"ret_4w_vs_spy >=10 and rot_score >=8\"}\n  ],\n  \"rejected\": [\n    {\"ticker\": \"UCO\", \"reason\": \"already open in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"MSTR\", \"reason\": \"already open; extreme extension and distribution_warning\", \"rejection_category\": \"technical_overextension\"},\n    {\"ticker\": \"WCP.TO\", \"reason\": \"already open in MIMO_SHADOW\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"KIST.L\", \"reason\": \"already open in CAVA_MACRO\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"LCX.V\", \"reason\": \"already open in multiple portfolios\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"CVE\", \"reason\": \"already open in MIMO_SHADOW and CAVA_MACRO\", \"rejection_category\": \"better_alternative_available\"},\n    {\"ticker\": \"VLE.TO\", \"reason\": \"already open in MIMO_SHADOW and CAVA_MACRO\", \"rejection_category\": \"better_alternative_availa"
+}
