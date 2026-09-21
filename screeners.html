@@ -98,6 +98,16 @@ function ScreenerPage() {
   const [updated, setUpdated] = React.useState(null);
   const [activeId, setActiveId] = React.useState(SCREENERS[0].id);
   const [showAll, setShowAll] = React.useState(false);
+  // Filtros opcionales "toggle" por screener (ej. SMA50>SMA200 del MACD) —
+  // marcas informativas que el usuario enciende/apaga para estrechar la
+  // vista SIN tocar evaluate()/pass del screener (ver extraFilters en
+  // shared/screener-lib.js). Reseteados al cambiar de pestaña de screener.
+  const [activeExtraFilters, setActiveExtraFilters] = React.useState(() => new Set());
+  const toggleExtraFilter = (id) => setActiveExtraFilters(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const [toast, showToast] = useToast();
 
   const load = React.useCallback(async () => {
@@ -149,7 +159,10 @@ function ScreenerPage() {
 
   const activeScreener = getScreener(activeId) || SCREENERS[0];
   const activeRows = resultsByScreener[activeScreener.id] || [];
-  const visibleRows = showAll ? activeRows : activeRows.filter(r => r.pass);
+  let visibleRows = showAll ? activeRows : activeRows.filter(r => r.pass);
+  (activeScreener.extraFilters || []).forEach(f => {
+    if (activeExtraFilters.has(f.id)) visibleRows = visibleRows.filter(r => f.predicate(r.q, r));
+  });
 
   const statusCounts = React.useMemo(() => {
     const c = {};
@@ -286,7 +299,7 @@ function ScreenerPage() {
             <button
               key={s.id}
               className="screener-tab"
-              onClick={() => setActiveId(s.id)}
+              onClick={() => { setActiveId(s.id); setActiveExtraFilters(new Set()); }}
               style={active ? { borderColor: s.color, background: '#fff', boxShadow: `0 0 0 1px ${s.color}` } : {}}
             >
               <div className="n" style={{ color: s.color }}>{n}</div>
@@ -296,6 +309,29 @@ function ScreenerPage() {
         })}
       </div>
       <div className="screener-desc"><b>{activeScreener.label}:</b> {activeScreener.description}</div>
+
+      {activeScreener.extraFilters && activeScreener.extraFilters.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '2px 0 10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: '#98a2b3' }}>Marcas opcionales (no afectan a quién es candidato, solo filtran la vista):</span>
+          {activeScreener.extraFilters.map(f => {
+            const on = activeExtraFilters.has(f.id);
+            return (
+              <button
+                key={f.id}
+                onClick={() => toggleExtraFilter(f.id)}
+                title={f.tooltip}
+                style={{
+                  background: on ? '#0d47a1' : '#eef0f2', color: on ? '#fff' : '#344054',
+                  border: '1px solid ' + (on ? '#0d47a1' : '#d0d5dd'), borderRadius: 14,
+                  padding: '3px 12px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {on ? '✓ ' : ''}{f.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="card-grid">
         {Object.entries(activeScreener.statuses).map(([id, m]) => (

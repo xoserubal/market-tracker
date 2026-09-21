@@ -6655,6 +6655,127 @@ usuario los pida, siguiendo el mismo patrón de registro.
 
 ---
 
+## Screener MACD — rediseño: cruce del histograma ya confirmado, cuantificado por magnitud (implementado 2026-09-22)
+
+Origen: al usar el screener del día anterior (`macd_zero_cross_up`) para investigar
+retrospectivamente el movimiento de META (ver conversación del mismo día), se
+comprobó que el filtro de tendencia (precio y SMA50 por encima de SMA200,
+un "cruce de medias" clásico tipo golden cross) **habría bloqueado ese caso
+real**: la SMA200 de META estaba clavada en ~622-625$ por la caída previa, y
+el precio no la recuperó hasta bien entrado el rally — el ticker saltaba
+directo de "sin tendencia" a "ya cruzado", sin pasar nunca por "candidato".
+El usuario pidió sustituir por completo el criterio: en vez de "línea MACD a
+punto de cruzar cero + filtro de tendencia SMA", buscar **el cruce del
+histograma (línea MACD vs su señal EMA9) ya confirmado**, sin filtro de
+tendencia, cuantificando la magnitud de ese cruce.
+
+**Tres decisiones tomadas explícitamente con el usuario antes de tocar
+código** (vía `AskUserQuestion`, no supuestos propios — la ambigüedad real
+afectaba al resultado):
+1. **Magnitud = "trayectoria media en los saltos del histograma antes y
+   después del cruce"** (respuesta literal del usuario, no una de las 3
+   opciones que se le ofrecieron) — no el valor puntual de hoy, ni solo el
+   salto del día exacto del cruce.
+2. **Solo cruces recientes** (ventana de 10 sesiones) — mantiene el screener
+   accionable, no una lista de todo lo que lleva en verde desde hace meses.
+3. **Sin filtro de tendencia adicional** — ni SMA50/SMA200 ni ningún otro,
+   a propósito, para no repetir el fallo detectado con META.
+
+### `shared/quote-lib.js → calcMACD()` — nuevo campo `macdHistRecent`
+
+Aditivo puro, sin tocar ningún campo existente (`macdHist`/`macdBull`/
+`macdLine`/`macdLineBull`/`macdLineDelta5` idénticos, verificado por
+regresión: la única diferencia frente al cálculo anterior es ruido de
+redondeo entre `toPrecision(4)` y `toPrecision(5)`, ~0.0002). Hasta ahora la
+función solo devolvía el histograma de HOY (un escalar) — localizar CUÁNDO
+cruzó y medir la trayectoria de saltos a su alrededor exige la serie, no un
+valor suelto. `macdHistRecent` = últimas ~30 barras del histograma completo
+(`macdLine[j+8] − signalArr[j]`, construido explícitamente en vez de
+recalcular solo el último valor como antes) — margen suficiente para una
+ventana de recencia de 10 sesiones sin devolver el histórico completo (miles
+de barras en 3 años).
+
+### `shared/screener-lib.js` — screener reescrito (mismo id de tab, regla nueva)
+
+`macd_zero_cross_up` → **`macd_hist_cross_up`**. `HIST_CROSS_LOOKBACK = 10`
+gobierna dos cosas a la vez, a propósito (un solo número en vez de dos
+umbrales sin relación): cuán reciente debe ser el cruce para contar como
+candidato, y cuánto se mira "hacia atrás" desde el cruce para promediar los
+saltos previos. `evalMacdHistCrossUp(q)`:
+
+```
+1. Si histograma de hoy < 0            → not_bullish
+2. Retroceder desde hoy mientras histograma ≥ 0 → localizar crossIdx
+   (primer día de la racha alcista actual)
+3. Si crossIdx queda fuera de la ventana disponible (30 barras) o la
+   racha empezó hace más de 10 sesiones               → cross_too_old
+4. Magnitud = media de (hist[i] − hist[i-1]) para i desde
+   (crossIdx − 10, recortado) hasta hoy, normalizada por ATR14 → candidate
+```
+
+Sin umbral mínimo de magnitud — el usuario pidió "cuantificar", no fijar un
+corte; la magnitud solo ordena los candidatos (mayor primero), no filtra
+ninguno. Sin calibrar contra rendimiento posterior — primera pasada, fase de
+observación, mismo criterio que el resto de umbrales nuevos del proyecto.
+
+**No se tocó `screeners.html`** — el framework registry-driven construido
+ayer cumplió su propósito: cambiar por completo la regla de un screener
+(incluidas sus columnas y tooltips) no exigió ningún cambio en la página.
+
+### Verificado
+
+Regresión de `calcMACD()` con datos sintéticos (diff ~0.0002, ruido de
+redondeo). 5 casos unitarios del nuevo `evaluate()` (candidato, histograma
+negativo, cruce hace 24 sesiones, histórico insuficiente con racha corta
+siempre verde, sin campo `macdHistRecent`) — los 5 correctos.
+
+**Backtest retroactivo contra META** (el caso real que motivó el cambio,
+mismo método que la investigación del día anterior — `fetchYahooChartFresh`
++ recorte del array de cierres día a día): el nuevo screener **sí** marca a
+META como `candidate` desde el **2026-08-26** (precio 576, el mismo día en
+que el histograma cruzó a positivo) y lo mantiene como candidato hasta el
+**2026-09-10** (precio 644, 10 sesiones después) — cubre toda la fase crítica
+del rally, incluido antes del salto de +6.5% del 9/09. A partir del
+2026-09-11 pasa correctamente a `cross_too_old` (más de 10 sesiones desde el
+cruce) — comportamiento esperado, no un fallo: este screener capta cruces
+frescos, no tendencias ya establecidas.
+
+**Universo real completo** (119 tickers, servidor reiniciado para recoger el
+cambio en `shared/quote-lib.js` — proceso Node persistente del usuario,
+`taskkill` por PID exacto + relanzado en background, ver
+[[project_dev_server_persistent]]): 83 `not_bullish` / 28 `candidate` / 8
+`cross_too_old`. Distribución de magnitud con sentido: desde AWX.V
+(0.089×ATR, cruce hace 2 sesiones) hasta TSLA/COIN/BTCC-B.TO con magnitud
+**negativa** (cruzaron pero el histograma ya se está desinflando — información
+real, no forzada a "no candidato" solo por eso). Edge headless confirma
+render correcto (28 candidatos, 3 tarjetas de resumen, tooltips de las 4
+columnas nuevas, cero errores de consola) y export a Markdown con las
+columnas correctas.
+
+### Adenda — marca opcional SMA50>SMA200, como toggle de vista (2026-09-22, mismo día)
+
+El usuario pidió recuperar SMA50>SMA200 pero explícitamente **como marca
+informativa con un toggle**, no como filtro obligatorio del screener —
+coherente con el propio rediseño de más arriba (exigirlo bloqueaba a META).
+Se implementó como mecanismo genérico del registro, no específico de MACD:
+cada screener puede declarar `extraFilters: [{id, label, tooltip,
+predicate}]` — condiciones que **nunca tocan `evaluate()`/`pass`/
+`sortValue`**, solo estrechan qué filas se muestran, activables/
+desactivables con un botón en la UI (`screeners.html`), reseteado al
+cambiar de pestaña de screener.
+
+`smaTrendUp(q)` (nuevo helper en `shared/screener-lib.js`, `sma50 > sma200`,
+`null` si falta alguna media) se reutiliza en dos sitios sin duplicar
+lógica: la columna informativa "SMA50>200" (✓/✗/—) y el `predicate` del
+filtro "Solo con SMA50 > SMA200". Ningún cambio en `shared/quote-lib.js` —
+`sma50`/`sma200` ya venían en `buildQuoteData()` desde antes.
+
+**Verificado en producción real:** botón pulsado vía Edge headless — pasa de
+28 candidatos a 14 (todos con ✓ en la columna SMA50>200), y al desactivarlo
+vuelve exactamente a 28. Cero errores de consola.
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

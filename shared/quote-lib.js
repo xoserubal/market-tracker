@@ -81,7 +81,8 @@ function getInsiderActivityData() {
 // ── MACD (12, 26, 9) ─────────────────────────────────────────────────────
 function calcMACD(closes) {
   const c = closes.filter(x => x != null);
-  if (c.length < 35) return { macdHist: null, macdBull: null, macdLine: null, macdLineBull: null, macdLineDelta5: null };
+  const empty = { macdHist: null, macdBull: null, macdLine: null, macdLineBull: null, macdLineDelta5: null, macdHistRecent: null };
+  if (c.length < 35) return empty;
 
   // EMA series usando SMA como semilla
   const emaFull = (data, period) => {
@@ -96,14 +97,19 @@ function calcMACD(closes) {
   const ema26 = emaFull(c, 26); // arr[0] = EMA en c[25]
   // ema12[14] y ema26[0] corresponden ambos a c[25]
   const macdLine = ema26.map((v, i) => ema12[i + 14] - v);
-  if (macdLine.length < 9) return { macdHist: null, macdBull: null, macdLine: null, macdLineBull: null, macdLineDelta5: null };
+  if (macdLine.length < 9) return empty;
 
-  // Señal: EMA(9) del MACD line
+  // Señal: EMA(9) del MACD line. signalArr[j] corresponde a macdLine[j+8]
+  // (semilla = SMA de macdLine[0..8], "colocada" en macdLine[8]).
   const k9 = 2 / 10;
   let signal = macdLine.slice(0, 9).reduce((a, b) => a + b, 0) / 9;
-  for (let i = 9; i < macdLine.length; i++) signal = macdLine[i] * k9 + signal * (1 - k9);
+  const signalArr = [signal];
+  for (let i = 9; i < macdLine.length; i++) { signal = macdLine[i] * k9 + signal * (1 - k9); signalArr.push(signal); }
+  // histArr[j] = macdLine[j+8] - signalArr[j] — histograma completo, misma
+  // alineación que signalArr.
+  const histArr = signalArr.map((s, j) => macdLine[j + 8] - s);
 
-  const hist = macdLine[macdLine.length - 1] - signal;
+  const hist = histArr[histArr.length - 1];
   const lastMacdLine = macdLine[macdLine.length - 1];
   // macdBull = histograma (línea MACD vs su señal) ≥ 0 — cruce clásico, momentum del momento.
   // macdLineBull = la línea MACD en sí ≥ 0 — un concepto distinto (¿está el EMA12-EMA26 en
@@ -115,10 +121,20 @@ function calcMACD(closes) {
   // ningún umbral de magnitud — un solo nivel de flecha (sube/baja), no escalonado.
   const macdLineDelta5 = macdLine.length >= 6
     ? +(lastMacdLine - macdLine[macdLine.length - 6]).toPrecision(4) : null;
+  // macdHistRecent = últimas ~30 barras del histograma (línea vs señal), no
+  // solo el valor de hoy — pedido 2026-09-22 para el screener de "cruce del
+  // histograma ya confirmado, cuantificado por magnitud" (shared/screener-lib.js):
+  // localizar CUÁNDO cruzó de negativo a positivo y medir la trayectoria de
+  // saltos diarios alrededor de ese cruce exige la serie, no un escalar.
+  // 30 barras es margen suficiente para una ventana de recencia de 10
+  // sesiones (10 antes del cruce + hasta 10 de "después" + margen), sin
+  // devolver el histórico completo (puede tener miles de barras en 3 años).
+  const macdHistRecent = histArr.slice(-30).map(v => +v.toPrecision(5));
   return {
     macdHist: +hist.toPrecision(4), macdBull: hist >= 0,
     macdLine: +lastMacdLine.toPrecision(4), macdLineBull: lastMacdLine >= 0,
     macdLineDelta5,
+    macdHistRecent,
   };
 }
 
