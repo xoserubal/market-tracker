@@ -70,8 +70,7 @@ OUT_PATH         = DATA / "ai_picks_decision_state.jsonl"
 
 sys.path.insert(0, str(Path(__file__).parent))
 from paper_trading import PORTFOLIOS  # pcs_min_entry por cartera PCS-gated
-
-ABSOLUTE_FLOOR = 62.0
+from ai_shared import ABSOLUTE_FLOOR, compute_t_active as _compute_t_active_raw
 
 # Carteras que usan PCS con el esquema de paper_trading.py (rule 13 real).
 PCS_GATED_PORTFOLIOS = [
@@ -193,14 +192,15 @@ def _from_high_window(close: np.ndarray) -> float | None:
 
 def compute_t_active(portfolio: str, streak_weeks: float | None) -> tuple[float | None, str]:
     """T_active = max(62, pcs_min_entry si streak<=1) — definición formal
-    de la hoja de ruta §6. Solo aplica a carteras PCS-gated."""
+    de la hoja de ruta §6. Solo aplica a carteras PCS-gated. Envoltorio
+    específico de PCS_GATED_PORTFOLIOS sobre la fórmula numérica pura de
+    ai_shared.compute_t_active — la misma que paper_trading.py usa desde
+    2026-09-22 para el enforcement determinista en real (Brazo D), evita
+    que ambas cálculos puedan desincronizarse."""
     if portfolio not in PCS_GATED_PORTFOLIOS:
         return None, "not_pcs_gated"
     pcs_min_entry = PORTFOLIOS.get(portfolio, {}).get("pcs_min_entry", ABSOLUTE_FLOOR)
-    if streak_weeks is not None and streak_weeks <= 1:
-        t = max(ABSOLUTE_FLOOR, pcs_min_entry)
-        return t, "portfolio_min_entry" if t > ABSOLUTE_FLOOR else "absolute_floor_62"
-    return ABSOLUTE_FLOOR, "absolute_floor_62"
+    return _compute_t_active_raw(pcs_min_entry, streak_weeks)
 
 
 def compute_mechanical_exit(portfolio: str, cand: dict | None, pos: dict,

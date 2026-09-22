@@ -45,6 +45,10 @@ from ai_shared import (
     NON_TRADABLE_SUBTHEMES,
     VALID_REJECT_CATS,
     compact_candidate as _compact_candidate,
+    compute_t_active as _compute_t_active,
+    compute_pcs_floor_verdict as _compute_pcs_floor_verdict,
+    PCS_FLOOR_HYSTERESIS_BUFFER,
+    PCS_FLOOR_SEVERE_BUFFER,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -56,6 +60,7 @@ TESTS_DIR     = DATA / "model_tests"
 SUMMARY_LOG   = DATA / "ai_model_test_summary.jsonl"
 SHADOW_LOG    = DATA / "shadow_picks.jsonl"
 BASELINES_LOG = DATA / "baselines.jsonl"
+DECISION_STATE_LOG = DATA / "ai_picks_decision_state.jsonl"
 
 # ── Pricing  (USD / 1M tokens) — OpenRouter prices: openrouter.ai/models ──────
 # Use OpenRouter model slugs as keys (e.g. "anthropic/claude-haiku-4-5-20251001")
@@ -130,6 +135,11 @@ SHADOW_MODEL_PORTFOLIOS: dict[str, str] = {
 
 VALID_PORTFOLIOS = frozenset(PORTFOLIOS) - {"REJECTED_HIGH_SCORE", "MIMO_SHADOW"}
 VALID_SHADOW_PORTFOLIOS = frozenset({"MIMO_SHADOW"})
+# Las 5 carteras PCS-gated juntas — usado solo para aplicar el enforcement
+# mecánico del suelo de PCS (Brazo D) en una sola pasada, antes de que el
+# modelo entre en juego. No sustituye a VALID_PORTFOLIOS/VALID_SHADOW_PORTFOLIOS
+# para SELECT/EXIT decididos por el modelo, que se mantienen separados.
+PCS_GATED_ALL = VALID_PORTFOLIOS | VALID_SHADOW_PORTFOLIOS
 
 REQUIRED_RESPONSE_KEYS = {"date", "decision_summary", "selected", "watch", "rejected"}
 
@@ -269,6 +279,104 @@ def _build_theme_exposure(eligible: list[dict], picks: dict) -> dict:
     return exposure
 
 
+def _load_prior_decision_state(before_date: str) -> dict[str, dict]:
+    """Última fila de ai_picks_decision_state.jsonl (P0) anterior a
+    `before_date`, por position_id — fuente de "la lectura anterior" para
+    el enforcement de histéresis+confirmación (Brazo D, ver ai_shared.py).
+    P0 corre después de este script en el mismo run del pipeline (Step 10i
+    vs Step 10), así que en el momento en que paper_trading.py se ejecuta
+    el jsonl solo contiene filas de runs anteriores — nunca la de hoy."""
+    if not DECISION_STATE_LOG.exists():
+        return {}
+    latest: dict[str, dict] = {}
+    with DECISION_STATE_LOG.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("date", "") >= before_date:
+                continue
+            pid = row.get("position_id")
+            if pid and (pid not in latest or row["date"] > latest[pid]["date"]):
+                latest[pid] = row
+    return latest
+
+
+def _build_active_positions(cands_data: dict, picks: dict, prior_state: dict) -> list[dict]:
+    """active_picks_relevant — una entrada por posición abierta, con el
+    veredicto determinista del suelo de PCS (mechanical_floor_status) ya
+    calculado. Compartida por build_payload() (lo que ve el modelo) y por
+    el enforcement mecánico en run() (lo que de verdad cierra posiciones) —
+    para que ambos no puedan desincronizarse."""
+    all_cands_map = {c["ticker"]: c for c in cands_data.get("candidates", [])}
+    active_positions = []
+    for pid, ptf in picks.get("portfolios", {}).items():
+        ptf_min = PORTFOLIOS.get(pid, {}).get("pcs_min_entry", 0)
+        pcs_gated = pid in PORTFOLIOS
+        for pos in ptf.get("positions", []):
+            tk = pos["ticker"]
+            current = all_cands_map.get(tk)
+            left_universe = current is None
+            current = current or {}
+
+            floor_status: str | None = None
+            t_active: float | None = None
+            if pcs_gated:
+                if left_universe:
+                    floor_status = "must_exit_left_universe"
+                else:
+                    t_active, _src = _compute_t_active(ptf_min, current.get("streak_weeks"))
+                    position_id = f"{tk}__{pos.get('entry_date', '')}"
+                    prior_row = prior_state.get(position_id)
+                    prev_breach_1_5 = None
+                    if (prior_row and prior_row.get("PCS") is not None
+                            and prior_row.get("trigger_threshold") is not None):
+                        prev_breach_1_5 = prior_row["PCS"] < (
+                            prior_row["trigger_threshold"] - PCS_FLOOR_HYSTERESIS_BUFFER
+                        )
+                    verdict = _compute_pcs_floor_verdict(
+                        current.get("pcs"), current.get("rot_score"), t_active, prev_breach_1_5,
+                    )
+                    floor_status = verdict["status"]
+
+            active_positions.append({
+                **pos,
+                "portfolio": pid,
+                "pcs_min_entry": ptf_min,
+                "left_universe": left_universe,
+                "current_pcs": current.get("pcs"),
+                "current_rot_score": current.get("rot_score"),
+                "current_streak_weeks": current.get("streak_weeks"),
+                "current_ret_4w_vs_spy": current.get("ret_4w_vs_spy"),
+                "mechanical_floor_status": floor_status,
+                "trigger_threshold": t_active,
+            })
+    return active_positions
+
+
+def _floor_exit_reason(p: dict) -> str:
+    status = p.get("mechanical_floor_status")
+    pcs    = p.get("current_pcs")
+    t      = p.get("trigger_threshold")
+    rot    = p.get("current_rot_score")
+    if status == "must_exit_left_universe":
+        return "Mechanical PCS-floor exit: ticker left the candidate universe (no current data available)."
+    if status == "must_exit_severe":
+        if rot is not None and rot <= 2:
+            return f"Mechanical PCS-floor exit (severe breach): rot_score={rot} <= 2."
+        buf = round(t - PCS_FLOOR_SEVERE_BUFFER, 1) if t is not None else None
+        return f"Mechanical PCS-floor exit (severe breach): PCS={pcs} < T_active-3.0={buf}."
+    if status == "must_exit_confirmed_breach":
+        buf = round(t - PCS_FLOOR_HYSTERESIS_BUFFER, 1) if t is not None else None
+        return (f"Mechanical PCS-floor exit (confirmed breach): PCS={pcs} < T_active-1.5={buf} "
+                f"on two consecutive readings.")
+    return "Mechanical PCS-floor exit."
+
+
 def build_payload(
     cands_data: dict,
     events: list[dict],
@@ -304,24 +412,8 @@ def build_payload(
     prev_data = _load("ai_candidates_prev.json")
     prev_date = prev_data.get("date") if prev_data else None
     prev_snapshot_available = bool(prev_date and prev_date != cands_data.get("date"))
-    active_positions = []
-    for pid, ptf in picks.get("portfolios", {}).items():
-        ptf_min = PORTFOLIOS.get(pid, {}).get("pcs_min_entry", 0)
-        for pos in ptf.get("positions", []):
-            tk = pos["ticker"]
-            current = all_cands_map.get(tk)
-            left_universe = current is None
-            current = current or {}
-            active_positions.append({
-                **pos,
-                "portfolio": pid,
-                "pcs_min_entry": ptf_min,
-                "left_universe": left_universe,
-                "current_pcs": current.get("pcs"),
-                "current_rot_score": current.get("rot_score"),
-                "current_streak_weeks": current.get("streak_weeks"),
-                "current_ret_4w_vs_spy": current.get("ret_4w_vs_spy"),
-            })
+    prior_state = _load_prior_decision_state(str(date.today()))
+    active_positions = _build_active_positions(cands_data, picks, prior_state)
 
     mandates = {
         pid: {k: v for k, v in m.items() if k != "is_control"}
@@ -942,13 +1034,17 @@ def validate_model_response(
     reviewed_map = {rv.get("ticker"): rv for rv in data.get("open_picks_review", [])}
     for t in set(active_map) - set(reviewed_map):
         r.warn(f"open_picks_review_missing: {t} not included in open_picks_review")
-    # Soft warning: HOLD on a position that should be EXITed per absolute floor rule
+    # Soft warning: model said HOLD on a position the mechanical floor rule
+    # is already closing regardless — informational only (the outcome does
+    # not depend on this), useful to see how often the model's own read
+    # diverges from mechanical_floor_status (see ai_shared.py).
     for t, rv in reviewed_map.items():
         if rv.get("action") == "HOLD":
             pos = active_map.get(t, {})
-            pcs = pos.get("current_pcs")
-            if pcs is not None and pcs < 62:
-                r.warn(f"hold_below_floor: {t} has pcs={pcs:.1f} (<62) but action=HOLD — should EXIT")
+            floor_status = pos.get("mechanical_floor_status")
+            if floor_status in ("must_exit_severe", "must_exit_confirmed_breach", "must_exit_left_universe"):
+                r.warn(f"hold_on_mechanical_floor_exit: {t} has mechanical_floor_status={floor_status} "
+                       f"and action=HOLD — position will be closed mechanically regardless")
 
     return r
 
@@ -1350,6 +1446,7 @@ def update_portfolio(
     cand_pcs: dict | None = None,
     allowed_portfolios: frozenset | None = None,
     cand_snapshot: dict[str, dict] | None = None,
+    forced_exits: list[dict] | None = None,
 ) -> tuple[dict, dict]:
     today      = str(date.today())
     portfolios = picks.setdefault("portfolios", {})
@@ -1386,6 +1483,38 @@ def update_portfolio(
             "portfolio":   pid,
             "close_price": exit_price,
             "close_reason": review.get("reason", ""),
+        })
+
+    # Mechanical PCS-floor exits (histéresis + confirmación, ai_shared.py) —
+    # deterministas, se aplican al margen de lo que haya dicho el modelo (o
+    # de si hubo modelo esta vez). Ver CLAUDE.md, repaso de carteras IA
+    # 2026-09-22, y wiki/PREREGISTRO_PCS_FLOOR_FACTORIAL_V1.md.
+    for fe in (forced_exits or []):
+        pid = fe["portfolio"]
+        if pid not in _valid:
+            continue
+        ptf = portfolios.get(pid)
+        if ptf is None:
+            continue
+        positions = ptf.get("positions", [])
+        tk = fe["ticker"]
+        pos_to_exit = next((p for p in positions if p["ticker"] == tk), None)
+        if pos_to_exit is None:
+            continue  # ya cerrada por la decisión propia del modelo, arriba
+        exit_price = _get_entry_price(tk)
+        ptf["positions"] = [p for p in positions if p["ticker"] != tk]
+        ptf.setdefault("history", []).append({
+            **pos_to_exit,
+            "event": "close",
+            "close_date": today,
+            "close_price": exit_price,
+            "close_reason": fe["reason"],
+        })
+        changes["closed"].append({
+            **pos_to_exit,
+            "portfolio":   pid,
+            "close_price": exit_price,
+            "close_reason": fe["reason"],
         })
 
     for s in data.get("selected", []):
@@ -1675,6 +1804,32 @@ def run(force: bool = False, apply: bool = False) -> None:
     picks      = _load("ai_picks.json")
     if not isinstance(picks, dict):
         picks = {}
+
+    # ── Mechanical PCS-floor enforcement (histéresis + confirmación) ─────────
+    # Corre SIEMPRE, en cada invocación de run() — incluso sin eventos nuevos
+    # hoy y aunque ninguna llamada al modelo tenga éxito esta vez. Es riesgo,
+    # no selección: no debe depender de la cadencia de eventos ni de que el
+    # LLM responda bien, igual que los cierres mecánicos de CAVA_MACRO/
+    # MIRROR_ESPEJO/CRUCE_ROJO_D corren en sus propios scripts sin depender
+    # de esto. Ver ai_shared.py y CLAUDE.md (repaso de carteras IA 2026-09-22).
+    if not (force and not apply):
+        prior_state_pre = _load_prior_decision_state(today)
+        active_positions_pre = _build_active_positions(cands_data, picks, prior_state_pre)
+        forced_exits = [
+            {"portfolio": p["portfolio"], "ticker": p["ticker"], "reason": _floor_exit_reason(p)}
+            for p in active_positions_pre
+            if p.get("mechanical_floor_status") in
+               ("must_exit_severe", "must_exit_confirmed_breach", "must_exit_left_universe")
+        ]
+        if forced_exits:
+            picks, mech_changes = update_portfolio(
+                picks, {}, forced_exits=forced_exits, allowed_portfolios=PCS_GATED_ALL,
+            )
+            if mech_changes["closed"]:
+                closed_desc = ", ".join(f"{c['ticker']}/{c['portfolio']}" for c in mech_changes["closed"])
+                print(f"[{run_id}] Mechanical PCS-floor exit -> {closed_desc}")
+                _write_json(DATA / "ai_picks.json", picks)
+                _notify_changes(mech_changes, today, "mechanical-pcs-floor", None)
 
     # Per-ticker snapshot for shadow_picks.jsonl logging: raw candidate fields
     # (extension_risk, konc_* — including the fields not sent to the model) plus
