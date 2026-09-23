@@ -471,6 +471,30 @@ const PRICE_OP_OPTIONS = [
   { value: 'above', label: 'Por encima de' },
   { value: 'below', label: 'Por debajo de' },
 ];
+// ── MACD / RSI (2026-09-23) — espejo de MACD_OPS/RSI_OPS en
+// scripts/koncorde_alert_conditions.py. MACD se ofrece como checkboxes
+// multi-selección (igual que Koncorde por timeframe, no un <select> único)
+// porque tiene dos ejes independientes — histograma (línea vs señal, más
+// reactivo) y línea (EMA12−EMA26 vs 0, más lento) — que el usuario puede
+// querer combinar (ej. "línea alcista" Y "histograma cruzando a alcista").
+const MACD_OP_OPTIONS = [
+  { value: 'hist_bull',       label: 'Histograma — alcista (línea > señal)' },
+  { value: 'hist_bear',       label: 'Histograma — bajista (línea < señal)' },
+  { value: 'hist_rising',     label: 'Histograma — creciendo vs ayer' },
+  { value: 'hist_falling',    label: 'Histograma — menguando vs ayer' },
+  { value: 'hist_cross_up',   label: 'Histograma — cruza a alcista' },
+  { value: 'hist_cross_down', label: 'Histograma — cruza a bajista' },
+  { value: 'line_bull',       label: 'Línea MACD — por encima de 0' },
+  { value: 'line_bear',       label: 'Línea MACD — por debajo de 0' },
+  { value: 'line_rising',     label: 'Línea MACD — subiendo (5 sesiones)' },
+  { value: 'line_falling',    label: 'Línea MACD — bajando (5 sesiones)' },
+  { value: 'line_cross_up',   label: 'Línea MACD — cruza a positiva (0)' },
+  { value: 'line_cross_down', label: 'Línea MACD — cruza a negativa (0)' },
+];
+const RSI_OP_OPTIONS = [
+  { value: 'above', label: 'Por encima de' },
+  { value: 'below', label: 'Por debajo de' },
+];
 
 function SpecialSituationModal({ item, onSave, onClose }) {
   const existingConds = item ? (item.conditions || [{ type:'koncorde', timeframe:item.timeframe, condition:item.condition }]) : [];
@@ -485,6 +509,8 @@ function SpecialSituationModal({ item, onSave, onClose }) {
   });
   const flowCond = existingConds.find(c => c.type==='flow');
   const priceCond = existingConds.find(c => c.type==='price');
+  const macdConds = existingConds.filter(c => c.type==='macd');
+  const rsiCond = existingConds.find(c => c.type==='rsi');
 
   const [ticker,     setTicker]     = React.useState(item?.ticker || '');
   const [label,      setLabel]      = React.useState(item?.label || '');
@@ -495,6 +521,10 @@ function SpecialSituationModal({ item, onSave, onClose }) {
   const [priceOn,    setPriceOn]    = React.useState(!!priceCond);
   const [priceOp,    setPriceOp]    = React.useState(priceCond?.op || 'above');
   const [priceVal,   setPriceVal]   = React.useState(priceCond?.threshold != null ? String(priceCond.threshold) : '');
+  const [macdOps,    setMacdOps]    = React.useState(() => new Set(macdConds.map(c=>c.op)));
+  const [rsiOn,      setRsiOn]      = React.useState(!!rsiCond);
+  const [rsiOp,      setRsiOp]      = React.useState(rsiCond?.op || 'above');
+  const [rsiVal,     setRsiVal]     = React.useState(rsiCond?.threshold != null ? String(rsiCond.threshold) : '');
   const [ratioPairs, setRatioPairs] = React.useState(
     item?.ratio_pairs?.length ? item.ratio_pairs.map(rp => ({ ...rp, required: existingConds.some(c => c.type==='ratio' && c.ratio_key===rp.key) }))
       : [{ key:'', other_ticker:'', label:'', required:false }]
@@ -522,12 +552,18 @@ function SpecialSituationModal({ item, onSave, onClose }) {
     const priceThreshold = priceOn ? parseFloat(priceVal) : null;
     if (priceOn && !Number.isFinite(priceThreshold)) return setErr('Umbral de precio inválido');
 
+    if (rsiOn && !rsiVal.trim()) return setErr('Indica un umbral de RSI, o desmarca la condición de RSI');
+    const rsiThreshold = rsiOn ? parseFloat(rsiVal) : null;
+    if (rsiOn && (!Number.isFinite(rsiThreshold) || rsiThreshold < 0 || rsiThreshold > 100)) return setErr('Umbral de RSI inválido (0-100)');
+
     const conditions = [];
     if (flowOp) conditions.push({ type:'flow', op: flowOp });
     koncD.forEach(cond  => conditions.push({ type:'koncorde', timeframe:'d',  condition: cond }));
     konc3D.forEach(cond => conditions.push({ type:'koncorde', timeframe:'3d', condition: cond }));
     koncW.forEach(cond  => conditions.push({ type:'koncorde', timeframe:'w',  condition: cond }));
     if (priceOn) conditions.push({ type:'price', op: priceOp, threshold: priceThreshold });
+    macdOps.forEach(op => conditions.push({ type:'macd', op }));
+    if (rsiOn) conditions.push({ type:'rsi', op: rsiOp, threshold: rsiThreshold });
     ratioPairs.filter(rp => rp.required && rp.other_ticker.trim()).forEach((rp, i) => {
       const key = cleanPairs[i]?.key;
       if (key) conditions.push({ type:'ratio', ratio_key: key, op:'improving' });
@@ -584,6 +620,38 @@ function SpecialSituationModal({ item, onSave, onClose }) {
                 {PRICE_OP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <input style={inp} type="number" step="any" value={priceVal} onChange={e=>setPriceVal(e.target.value)} placeholder="70" />
+            </div>
+          )}
+        </div>
+
+        <div className="field">
+          <label>MACD (opcional, marca todas las que apliquen — cuentan como AND){macdOps.size ? ` — ${macdOps.size} seleccionadas` : ''}</label>
+          <div style={{border:'1px solid #ddd', borderRadius:3, maxHeight:150, overflowY:'auto', padding:'2px 6px', background:'white'}}>
+            {MACD_OP_OPTIONS.map(o => (
+              <label key={o.value} style={{display:'flex', alignItems:'flex-start', gap:4, fontSize:10, padding:'2px 0', cursor:'pointer', lineHeight:1.25}}>
+                <input type="checkbox" style={{marginTop:1}} checked={macdOps.has(o.value)}
+                  onChange={()=>setMacdOps(prev => {
+                    const next = new Set(prev);
+                    next.has(o.value) ? next.delete(o.value) : next.add(o.value);
+                    return next;
+                  })} />
+                <span>{o.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <label style={{display:'flex',alignItems:'center',gap:6}}>
+            <input type="checkbox" checked={rsiOn} onChange={e=>setRsiOn(e.target.checked)} />
+            RSI(14)
+          </label>
+          {rsiOn && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:4}}>
+              <select style={sel} value={rsiOp} onChange={e=>setRsiOp(e.target.value)}>
+                {RSI_OP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <input style={inp} type="number" step="any" min="0" max="100" value={rsiVal} onChange={e=>setRsiVal(e.target.value)} placeholder="30" />
             </div>
           )}
         </div>
@@ -972,6 +1040,38 @@ function Portfolio() {
     return null;
   }
 
+  // Réplica de evaluate_macd en scripts/koncorde_alert_conditions.py. Los
+  // ops de nivel/tendencia leen directo de `p` (ya calculado en vivo por
+  // /api/quote/:symbol, igual que la columna MACD de la tabla principal);
+  // los de cruce necesitan "ayer" — prevSessionMap (portfolio_daily_snapshot,
+  // mismo mecanismo ya usado por checkFlowCond y por las flechas Δ1d).
+  function checkMacdCond(ticker, p, op) {
+    if (!p) return null;
+    if (op === 'hist_bull')    return p.macdBull == null ? null : !!p.macdBull;
+    if (op === 'hist_bear')    return p.macdBull == null ? null : !p.macdBull;
+    if (op === 'hist_rising')  return p.macdHistDelta1 == null ? null : p.macdHistDelta1 > 0;
+    if (op === 'hist_falling') return p.macdHistDelta1 == null ? null : p.macdHistDelta1 < 0;
+    if (op === 'line_bull')    return p.macdLineBull == null ? null : !!p.macdLineBull;
+    if (op === 'line_bear')    return p.macdLineBull == null ? null : !p.macdLineBull;
+    if (op === 'line_rising')  return p.macdLineDelta5 == null ? null : p.macdLineDelta5 > 0;
+    if (op === 'line_falling') return p.macdLineDelta5 == null ? null : p.macdLineDelta5 < 0;
+    if (op === 'hist_cross_up' || op === 'hist_cross_down' || op === 'line_cross_up' || op === 'line_cross_down') {
+      const field = op.startsWith('hist_') ? 'macdBull' : 'macdLineBull';
+      const prev = prevSessionMap[ticker]?.[field];
+      const cur  = p[field];
+      if (prev == null || cur == null) return null;
+      return op.endsWith('cross_up') ? (!prev && cur) : (!!prev && !cur);
+    }
+    return null;
+  }
+
+  // Réplica de evaluate_rsi — `p.rsi` es el mismo Wilder RSI(14) ya
+  // calculado en vivo por /api/quote/:symbol (shared/quote-lib.js).
+  function checkRsiCond(p, op, threshold) {
+    if (!p || p.rsi == null) return null;
+    return op === 'above' ? p.rsi > threshold : p.rsi < threshold;
+  }
+
   function evaluateSituationConditions(sit, prices) {
     const p = prices[sit.ticker];
     const results = getSituationConditions(sit).map(c => {
@@ -980,6 +1080,8 @@ function Portfolio() {
       if (ctype === 'flow')     return checkFlowCond(sit.ticker, p, c.op);
       if (ctype === 'ratio')    return checkRatioCond(c.ratio_key, sit, c.op);
       if (ctype === 'price')    return checkPriceCond(p, c.op, c.threshold);
+      if (ctype === 'macd')     return checkMacdCond(sit.ticker, p, c.op);
+      if (ctype === 'rsi')      return checkRsiCond(p, c.op, c.threshold);
       return null;
     });
     if (results.some(r => r === false)) return false;
@@ -1223,6 +1325,12 @@ function Portfolio() {
         } else if (ctype === 'price') {
           result = checkPriceCond(prices[sit.ticker], c.op, c.threshold);
           desc = `Precio ${c.op === 'above' ? '>' : '<'} ${c.threshold}`;
+        } else if (ctype === 'macd') {
+          result = checkMacdCond(sit.ticker, prices[sit.ticker], c.op);
+          desc = (MACD_OP_OPTIONS.find(o=>o.value===c.op)||{}).label || c.op;
+        } else if (ctype === 'rsi') {
+          result = checkRsiCond(prices[sit.ticker], c.op, c.threshold);
+          desc = `RSI(14) ${c.op === 'above' ? '>' : '<'} ${c.threshold}`;
         } else {
           result = null; desc = ctype;
         }
@@ -1591,7 +1699,7 @@ function Portfolio() {
       <div style={{marginBottom:16,border:'1px solid #e0e0e0',borderRadius:6,overflow:'hidden'}}>
         <div style={{padding:'5px 12px',background:'#354f73',color:'white',
           display:'flex',justifyContent:'space-between',alignItems:'center'}}
-          data-tip={"Tesis de trade discrecionales con condiciones compuestas (Flow Score, ratios custom, Koncorde D/3D/W).\nSe disparan (y avisan por Telegram) solo cuando TODAS las condiciones marcadas se cumplen a la vez.\nSe evalúan en el pipeline (scripts/check_koncorde_alerts.py); aquí solo se ve su estado en vivo con los datos ya cargados."}>
+          data-tip={"Tesis de trade discrecionales con condiciones compuestas (Flow Score, MACD histograma/línea, RSI(14), ratios custom, Koncorde D/3D/W, precio).\nSe disparan (y avisan por Telegram) solo cuando TODAS las condiciones marcadas se cumplen a la vez.\nSe evalúan en el pipeline (scripts/check_koncorde_alerts.py); aquí solo se ve su estado en vivo con los datos ya cargados."}>
           <span style={{fontSize:10,fontWeight:700,letterSpacing:'.5px',textTransform:'uppercase'}}>Situaciones Especiales</span>
           <button onClick={()=>setModal({type:'special-situation', item:null})}
             style={{padding:'2px 10px',fontSize:10,border:'1px solid rgba(255,255,255,.5)',borderRadius:3,cursor:'pointer',background:'transparent',color:'white'}}>

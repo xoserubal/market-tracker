@@ -177,6 +177,37 @@ PRICE_OPS: dict[str, str] = {
     "below": "Precio por debajo de un umbral",
 }
 
+# ── MACD (2026-09-23) — mismos campos que ya calcula shared/quote-lib.js →
+# calcMACD() y que ya se muestran en el triángulo MACD de portfolio.html
+# (color=estado del histograma, flecha=tendencia). Dos ejes independientes,
+# igual que Koncorde separa blue/green/trend: "histograma" (línea MACD vs su
+# señal EMA9 — el cruce clásico, más reactivo) y "línea" (EMA12-EMA26 vs 0 —
+# más lento, régimen de fondo). Cada eje tiene nivel (bull/bear, rising/
+# falling) + evento (cross_up/cross_down) — mismo patrón que blue_positive/
+# blue_rising/blue_cross_up en CONDITIONS. Los ops de cruce necesitan 2
+# sesiones (hoy + ayer) de portfolio_daily_snapshot.jsonl, igual que
+# evaluate_flow's cross_positive.
+MACD_OPS: dict[str, str] = {
+    "hist_bull":       "Histograma MACD (línea vs señal) en alcista",
+    "hist_bear":       "Histograma MACD (línea vs señal) en bajista",
+    "hist_rising":     "Histograma MACD creciendo vs la sesión anterior",
+    "hist_falling":    "Histograma MACD menguando vs la sesión anterior",
+    "hist_cross_up":   "Histograma MACD cruza a alcista (bajista → alcista)",
+    "hist_cross_down": "Histograma MACD cruza a bajista (alcista → bajista)",
+    "line_bull":       "Línea MACD (EMA12−EMA26) por encima de 0",
+    "line_bear":       "Línea MACD (EMA12−EMA26) por debajo de 0",
+    "line_rising":     "Línea MACD subiendo (últimas 5 sesiones)",
+    "line_falling":    "Línea MACD bajando (últimas 5 sesiones)",
+    "line_cross_up":   "Línea MACD cruza a positiva (0)",
+    "line_cross_down": "Línea MACD cruza a negativa (0)",
+}
+
+# ── RSI (2026-09-23) — umbral simple, mismo shape que PRICE_OPS ────────────
+RSI_OPS: dict[str, str] = {
+    "above": "RSI(14) por encima de un umbral",
+    "below": "RSI(14) por debajo de un umbral",
+}
+
 
 def get_conditions(row: dict) -> list[dict]:
     """Returns the `conditions` list for an alert row, upgrading old-format
@@ -227,6 +258,71 @@ def evaluate_ratio(trend: dict | None, op: str) -> bool | None:
     raise AssertionError("unreachable — op validated above")
 
 
+def evaluate_macd(rows_for_ticker: list[dict], op: str) -> bool | None:
+    """Evaluates one MACD condition from portfolio_daily_snapshot.jsonl rows
+    for a single ticker (any order; only the two most recent by date are
+    used — level ops need just the latest, cross ops need both). Returns
+    None if there's no row yet, or the field is null in the row(s) needed —
+    same "missing data is never False" principle as evaluate_flow()."""
+    if op not in MACD_OPS:
+        raise ValueError(f"Unknown macd op: {op}")
+    rows = sorted((r for r in rows_for_ticker if r.get("date")), key=lambda r: r["date"])
+    if not rows:
+        return None
+    cur = rows[-1]
+    if op == "hist_bull":
+        v = cur.get("macdBull")
+        return None if v is None else bool(v)
+    if op == "hist_bear":
+        v = cur.get("macdBull")
+        return None if v is None else not v
+    if op == "hist_rising":
+        v = cur.get("macdHistDelta1")
+        return None if v is None else v > 0
+    if op == "hist_falling":
+        v = cur.get("macdHistDelta1")
+        return None if v is None else v < 0
+    if op == "line_bull":
+        v = cur.get("macdLineBull")
+        return None if v is None else bool(v)
+    if op == "line_bear":
+        v = cur.get("macdLineBull")
+        return None if v is None else not v
+    if op == "line_rising":
+        v = cur.get("macdLineDelta5")
+        return None if v is None else v > 0
+    if op == "line_falling":
+        v = cur.get("macdLineDelta5")
+        return None if v is None else v < 0
+    if op in ("hist_cross_up", "hist_cross_down", "line_cross_up", "line_cross_down"):
+        if len(rows) < 2:
+            return None
+        field = "macdBull" if op.startswith("hist_") else "macdLineBull"
+        prev_v, cur_v = rows[-2].get(field), rows[-1].get(field)
+        if prev_v is None or cur_v is None:
+            return None
+        if op.endswith("cross_up"):
+            return (not prev_v) and cur_v
+        return bool(prev_v) and (not cur_v)
+    raise AssertionError("unreachable — op validated above")
+
+
+def evaluate_rsi(rows_for_ticker: list[dict], op: str, threshold: float) -> bool | None:
+    """Evaluates one RSI(14) threshold condition from the latest
+    portfolio_daily_snapshot.jsonl row for a ticker. `rsi` is the same
+    Wilder RSI-14 field shared/quote-lib.js already computes for every
+    ticker's /api/quote/:symbol response."""
+    if op not in RSI_OPS:
+        raise ValueError(f"Unknown rsi op: {op}")
+    rows = sorted((r for r in rows_for_ticker if r.get("date")), key=lambda r: r["date"])
+    if not rows:
+        return None
+    v = rows[-1].get("rsi")
+    if v is None:
+        return None
+    return v > threshold if op == "above" else v < threshold
+
+
 def evaluate_price(current_price: float | None, op: str, threshold: float) -> bool | None:
     """Evaluates one price-threshold condition. `current_price` is None if the
     live fetch failed that run (scripts/price_signal.py) — missing data is
@@ -246,7 +342,9 @@ def evaluate_single_condition(condition: dict, ctx: dict) -> bool | None:
     """Dispatches one condition dict (from get_conditions()) to the right
     evaluator, using pre-fetched data supplied in `ctx`:
       ctx["koncorde_ticker_data"] — this ticker's koncorde_data.json entry
-      ctx["flow_rows"]            — this ticker's portfolio_daily_snapshot rows
+      ctx["snapshot_rows"]        — this ticker's portfolio_daily_snapshot rows
+                                     (flowScore/macd*/rsi fields — shared by
+                                     "flow", "macd" and "rsi" conditions)
       ctx["ratio_trends"]         — {ratio_key: trend_dict} for this alert's ratio_pairs
       ctx["current_price"]        — this ticker's live price (scripts/price_signal.py), or None
     Never fetches anything itself — callers own all I/O, same separation of
@@ -259,7 +357,11 @@ def evaluate_single_condition(condition: dict, ctx: dict) -> bool | None:
             return None
         return evaluate(ticker_data, condition["timeframe"], condition["condition"])
     if ctype == "flow":
-        return evaluate_flow(ctx.get("flow_rows") or [], condition["op"])
+        return evaluate_flow(ctx.get("snapshot_rows") or [], condition["op"])
+    if ctype == "macd":
+        return evaluate_macd(ctx.get("snapshot_rows") or [], condition["op"])
+    if ctype == "rsi":
+        return evaluate_rsi(ctx.get("snapshot_rows") or [], condition["op"], condition["threshold"])
     if ctype == "ratio":
         ratio_trends = ctx.get("ratio_trends") or {}
         return evaluate_ratio(ratio_trends.get(condition["ratio_key"]), condition["op"])
@@ -293,6 +395,11 @@ def describe_conditions(ticker: str, conditions: list[dict]) -> str:
             parts.append(f"{CONDITIONS.get(c['condition'], c['condition'])} en {TIMEFRAME_LABELS.get(c['timeframe'], c['timeframe'])}")
         elif ctype == "flow":
             parts.append(FLOW_OPS.get(c["op"], c["op"]))
+        elif ctype == "macd":
+            parts.append(MACD_OPS.get(c["op"], c["op"]))
+        elif ctype == "rsi":
+            verb = "por encima de" if c.get("op") == "above" else "por debajo de"
+            parts.append(f"RSI {verb} {c.get('threshold')}")
         elif ctype == "ratio":
             parts.append(f"{c.get('ratio_key', '?')}: {RATIO_OPS.get(c['op'], c['op'])}")
         elif ctype == "price":

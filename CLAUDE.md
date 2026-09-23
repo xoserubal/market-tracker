@@ -6075,6 +6075,97 @@ producción. Nada de esto se ha tocado.
 
 ---
 
+## Situaciones Especiales — condiciones de MACD y RSI (implementado 2026-09-23)
+
+Sexto y séptimo tipo de condición del sistema de alertas compuestas
+(`koncorde`/`flow`/`ratio`/`price`/`macd`/`rsi`), a petición explícita del
+usuario: poder seleccionar configuraciones del MACD (más allá del triángulo
+visual ya existente en la tabla, ver "Triángulo MACD..." más arriba) y
+umbrales de RSI como condiciones de una situación especial, combinables con
+el resto (AND). Mismo patrón exacto que `price` (2026-08-30): generaliza el
+sistema ya existente, sin construir nada paralelo.
+
+**MACD — dos ejes independientes, checkboxes multi-selección (no un único
+`<select>`)**, mismo criterio visual que Koncorde D/3D/W: histograma (línea
+MACD vs su señal EMA9 — el cruce clásico, más reactivo) y línea
+(EMA12−EMA26 vs 0 — más lento, régimen de fondo), cada uno con nivel
+(`hist_bull`/`hist_bear`, `line_bull`/`line_bear`), tendencia
+(`hist_rising`/`hist_falling` vía `macdHistDelta1`, `line_rising`/
+`line_falling` vía `macdLineDelta5`) y evento de cruce
+(`hist_cross_up`/`hist_cross_down`, `line_cross_up`/`line_cross_down`) — 12
+condiciones en total, mismo tamaño de vocabulario que los 12 de
+dirección/giro ya existentes para blue/green/trend de Koncorde. Los 4
+campos que alimentan esto (`macdBull`, `macdHistDelta1`, `macdLineBull`,
+`macdLineDelta5`) ya los calculaba `shared/quote-lib.js` desde el triángulo
+MACD del día anterior — cero cálculo nuevo, solo exponerlos como
+condiciones de alerta.
+
+**RSI — umbral simple**, mismo shape que `price` (`op` above/below +
+`threshold`, validado 0-100 en el modal). Usa el campo `rsi` (Wilder
+RSI-14) que `shared/quote-lib.js` ya calculaba para toda la tabla.
+
+**Fuente de datos — `portfolio_daily_snapshot.jsonl`, no fetch en vivo**
+(`scripts/check_koncorde_alerts.py`, lado servidor): a diferencia de
+`price` (fetch en vivo de un solo precio, barato), RSI/MACD requieren
+~15-35 sesiones de cierres para calcularse — mucho más caro que el fetch de
+precio existente. Como `portfolio_daily_snapshot.jsonl` (Step 9g del
+pipeline) ya captura estos campos a diario para todo el universo (mismo
+patrón ya usado por la condición `flow` desde el 2026-08-26), se reutiliza
+esa misma fuente en vez de calcular nada en vivo. `_load_flow_rows_by_ticker`
+se generalizó a `_load_snapshot_rows_by_ticker` (whitelist explícita de
+campos: `flowScore`, `macdBull`, `macdHistDelta1`, `macdLineBull`,
+`macdLineDelta5`, `rsi`) — mismas 2 filas más recientes por ticker que ya
+se leían para `flow`, solo con más columnas; gateado igual (`needs_snapshot`
+sustituye a `needs_flow`, solo lee el archivo si alguna alerta tiene
+condición `flow`/`macd`/`rsi`). Los ops de nivel usan solo la fila más
+reciente; los de cruce (`*_cross_up`/`*_cross_down`) comparan contra la fila
+anterior — mismo mecanismo que `flow`'s `cross_positive`.
+
+**Cliente (`portfolio.html`) — espejo deliberado, sin fetch adicional:**
+`checkMacdCond`/`checkRsiCond` leen los mismos campos ya presentes en `p`
+(el objeto de `/api/quote/:symbol`, ya cargado para la tabla principal) para
+los ops de nivel/tendencia; los de cruce usan `prevSessionMap[ticker]`
+(mismo mecanismo ya usado por `checkFlowCond` y por las flechas Δ1d de
+Flow/ATR%) para leer "ayer". Mismo principio de "réplica en JS, no fuente
+de verdad distinta" ya aceptado en el proyecto (`calcCMF`, `ratio_signal.py`).
+
+**Solo el sistema de Situaciones Especiales (UI de `portfolio.html`), no
+`/kalert`** — alcance pedido explícitamente por el usuario. `describe_conditions`/
+`get_conditions` (compartidas con el bot de Telegram) ganan las nuevas
+etiquetas de forma transparente, así que si una alerta con condición
+macd/rsi apareciera algún día en `/kalerts` se describiría bien, pero el
+parser NL de `/kalert` no se tocó — no ofrece crear estas condiciones por
+voz/texto.
+
+**Verificado end-to-end contra producción real** (Edge headless vía CDP
+directo, servidor del usuario ya en marcha sin reiniciar — solo se tocó
+`portfolio.html`, estático, servido por `express.static`): 45 tests
+unitarios sintéticos de `evaluate_macd`/`evaluate_rsi`/AND compuesto, todos
+correctos; `check_koncorde_alerts.py --dry-run` contra las 9 alertas reales
+sin regresión; `_load_snapshot_rows_by_ticker()` + `evaluate_conditions()`
+contra datos reales de CMCSA (`hist_bear` + `rsi<40` → `True`, coincide con
+el estado real del ticker ese día). En el navegador: modal muestra los 12
+checkboxes de MACD + el bloque RSI correctamente; creada una situación real
+de prueba (`TESTMACD`, `hist_cross_up` + `line_bull` + `rsi>25`) vía clics
+reales — persistida en `docs/data/koncorde_bot_alerts.json` con el shape
+exacto esperado, verificada también desde el lado Python
+(`get_conditions`/`describe_conditions` la leen correctamente), badges
+correctos en la tabla ("pendiente", ticker sin datos reales), cero errores
+de consola. Eliminada tras verificar (mismo patrón ya aceptado de
+`TESTX`/`ads_de_...`/`TESTPX` — 2 commits de auto-commit+push de
+`server.js` generados y revertidos, `koncorde_bot_alerts.json` de vuelta a
+las 9 alertas reales).
+
+### Fuera de alcance (explícito)
+
+`/kalert` (texto/voz) no ofrece crear condiciones MACD/RSI todavía. Ningún
+umbral calibrado contra rendimiento posterior (primera pasada, fase de
+observación, mismo criterio que el resto de condiciones del sistema).
+Ningún cambio a PCS, `rot_score`, `HARD_RULES` ni ninguna cartera — esto es
+una utilidad del sistema de alertas, no toca el motor de picks.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

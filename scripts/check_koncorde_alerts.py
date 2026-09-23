@@ -9,19 +9,20 @@ Generalized 2026-08-26 from a Koncorde-only single-condition evaluator to a
 composite AND-over-typed-conditions one (see koncorde_alert_conditions.py's
 `get_conditions`/`evaluate_conditions`/`evaluate_single_condition`) — same
 storage file, same evaluator entry point, one alert can now require any mix
-of Koncorde state, Flow Score crossing, custom ticker-ratio trend, and live
-price-threshold conditions simultaneously (price added 2026-08-30, in direct
-response to a real request that failed: "avisar si TNZ supera 70 y en vela
-diaria azul positivo" — a single alert needing both a price level AND a
-Koncorde condition true at once). Old-format rows (flat
-ticker/timeframe/condition) keep working unmodified via the read-time
-compatibility shim.
+of Koncorde state, Flow Score crossing, MACD histogram/line configuration,
+RSI(14) threshold, custom ticker-ratio trend, and live price-threshold
+conditions simultaneously (price added 2026-08-30, in direct response to a
+real request that failed: "avisar si TNZ supera 70 y en vela diaria azul
+positivo"; MACD/RSI added 2026-09-23 for "situaciones especiales" created
+from portfolio.html). Old-format rows (flat ticker/timeframe/condition) keep
+working unmodified via the read-time compatibility shim.
 
 Reads:
   docs/data/koncorde_bot_alerts.json         (alerts; both formats, see above)
   docs/data/koncorde_data.json               (konc_* fields per ticker, latest run)
-  docs/data/portfolio_daily_snapshot.jsonl   (flowScore history — only read if
-                                                any alert has a "flow" condition)
+  docs/data/portfolio_daily_snapshot.jsonl   (flowScore/macd*/rsi history — only
+                                                read if any alert has a "flow",
+                                                "macd" or "rsi" condition)
   live yfinance fetch via ratio_signal.py    (only for alerts with a "ratio" condition)
   live yfinance fetch via price_signal.py    (only for alerts with a "price" condition)
 
@@ -59,9 +60,19 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 sys.path.insert(0, str(Path(__file__).parent))
-from koncorde_alert_conditions import describe_conditions, evaluate_conditions, get_conditions
+from koncorde_alert_conditions import (
+    describe_conditions, evaluate_conditions, get_conditions,
+)
 from ratio_signal import fetch_ratio_trend
 from price_signal import fetch_current_price
+
+# Fields read off each portfolio_daily_snapshot.jsonl row for "flow"/"macd"/
+# "rsi" conditions — kept as an explicit whitelist (not the whole ~121-field
+# row) so a schema change elsewhere in that file can't silently change what
+# an alert condition sees. date/ticker are structural, not condition data.
+_SNAPSHOT_FIELDS = (
+    "flowScore", "macdBull", "macdHistDelta1", "macdLineBull", "macdLineDelta5", "rsi",
+)
 
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
@@ -103,10 +114,17 @@ def _send_telegram(text: str) -> bool:
         return False
 
 
-def _load_flow_rows_by_ticker() -> dict[str, list[dict]]:
+def _load_snapshot_rows_by_ticker() -> dict[str, list[dict]]:
     """Last 2 rows (by date) per ticker from portfolio_daily_snapshot.jsonl —
-    all that evaluate_flow() ever needs. Reads the whole file once per run
-    (only called at all if some alert actually has a "flow" condition)."""
+    all that evaluate_flow()/evaluate_macd()/evaluate_rsi() ever need (level
+    ops only look at the latest row; cross ops need both). Reads the whole
+    file once per run (only called at all if some alert actually has a
+    "flow", "macd" or "rsi" condition — see `needs_snapshot` below).
+
+    Generalized 2026-09-23 from a flow-only loader (_load_flow_rows_by_ticker)
+    when MACD/RSI conditions were added to "situaciones especiales" — same
+    source file, same 2-rows-per-ticker shape, just a wider field whitelist.
+    """
     if not SNAPSHOT_PATH.exists():
         return {}
     by_ticker: dict[str, list[dict]] = {}
@@ -122,7 +140,9 @@ def _load_flow_rows_by_ticker() -> dict[str, list[dict]]:
             t = row.get("ticker")
             if not t:
                 continue
-            by_ticker.setdefault(t, []).append({"date": row.get("date"), "flowScore": row.get("flowScore")})
+            entry = {"date": row.get("date")}
+            entry.update({field: row.get(field) for field in _SNAPSHOT_FIELDS})
+            by_ticker.setdefault(t, []).append(entry)
     for t, rows in by_ticker.items():
         rows.sort(key=lambda r: r["date"] or "")
         by_ticker[t] = rows[-2:]
@@ -137,11 +157,11 @@ def run(dry_run: bool = False) -> None:
 
     konc_tickers = _load_json(KONC_PATH, {}).get("tickers", {})
 
-    # Only pay for flow-snapshot / ratio-fetch / price-fetch work if some alert
-    # actually needs it — same gating principle for all three.
+    # Only pay for snapshot-read / ratio-fetch / price-fetch work if some
+    # alert actually needs it — same gating principle for all of them.
     all_conditions = [c for a in alerts for c in get_conditions(a)]
-    needs_flow = any(c.get("type") == "flow" for c in all_conditions)
-    flow_rows_by_ticker = _load_flow_rows_by_ticker() if needs_flow else {}
+    needs_snapshot = any(c.get("type") in ("flow", "macd", "rsi") for c in all_conditions)
+    snapshot_rows_by_ticker = _load_snapshot_rows_by_ticker() if needs_snapshot else {}
 
     ratio_trend_cache: dict[tuple[str, str], dict | None] = {}
 
@@ -177,7 +197,7 @@ def run(dry_run: bool = False) -> None:
         needs_price = any(c.get("type") == "price" for c in conditions)
         ctx = {
             "koncorde_ticker_data": konc_tickers.get(ticker),
-            "flow_rows": flow_rows_by_ticker.get(ticker, []),
+            "snapshot_rows": snapshot_rows_by_ticker.get(ticker, []),
             "ratio_trends": ratio_trends,
             "current_price": _cached_price(ticker) if needs_price else None,
         }
