@@ -2,7 +2,15 @@ name: Market Data Update
 
 on:
   schedule:
-    - cron: '0 8,20 * * *'   # 08:00 y 20:00 UTC (cada 12h)
+    # 08:00 y 20:00 UTC nominal (cada 12h) — minuto 7, no 0, siguiendo la
+    # recomendación de GitHub de evitar disparar justo en punto (el minuto
+    # de más carga de su scheduler). Cambiado 2026-09-23 tras confirmar
+    # contra el historial real de Actions un retraso medio de ~4h (slot de
+    # 08:00) y ~1.5-2.5h (slot de 20:00) — el propio precedente de
+    # gex-zerogex-fase2.yml (programado a :55, no en punto) sugiere que
+    # esto no resuelve el retraso por sí solo, pero el cambio es reversible
+    # y de coste nulo. Ver CLAUDE.md.
+    - cron: '7 8,20 * * *'
   workflow_dispatch:           # permite lanzar manualmente desde GitHub
 
 permissions:
@@ -205,8 +213,18 @@ jobs:
       - name: Check if this is the morning run
         id: time_check
         run: |
+          # Corte 16:00 UTC, no 14:00 (ampliado 2026-09-23). El disparo
+          # nominal de las 08:00 UTC lleva semanas llegando con ~4h de
+          # retraso de media (confirmado contra el historial real de
+          # Actions) y algunas pasadas ya han caído en 13:50-13:59 UTC —
+          # muy cerca del corte anterior. Sin margen, un día de retraso
+          # algo peor de lo habitual haría que este `if` fallara en
+          # silencio (sin error visible en la pestaña Actions) y Mirror
+          # Espejo/Insider Activity se saltaran ese día — mismo patrón de
+          # fallo silencioso ya visto con TELEGRAM_BOT_TOKEN/
+          # CAVA_ENGINE_TOKEN vacíos. Ver CLAUDE.md.
           HOUR=$(date -u +%H)
-          if [ "$HOUR" -lt 14 ]; then
+          if [ "$HOUR" -lt 16 ]; then
             echo "is_morning=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_morning=false" >> "$GITHUB_OUTPUT"

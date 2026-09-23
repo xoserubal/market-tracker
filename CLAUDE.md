@@ -6242,6 +6242,68 @@ aplica, este backtest nunca llegó al punto de proponer operar nada.
 
 ---
 
+## Retraso del cron de GitHub Actions — ampliado el margen de `is_morning`, minuto del cron movido fuera de `:00` (2026-09-23)
+
+El usuario reportó que el pipeline se estaba ejecutando "casi a las 00:00
+hora de Madrid, incluso más tarde" — verificado contra el historial real de
+`market-update.yml` (API de GitHub, últimas ~60 corridas, ~4 semanas): el
+disparo nominal de las 08:00 UTC llega en la práctica a **~12:30-13:30
+UTC** (retraso medio ~3h49min) y el de las 20:00 UTC a **~21:50-22:35 UTC**
+(retraso medio ~1h30-2h30min, con ruido de medición en las corridas que
+cruzan medianoche). El patrón se estabilizó en estos valores altos a
+partir de ~1 de septiembre y, si acaso, ha ido a más desde entonces (el
+slot de 08:00 pasó de ~230min de retraso a ~270-310min). En hora de
+Madrid (CEST, UTC+2), el disparo nominal de las 20:00 UTC aterriza
+sistemáticamente entre las 23:50 y las 00:35 — coincide exacto con lo
+reportado.
+
+**Causa: el propio scheduler de GitHub Actions, no un bug del repo.** El
+cron sigue siendo correcto (`0 8,20 * * *` hasta este cambio). GitHub
+documenta que los workflows programados pueden retrasarse en "periodos de
+alta carga", y que el minuto `:00` en punto es el peor momento posible
+porque coincide con el pico de disparo de todos los repos a la vez.
+
+**Dos cambios, decididos con el usuario tras presentarle los datos (no
+unilaterales):**
+
+1. **Cron movido de `:00` a `:07`** (`'7 8,20 * * *'`) — siguiendo la
+   recomendación oficial de GitHub. Cambio de coste casi nulo y sin
+   ningún riesgo (solo afecta a cuándo se pide el disparo, no a la lógica
+   del pipeline), pero con beneficio esperado incierto: `gex-zerogex-
+   fase2.yml`, programado a `:55` (no en punto), acumuló retrasos de hasta
+   8h en este mismo repo (ver sección "Fix: GEX ZeroGEX Fase 2..." más
+   arriba) — sugiere que la congestión de esta cuenta no depende solo del
+   minuto exacto, así que no se espera que esto resuelva el retraso por
+   sí solo.
+
+2. **Corte `is_morning` ampliado de 14:00 a 16:00 UTC** — este es el
+   hallazgo con riesgo real, encontrado al investigar la pregunta del
+   usuario, no reportado por él. `is_morning` (Step "Check if this is the
+   morning run") gatea Mirror Espejo (Grok) e Insider Activity
+   (Form4API) — solo corren si `HOUR < 14` (UTC). Con el retraso medido,
+   varias pasadas de "mañana" ya habían llegado a disparar a las
+   **13:50-13:59 UTC** — a minutos del corte. Si el retraso sigue
+   creciendo (tendencia observada), un día la pasada de mañana caería
+   después de las 14:00 UTC y **Mirror Espejo/Insider Activity se
+   saltarían ese día sin ningún error visible** en la pestaña Actions —
+   el `if` del step simplemente no se cumple, mismo patrón de fallo
+   silencioso ya sufrido con `TELEGRAM_BOT_TOKEN`/`CAVA_ENGINE_TOKEN`
+   vacíos (ver secciones correspondientes más arriba). Ampliado a 16:00
+   UTC — con los retrasos actuales (~13:30 UTC típico) da varias horas de
+   margen real, no solo minutos.
+
+**Verificado:** YAML parseable con PyYAML tras el cambio (52 steps, sin
+cambios de estructura); `grep` confirma que `is_morning`/el corte de
+14→16h solo se usa en `market-update.yml` — ningún otro workflow
+(`koncorde-retry.yml`, `gex-zerogex-fase1/2.yml`) depende de él.
+
+**Pendiente de observar, no verificable hasta que ocurra:** si el retraso
+real cambia tras mover el cron a `:07` — solo se sabrá con más corridas
+reales, no hay forma de simularlo. El corte ampliado a 16:00 UTC es
+verificable por inspección (aritmética simple), sin necesidad de esperar.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
