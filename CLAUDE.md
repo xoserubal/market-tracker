@@ -5856,6 +5856,225 @@ más allá de leer campos que ya existían en el JSON).
 
 ---
 
+## Suelo de PCS: histéresis + confirmación en real (Brazo D adoptado sin esperar a n suficiente) (implementado 2026-09-22)
+
+Repaso de "gestión de carteras por las IAs" pedido explícitamente por el
+usuario ("está siendo una auténtica castaña"). Números reales sobre
+`ai_picks.json`/`shadow_picks.jsonl` (117 cierres históricos en
+HIGH_CONVICTION/CONFIRMED_FLOW_LEADERS/EARLY_ROTATION/
+MACRO_THEMATIC_BENEFICIARIES/MIMO_SHADOW, excluyendo el lote zombi del
+2026-06-10 ya documentado): win rate 20-33% según cartera, peores casos
+hasta -37.6% (MSTR, CFL) y -31.9% (NBIS, MIMO, repetido 3 veces), y **el
+100% de los 117 cierres tiene la misma causa exacta: el suelo de PCS de
+una sola lectura**. Ninguno se cerró nunca por objetivo de beneficio ni por
+ningún otro motivo. Esto es una versión mucho más extrema del hallazgo ya
+documentado en "PCS-floor whipsaw monitor" (arriba) y en el diagnóstico CFL
+original (alpha -5%).
+
+**Decisión tomada con el usuario:** intervenir ya sobre la regla de salida,
+sin esperar a que `pcs_floor_factorial_v1_shadow.py` (P2, arrancado
+2026-08-30) alcance n suficiente (llevaba solo 23 días, 1/27 disparos en
+cualquier brazo — sin potencia estadística) — el patrón cualitativo (100%
+mismo motivo, en 117 eventos, no en 27) ya era lo bastante consistente
+como para no esperar más. Rompe deliberadamente la disciplina de
+"preregistro antes de actuar" que rige el resto del proyecto — excepción
+explícita, decidida con el usuario, no una decisión unilateral.
+
+**Por qué el modelo nunca pudo implementar esto por su cuenta:** el payload
+que recibe el LLM (`active_picks_relevant`) solo trae el PCS de HOY —
+histéresis y confirmación de 2 lecturas exigen la lectura de AYER, que el
+modelo nunca ha tenido. No era que el modelo razonara mal la regla escrita
+en `HARD_RULES` — es que la regla escrita (una sola lectura) es literalmente
+todo lo que se le podía pedir que computara con los datos que se le daban.
+
+### Implementación — determinista en Python, no delegada al LLM
+
+Mismo criterio que CRUCE_ROJO_D/CAVA_MACRO/MIRROR_ESPEJO ("el LLM no añade
+nada cuando la decisión es puramente numérica"): el suelo de PCS deja de
+ser una HARD_RULE que el modelo debe autoevaluar y pasa a ser un
+enforcement mecánico en `paper_trading.py`, con la fórmula exacta del
+**Brazo D** del factorial P2 (histéresis + confirmación), para que ambos
+midan literalmente la misma regla:
+
+```
+severidad "severe"  = PCS < T_active-3.0  O  rot_score<=2   -> cierre inmediato (bypass)
+"confirmed_breach"  = PCS < T_active-1.5 HOY  Y  en la lectura anterior   -> cierre
+"unconfirmed_breach"= PCS < T_active-1.5 solo hoy (1ª lectura)            -> NO cierra, solo watch
+"left_universe"                                                           -> cierre inmediato
+```
+
+`ai_shared.py` gana `ABSOLUTE_FLOOR`/`PCS_FLOOR_HYSTERESIS_BUFFER`/
+`PCS_FLOOR_SEVERE_BUFFER` + `compute_t_active()`/`compute_pcs_floor_verdict()`
+— la aritmética pura, sin depender de qué cartera es. `ai_picks_decision_state.py`
+(P0) se refactorizó para delegar en esta misma fórmula en vez de mantener su
+propia copia (antes ya coincidía por valor, ahora no puede desincronizarse).
+
+**La "lectura de ayer" se lee de `docs/data/ai_picks_decision_state.jsonl`
+(P0), no de un campo nuevo en `ai_picks.json`** — P0 corre en Step 10i,
+después de `paper_trading.py` (Step 10) en el mismo pipeline, así que en el
+momento en que este script se ejecuta el jsonl solo contiene la fila del
+run anterior (nunca la de hoy) — exactamente la granularidad "2 lecturas
+diarias consecutivas" que el preregistro de P2 ya había fijado. `position_id`
+= `f"{ticker}__{entry_date}"`, mismo formato que P0 ya usa.
+
+**Se aplica SIEMPRE, no solo cuando el LLM responde bien.** A diferencia del
+resto de HARD_RULES (que solo se procesan si `is_valid_run=True` —
+`hard_rule_violations>0` salta `update_portfolio()` para todo el run,
+deliberado para no bloquear trading real por un falso positivo del
+validador de claims numéricos), el nuevo bloque corre incondicionalmente al
+principio de `run()`, antes incluso del gate de "hay eventos nuevos hoy" —
+mismo espíritu que los cierres mecánicos de CAVA_MACRO/MIRROR_ESPEJO/
+CRUCE_ROJO_D, que tampoco dependen de que el LLM responda. Se persiste
+`ai_picks.json` inmediatamente si hay algún cierre, sin esperar al final de
+`run()`. Único guard: `force and not apply` (mismo dry-run ya existente para
+runs manuales de `force_analyze`-style).
+
+`update_portfolio()` gana el parámetro `forced_exits`, aplicado en un bucle
+nuevo justo después del bucle de EXIT decidido por el modelo (mismo formato
+de cierre — `event:"close"`, `close_reason` legible — así que
+`update_performance.py`/`notify_telegram.py`/el dashboard no necesitan
+ningún cambio). `PCS_GATED_ALL = VALID_PORTFOLIOS | VALID_SHADOW_PORTFOLIOS`
+(las 5 carteras PCS-gated juntas) se usa solo para este enforcement, sin
+tocar el alcance de SELECT/EXIT decidido por el modelo.
+
+**HARD_RULES (`ai_shared.py`) reescrita:** el modelo ya no debe replicar la
+fórmula de suelo — se le dice explícitamente que consulte
+`mechanical_floor_status` por posición (`must_exit_severe`/
+`must_exit_confirmed_breach`/`must_exit_left_universe`/`ok`/
+`watch_unconfirmed_breach`) y que solo proponga EXIT por su cuenta cuando
+tenga un motivo fundamental independiente de una caída de PCS — "debería
+ser raro". El soft-warning `hold_below_floor` (comparaba PCS crudo contra
+62 para CUALQUIER posición activa) se renombró a
+`hold_on_mechanical_floor_exit` y pasa a comparar contra
+`mechanical_floor_status` — **hallazgo colateral real durante la
+verificación:** el check viejo disparaba también para posiciones de
+MIRROR_ESPEJO (JD/UNH/RYM.NZ/INDA/FDR.MC, visibles en
+`docs/data/model_tests/*.json` históricos), que no usan PCS como criterio
+de salida en absoluto — era un falso positivo sistemático, no solo
+impreciso en el timing. El nuevo check, al estar scopeado a
+`mechanical_floor_status` (solo se calcula para carteras PCS-gated), no
+puede repetir ese error.
+
+### Verificado
+
+Refactor de `compute_t_active` en `ai_picks_decision_state.py` (delega en
+`ai_shared.py` en vez de reimplementar) verificado sin regresión:
+`pcs_floor_factorial_v1_shadow.py --report` da exactamente los mismos
+números antes y después (309 filas, 27 posiciones, 1/27 disparo en los 4
+brazos). 23/23 tests de `test_numeric_claims_validation.py` siguen
+pasando. 6 casos sintéticos cubriendo las 4 ramas de
+`compute_pcs_floor_verdict` (severe por PCS, severe por rot_score,
+confirmed_breach con 2 lecturas, unconfirmed_breach con 1 lectura → NO
+cierra, ok, left_universe) — los 6 clasifican correctamente. Flujo completo
+`update_portfolio(..., forced_exits=...)` probado con datos sintéticos: la
+posición marcada se cierra con `event:"close"`/`close_reason` legible, la
+no marcada permanece abierta. Contra datos reales de producción de hoy
+(2026-09-22): `_build_active_positions()` sobre los 34 posiciones abiertas
+reales da 0 disparos (todas las 12 posiciones PCS-gated actuales están
+`ok`, sin ningún breach en curso) — confirma que el cambio no fuerza
+ningún cierre falso sobre el estado real vigente; los 22 no-`ok`/`None`
+corresponden exactamente a las posiciones de CAVA_MACRO(10)+MIRROR_ESPEJO(7)+
+RANKING_SHADOW_EXPERIMENTAL(5), no PCS-gated, tal como se espera.
+`py_compile` limpio en los 3 archivos tocados
+(`ai_shared.py`/`ai_picks_decision_state.py`/`paper_trading.py`).
+
+**No verificado end-to-end contra el pipeline real** (no se ha ejecutado
+`paper_trading.py` sin `--dry-run` contra producción — habría gastado
+crédito de API y mutado `ai_picks.json` real sin que hubiera ningún caso
+real que disparar hoy para demostrarlo). Se confirmará solo en producción
+la próxima vez que una posición real rompa el suelo (probablemente en las
+próximas 1-2 semanas dado el ritmo histórico de cierres).
+
+### Explícitamente fuera de alcance de este cambio
+
+**Toma de beneficios (mitad "y/o" de la decisión aprobada) — diferida a
+propósito, no implementada.** El propio diagnóstico (0% de los 117 cierres
+por objetivo de beneficio) es tan señalado como el problema de la
+histéresis, pero P1A (`p1a_profit_protection_v1_shadow.py`, FIXED trailing
+8% desde MFE≥10% vs ATR-ratchet) tiene la misma falta de potencia que P2
+(1/27 disparos) y, a diferencia del suelo de PCS, no hay todavía ganador
+claro entre sus dos variantes — elegir una sin que el usuario decida el
+diseño concreto habría sido una segunda intervención no autorizada
+explícitamente. Queda como decisión pendiente, separada de esta.
+
+Ranking del suelo dentro de P1C (time-stop, structure-break) — sin tocar,
+ese experimento evalúa el riesgo inicial de entrada, no el suelo de
+mantenimiento. Ningún cambio en CAVA_MACRO/MIRROR_ESPEJO/CRUCE_ROJO_D (no
+usan esta regla, cada uno tiene su propio mecanismo mecánico ya
+documentado). Ningún cambio de umbral (`ABSOLUTE_FLOOR`, `pcs_min_entry`
+por cartera) — solo la disciplina temporal de cuándo se dispara.
+
+---
+
+## Sistema Trullás — divergencia con ventana extendida (6 meses): sí aporta, con dos bugs de diseño corregidos en el camino (2026-09-23)
+
+Origen: revisando QXO a mano a petición del usuario se encontró una
+divergencia alcista real de marzo a agosto 2026 que el método estándar
+(`evaluate_pivot_pair`, solo compara los dos últimos pivotes consecutivos)
+no detecta — un rebote intermedio (23-jun) "resetea" la cadena de
+comparación. El usuario propuso ampliar la ventana a 6 meses y comparar
+contra el mínimo más significativo en vez de solo el inmediato anterior;
+se acordó explorarlo con un backtest antes de decidir nada (research/,
+mismo patrón que el resto de exploraciones Trullás).
+
+**Dos bugs de diseño reales, encontrados y corregidos durante la propia
+verificación, no al diseñar:**
+1. Elegir la referencia por **MACD más negativo** es tautológico (la
+   referencia ya es el mínimo por construcción, así que "MACD de hoy más
+   alto" es casi automático) — la primera versión disparó 896 casos con
+   100% de acierto a 5 días, imposible para una señal real. Corregido:
+   referencia por **precio** más bajo (eje independiente del que se
+   prueba).
+2. Medir el retorno futuro desde el propio cierre del pivote es
+   tautológico para el horizonte de 5 sesiones: `find_pivots_low` exige
+   que los 5 cierres siguientes a un pivote sean todos más altos que él
+   mismo — es la definición de "mínimo estricto en la ventana". Corregido
+   midiendo desde el primer día en que el pivote es realmente confirmable
+   (`b + PIVOT_WINDOW`). Propiedad general de `find_pivots_low`, no
+   específica de este backtest — cualquier análisis futuro que mida
+   retornos desde el cierre de un pivote confirmado en un horizonte
+   ≤`PIVOT_WINDOW` hereda el mismo problema.
+
+**Resultado, ya limpio** (117 tickers, universo Portfolio Tracker,
+2019→hoy, reutilizando `research/trullas_divergence_backtest_v1/ohlcv_cache.json`
+sin descargar de nuevo):
+
+```
+                                              n     media   win%
+Baseline (V1_EXECUTABLE, método estándar)   54    +1.27%  66.7%
+FULL (nuevo, contra mínimo de 6 meses)     101    +2.42%  76.2%
+PARTIAL_LOWER_LOW_STALLING_MOMENTUM (nuevo) 55    +2.32%  72.7%
+PARTIAL_FLAT_PRICE_RISING_MOMENTUM          690    ~0%    ~50%  (sin estructura Fibonacci)
+```
+
+La categoría "parcial" que el propio usuario propuso explorar (doble
+suelo, precio plano, MACD mejorando) **no aporta nada una vez corregido el
+sesgo de medición** — ruido puro, hallazgo negativo real. Las dos
+categorías con estructura de trade sí dan ~3x más señales que el método
+actual con métricas algo mejores, repartidas en 87 tickers distintos (máx.
+6 en uno solo, solo 2 pares se solapan en el tiempo) — no es el mismo
+evento contado varias veces. Sigue siendo poco (101/55 eventos) para
+prometer nada, muy por debajo del umbral que este proyecto se exige antes
+de tocar producción (~40-150 eventos, dev/test).
+
+**Implementación:** 3 funciones nuevas en `scripts/trullas_lib.py`
+(`find_extended_reference`, `classify_extended_divergence`,
+`EXTENDED_LOOKBACK_BARS=126`/`EXTENDED_STALL_FRACTION=0.25` sin calibrar),
+marcadas explícitamente "investigación, no en producción" (mismo patrón
+que el detector B0/B1) — no tocan `trullas_signal_calculator.py` ni
+`trullas_shadow_portfolio.py`, verificado sin regresión (`py_compile`
+limpio en los 4 scripts que dependen de `trullas_lib.py`). Backtest y
+metodología completa en `research/trullas_extended_divergence_v1/README.md`.
+
+### Explícitamente fuera de alcance
+
+Split dev/test, calibración de los dos umbrales nuevos contra rendimiento,
+corrección por comparaciones múltiples, extensión a máximos (divergencia
+bajista/cortos — fuera del alcance long-only del proyecto), integración en
+producción. Nada de esto se ha tocado.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

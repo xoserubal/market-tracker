@@ -267,3 +267,100 @@ def evaluate_early_candidate_b0(close: np.ndarray, macd_arr: np.ndarray,
         "ref_pivot_close": c1, "provisional_low_close": c2, "swing_pct": swing_pct,
         "tp": c2 + RETR_TP * swing, "stop": c2,
     }
+
+
+# ── Divergencia con ventana extendida (6 meses) — investigación, no en ─────
+# producción. Añadido 2026-09-23 a petición del usuario tras revisar QXO:
+# el gate estándar (evaluate_pivot_pair) solo compara el pivote inmediatamente
+# anterior — un rebote intermedio "resetea" la cadena y esconde una
+# divergencia real de varios meses (caso real: QXO marzo-agosto 2026, ver
+# CLAUDE.md). Ninguna función de aquí abajo se usa en
+# trullas_signal_calculator.py ni en trullas_shadow_portfolio.py todavía —
+# solo en research/trullas_extended_divergence_v1/.
+EXTENDED_LOOKBACK_BARS = 126     # ~6 meses de sesiones (21 x 6) — pedido literal del usuario
+EXTENDED_STALL_FRACTION = 0.25  # sin calibrar, primera pasada (mismo estilo que EARLY_VOLUME_SPIKE_THRESHOLD)
+
+
+def find_extended_reference(close: np.ndarray, pivots: list[int],
+                             a_idx: int, b_idx: int,
+                             lookback_bars: int = EXTENDED_LOOKBACK_BARS) -> int | None:
+    """El pivote con el PRECIO más bajo (no el MACD más negativo — ver nota)
+    entre los que caen en la ventana de `lookback_bars` antes de `b_idx`,
+    exigiendo que sea estrictamente anterior a `a_idx` (el predecesor
+    inmediato ya evaluado por el método estándar) — así solo se considera
+    si de verdad aporta algo "más allá" de lo que
+    evaluate_pivot_pair(a_idx, b_idx) ya comprueba. None si no hay ningún
+    candidato en esa ventana.
+
+    Bug real encontrado y corregido en la propia verificación (2026-09-23):
+    la primera versión seleccionaba el pivote de MACD MÁS NEGATIVO como
+    referencia — pero entonces "macd_higher" (¿el MACD de hoy es mayor que
+    el de la referencia?) es casi una tautología, porque la referencia YA
+    ES el mínimo por construcción. Sobre el universo real esto disparó
+    "divergencia" en 896 casos con 100% de acierto a 5 días — imposible
+    para una señal de mercado real, señal inequívoca de un sesgo de
+    diseño. Seleccionar por PRECIO más bajo (eje independiente del que se
+    prueba, el MACD) evita la tautología: que el precio de hoy sea más
+    bajo que el mínimo histórico NO está garantizado por construcción (b
+    puede o no superar ese mínimo), y que el MACD de hoy sea más alto que
+    el de aquel mínimo de precio tampoco lo está — es la comparación real
+    que la divergencia técnica clásica exige."""
+    window_start = max(0, b_idx - lookback_bars)
+    candidates = [p for p in pivots if window_start <= p < a_idx]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda p: close[p])
+
+
+def classify_extended_divergence(close: np.ndarray, macd_arr: np.ndarray,
+                                  r_idx: int, b_idx: int,
+                                  min_swing_pct: float = MIN_SWING_PCT) -> tuple[str, float]:
+    """Clasifica la relación entre el pivote de referencia extendida `r_idx`
+    y el pivote actual `b_idx` — devuelve (categoria, swing_pct_ref_a_pivote).
+
+    Categorías (documentadas explícitamente para no dejarlas ambiguas):
+      "FULL"                                precio hace mínimo MÁS BAJO que
+                                             la referencia Y el MACD es MÁS
+                                             ALTO — divergencia completa,
+                                             misma definición que
+                                             evaluate_pivot_pair, aplicada a
+                                             un par más separado en el tiempo.
+      "PARTIAL_FLAT_PRICE_RISING_MOMENTUM"  precio prácticamente IGUAL (doble
+                                             suelo, dentro de min_swing_pct)
+                                             pero el MACD sí mejora con
+                                             claridad — sin caída de precio
+                                             que retraceder, no forma una
+                                             estructura Fibonacci válida.
+      "PARTIAL_LOWER_LOW_STALLING_MOMENTUM" precio hace mínimo más bajo, el
+                                             MACD no llega a ser más alto,
+                                             pero cae mucho menos de lo que
+                                             cabría esperar dado su propio
+                                             rango en la ventana — el
+                                             momentum se "resiste" a
+                                             confirmar la caída de precio
+                                             sin llegar a formar un mínimo
+                                             más alto en términos absolutos.
+      "NONE"                                nada de lo anterior.
+    """
+    c_r, c_b = float(close[r_idx]), float(close[b_idx])
+    macd_r, macd_b = float(macd_arr[r_idx]), float(macd_arr[b_idx])
+    swing_pct_rb = (c_r - c_b) / c_r * 100  # positivo si b_idx está más bajo que r_idx
+
+    price_lower = swing_pct_rb >= min_swing_pct
+    price_flat = abs(swing_pct_rb) < min_swing_pct
+    macd_higher = macd_b > macd_r
+
+    if np.isnan(macd_r) or np.isnan(macd_b):
+        return "NONE", swing_pct_rb
+
+    if price_lower and macd_higher:
+        return "FULL", swing_pct_rb
+    if price_flat and macd_higher:
+        return "PARTIAL_FLAT_PRICE_RISING_MOMENTUM", swing_pct_rb
+    if price_lower and not macd_higher:
+        window = macd_arr[r_idx:b_idx + 1]
+        window = window[~np.isnan(window)]
+        macd_range = float(window.max() - window.min()) if len(window) else 0.0
+        if macd_range > 0 and (macd_r - macd_b) < EXTENDED_STALL_FRACTION * macd_range:
+            return "PARTIAL_LOWER_LOW_STALLING_MOMENTUM", swing_pct_rb
+    return "NONE", swing_pct_rb
