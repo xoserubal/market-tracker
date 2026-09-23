@@ -6304,6 +6304,65 @@ verificable por inspección (aritmética simple), sin necesidad de esperar.
 
 ---
 
+## Fix: "Commit updated data" fallaba por push no-fast-forward — reintento con rebase (2026-09-24)
+
+El usuario preguntó por qué habían fallado los runs **#291** (2026-09-20) y
+**#293** (2026-09-21) del pipeline. Diagnóstico contra los logs reales de
+GitHub Actions (API `jobs`/`logs`, con el token ya guardado por `git
+credential fill` — sin pedir ninguno nuevo): **ambos fallan en el mismo
+step, "Commit updated data", por el mismo motivo exacto**:
+
+```
+[master 2f0ab82] chore: auto-update market data ...
+ ! [rejected]        master -> master (fetch first)
+error: failed to push some refs to 'https://github.com/xoserubal/market-tracker'
+```
+
+**Causa raíz:** ese step hacía `git add` + `git commit` + `git push` sin
+ningún `git fetch`/`git pull` antes. El `checkout` del job ocurre al
+principio de la corrida; este push es el último paso, a veces
+minutos/horas después con los retrasos del scheduler ya documentados en la
+sección anterior. Si **cualquier otra cosa** publica en `master` en ese
+hueco — una edición del dashboard (`server.js` auto-commit+push, ver
+Situaciones Especiales/universo), otro workflow con su propio auto-commit
+(`gex-zerogex-fase2.yml`, `koncorde-retry.yml`), u otra corrida de este
+mismo pipeline — el push se rechaza y **toda la corrida se marca como
+fallida**, aunque todo el cálculo previo (picks, Koncorde, Trullás, Cava…)
+ya se hubiera hecho bien — simplemente no llega a publicarse ese ciclo.
+No es del todo silencioso (el step no tiene `continue-on-error`, así que sí
+dispara `notify_workflow_failure.py`), pero los datos de ese ciclo se
+pierden hasta el siguiente run 12h después.
+
+**No es un caso aislado de esos dos runs:** de las 16 corridas fallidas en
+toda la historia del proyecto, se comprobó también la **#277**
+(2026-09-13) — mismo step, mismo error. Concentradas casi todas en la
+franja de las 20:00 UTC, coincidiendo con cuando más se toca el dashboard.
+
+**Fix:** el step reintenta hasta 5 veces con `git fetch` + `git rebase
+origin/master` entre cada intento de push. Si el rebase encuentra un
+conflicto real de líneas (raro — la mayoría de colisiones son commits que
+tocan archivos/líneas distintos, que el rebase resuelve solo), se aborta
+el rebase y se falla en voz alta (`::error::`, dispara el aviso existente)
+en vez de resolverlo a ciegas con `-X ours`/`-X theirs` — esa estrategia
+podría descartar en silencio una edición real hecha desde el dashboard
+justo en ese instante, y este proyecto ya tiene el principio de fallar
+visible antes que degradarse en silencio (mismo criterio que
+`TELEGRAM_BOT_TOKEN`/`CAVA_ENGINE_TOKEN` vacíos).
+
+**Verificado con dos simulaciones reales** (repos git temporales, remoto +
+2 clones, sin tocar nada del proyecto): (1) colisión normal — un "clon A"
+empuja un commit a un archivo distinto mientras el "job" ya tiene su
+propio commit local sin publicar; el push falla exactamente con el mismo
+`! [rejected] ... (fetch first)` visto en los logs reales, el fetch+rebase
+del intento 2 lo resuelve solo y el push siguiente tiene éxito — ambos
+commits sobreviven en el remoto, en el orden correcto. (2) conflicto real
+— ambos lados editan la misma línea del mismo archivo; el rebase falla con
+`CONFLICT (content)`, el script aborta limpio y termina con `exit 1` sin
+publicar nada — el remoto queda exactamente como lo dejó el otro lado, sin
+ningún dato pisado en silencio. YAML validado con PyYAML tras el cambio.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

@@ -448,7 +448,38 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backtest/data/processed/ backtest/data/manifest.json backtest/reports/ docs/data/ portfolio.json
           git diff --staged --quiet || git commit -m "chore: auto-update market data $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push
+
+          # Reintento con rebase si el push se rechaza por no-fast-forward
+          # (2026-09-24, ver CLAUDE.md). El checkout de este job ocurre al
+          # principio de la corrida; este push es el último paso, a veces
+          # minutos/horas después con los retrasos del scheduler de GitHub —
+          # cualquier otra cosa que publique en `master` mientras tanto
+          # (edición del dashboard, otro workflow con su propio auto-commit,
+          # otra corrida de este mismo pipeline) hacía fallar toda la corrida
+          # aquí, con todo el trabajo previo ya calculado pero sin publicar.
+          # Confirmado en runs #277/#291/#293, mismo error "! [rejected]
+          # master -> master (fetch first)" los tres.
+          #
+          # La mayoría de estas colisiones no comparten líneas modificadas
+          # (el rebase las resuelve solo) — si alguna vez hay un conflicto
+          # real, se aborta el rebase y se falla en voz alta (dispara el
+          # aviso de notify_workflow_failure.py) en vez de resolverlo a
+          # ciegas con una estrategia -X ours/theirs, que podría descartar
+          # en silencio una edición real hecha desde el dashboard.
+          for i in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "git push rechazado (intento $i/5) — otro proceso publicó mientras tanto, reintentando con rebase"
+            git fetch origin master
+            if ! git rebase origin/master; then
+              echo "::error::conflicto real al hacer rebase tras un push rechazado — requiere revisión manual"
+              git rebase --abort
+              exit 1
+            fi
+          done
+          echo "::error::git push siguió fallando tras 5 reintentos"
+          exit 1
 
       # Último step, a propósito — if: failure() solo se activa cuando un
       # step SIN continue-on-error ha fallado de verdad y ha bloqueado el
