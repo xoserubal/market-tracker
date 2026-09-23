@@ -81,7 +81,7 @@ function getInsiderActivityData() {
 // ── MACD (12, 26, 9) ─────────────────────────────────────────────────────
 function calcMACD(closes) {
   const c = closes.filter(x => x != null);
-  const empty = { macdHist: null, macdBull: null, macdLine: null, macdLineBull: null, macdLineDelta5: null, macdHistRecent: null };
+  const empty = { macdHist: null, macdBull: null, macdHistDelta1: null, macdLine: null, macdLineBull: null, macdLineDelta5: null, macdHistRecent: null };
   if (c.length < 35) return empty;
 
   // EMA series usando SMA como semilla
@@ -130,8 +130,16 @@ function calcMACD(closes) {
   // sesiones (10 antes del cruce + hasta 10 de "después" + margen), sin
   // devolver el histórico completo (puede tener miles de barras en 3 años).
   const macdHistRecent = histArr.slice(-30).map(v => +v.toPrecision(5));
+  // macdHistDelta1 = variación del histograma vs la sesión anterior (hoy −
+  // ayer, con signo). Pedido 2026-09-22: la flecha del histograma mostraba
+  // solo el estado (macdBull, línea vs señal ≥ 0), no si la barra está
+  // creciendo o menguando — con esto se puede distinguir "alcista pero
+  // perdiendo fuerza" (macdBull=true, delta<0) de "alcista y acelerando"
+  // (macdBull=true, delta>0), y lo simétrico en el lado bajista.
+  const macdHistDelta1 = histArr.length >= 2
+    ? +(hist - histArr[histArr.length - 2]).toPrecision(5) : null;
   return {
-    macdHist: +hist.toPrecision(4), macdBull: hist >= 0,
+    macdHist: +hist.toPrecision(4), macdBull: hist >= 0, macdHistDelta1,
     macdLine: +lastMacdLine.toPrecision(4), macdLineBull: lastMacdLine >= 0,
     macdLineDelta5,
     macdHistRecent,

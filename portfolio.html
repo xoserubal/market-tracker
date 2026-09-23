@@ -109,6 +109,20 @@ const INSIDER_CONTEXT_LBL = {strong_confirmation:'Confirmación fuerte',moderate
 const INSIDER_CONTEXT_STYLE = {strong_confirmation:{bg:'#22c55e',fg:'#052e16'},moderate_confirmation:{bg:'#dcfce7',fg:'#15803d'},neutral:{bg:'#f3f4f6',fg:'#6b7280'},warning:{bg:'#fee2e2',fg:'#b91c1c'},ignored_selling:{bg:'#f3f4f6',fg:'#9ca3af'},not_evaluable:{bg:'',fg:'#ccc'}};
 const INSIDER_COVERAGE_LBL = {covered:'✓ Cubierto',unsupported_non_us_or_no_data:'No cubierto (no-US)',error:'Error'};
 const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
+// ── Triángulo MACD (histograma) — color = estado, dirección = tendencia ────
+// Color = macdBull (línea MACD por encima/debajo de su señal — el cruce
+// clásico). Dirección = signo de macdHistDelta1 (¿la barra de hoy es más
+// grande o más pequeña que la de ayer?), independiente del color — así un
+// histograma todavía alcista (verde) pero menguando (perdiendo fuerza) sale
+// como ▼ verde, y uno todavía bajista (rojo) pero recuperando sale como ▲
+// rojo. Pedido por el usuario 2026-09-22, antes solo mostraba el estado
+// (▲ verde / ▼ rojo) sin distinguir si la barra crecía o menguaba.
+const macdTriangle = p => {
+  if (p?.macdBull == null) return null;
+  const color = p.macdBull ? '#1a7a1a' : '#c0392b';
+  const up = p.macdHistDelta1 == null ? p.macdBull : p.macdHistDelta1 >= 0;
+  return { glyph: up ? '▲' : '▼', color, weakening: p.macdHistDelta1 != null && up !== p.macdBull };
+};
 
 // ── Koncorde mini chart — últimas 5 sesiones (blue/green/trend/trend_ma) ───
 // Estilo Koncorde clásico, estructura confirmada con el usuario 2026-08-14
@@ -460,17 +474,24 @@ const PRICE_OP_OPTIONS = [
 
 function SpecialSituationModal({ item, onSave, onClose }) {
   const existingConds = item ? (item.conditions || [{ type:'koncorde', timeframe:item.timeframe, condition:item.condition }]) : [];
+  // Varias condiciones Koncorde pueden convivir en el mismo timeframe (ej.
+  // "blue_positive" Y "state_accumulation" en D a la vez) — se guardan como
+  // varias filas independientes {type:'koncorde', timeframe, condition} en
+  // conditions[], evaluadas con AND igual que el resto (ver evaluate_conditions
+  // en koncorde_alert_conditions.py, ya soporta esto sin cambios).
   const koncByTf = {};
-  existingConds.filter(c => (c.type||'koncorde')==='koncorde').forEach(c => { koncByTf[c.timeframe] = c.condition; });
+  existingConds.filter(c => (c.type||'koncorde')==='koncorde').forEach(c => {
+    (koncByTf[c.timeframe] = koncByTf[c.timeframe] || []).push(c.condition);
+  });
   const flowCond = existingConds.find(c => c.type==='flow');
   const priceCond = existingConds.find(c => c.type==='price');
 
   const [ticker,     setTicker]     = React.useState(item?.ticker || '');
   const [label,      setLabel]      = React.useState(item?.label || '');
   const [flowOp,     setFlowOp]     = React.useState(flowCond?.op || '');
-  const [koncD,      setKoncD]      = React.useState(koncByTf.d  || '');
-  const [konc3D,     setKonc3D]     = React.useState(koncByTf['3d'] || '');
-  const [koncW,      setKoncW]      = React.useState(koncByTf.w  || '');
+  const [koncD,      setKoncD]      = React.useState(() => new Set(koncByTf.d    || []));
+  const [konc3D,     setKonc3D]     = React.useState(() => new Set(koncByTf['3d']|| []));
+  const [koncW,      setKoncW]      = React.useState(() => new Set(koncByTf.w    || []));
   const [priceOn,    setPriceOn]    = React.useState(!!priceCond);
   const [priceOp,    setPriceOp]    = React.useState(priceCond?.op || 'above');
   const [priceVal,   setPriceVal]   = React.useState(priceCond?.threshold != null ? String(priceCond.threshold) : '');
@@ -503,9 +524,9 @@ function SpecialSituationModal({ item, onSave, onClose }) {
 
     const conditions = [];
     if (flowOp) conditions.push({ type:'flow', op: flowOp });
-    if (koncD)  conditions.push({ type:'koncorde', timeframe:'d',  condition: koncD });
-    if (konc3D) conditions.push({ type:'koncorde', timeframe:'3d', condition: konc3D });
-    if (koncW)  conditions.push({ type:'koncorde', timeframe:'w',  condition: koncW });
+    koncD.forEach(cond  => conditions.push({ type:'koncorde', timeframe:'d',  condition: cond }));
+    konc3D.forEach(cond => conditions.push({ type:'koncorde', timeframe:'3d', condition: cond }));
+    koncW.forEach(cond  => conditions.push({ type:'koncorde', timeframe:'w',  condition: cond }));
     if (priceOn) conditions.push({ type:'price', op: priceOp, threshold: priceThreshold });
     ratioPairs.filter(rp => rp.required && rp.other_ticker.trim()).forEach((rp, i) => {
       const key = cleanPairs[i]?.key;
@@ -568,16 +589,28 @@ function SpecialSituationModal({ item, onSave, onClose }) {
         </div>
 
         <div className="field">
-          <label>Koncorde — condiciones por timeframe (opcional, marca las que apliquen)</label>
+          <label>Koncorde — condiciones por timeframe (opcional, marca todas las que apliquen — varias a la vez cuentan como AND)</label>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
-            {[['D', koncD, setKoncD], ['3D', konc3D, setKonc3D], ['W', koncW, setKoncW]].map(([tfLbl, val, setter]) => (
-              <div key={tfLbl}>
-                <span style={lbl}>{tfLbl}</span>
-                <select style={sel} value={val} onChange={e=>setter(e.target.value)}>
-                  {KONC_COND_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-            ))}
+            {[['D', koncD, setKoncD], ['3D', konc3D, setKonc3D], ['W', koncW, setKoncW]].map(([tfLbl, selSet, setter]) => {
+              const toggle = val => setter(prev => {
+                const next = new Set(prev);
+                next.has(val) ? next.delete(val) : next.add(val);
+                return next;
+              });
+              return (
+                <div key={tfLbl}>
+                  <span style={lbl}>{tfLbl}{selSet.size ? ` (${selSet.size})` : ''}</span>
+                  <div style={{border:'1px solid #ddd', borderRadius:3, maxHeight:140, overflowY:'auto', padding:'2px 4px', background:'white'}}>
+                    {KONC_COND_OPTIONS.filter(o => o.value).map(o => (
+                      <label key={o.value} style={{display:'flex', alignItems:'flex-start', gap:4, fontSize:10, padding:'2px 0', cursor:'pointer', lineHeight:1.25}}>
+                        <input type="checkbox" style={{marginTop:1}} checked={selSet.has(o.value)} onChange={()=>toggle(o.value)} />
+                        <span>{o.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -751,6 +784,7 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, i
   const fr   = v => v == null ? '—' : (v >= 0 ? '+' : '') + Math.round(v) + '%';
   const fv   = v => v == null ? '—' : v + '%';
   let md = `# Portfolio Tracker — Snapshot\n**Fecha:** ${date}\n\n`;
+  md += `_MACD: ▲/▼ = tendencia del histograma vs ayer (color implícito en el estado); "*" = va en contra del estado (▲* bajista recuperando, ▼* alcista perdiendo fuerza)._\n\n`;
   md += `## RESUMEN GLOBAL\n| Coste | Valor | P&L | P&L% | Daily P&L |\n|------:|------:|----:|-----:|----------:|\n`;
   md += `| ${f(summary.cost)} | ${f(summary.value)} | ${f(summary.pl)} | ${fp(summary.plPct)} | ${f(summary.dailyPL)} |\n\n`;
   portfolio.sections.forEach(sec => {
@@ -768,7 +802,8 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, i
       const koncD   = p ? `blue ${fmtKonc(p.konc_d_blue,  p.konc_d_blue_delta1)} / green ${fmtKonc(p.konc_d_green,  p.konc_d_green_delta1)} / trend ${fmtKonc(p.konc_d_trend,  p.konc_d_trend_delta1)} (${koncStateLbl(p.konc_d_state)})`  : '—';
       const konc3D  = p ? `blue ${fmtKonc(p.konc_3d_blue, p.konc_3d_blue_delta1)} / green ${fmtKonc(p.konc_3d_green, p.konc_3d_green_delta1)} / trend ${fmtKonc(p.konc_3d_trend, p.konc_3d_trend_delta1)} (${koncStateLbl(p.konc_3d_state)})` : '—';
       const koncW   = p ? `blue ${fmtKonc(p.konc_w_blue,  p.konc_w_blue_delta1)} / green ${fmtKonc(p.konc_w_green,  p.konc_w_green_delta1)} / trend ${fmtKonc(p.konc_w_trend,  p.konc_w_trend_delta1)} (${koncStateLbl(p.konc_w_state)})`  : '—';
-      const macd    = p?.macdBull == null ? '—' : p.macdBull ? '▲' : '▼';
+      const macdT   = macdTriangle(p);
+      const macd    = macdT ? macdT.glyph + (macdT.weakening ? '*' : '') : '—';
       const macd0Trend = p?.macdLineDelta5 == null || p.macdLineDelta5 === 0 ? '' : (p.macdLineDelta5 > 0 ? '↑' : '↓');
       const macd0   = p?.macdLineBull == null ? '—' : `${p.macdLineBull ? '+' : ''}${p.macdLine}${macd0Trend}`;
       const notes   = (item.notes || '—').replace(/\|/g, '/').replace(/\n/g, ' ');
@@ -1755,7 +1790,7 @@ function Portfolio() {
                     <th title="Estado Koncorde Plus: Acumul. / Alza / Distrib. / Baja">Estado</th>
                     <th title="Mini-gráfico Koncorde — últimas 5 sesiones (azul/verde/tendencia-EMA15). Área+línea, misma escala que el 0.">📈</th>
                     <th title="Marca manual por timeframe: has comprobado que el posicionamiento del azul de Koncorde en ESTE timeframe (D en la fila principal, 3D y W en sus sub-filas) anticipa los giros alcistas/bajistas de esta acción. Guarda la fecha en que la marcaste, para saber qué periodo revisar más adelante y ampliar la validación.">🔮</th>
-                    <th title="MACD histograma (12,26,9) — ▲ alcista / ▼ bajista">MACD</th>
+                    <th title="MACD histograma (12,26,9). Color = estado (línea vs señal): verde alcista / rojo bajista. Flecha = tendencia del histograma vs ayer: ▲ creciendo / ▼ menguando — puede ir en contra del color (verde▼ = alcista perdiendo fuerza, rojo▲ = bajista recuperando).">MACD</th>
                     <th title="Línea MACD (EMA12−EMA26) por encima (+) o por debajo (−) de 0 — distinto de la columna MACD: esa mira el histograma (línea vs su señal EMA9), esta mira la línea en sí vs cero. Flecha ↑/↓ = tendencia de la línea en las últimas 5 sesiones.">MACD 0</th>
                     <th title="ATLAS Mini (Blai5): estrechamiento significativo de Bollinger Bands(20). dbb=sqrt((BBup-BBlow)/BBup)×20, señal si dbb ≤ EMA(dbb,120)×0.8. No da dirección, solo avisa de posible movimiento brusco próximo — combinar con MACD.">ATLAS</th>
                     <th title="ATR(14) normalizado por precio — volatilidad/fuerza del movimiento">ATR%</th>
@@ -1912,11 +1947,14 @@ function Portfolio() {
                                 : 'Marcar si compruebas que el patrón Koncorde D (azul) predice los giros de esta acción'}
                             style={{cursor:'pointer'}}/>
                         </td>
-                        {/* MACD */}
-                        <td style={{textAlign:'center',fontSize:12}}>
-                          {isLoad ? dot : p?.macdBull==null ? <span style={{color:'#aaa'}}>—</span>
-                            : p.macdBull ? <span style={{color:'#1a7a1a'}}>▲</span>
-                                         : <span style={{color:'#c0392b'}}>▼</span>}
+                        {/* MACD — color = estado (línea vs señal), flecha = tendencia del
+                            histograma vs ayer (puede ir en contra del color, ver macdTriangle) */}
+                        <td style={{textAlign:'center',fontSize:12}}
+                          title={p?.macdHist!=null ? `Histograma MACD = ${p.macdHist}${p.macdHistDelta1!=null ? ` (Δ1d ${p.macdHistDelta1>=0?'+':''}${p.macdHistDelta1})` : ''}` : undefined}>
+                          {isLoad ? dot : (() => {
+                            const t = macdTriangle(p);
+                            return t ? <span style={{color:t.color}}>{t.glyph}</span> : <span style={{color:'#aaa'}}>—</span>;
+                          })()}
                         </td>
                         {/* MACD línea vs 0 — distinto del histograma de la columna anterior.
                             La flecha es la tendencia de la línea en las últimas 5 sesiones

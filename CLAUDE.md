@@ -3597,6 +3597,89 @@ sobrescribirá de todos modos en unas horas.
 
 ---
 
+## Situaciones Especiales — multi-selección de condiciones Koncorde por timeframe (implementado 2026-09-22)
+
+El modal `SpecialSituationModal` (`portfolio.html`) solo permitía UNA
+condición Koncorde por timeframe (D/3D/W) — un `<select>` por columna. El
+usuario pidió poder marcar varias condiciones a la vez para el mismo
+timeframe (ej. D: "Blue positivo" Y "Estado = Acumulación" simultáneamente),
+válido para las 3 columnas.
+
+**No hizo falta tocar backend ni evaluadores** — `conditions[]` ya era un
+array plano de `{type:'koncorde', timeframe, condition}` y tanto
+`evaluate_conditions()` (`scripts/koncorde_alert_conditions.py`) como su
+espejo cliente (`evaluateSituationConditions()`/`checkKoncordeCond()` en
+`portfolio.html`) ya evalúan cada entrada de forma independiente con AND —
+nada impedía que dos entradas compartieran el mismo `timeframe`. El único
+límite era la UI del modal, que solo dejaba construir una entrada por
+columna.
+
+**Cambio, solo en `SpecialSituationModal`:** los 3 `<select>` (D/3D/W) se
+sustituyeron por 3 cajas de checkboxes con scroll (`maxHeight:140,
+overflowY:'auto'`), estado `koncD`/`konc3D`/`koncW` pasó de `string` a
+`Set<string>`. `koncByTf` (reconstrucción del estado al editar una
+situación existente) pasó de quedarse solo con la última condición del
+timeframe (sobrescritura silenciosa) a acumular un array por timeframe. Al
+guardar, cada Set se recorre y genera una entrada independiente en
+`conditions[]` — mismo formato exacto que antes, solo que ahora puede haber
+más de una fila por timeframe. Badge junto a cada columna (`D (2)`) muestra
+cuántas condiciones hay marcadas.
+
+**Verificado end-to-end** (Edge headless vía CDP, servidor local real): 2
+checkboxes marcados en D + 1 en 3D → el `POST /api/special-situations` real
+llevó 3 entradas `koncorde` independientes (`state_accumulation`+
+`blue_positive` en `d`, `blue_negative` en `3d`); la fila de la tabla
+renderizó las 3 como badges separados (`Estado = Acumulación (D)` / `Blue
+positivo (D)` / `Blue negativo (3D)`); cero errores de consola. Situación de
+prueba (`TESTMULTI`) creada y eliminada tras verificar — mismo patrón ya
+aceptado para `TESTX`/`ads_de_...`/`TESTPX` en secciones anteriores (2
+commits de auto-commit+push de `server.js` generados y revertidos,
+`docs/data/koncorde_bot_alerts.json` limpio tras la limpieza).
+
+---
+
+## Triángulo MACD en Portfolio Tracker — color = estado, dirección = tendencia del histograma (implementado 2026-09-22)
+
+La columna MACD de `portfolio.html` (tabla "Cartera") mostraba ▲ verde /
+▼ rojo según `macdBull` (histograma = línea MACD vs su señal EMA9, ≥0 o
+no) — un único bit de estado, sin indicar si la barra del histograma
+crecía o menguaba sesión a sesión. El usuario señaló que sería útil
+distinguir "alcista pero perdiendo fuerza" de "alcista y acelerando", y
+propuso invertir el triángulo (manteniendo el color del estado) cuando el
+histograma va en contra: ▼ verde = todavía alcista pero menguando, ▲ rojo
+= todavía bajista pero recuperando.
+
+**Campo nuevo `macdHistDelta1`** (`shared/quote-lib.js → calcMACD()`) —
+`histograma_hoy − histograma_ayer`, con signo. Aditivo puro, mismo patrón
+que `macdLineDelta5` (ya existente para la columna "MACD 0"): no toca
+`macdHist`/`macdBull`/`macdLine`/`macdLineBull`/`macdHistRecent`.
+
+**Regla, sin umbral que calibrar** (color y dirección son ejes
+independientes, no un nuevo nivel de "fuerza"): color = `macdBull` (verde
+si histograma≥0, rojo si <0, el cruce clásico). Dirección = signo de
+`macdHistDelta1` (▲ si el histograma de hoy es mayor que el de ayer, ▼ si
+es menor) — **independiente del color**. Los 4 cruces resultantes:
+`▲ verde` (alcista acelerando, el caso "normal"), `▼ verde` (alcista
+perdiendo fuerza — el caso que motivó el cambio), `▼ rojo` (bajista
+acelerando, "normal"), `▲ rojo` (bajista recuperando). Helper
+`macdTriangle(p)` (`portfolio.html`, junto a `fmtKonc`) centraliza la
+regla — usado tanto en la celda de la tabla como en el export a Markdown
+(`buildPortfolioMarkdown`, que además añade un sufijo `*` cuando la
+flecha contradice el color, ya que el markdown en texto plano no puede
+transmitir color — con una nota de leyenda al inicio del documento).
+
+**Verificado con datos reales** (servidor reiniciado tras el cambio en
+`shared/quote-lib.js` — módulo compartido con `server.js`, ver
+[[project_dev_server_persistent]]; Edge headless vía CDP contra el
+servidor real): `/api/quote/AAPL` confirma `macdHistDelta1` poblado; barrido
+de las 57 filas reales de la tabla "Cartera" encontró los 4 cruces color/
+dirección presentes de forma natural en el universo actual (ej. histograma
+0.0166 con Δ1d −0.0021 → ▼ verde; histograma −0.0045 con Δ1d +0.00002 →
+▲ rojo), con el tooltip mostrando el histograma y el delta exacto. Cero
+errores de consola.
+
+---
+
 ## Orden en tabla "Acciones individuales — candidatos por cluster" + fix de /api/state (2026-08-28)
 
 ### Orden por columna (`rotacion.html`, `StockCandidates`)
