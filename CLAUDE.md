@@ -6166,6 +6166,82 @@ una utilidad del sistema de alertas, no toca el motor de picks.
 
 ---
 
+## "Fallo de MACD" (fallo bajista de implicaciones alcistas) — backtest, NO se construye el panel (2026-09-24)
+
+El usuario pidió incorporar un detector nuevo en la pestaña Trullás,
+descripción literal del método: precio cae con MACD por debajo de su señal
+→ recuperación (MACD cruza al alza) → precio marca un nuevo mínimo → el
+MACD retrocede pero **no vuelve a cruzar por debajo de la señal** → MACD
+gira de nuevo al alza ("fallo bajista de implicaciones alcistas"). Antes de
+tocar código se preguntó al usuario por las 4 decisiones que más cambiaban
+el resultado (mismo criterio que el resto del proyecto,
+[[feedback_rigor_ask_for_literal_spec]]): **validar con backtest antes de
+construir nada** (sí); condición de "no vuelve a cruzar por debajo" —
+**estricta, todo el tramo** entre el cruce alcista y el nuevo mínimo, no
+solo el instante del mínimo; "nuevo mínimo" = **pivote fractal confirmado**
+(mismo `find_pivots_low` de 5 sesiones que ya usa el resto de Trullás); y
+alcance — **solo panel visual** en `trullas.html` si el backtest resultaba
+favorable, sin tocar `TRULLAS_SHADOW` ni el sistema de alertas.
+
+**Resultado: no se construye el panel.** Backtest completo en
+`research/trullas_macd_failure_swing_v1/` (script + README con la
+metodología y las cifras completas). Patrón muy raro (74 de 11.464 pares de
+pivotes consecutivos en el universo Portfolio Tracker, 0,65%) y, con los
+datos disponibles, sin evidencia de aportar nada mejor que la divergencia
+MACD estándar que ya usa el sistema en producción:
+
+- **57% de los 74 candidatos se invalida** (rompe el stop) antes siquiera
+  de poder operarse — el patrón no protege de forma fiable contra que el
+  precio siga cayendo, justo lo contrario de su promesa "de implicaciones
+  alcistas".
+- Medición puramente descriptiva (retorno de precio desde el primer día
+  REALMENTE confirmable, `b + PIVOT_WINDOW` — nunca desde el propio
+  pivote, que estaría sesgado por construcción, mismo bug ya corregido una
+  vez en `research/trullas_extended_divergence_v1`): mediana **negativa**
+  y win%<50% a 21 y 63 sesiones (n=74), pese a media positiva sostenida
+  por un puñado de casos extremos.
+- De los 6 trades que sí llegan a ejecutarse con el mismo modelo Fibonacci
+  ya validado (`V1_EXECUTABLE`), 4 de 6 **ya calificaban** con el método
+  de divergencia estándar — poca cobertura genuinamente nueva, y los 2
+  casos realmente nuevos (JNJ, SLS) rinden peor que el baseline
+  (media -0.19% vs +1.27% del baseline).
+
+Ninguno de esos tres hallazgos es concluyente por separado con un n tan
+pequeño, pero los tres apuntan en la misma dirección — mismo patrón que
+otras hipótesis descartadas en este proyecto tras contrastarlas con datos
+reales (Capitulación Precursores, Relative Flow Family Test v1): una
+descripción de manual razonable que no sobrevive al contraste empírico en
+este universo concreto.
+
+**Follow-up mismo día — versión laxa de la condición 4, tampoco funciona
+(peor incluso).** El usuario pidió probar la alternativa descartada de
+entrada: en vez de exigir que el MACD permanezca por encima de su señal en
+TODO el tramo entre el cruce y el nuevo mínimo, exigir solo que lo esté EN
+el instante del nuevo mínimo (`strict_stretch=False`, parámetro nuevo en
+`evaluate_macd_failure_swing()`, por defecto sigue siendo la versión
+estricta). Resultado: duplica los candidatos (145 vs 74) pero la calidad
+no sube con la cantidad — media de trades ejecutables cae de +1.85% a
+**+0.03%**, y los casos genuinamente nuevos (no capturados por el método
+estándar) empeoran de -0.19% a **-3.76%** (n=3). No hay ningún punto entre
+"estricto" y "laxo" donde el patrón funcione — relajar la condición más
+sospechosa hace el resultado peor, no mejor. Comparativa completa en el
+README.
+
+`evaluate_macd_failure_swing()`/`find_bullish_cross_between()` quedan en
+`scripts/trullas_lib.py`, marcadas explícitamente "investigación, no en
+producción" (mismo patrón que `evaluate_early_candidate_b0`/
+`classify_extended_divergence`) — sin ningún llamador desde
+`trullas_signal_calculator.py` ni `trullas_shadow_portfolio.py`.
+**`trullas.html` no se ha tocado.**
+
+### Fuera de alcance
+
+Universo más allá de Portfolio Tracker. Costes de transacción (n=6-7
+ejecutables no da para nada más). Preregistro con split dev/test — no
+aplica, este backtest nunca llegó al punto de proponer operar nada.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

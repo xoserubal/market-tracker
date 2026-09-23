@@ -364,3 +364,103 @@ def classify_extended_divergence(close: np.ndarray, macd_arr: np.ndarray,
         if macd_range > 0 and (macd_r - macd_b) < EXTENDED_STALL_FRACTION * macd_range:
             return "PARTIAL_LOWER_LOW_STALLING_MOMENTUM", swing_pct_rb
     return "NONE", swing_pct_rb
+
+
+# ── "Fallo de MACD" / fallo bajista de implicaciones alcistas — ────────────
+# investigación, no en producción. Añadido 2026-09-23 a petición del usuario
+# (descripción literal del método Trullás, ver CLAUDE.md "Detector MACD
+# Failure Swing"). Ninguna función de aquí abajo se usa en
+# trullas_signal_calculator.py ni en trullas_shadow_portfolio.py todavía —
+# solo en research/trullas_macd_failure_swing_v1/, pendiente de decidir tras
+# el backtest si se expone como panel en trullas.html.
+
+def find_bullish_cross_between(macd_line: np.ndarray, signal_line: np.ndarray,
+                                start_idx_exclusive: int, end_idx_inclusive: int) -> int | None:
+    """Primer índice en (start_idx_exclusive, end_idx_inclusive] donde la
+    línea MACD cruza de por debajo a por encima/igual de su señal (línea[i-1]
+    < señal[i-1] y línea[i] >= señal[i]). None si no hay ningún cruce en ese
+    tramo."""
+    for i in range(start_idx_exclusive + 1, end_idx_inclusive + 1):
+        if macd_line[i - 1] < signal_line[i - 1] and macd_line[i] >= signal_line[i]:
+            return i
+    return None
+
+
+def evaluate_macd_failure_swing(close: np.ndarray, macd_line: np.ndarray, signal_line: np.ndarray,
+                                 a_idx: int, b_idx: int, require_turn_up: bool = True,
+                                 strict_stretch: bool = True) -> dict | None:
+    """"Fallo bajista de implicaciones alcistas" (Trullás) — mismo par de
+    pivotes de mínimo CONSECUTIVOS (a=más antiguo, b=más reciente) que
+    evaluate_pivot_pair(), pero un gate DISTINTO: en vez de comparar el
+    valor crudo del MACD entre los dos pivotes (macd[b] > macd[a]), exige
+    una secuencia concreta sobre la RELACIÓN línea-vs-señal:
+
+      1. En el pivote `a`, la línea MACD está por debajo de su señal
+         (estado bajista de partida).
+      2. Entre `a` y `b` la línea cruza al ALZA sobre su señal (recuperación).
+      3. El precio cae de nuevo y marca un mínimo más bajo en `b`.
+      4. La línea MACD, aunque retrocede, no vuelve a mostrar la
+         configuración bajista de partida. Dos lecturas posibles de esto,
+         controladas por `strict_stretch` — la pregunta quedó explícita
+         con el usuario tras el primer backtest (2026-09-23/24), que solo
+         probó la estricta:
+           - `strict_stretch=True` (por defecto, versión ya validada): la
+             línea permanece por encima/igual de su señal en TODO el tramo
+             entre el cruce alcista y `b` — cualquier cruce por debajo en
+             medio invalida el patrón.
+           - `strict_stretch=False` (versión laxa, 2026-09-24): solo se
+             exige que, EN EL INSTANTE de `b`, la línea siga por
+             encima/igual de su señal — permite que haya oscilado por
+             debajo en algún punto intermedio del tramo, mientras no esté
+             por debajo justo cuando el precio marca el nuevo mínimo.
+      5. Para el momento en que el pivote `b` queda confirmado
+         (b + PIVOT_WINDOW, mismo lag de confirmación que el resto del
+         sistema), la línea MACD ya ha vuelto a girar al alza
+         (macd[b+PIVOT_WINDOW] > macd[b]) — la parte "vuelve a girarse al
+         alza" de la descripción. `require_turn_up=False` la desactiva,
+         para el análisis de sensibilidad.
+
+    Devuelve None si no hay suficiente historia para evaluar el tramo
+    completo (nunca False encubierto en None — mismo principio que el resto
+    de evaluadores del proyecto). Si no califica, un dict con "reason". Si
+    califica, un dict con "qualifies": True y los índices relevantes.
+    """
+    c1, c2 = float(close[a_idx]), float(close[b_idx])
+    if not (c2 < c1):
+        return {"reason": "no_lower_low"}
+    swing_pct = (c1 - c2) / c1 * 100
+    if swing_pct < MIN_SWING_PCT:
+        return {"reason": "swing_too_small", "swing_pct": swing_pct}
+
+    seg_macd, seg_sig = macd_line[a_idx:b_idx + 1], signal_line[a_idx:b_idx + 1]
+    if np.isnan(seg_macd).any() or np.isnan(seg_sig).any():
+        return {"reason": "insufficient_history", "swing_pct": swing_pct}
+
+    if not (macd_line[a_idx] < signal_line[a_idx]):
+        return {"reason": "no_bearish_anchor_at_a", "swing_pct": swing_pct}
+
+    cross_idx = find_bullish_cross_between(macd_line, signal_line, a_idx, b_idx)
+    if cross_idx is None:
+        return {"reason": "no_bullish_cross_between", "swing_pct": swing_pct}
+
+    if strict_stretch:
+        stretch_macd = macd_line[cross_idx:b_idx + 1]
+        stretch_sig = signal_line[cross_idx:b_idx + 1]
+        if not np.all(stretch_macd >= stretch_sig):
+            return {"reason": "macd_crossed_back_below", "swing_pct": swing_pct, "cross_idx": int(cross_idx)}
+    else:
+        if not (macd_line[b_idx] >= signal_line[b_idx]):
+            return {"reason": "macd_below_signal_at_b", "swing_pct": swing_pct, "cross_idx": int(cross_idx)}
+
+    if require_turn_up:
+        confirm_idx = b_idx + PIVOT_WINDOW
+        if confirm_idx >= len(macd_line) or np.isnan(macd_line[confirm_idx]) or np.isnan(macd_line[b_idx]):
+            return {"reason": "not_confirmable_yet", "swing_pct": swing_pct, "cross_idx": int(cross_idx)}
+        if not (macd_line[confirm_idx] > macd_line[b_idx]):
+            return {"reason": "macd_not_turning_up", "swing_pct": swing_pct, "cross_idx": int(cross_idx)}
+
+    return {
+        "reason": None, "qualifies": True,
+        "pivot_a_close": c1, "pivot_b_close": c2, "swing_pct": swing_pct,
+        "cross_idx": int(cross_idx),
+    }
