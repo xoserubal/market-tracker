@@ -6363,6 +6363,87 @@ ningún dato pisado en silencio. YAML validado con PyYAML tras el cambio.
 
 ---
 
+## Fix: `server.js` dejaba commits sin publicar tras un push rechazado — mismo bug que el pipeline, sin el fix (implementado 2026-09-29)
+
+El usuario reportó `node server.js` fallando al arrancar: `git pull --ff-only`
+(el pull automático de `gitPull()` al iniciar, mismo mecanismo que el botón
+"Sincronizar") con `fatal: Not possible to fast-forward, aborting` — rama
+local con 2 commits propios y `origin/master` con 3 commits que no tenía.
+
+**Causa raíz — el mismo bug ya corregido en el pipeline
+("Commit updated data", 2026-09-24, ver sección de arriba), pero sin
+aplicar a los 4 puntos de `server.js` que también hacen auto-commit+push**:
+`POST /api/stock-config`, `POST /api/universe/add`, `POST /api/universe/remove`
+y `_pushSpecialSituations()` (usada por Situaciones Especiales) encadenaban
+`git add && git commit && git push origin master` en un solo `exec()`, sin
+ningún reintento. Si el pipeline (u otro de estos mismos endpoints, u otro
+workflow con su propio auto-commit) publicaba en `master` entre el commit
+local y el push, el push se rechazaba y **el commit se quedaba local,
+sin push y sin ningún aviso visible** (solo un `console.log` de advertencia
+en la terminal del servidor, fácil de no ver). Confirmado en producción: los
+2 commits divergentes (`add REG.V to universe`, `update individual_stocks.yaml`)
+llevaban así hasta que el siguiente `git pull --ff-only` —que si exige
+fast-forward estricto por diseño, para nunca fusionar contenido en
+silencio— falló en voz alta y lo hizo visible.
+
+**Fix:** `gitCommitAndPushWithRetry(relPaths, commitMsg, logLabel)`
+(`server.js`, junto a `gitPull()`) — mismo patrón que el step del pipeline:
+intenta el push hasta 5 veces, y si se rechaza hace `git fetch` + `git rebase
+origin/master` antes de reintentar; si el rebase encuentra un conflicto real
+de contenido, lo aborta y falla en voz alta (log) en vez de resolverlo a
+ciegas con `-X ours/theirs` — mismo criterio que el pipeline, para no
+descartar en silencio una edición real. Los 4 puntos de auto-commit de
+`server.js` ahora llaman a este helper en vez de su propio `exec()` suelto.
+
+**Divergencia real resuelta en el propio cambio:** `git rebase
+origin/master` limpio (sin conflictos — los 2 commits locales tocaban
+`docs/data/universe.json`/`backtest/config/individual_stocks.yaml`, el
+pipeline tocaba archivos de datos distintos) + push — confirmado en GitHub
+(`c1b6a6f8..606640f7 master -> master`). El `portfolio.json` modificado sin
+commitear (cambios en curso del propio servidor corriendo) se guardó con
+`git stash` antes del rebase y se restauró después, sin tocarlo.
+
+**Verificado con un repo temporal aislado (bare remote + 2 clones)**
+simulando exactamente la race: clon B commitea+publica primero, clon A
+(con el mismo archivo modificado, offline respecto a ese push) ejecuta el
+helper — intento 1 rechazado, fetch+rebase automático, intento 2 con éxito;
+`git log` del remoto confirma ambos commits en orden lineal, ninguno
+perdido. Caso "nada que commitear" (sin cambios staged) confirmado como
+no-op limpio. `node --check server.js` limpio tras el cambio.
+
+**Pendiente del lado del usuario:** reiniciar `node server.js` para que
+recoja el cambio — ver [[project_dev_server_persistent]].
+
+---
+
+## Hover con el valor de la sesión anterior en las celdas Koncorde blue/green/trend (implementado 2026-09-29)
+
+Petición del usuario: al pasar el ratón por la flecha ↑/↓ de las celdas
+Koncorde (blue/green/trend, en las 3 filas D/3D/W de `portfolio.html`), ver
+el valor de la sesión anterior — hasta ahora la flecha solo indicaba
+dirección (`fmtKonc()`, umbral ±0.1), sin magnitud visible sin mirar el
+mini-gráfico.
+
+**`koncPrevTitle(label, v, d)`** (nuevo, junto a `fmtKonc`) — calcula
+`prev = v - d` (ya que `konc_*_delta1` es "hoy − ayer", campo que estas
+celdas ya recibían y usaban solo para decidir la flecha) y devuelve el
+texto del `title`: `"Blue: 5.2 · sesión anterior: 3.1 (+2.1)"`. `fmtKonc`
+en sí no se tocó (sigue siendo una función pura que devuelve texto, usada
+también en los resúmenes de texto de `buildPortfolioMarkdown`, donde un
+tooltip no aplica) — el `title` se añadió como atributo en las 9 celdas
+`<td>` (D/3D/W × blue/green/trend) que ya envolvían el resultado de
+`fmtKonc()`.
+
+**Verificado:** JSX transpila sin errores (`@babel/standalone` en Node).
+No se pudo verificar visualmente con Edge headless en esta sesión (mismo
+problema de lanzamiento ya documentado en la sección de la PWA) — cambio de
+bajo riesgo (solo añade un atributo `title` HTML estándar a celdas ya
+existentes, sin tocar lógica de cálculo ni de render), verificado por
+inspección de la aritmética (`prev = v - d`, coherente con que `delta1` ya
+se usaba para decidir ↑/↓ en las mismas celdas).
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

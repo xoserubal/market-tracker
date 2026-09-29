@@ -5,6 +5,8 @@ const cors    = require("cors");
 const path    = require("path");
 const fs      = require("fs");
 const { exec } = require("child_process");
+const { promisify } = require("util");
+const execP = promisify(exec);
 
 const app = express();
 
@@ -753,11 +755,7 @@ app.post("/api/stock-config", express.json({ limit: '5mb' }), (req, res) => {
     res.json({ ok: true });
     // Push al config a GitHub en background para que Actions lo recoja
     const rel = path.relative(__dirname, STOCK_CFG).replace(/\\/g, '/');
-    const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "chore: update individual_stocks.yaml from dashboard" && git push origin master`;
-    exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
-      if (err) console.log("⚠ git push config:", (stderr || err.message).trim());
-      else     console.log("✓ git push config:", stdout.trim() || "ok");
-    });
+    gitCommitAndPushWithRetry([rel], "chore: update individual_stocks.yaml from dashboard", "config");
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -862,6 +860,51 @@ function fixGitObjectPerms(done) {
   done();
 }
 
+// Stages relPaths, commits (no-op if nothing changed) and pushes to origin
+// master, retrying with a fetch+rebase when the push is rejected because
+// something else published to master in the meantime (a pipeline run, the
+// "Sincronizar" pull, another dashboard edit) — same non-fast-forward
+// failure already fixed for the pipeline's own "Commit updated data" step
+// (2026-09-24, see CLAUDE.md). Real bug this fixes: unlike that step, these
+// dashboard auto-commit call sites (config/universe/special situations) had
+// no retry at all, so a rejected push left the commit stuck local-only —
+// confirmed 2026-09-29 (two such commits sat unpushed for days, then made
+// the startup `git pull --ff-only` fail outright with "Not possible to
+// fast-forward"). On a real rebase conflict, abort and log loudly instead
+// of guessing with -X ours/theirs, which could silently drop a real edit.
+async function gitCommitAndPushWithRetry(relPaths, commitMsg, logLabel) {
+  try {
+    await execP(`git add ${relPaths.map(p => `"${p}"`).join(" ")}`, { cwd: __dirname });
+    try {
+      await execP(`git diff --cached --quiet`, { cwd: __dirname });
+      return; // nothing staged, no-op
+    } catch (_) {
+      // git diff --cached --quiet exits non-zero when there ARE staged changes
+    }
+    await execP(`git commit -m "${commitMsg}"`, { cwd: __dirname });
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        const { stdout } = await execP(`git push origin master`, { cwd: __dirname });
+        console.log(`✓ git push ${logLabel}:`, (stdout || "ok").trim());
+        return;
+      } catch (pushErr) {
+        console.log(`⚠ git push ${logLabel} rechazado (intento ${attempt}/5), reintentando con rebase:`, (pushErr.stderr || pushErr.message).trim());
+        try {
+          await execP(`git fetch origin master`, { cwd: __dirname });
+          await execP(`git rebase origin/master`, { cwd: __dirname });
+        } catch (rebaseErr) {
+          console.log(`⚠ git push ${logLabel}: conflicto real al hacer rebase, requiere revisión manual —`, (rebaseErr.stderr || rebaseErr.message).trim());
+          try { await execP(`git rebase --abort`, { cwd: __dirname }); } catch (_) {}
+          return;
+        }
+      }
+    }
+    console.log(`⚠ git push ${logLabel}: siguió fallando tras 5 reintentos`);
+  } catch (err) {
+    console.log(`⚠ git push ${logLabel}:`, (err.stderr || err.message || String(err)).trim());
+  }
+}
+
 function gitPull(cb) {
   fixGitObjectPerms(() => {
     exec("git pull --ff-only origin master", { cwd: __dirname, timeout: 60000 }, (err, stdout, stderr) => {
@@ -923,11 +966,7 @@ app.post("/api/universe/add", express.json({ limit: '5mb' }), (req, res) => {
     res.json({ ok: true, added: ticker });
 
     const rel = path.relative(__dirname, UNIVERSE_FILE).replace(/\\/g, "/");
-    const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "chore: add ${ticker} to universe from dashboard" && git push origin master`;
-    exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
-      if (err) console.log("⚠ git push universe:", (stderr || err.message).trim());
-      else     console.log("✓ git push universe:", stdout.trim() || "ok");
-    });
+    gitCommitAndPushWithRetry([rel], `chore: add ${ticker} to universe from dashboard`, "universe");
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -949,11 +988,7 @@ app.post("/api/universe/remove", express.json({ limit: '5mb' }), (req, res) => {
     res.json({ ok: true, removed: ticker });
 
     const rel = path.relative(__dirname, UNIVERSE_FILE).replace(/\\/g, "/");
-    const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "chore: remove ${ticker} from universe from dashboard" && git push origin master`;
-    exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
-      if (err) console.log("⚠ git push universe:", (stderr || err.message).trim());
-      else     console.log("✓ git push universe:", stdout.trim() || "ok");
-    });
+    gitCommitAndPushWithRetry([rel], `chore: remove ${ticker} from universe from dashboard`, "universe");
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -987,11 +1022,7 @@ function _readSpecialSituations() {
 
 function _pushSpecialSituations(commitMsg) {
   const rel = path.relative(__dirname, SPECIAL_SITUATIONS_FILE).replace(/\\/g, "/");
-  const cmd = `git add "${rel}" && git diff --cached --quiet || git commit -m "${commitMsg}" && git push origin master`;
-  exec(cmd, { cwd: __dirname }, (err, stdout, stderr) => {
-    if (err) console.log("⚠ git push situaciones especiales:", (stderr || err.message).trim());
-    else     console.log("✓ git push situaciones especiales:", stdout.trim() || "ok");
-  });
+  gitCommitAndPushWithRetry([rel], commitMsg, "situaciones especiales");
 }
 
 app.get("/api/special-situations", (_req, res) => {

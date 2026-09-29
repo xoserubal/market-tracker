@@ -109,6 +109,16 @@ const INSIDER_CONTEXT_LBL = {strong_confirmation:'Confirmación fuerte',moderate
 const INSIDER_CONTEXT_STYLE = {strong_confirmation:{bg:'#22c55e',fg:'#052e16'},moderate_confirmation:{bg:'#dcfce7',fg:'#15803d'},neutral:{bg:'#f3f4f6',fg:'#6b7280'},warning:{bg:'#fee2e2',fg:'#b91c1c'},ignored_selling:{bg:'#f3f4f6',fg:'#9ca3af'},not_evaluable:{bg:'',fg:'#ccc'}};
 const INSIDER_COVERAGE_LBL = {covered:'✓ Cubierto',unsupported_non_us_or_no_data:'No cubierto (no-US)',error:'Error'};
 const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
+// Título de hover para las celdas blue/green/trend de Koncorde — pedido por
+// el usuario 2026-09-29: al pasar el ratón por la flecha, ver el valor de la
+// sesión anterior (v - delta1) y el delta exacto, no solo la dirección ↑/↓.
+const koncPrevTitle = (label, v, d) => {
+  if (v == null) return null;
+  if (d == null) return `${label}: ${v.toFixed(1)} (sin dato de sesión anterior)`;
+  const prev = v - d;
+  const ds = d >= 0 ? '+' : '';
+  return `${label}: ${v.toFixed(1)} · sesión anterior: ${prev.toFixed(1)} (${ds}${d.toFixed(1)})`;
+};
 // ── Triángulo MACD (histograma) — color = estado, dirección = tendencia ────
 // Color = macdBull (línea MACD por encima/debajo de su señal — el cruce
 // clásico). Dirección = signo de macdHistDelta1 (¿la barra de hoy es más
@@ -2027,13 +2037,16 @@ function Portfolio() {
                         </td>
                         {/* Koncorde Plus — D row */}
                         <td style={{textAlign:'center',fontSize:9,color:'#888',fontWeight:600}}>D</td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,color:blueFg(p?.konc_d_blue)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,color:blueFg(p?.konc_d_blue)}}
+                          title={isLoad ? undefined : koncPrevTitle('Blue', p?.konc_d_blue, p?.konc_d_blue_delta1)}>
                           {isLoad ? dot : fmtKonc(p?.konc_d_blue, p?.konc_d_blue_delta1)}
                         </td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,color:greenFg(p?.konc_d_green)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,color:greenFg(p?.konc_d_green)}}
+                          title={isLoad ? undefined : koncPrevTitle('Green', p?.konc_d_green, p?.konc_d_green_delta1)}>
                           {isLoad ? dot : fmtKonc(p?.konc_d_green, p?.konc_d_green_delta1)}
                         </td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,color:trendFg(p?.konc_d_trend)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,color:trendFg(p?.konc_d_trend)}}
+                          title={isLoad ? undefined : koncPrevTitle('Trend', p?.konc_d_trend, p?.konc_d_trend_delta1)}>
                           {isLoad ? dot : fmtKonc(p?.konc_d_trend, p?.konc_d_trend_delta1)}
                         </td>
                         {(() => { const st = koncStateStyle(p?.konc_d_state); return (
@@ -2170,13 +2183,16 @@ function Portfolio() {
                       <tr style={{background:subBg1}}>
                         <td colSpan={14} style={{padding:0}}/>
                         <td style={{textAlign:'center',fontSize:9,color:'#888',fontWeight:600,padding:'1px 4px'}}>3D</td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:blueFg(p?.konc_3d_blue)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:blueFg(p?.konc_3d_blue)}}
+                          title={koncPrevTitle('Blue', p?.konc_3d_blue, p?.konc_3d_blue_delta1)}>
                           {fmtKonc(p?.konc_3d_blue, p?.konc_3d_blue_delta1)}
                         </td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:greenFg(p?.konc_3d_green)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:greenFg(p?.konc_3d_green)}}
+                          title={koncPrevTitle('Green', p?.konc_3d_green, p?.konc_3d_green_delta1)}>
                           {fmtKonc(p?.konc_3d_green, p?.konc_3d_green_delta1)}
                         </td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,padding:'1px 4px',color:trendFg(p?.konc_3d_trend)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,padding:'1px 4px',color:trendFg(p?.konc_3d_trend)}}
+                          title={koncPrevTitle('Trend', p?.konc_3d_trend, p?.konc_3d_trend_delta1)}>
                           {fmtKonc(p?.konc_3d_trend, p?.konc_3d_trend_delta1)}
                         </td>
                         {(() => { const st = koncStateStyle(p?.konc_3d_state); return (
@@ -2204,13 +2220,16 @@ function Portfolio() {
                       <tr style={{background:subBg2}}>
                         <td colSpan={14} style={{padding:0}}/>
                         <td style={{textAlign:'center',fontSize:9,color:'#888',fontWeight:600,padding:'1px 4px'}}>W</td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:blueFg(p?.konc_w_blue)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:blueFg(p?.konc_w_blue)}}
+                          title={koncPrevTitle('Blue', p?.konc_w_blue, p?.konc_w_blue_delta1)}>
                           {fmtKonc(p?.konc_w_blue, p?.konc_w_blue_delta1)}
                         </td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:greenFg(p?.konc_w_green)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontWeight:600,padding:'1px 4px',color:greenFg(p?.konc_w_green)}}
+                          title={koncPrevTitle('Green', p?.konc_w_green, p?.konc_w_green_delta1)}>
                           {fmtKonc(p?.konc_w_green, p?.konc_w_green_delta1)}
                         </td>
-                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,padding:'1px 4px',color:trendFg(p?.konc_w_trend)}}>
+                        <td style={{textAlign:'center',fontFamily:'monospace',fontSize:10,padding:'1px 4px',color:trendFg(p?.konc_w_trend)}}
+                          title={koncPrevTitle('Trend', p?.konc_w_trend, p?.konc_w_trend_delta1)}>
                           {fmtKonc(p?.konc_w_trend, p?.konc_w_trend_delta1)}
                         </td>
                         {(() => { const st = koncStateStyle(p?.konc_w_state); return (
