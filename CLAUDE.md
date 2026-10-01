@@ -7512,6 +7512,206 @@ corregido buscando el segundo `.screener-tabs` directamente):
 
 ---
 
+## Sol — disciplina de promoción EARLY/CONFIRMED + 3 screeners "Flow" (implementado 2026-10-02)
+
+Un asesor externo auditó `market_analysis_llm.jsonl` (el análisis diario
+automatizado de Sol, ver sección "Análisis de mercado automatizado — Fase 2"
+más arriba) y encontró un patrón real y repetido: Sol etiqueta EARLY/
+CONFIRMED el mismo día que aparece un ΔFlow positivo de un solo día, sin
+exigir que el Flow haya cruzado de verdad por encima de cero ni que el
+cambio persista — la auditoría del día siguiente tiene que deshacerlo.
+Propuso una especificación completa (persistencia 2-3 sesiones, vetoes de
+Koncorde/tema, 3 filtros — Inflexión/Continuación/Reversión) y el usuario
+pidió valorarla y, además de corregir la lectura diaria, implementar los 3
+filtros como screeners aplicados a diario sobre el universo.
+
+**Verificado contra datos reales antes de implementar nada** (memoria del
+proyecto: no fiarse de auditorías externas sin contrastarlas) — el
+diagnóstico se sostiene exactamente: BSX real, `flowScore=-2.9` el
+2026-09-24, etiquetado EARLY por Sol ese mismo día ("antes de un zero-cross
+de Flow" — literal en su propia prosa); el cruce real no llegó hasta el
+2026-09-25 (+0.7) y se revirtió enseguida (negativo otra vez 9/26→10/1).
+Cannabis (EARLY 9/24-28, INVALIDATED 9/30) y WTI/Brent (EARLY 9/24 y 9/28,
+INVALIDATED 10/1) cuadran igual contra `market_analysis_llm.jsonl`.
+
+**Matiz real encontrado, no señalado por el asesor:** "Uranium Regime
+Score" (citado literalmente por Sol como motivo de rechazo) no es ningún
+campo que el sistema calcule — es terminología que Sol se inventa en su
+propia narrativa a partir de los datos agregados que ve, sin que exista
+ningún cálculo detrás. Para Cannabis (que no es ninguna fase de Cycle
+Tracker) ese "regime score" ni siquiera tendría de dónde salir con el
+diseño que proponía el asesor.
+
+### Decisión de arquitectura: motor compartido, no narrativa-primero
+
+Dos problemas distintos, un solo motor de cálculo — mismo criterio que
+`ai_shared.py` (HARD_RULES) o `koncorde_alert_conditions.py`: (A) Sol deja
+de inventar el estado y recibe el cálculo de verdad en la misma tabla que
+ya lee; (B) los mismos 3 filtros se exponen como screeners discrecionales.
+Confirmado con el usuario antes de construir (`AskUserQuestion`): sí a
+ambos, y el veto de "regime score de tema" se implementa como breadth
+calculado sobre una cesta fija de tickers por tema.
+
+**Las cestas de tema no se inventaron — ya existían.** `build_portfolio_table`/
+`build_equities_table` (`market_analysis_llm.py`) ya agrupaban sus tablas
+por sección de `portfolio.json` ("Cannabis", "Petróleo", "Argentina"…) y por
+`sections` de `market_equities_daily_snapshot.jsonl` ("URANIO", "GAS
+NATURAL"…) — son literalmente las cestas que ya ve Sol. Se reutilizan tal
+cual (`EXCLUDED_BASKET_SECTIONS` excluye solo buckets de gestión sin tema
+coherente: Cartera/Watchlist/Opciones/MAJOR INDICES/MAG 6/BONDS COMMODITIES),
+sin mantener una segunda definición que pudiera desincronizarse.
+
+### `scripts/flow_state_lib.py` (nuevo) — motor Python, sin memoria persistida
+
+Reclasifica desde cero cada día a partir de la ventana de datos ya
+capturada (`portfolio_daily_snapshot.jsonl` + `market_equities_daily_snapshot.jsonl`)
+— sin máquina de estados con "el estado de ayer" guardado en ningún sitio,
+mismo criterio que `trullas_signal_calculator.py`/`koncorde_calculator.py`
+(evita el backend de hipótesis con IDs ya descartado el 2026-09-21).
+
+- `delta5` = Flow de hoy menos Flow de hace 5 filas capturadas (no
+  sesiones de calendario exactas).
+- `zero_cross_up/down`, `flow_above_zero_days`, `delta5_persist_up/nonneg`,
+  `days_since_zero_cross_up` — derivados de la propia serie.
+- `compute_theme_breadth()` — breadth = % de la cesta (ticker incluido) con
+  Flow>0 y sin veto de Koncorde; `blocked=True` solo si breadth es
+  literalmente 0 (interpretación literal de "regime score = 0").
+- `evaluate_inflexion/continuacion/reversion()` — los 3 filtros, con los
+  umbrales que proponía la auditoría (Flow -5/+8, RSI 40-58/55-68,
+  percentil ATR 80, etc.) — primera pasada, sin calibrar contra rendimiento
+  posterior, mismo criterio que el resto de señales nuevas del proyecto.
+
+**Dos relajaciones deliberadas sobre el texto literal de la auditoría,
+encontradas durante la propia verificación** (no corregidas a ciegas —
+primero se confirmó que una traducción literal rompía un caso real que la
+propia auditoría exige mantener):
+1. **Inflexión, regla de timing:** el texto original exige "cruza hoy, o ya
+   cruzó hace poco" en AND con la persistencia de ΔFlow. Aplicado literal,
+   nunca se cumple en un caso real (ASM.AS, 2026-09-19/20: Flow salta de
+   -0.7 a +16.5 en una sola sesión, sin pasar nunca por un cruce clásico
+   antes de extenderse) — justo el caso que la auditoría pide seguir
+   detectando. Relajado: si el Flow sigue negativo pero ya lleva la
+   persistencia de ΔFlow exigida por la regla de al lado, cuenta igual — es
+   la situación que describe el propio objetivo de la sección ("pillar el
+   cambio de estado, no el movimiento ya hecho"). Verificado: con la
+   relajación, ASM.AS pasa Inflexión el 2026-09-20, un día antes de su
+   ruptura real — antes de la relajación, nunca pasaba en ningún día de su
+   trayectoria real.
+2. **Continuación, estado MATURE:** faltaba implementar literalmente "ΔFlow
+   negativo 2 sesiones seguidas, aunque Flow siga alto" → MATURE. Sin esto,
+   ASM.AS en su consolidación real (9/26-29, Flow~10.9 estable pero ΔFlow-5d
+   negativo 2+ sesiones tras el pico del 22-23/09) no se etiquetaba como
+   nada — ni Continuación ni Madura, silencio. Añadido tal cual lo pide el
+   texto original; verificado que dispara correctamente ese día.
+
+**Verificado con `scripts/test_flow_state_lib.py`** (26 tests, sin pytest):
+funciones puras con datos sintéticos + los casos reales de la auditoría
+contra el historial real truncado a la fecha exacta de cada etiqueta
+errónea de Sol — BSX (9/15, 9/24), Cannabis/VFF (9/24, 9/30), WTI/Brent
+(CL=F 9/24, BZ=F 9/28) quedan correctamente rechazados; ASM.AS pasa
+Inflexión el 9/20 y se etiqueta MATURE en su consolidación del 9/28; OSCR
+sigue vetado por Koncorde el 9/30 (EARLY sin CONFIRMED, tal como exige la
+auditoría mientras `distribution_warning` siga activo).
+
+### Sol (`market_analysis_llm.py`) — columna "Mecánico" en las tablas
+
+`build_equities_table`/`build_portfolio_table` ganan una columna "Mecánico"
+(`_flow_mechanical_tag()`) con el veredicto de los 3 filtros + vetoes:
+`INFL`/`CONT`/`MATURE`/`REV` combinables, `(KONC✗)`/`(TEMA✗)` si hay veto
+duro activo, `—` si no cumple nada. `OUTPUT_FORMAT_ADDENDUM` gana reglas de
+reconciliación no opcionales: no llamar EARLY sin INFL (o explicar
+explícitamente por qué se contradice el cálculo), no llamar CONFIRMED sin
+CONT, MATURE implica protección de beneficios nunca "expansión", y un
+ΔFlow de un solo día sin INFL/CONT nunca es motivo suficiente para subir la
+convicción.
+
+**Verificado con datos reales (dry-run, sin gastar crédito de API) contra
+el payload de hoy (2026-10-01):** URNM → `— (KONC✗,TEMA✗)` (Koncorde en
+`distribution_warning` Y breadth de uranio en 0 — el "Uranium Regime Score
+0" ahora sí es un cálculo real); BZ=F/CL=F → `— (TEMA✗)` (breadth del tema
+energía físico en 0 hoy); OSCR → `— (KONC✗)` (sigue vetado, coherente con
+que Sol no debe confirmarlo mientras persista `distribution_warning`); BSX
+→ `—` (sin tags, correcto dado el deterioro real de hoy).
+
+### `shared/flow-state-lib.js` (nuevo) — espejo JS, mismos umbrales
+
+Duplicación deliberada entre Python y JS — mismo patrón ya aceptado en este
+proyecto para `calcCMF`/`koncorde_alert_conditions.py`+su espejo en
+`portfolio.html`. **Verificado con paridad exacta, no solo "se parece":**
+un script Node evalúa ambos motores (Python vía `py -3`, JS vía
+`require()`) contra los mismos 15 casos reales truncados a fecha — flow,
+delta5, y el pass/fail de los 3 filtros coinciden byte a byte en los 15.
+
+Contiene solo las funciones puras de cálculo — el historial se construye
+aparte (fetch client-side) y se le pasa ya hecho, sin I/O propio.
+
+### 3 screeners nuevos en `screeners.html` (`shared/screener-lib.js`)
+
+Registro `flow_state_screener` con 3 filtros combinables (AND, mismo
+mecanismo multi-filtro ya construido para el screener MACD el 2026-09-22):
+`flow_inflexion` (activo por defecto), `flow_continuacion`,
+`flow_reversion` — mismos umbrales/relajaciones que el motor Python, mismo
+texto de reglas en los desplegables `<details>` de la página.
+
+Universo: Portfolio Tracker (`portfolio.json`), igual que el resto de
+`screeners.html` — **no cubre tickers solo-de-mercado** (uranio, WTI/Brent
+viven en `market_equities_daily_snapshot.jsonl`, fuera del universo de esta
+pestaña); esos sí quedan cubiertos por la columna "Mecánico" de Sol (A),
+simplemente no por el screener (B). Límite de alcance explícito, no un
+hueco por descuido.
+
+`screeners.html → load()` hace fetch de `/docs/data/portfolio_daily_snapshot.jsonl`
+(mismo patrón que `trullas.html` con `ai_picks.json`) + un fetch extra de
+`/api/quote/%5EGSPC` (benchmark de fuerza relativa — el proyecto no tiene
+benchmark sectorial por ticker, se usa el índice general) + las secciones
+de `portfolio.json` ya cargadas, construye el contexto una sola vez
+(`fslBuildBasketMembership`/`fslEvaluateTicker`) y adjunta el resultado
+como `q._flow` a cada quote antes de que los filtros lo lean — `evaluate(q)`
+de cada filtro sigue siendo síncrono y puro, sin tocar el contrato ya
+existente del registro.
+
+**Bug real encontrado y corregido durante la propia implementación:** un
+primer intento de compatibilidad Node (`var { FSL_KONC_BEARISH } =
+require(...)` dentro de un `if`) lanzaba `SyntaxError: already declared` —
+en JS, una declaración `var` se *hoistea* al top del scope aunque esté
+dentro de un `if` nunca ejecutado, y colisiona con el `const` del mismo
+nombre que ya declara `flow-state-lib.js` en el entorno léxico global
+compartido entre `<script>` tags del navegador (no solo en Node). Corregido
+resolviendo a un nombre distinto (`FSL_KONC_BEARISH_REF`) en vez de
+redeclarar el mismo identificador. Verificado tanto en Node (`require()`
+standalone) como simulando fielmente el navegador (`vm.createContext` sin
+`module`/`require`, dos scripts ejecutados en el mismo entorno global, sin
+colisión).
+
+**Verificado en producción real** (Edge headless vía CDP directo —
+Puppeteer/Playwright no instalados en el proyecto, WebSocket nativo de
+Node hablando el protocolo CDP a pelo, contra el `server.js` real del
+usuario ya en marcha, sin reiniciar — solo se tocaron archivos estáticos):
+un primer intento dio "0 tickers" (fallo transitorio de arranque del propio
+Edge recién lanzado, no reproducible en el segundo intento); el segundo
+intento cargó el universo completo (123 tickers) y mostró candidatos reales
+del día — CVE (Petróleo) como único candidato de Inflexión hoy; BSX/ASM.AS
+"No cumple" (fuera del rango -5/+8, coherente con el deterioro/extensión
+reales de cada uno); OSCR "Vetado por Koncorde"; VFF (Cannabis) "Tema con
+breadth 0" — los mismos 4 veredictos que ya había verificado contra el
+historial truncado, ahora confirmados en vivo contra datos de hoy, no solo
+reconstruidos. Activando los 3 filtros a la vez: 15 tickers reales
+etiquetados "Madura — proteger beneficio" por Continuación. Cero errores de
+consola en las dos pasadas.
+
+### Explícitamente fuera de alcance
+
+Calibración de los umbrales contra rendimiento posterior (primera pasada,
+observación, como el resto de señales nuevas del proyecto). Extender el
+universo del screener a tickers solo-de-mercado (uranio, WTI/Brent) — ya
+cubiertos por la columna Mecánico de Sol, no por el screener. Ningún
+cambio a PCS, `rot_score`, `HARD_RULES` ni ninguna cartera — esto es
+disciplina de narrativa + lectura discrecional, no toca el motor de picks.
+Un registro persistente de hipótesis con IDs/MFE-MAE (ya descartado el
+2026-09-21 por el mismo motivo: observar antes de construir infraestructura).
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

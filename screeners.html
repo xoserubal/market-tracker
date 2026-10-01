@@ -16,6 +16,7 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <script src="/shared/flow-state-lib.js"></script>
   <script src="/shared/screener-lib.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,6 +91,33 @@ function filterStatusMeta(filter, status) {
   return { label: m.label, ...C[m.badge] };
 }
 
+// ── Carga de historial de Flow para los 3 filtros "Flow — Disciplina de
+// promoción" (shared/flow-state-lib.js) — fetch directo del jsonl estático,
+// mismo patrón que trullas.html con ai_picks.json. Solo se necesitan estos
+// 9 campos por fila; el resto de portfolio_daily_snapshot.jsonl (Koncorde
+// completo, insider activity…) no hace falta aquí.
+const FLOW_HISTORY_FIELDS = ['date', 'flowScore', 'rsi', 'konc_alignment', 'macdHist', 'macdHistDelta1', 'atrPct', 'price', 'm1'];
+
+async function fetchFlowHistory() {
+  const text = await fetch('/docs/data/portfolio_daily_snapshot.jsonl?t=' + Date.now()).then(r => r.text()).catch(() => '');
+  const byTicker = {};
+  text.trim().split('\n').forEach(line => {
+    if (!line) return;
+    let r;
+    try { r = JSON.parse(line); } catch (e) { return; }
+    if (!r.ticker || !r.date) return;
+    if (!byTicker[r.ticker]) byTicker[r.ticker] = {};
+    const row = {};
+    FLOW_HISTORY_FIELDS.forEach(k => { row[k] = r[k] !== undefined ? r[k] : null; });
+    byTicker[r.ticker][r.date] = row;
+  });
+  const out = {};
+  Object.entries(byTicker).forEach(([tk, byDate]) => {
+    out[tk] = Object.keys(byDate).sort().map(d => byDate[d]);
+  });
+  return out;
+}
+
 function useToast() {
   const [toast, setToast] = React.useState(null);
   const show = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
@@ -139,13 +167,30 @@ function ScreenerPage() {
 
     const tickers = Object.keys(secMap);
     const map = {};
-    await Promise.allSettled(tickers.map(async ticker => {
-      try {
-        const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`);
-        const d = await r.json();
-        if (!d.error) map[ticker] = d;
-      } catch (e) { /* ticker individual fallido — el resto sigue */ }
-    }));
+    const [, history, gspcQuote] = await Promise.all([
+      Promise.allSettled(tickers.map(async ticker => {
+        try {
+          const r = await fetch(`/api/quote/${encodeURIComponent(ticker)}`);
+          const d = await r.json();
+          if (!d.error) map[ticker] = d;
+        } catch (e) { /* ticker individual fallido — el resto sigue */ }
+      })),
+      fetchFlowHistory(),
+      fetch(`/api/quote/${encodeURIComponent('^GSPC')}`).then(r => r.json()).catch(() => null),
+    ]);
+
+    // Disciplina de promoción sobre Flow Score (3 screeners "Flow") — mismo
+    // motor exacto que usa market_analysis_llm.py para Sol
+    // (shared/flow-state-lib.js), calculado aquí una sola vez y adjuntado a
+    // cada quote como `_flow` antes de que los filtros lo lean.
+    const membership = fslBuildBasketMembership(sections);
+    const basketToTickers = fslBasketToTickers(membership);
+    const benchmarkM1 = gspcQuote && !gspcQuote.error ? gspcQuote.m1 : null;
+    const flowCtx = { membership, basketToTickers, history, benchmarkM1 };
+    tickers.forEach(ticker => {
+      if (map[ticker]) map[ticker]._flow = fslEvaluateTicker(ticker, flowCtx);
+    });
+
     setQuotes(map);
     setUpdated(new Date());
     setLoading(false);

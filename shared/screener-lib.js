@@ -27,6 +27,19 @@
 // tanto desde screeners.html como, si algún screener futuro necesita
 // cómputo pesado fuera del navegador, desde un script standalone.
 
+// En el navegador, shared/flow-state-lib.js se carga vía <script> ANTES que
+// este archivo (mismo orden que screeners.html) y declara FSL_KONC_BEARISH
+// como const de ámbito global compartido entre <script> tags — basta con
+// LEER ese identificador más abajo, sin declararlo de nuevo (una segunda
+// declaración `var`/`const` con el mismo nombre lanzaría "already declared"
+// incluso en un <script> tag distinto, por cómo el navegador comparte el
+// entorno léxico global entre scripts clásicos). En Node (require() para
+// tests/scripts standalone, sin <script> de por medio) no existe ese
+// global compartido, así que aquí se resuelve con un nombre DISTINTO
+// (FSL_KONC_BEARISH_REF) para no colisionar con el de flow-state-lib.js.
+var _fslNodeCompat = (typeof module !== 'undefined' && module.exports) ? require('./flow-state-lib.js') : null;
+var FSL_KONC_BEARISH_REF = _fslNodeCompat ? _fslNodeCompat.FSL_KONC_BEARISH : FSL_KONC_BEARISH;
+
 function fmtNum(v, decimals) {
   if (v == null) return '—';
   return v.toFixed(decimals != null ? decimals : 4);
@@ -172,7 +185,163 @@ function evalMacdZeroCrossUp(q) {
   return { status: 'candidate', pass: true, sortValue: distAtr, detail };
 }
 
+// ── Screener: disciplina de promoción sobre Flow Score ──────────────────
+// Añadido 2026-10-02 a partir de una auditoría externa sobre
+// market_analysis_llm.jsonl (Sol, el LLM narrador) que encontró un patrón
+// real y repetido: Sol etiqueta EARLY/CONFIRMED el mismo día que aparece un
+// ΔFlow positivo de un solo día, sin zero-cross real ni persistencia de
+// 2-3 sesiones — la auditoría del día siguiente tiene que deshacerlo (ver
+// CLAUDE.md "Sol — disciplina de promoción EARLY/CONFIRMED" para el
+// detalle completo, casos reales verificados contra datos crudos, y las
+// dos relajaciones deliberadas respecto al texto literal de la auditoría).
+//
+// Los 3 filtros (evalFlowInflexion/evalFlowContinuacion/evalFlowReversion)
+// son un ESPEJO de scripts/flow_state_lib.py (mismos umbrales/relajaciones,
+// mismo motivo de duplicación ya aceptado en este proyecto que para
+// calcCMF/koncorde_alert_conditions.py) — no recalculan nada aquí: leen
+// `q._flow`, un objeto ya calculado por screeners.html antes de llamar a
+// evaluate() (fetch de portfolio_daily_snapshot.jsonl + cestas de tema de
+// portfolio.json + ^GSPC como benchmark), usando shared/flow-state-lib.js.
+//
+// Mismo motor exacto que da el dato de verdad a Sol en market_analysis_llm.py
+// — "candidato del screener" y "columna Mecánico que ve Sol" son
+// literalmente el mismo cálculo, solo con una UI distinta encima.
+
+function evalFlowInflexion(q) {
+  const f = q && q._flow;
+  if (!f || f.dataStatus !== 'ok') return { status: 'no_data', pass: false, sortValue: null, detail: {} };
+  const r = f.inflexion;
+  let status = 'not_candidate';
+  if (r.pass) status = 'candidate';
+  else if (FSL_KONC_BEARISH_REF.has(f.konc_alignment)) status = 'vetoed_konc';
+  else if (f.theme.blocked) status = 'vetoed_tema';
+  const detail = { flow: f.flow, delta5: f.delta5, rsi: f.rsi, theme: f.theme, reasons: r.reasons };
+  return { status, pass: r.pass, sortValue: r.pass ? -(f.delta5 ?? 0) : null, detail };
+}
+
+function evalFlowContinuacion(q) {
+  const f = q && q._flow;
+  if (!f || f.dataStatus !== 'ok') return { status: 'no_data', pass: false, sortValue: null, detail: {} };
+  const r = f.continuacion;
+  let status = 'not_candidate';
+  if (r.pass) status = 'candidate';
+  else if (r.mature) status = 'mature';
+  else if (FSL_KONC_BEARISH_REF.has(f.konc_alignment)) status = 'vetoed_konc';
+  const detail = { flow: f.flow, delta5: f.delta5, rsi: f.rsi, relStrength: f.relStrength1m, reasons: r.reasons };
+  return { status, pass: r.pass, sortValue: r.pass ? -(f.flow ?? 0) : null, detail };
+}
+
+function evalFlowReversion(q) {
+  const f = q && q._flow;
+  if (!f || f.dataStatus !== 'ok') return { status: 'no_data', pass: false, sortValue: null, detail: {} };
+  const r = f.reversion;
+  let status = 'not_candidate';
+  if (r.pass) status = 'candidate';
+  else if (FSL_KONC_BEARISH_REF.has(f.konc_alignment)) status = 'vetoed_konc';
+  const detail = { flow: f.flow, delta5: f.delta5, rsi: f.rsi, reasons: r.reasons };
+  return { status, pass: r.pass, sortValue: r.pass ? f.rsi ?? 0 : null, detail };
+}
+
 const SCREENERS = [
+  {
+    id: 'flow_state_screener',
+    label: 'Flow — Disciplina de promoción',
+    shortLabel: 'Flow',
+    color: '#0d47a1',
+    description: 'Flow es estado, ΔFlow es cambio de estado — ninguno de los dos es señal de entrada por sí solo. 3 filtros independientes y combinables (AND) que exigen persistencia de 2-3 sesiones y ausencia de veto (Koncorde, breadth del tema) antes de contar como candidato. Mismo motor que usa market_analysis_llm.py para dar a Sol el dato de verdad contra el que reconciliar su propia narrativa.',
+    filters: [
+      {
+        id: 'flow_inflexion', label: 'Inflexión temprana', shortLabel: 'Inflexión', defaultActive: true,
+        description: 'Flow en zona de transición (-5/+8), con persistencia de ΔFlow hacia cero de 2+ sesiones, RSI 40-58, sin veto de Koncorde ni de breadth del tema, y sin haber estado ya extendido (Flow>15) en las últimas 10 sesiones.',
+        rulesText: [
+          'Flow entre -5 y +8 — fuera de ahí ya no es "temprano" (por debajo, suelo no confirmado; por encima, ya extendido).',
+          'Zero-cross reciente (≤3 sesiones), Flow positivo de antigüedad ≤3 sesiones, O Flow todavía negativo pero con la persistencia de ΔFlow de la regla siguiente ya cumplida (relajación deliberada: un Flow que salta de negativo a muy extendido en una sola sesión, sin pasar por un cruce clásico, debe poder capturarse igual — verificado contra un caso real, ver CLAUDE.md).',
+          'ΔFlow (Flow de hoy menos el de hace 5 sesiones) positivo en 2+ sesiones consecutivas.',
+          'RSI entre 40 y 58.',
+          'Koncorde distinto de distribution_warning/bearish_aligned.',
+          'La cesta de tema del ticker (su sección de Portfolio Tracker) no tiene breadth 0 — si ningún miembro de la cesta confirma, el tema entero queda vetado.',
+          'Flow no ha superado +15 en las últimas 10 sesiones (si ya lo hizo, es extensión, no inflexión).',
+          'ATR% no está en el percentil >80 de su propia ventana de 60 sesiones (si hay menos de 20 sesiones de histórico, no se exige — "sizing reducido", no exclusión).',
+        ],
+        statuses: {
+          candidate:      { label: 'Inflexión temprana',       badge: 'green'   },
+          vetoed_konc:    { label: 'Vetado por Koncorde',       badge: 'red'     },
+          vetoed_tema:    { label: 'Tema con breadth 0',        badge: 'orange'  },
+          not_candidate:  { label: 'No cumple',                 badge: 'neutral' },
+          no_data:        { label: 'Histórico insuficiente',    badge: 'neutral' },
+        },
+        columns: [
+          { header: 'Flow',   get: (q, r) => r.detail.flow,    format: v => v == null ? '—' : fmtSigned(v, 1),
+            tooltip: 'Flow Score de hoy. Este filtro exige que esté entre -5 y +8.' },
+          { header: 'ΔFlow5', get: (q, r) => r.detail.delta5,  format: v => v == null ? '—' : fmtSigned(v, 1),
+            tooltip: 'Flow de hoy menos Flow de hace 5 sesiones capturadas. Exige persistencia positiva de 2+ sesiones.' },
+          { header: 'RSI14',  get: (q, r) => r.detail.rsi,     format: v => v == null ? '—' : String(v),
+            tooltip: 'RSI de 14 sesiones. Este filtro exige 40-58.' },
+          { header: 'Tema',   get: (q, r) => (r.detail.theme && r.detail.theme.baskets || []).join(', '), format: v => v || '—',
+            tooltip: 'Cesta(s) de tema del ticker (sección de Portfolio Tracker) usada para el veto de breadth.' },
+        ],
+        evaluate: evalFlowInflexion,
+      },
+      {
+        id: 'flow_continuacion', label: 'Continuación', shortLabel: 'Continuación', defaultActive: false,
+        description: 'Tendencia de Flow ya establecida (positiva ≥5 sesiones) que no se está agotando: ΔFlow no negativo en 3 de las últimas 5 sesiones, RSI 55-68, Koncorde bullish_aligned, MACD histograma confirma.',
+        rulesText: [
+          'Flow positivo durante al menos 5 sesiones.',
+          'ΔFlow ≥0 en al menos 3 de las últimas 5 sesiones (se permite una sesión plana, no una racha negativa).',
+          'Koncorde en bullish_aligned exactamente — bullish_pending_3d_confirmation NO cuenta (literal de la auditoría: sin confirmación 3D no es continuación confirmada).',
+          'RSI entre 55 y 68 — por debajo no es continuación, por encima es extensión.',
+          'Fuerza relativa 1 mes positiva (aproximada: retorno del ticker menos el de ^GSPC — el proyecto no tiene un benchmark sectorial por ticker, se usa el índice general).',
+          'Histograma MACD no negativo y no decelerando (confirmación, no disparador).',
+          'No es un vehículo apalancado (UCO, UVXY, TQQQ…) — esos no heredan la etiqueta de continuación de su subyacente.',
+          'Si RSI>70, o si el Flow sigue alto pero el ΔFlow se gira negativo 2 sesiones seguidas: no es "Continuación", es "Madura" (protección de beneficios, no entrada nueva) — estado distinto, no simplemente "no cumple".',
+        ],
+        statuses: {
+          candidate:      { label: 'Continuación activa',       badge: 'green'   },
+          mature:         { label: 'Madura — proteger beneficio', badge: 'yellow' },
+          vetoed_konc:    { label: 'Vetado por Koncorde',        badge: 'red'     },
+          not_candidate:  { label: 'No cumple',                  badge: 'neutral' },
+          no_data:        { label: 'Histórico insuficiente',     badge: 'neutral' },
+        },
+        columns: [
+          { header: 'Flow',        get: (q, r) => r.detail.flow,        format: v => v == null ? '—' : fmtSigned(v, 1),
+            tooltip: 'Flow Score de hoy. Debe ser positivo y llevar ≥5 sesiones así.' },
+          { header: 'ΔFlow5',      get: (q, r) => r.detail.delta5,      format: v => v == null ? '—' : fmtSigned(v, 1),
+            tooltip: 'Flow de hoy menos Flow de hace 5 sesiones. Exige ≥0 en 3 de las últimas 5 sesiones.' },
+          { header: 'RSI14',       get: (q, r) => r.detail.rsi,         format: v => v == null ? '—' : String(v),
+            tooltip: 'RSI de 14 sesiones. Este filtro exige 55-68.' },
+          { header: 'F.Rel. 1M',   get: (q, r) => r.detail.relStrength, format: v => v == null ? '—' : fmtSigned(v, 1, '%'),
+            tooltip: 'Retorno 1 mes del ticker menos el de ^GSPC — aproximación de fuerza relativa (sin benchmark sectorial por ticker en el proyecto).' },
+        ],
+        evaluate: evalFlowContinuacion,
+      },
+      {
+        id: 'flow_reversion', label: 'Reversión', shortLabel: 'Reversión', defaultActive: false,
+        description: 'Recuperación real desde deterioro previo: Flow estuvo por debajo de -10 en las últimas 10 sesiones, ΔFlow positivo 3 sesiones consecutivas, sin mínimo nuevo de precio, Koncorde saliendo del veto, RSI saliendo de sobreventa.',
+        rulesText: [
+          'Flow estuvo por debajo de -10 en alguna de las últimas 10 sesiones (si nunca estuvo tan deteriorado, no es "reversión", es otra cosa).',
+          'ΔFlow positivo durante 3 sesiones consecutivas — con menos de 3 no se etiqueta.',
+          'El precio no ha hecho un mínimo nuevo en esas 3 sesiones.',
+          'Koncorde sale de distribution_warning/bearish_aligned (si sigue ahí, no entra).',
+          'RSI sale de sobreventa pero sigue por debajo de 55 (si ya está en 55+, ya no es "saliendo de sobreventa").',
+        ],
+        statuses: {
+          candidate:      { label: 'Reversión en curso',        badge: 'green'   },
+          vetoed_konc:    { label: 'Vetado por Koncorde',        badge: 'red'     },
+          not_candidate:  { label: 'No cumple',                  badge: 'neutral' },
+          no_data:        { label: 'Histórico insuficiente',     badge: 'neutral' },
+        },
+        columns: [
+          { header: 'Flow',   get: (q, r) => r.detail.flow,   format: v => v == null ? '—' : fmtSigned(v, 1),
+            tooltip: 'Flow Score de hoy.' },
+          { header: 'ΔFlow5', get: (q, r) => r.detail.delta5, format: v => v == null ? '—' : fmtSigned(v, 1),
+            tooltip: 'Flow de hoy menos Flow de hace 5 sesiones. Exige positivo 3 sesiones consecutivas.' },
+          { header: 'RSI14',  get: (q, r) => r.detail.rsi,    format: v => v == null ? '—' : String(v),
+            tooltip: 'RSI de 14 sesiones. Este filtro exige que esté saliendo de sobreventa, por debajo de 55.' },
+        ],
+        evaluate: evalFlowReversion,
+      },
+    ],
+  },
   {
     id: 'macd_screener',
     label: 'MACD',
@@ -302,5 +471,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     SCREENERS, getScreener, getFilter, defaultActiveFilterIds, runScreenerFilters,
     evalMacdHistCrossUp, evalMacdZeroCrossUp, smaTrendUp,
+    evalFlowInflexion, evalFlowContinuacion, evalFlowReversion,
   };
 }

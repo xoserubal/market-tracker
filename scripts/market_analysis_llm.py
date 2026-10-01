@@ -92,6 +92,7 @@ OUT_PATH        = DATA / "market_analysis_llm.jsonl"
 
 sys.path.insert(0, str(Path(__file__).parent))
 from paper_trading import call_model, compute_cost  # reuso, ver docstring
+import flow_state_lib as fsl  # disciplina de promoción Flow — ver docstring del módulo y sección CLAUDE.md "Sol — disciplina de promoción EARLY/CONFIRMED"
 
 MODEL = "openai/gpt-5.6-sol"
 REASONING_EFFORT = "high"
@@ -129,6 +130,30 @@ escribir: para cada señal previa que siga siendo relevante, di
 explícitamente si se ha fortalecido, debilitado, confirmado o invalidado.
 No la sustituyas en silencio por una oportunidad nueva sin comentar qué
 pasó con la anterior.
+
+IMPORTANTE sobre la columna "Mecánico" de las tablas: es un cálculo
+determinista de disciplina de promoción (flow_state_lib.py), NO tu propia
+convicción. Valores posibles: INFL (inflexión temprana genuina: Flow en
+rango -5/+8, ΔFlow persistente ≥2 sesiones, RSI 40-58, sin veto), CONT
+(continuación: Flow>0 ≥5 sesiones, RSI 55-68, Koncorde bullish_aligned,
+MACD confirma), MATURE (Flow sigue alto pero decelerando o RSI extendido —
+protección de beneficios, no entrada nueva), REV (reversión desde Flow muy
+negativo con persistencia de 3 sesiones). KONC✗/TEMA✗ entre paréntesis son
+VETOES DUROS (Koncorde en distribution_warning/bearish_aligned, o la cesta
+de tema del ticker — su sección de Portfolio Tracker o grupo de mercado —
+con breadth 0, ningún miembro confirma).
+
+Reglas de reconciliación, NO OPCIONALES:
+- No llames EARLY a un ticker cuya columna Mecánico sea "—" sin INFL, ni a
+  uno marcado (KONC✗) o (TEMA✗) — si lo haces, explica explícitamente por
+  qué contradices el cálculo mecánico (debe ser una razón fundamental
+  concreta, no "el momentum se ve bien").
+- No llames CONFIRMED a un ticker sin CONT en su columna Mecánico.
+- Si la columna dice MATURE, tu conclusión debe ser protección de
+  beneficios o MATURE, nunca EARLY ni "expansión" de una señal nueva.
+- Un ΔFlow positivo de un solo día, sin INFL ni CONT en la columna
+  Mecánico, NUNCA es motivo suficiente por sí solo para subir la
+  convicción de un ticker — regístralo como WATCH, no como EARLY.
 
 IMPORTANTE sobre "cartera": los tickers de la sección PORTFOLIO TRACKER son
 una watchlist curada por el usuario, NO posiciones reales verificadas — hoy
@@ -258,6 +283,49 @@ def _delta(cur, prev):
     return round(cur - prev, 2)
 
 
+def _flow_mechanical_tag(ticker: str, flow_ctx: dict) -> str:
+    """Columna mecánica de disciplina de promoción (flow_state_lib.py).
+    Origen (2026-10-01): una auditoría externa sobre market_analysis_llm.jsonl
+    encontró que Sol etiqueta EARLY/CONFIRMED el mismo día que aparece un
+    ΔFlow positivo de un solo día, sin exigir zero-cross real ni
+    persistencia de 2-3 sesiones — la auditoría del día siguiente tiene que
+    deshacerlo (caso verificado contra datos reales: BSX, flow=-2.9,
+    etiquetado EARLY "antes de un zero-cross de Flow" — literal en la
+    propia prosa de Sol). Esta columna le da a Sol el cálculo de verdad en
+    la misma tabla que ya lee, en vez de dejar que lo invente desde los
+    números crudos — ver OUTPUT_FORMAT_ADDENDUM para la instrucción de
+    reconciliación explícita.
+
+    INFL/CONT/MATURE/REV son los 3 filtros de flow_state_lib.py (Inflexión/
+    Continuación/Reversión) — no sustituyen la convicción libre de Sol
+    (EARLY/CONFIRMED/MATURE/...), son el check mecánico contra el que debe
+    reconciliarla. KONC✗/TEMA✗ son vetoes duros (Koncorde en distribution_
+    warning/bearish_aligned, o breadth de la cesta de tema en 0 — el
+    "Uranium Regime Score" que Sol se inventaba en su narrativa sin que
+    existiera como campo calculado en ningún sitio, ahora sí se calcula)."""
+    r = fsl.evaluate_ticker(ticker, flow_ctx)
+    if r.get("data_status") != "ok":
+        return "—"
+    tags = []
+    if r["inflexion"]["pass"]:
+        tags.append("INFL")
+    if r["continuacion"]["pass"]:
+        tags.append("CONT")
+    elif r["continuacion"]["mature"]:
+        tags.append("MATURE")
+    if r["reversion"]["pass"]:
+        tags.append("REV")
+    vetoes = []
+    if r["konc_alignment"] in fsl.KONC_BEARISH:
+        vetoes.append("KONC✗")
+    if r["theme"].get("blocked"):
+        vetoes.append("TEMA✗")
+    label = "+".join(tags) if tags else "—"
+    if vetoes:
+        label += " (" + ",".join(vetoes) + ")"
+    return label
+
+
 def build_macro_table(today: str, prev: str | None) -> str:
     rows = _load_jsonl(MARKET_MACRO)
     today_rows = {r["id"]: r for r in rows if r["date"] == today}
@@ -278,7 +346,7 @@ def build_macro_table(today: str, prev: str | None) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_equities_table(today: str, prev: str | None) -> str:
+def build_equities_table(today: str, prev: str | None, flow_ctx: dict) -> str:
     rows = _load_jsonl(MARKET_EQUITIES)
     today_rows = [r for r in rows if r["date"] == today and r["ticker"] not in KNOWN_BAD_TICKERS]
     prev_by_ticker = {r["ticker"]: r for r in rows if prev and r["date"] == prev} if prev else {}
@@ -293,24 +361,25 @@ def build_equities_table(today: str, prev: str | None) -> str:
     out = []
     for sec, sec_rows in by_section.items():
         out.append(f"### {sec}")
-        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d |")
-        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|")
+        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d | Mecánico |")
+        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|---|")
         for r in sec_rows:
             p = prev_by_ticker.get(r["ticker"])
             dflow  = _delta(r.get("flowScore"), p.get("flowScore") if p else None)
             dearly = _delta(r.get("earlyFlow"), p.get("earlyFlow") if p else None)
             macd = "—" if r.get("macdBull") is None else ("▲" if r["macdBull"] else "▼")
+            mech = _flow_mechanical_tag(r["ticker"], flow_ctx)
             out.append(
                 f"| {r['ticker']} | {_fmt(r.get('price'))} | {_fmt(r.get('d1'),'%')} | {_fmt(r.get('w1'),'%')} | "
                 f"{_fmt(r.get('m1'),'%')} | {_fmt(r.get('m3'),'%')} | {_fmt(r.get('rsi'))} | {macd} | "
                 f"{_fmt(r.get('atrPct'),'%')} | {r.get('konc_alignment') or '—'} | {_fmt(r.get('flowScore'))} | "
-                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} |"
+                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} | {mech} |"
             )
         out.append("")
     return "\n".join(out)
 
 
-def build_portfolio_table(today: str, prev: str | None) -> str:
+def build_portfolio_table(today: str, prev: str | None, flow_ctx: dict) -> str:
     rows = _load_jsonl(PORTFOLIO_SNAP)
     today_rows = {r["ticker"]: r for r in rows if r["date"] == today and r["ticker"] not in KNOWN_BAD_TICKERS}
     prev_by_ticker = {r["ticker"]: r for r in rows if prev and r["date"] == prev} if prev else {}
@@ -334,19 +403,20 @@ def build_portfolio_table(today: str, prev: str | None) -> str:
         if not present:
             continue
         out.append(f"### {sec_name}")
-        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d |")
-        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|")
+        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d | Mecánico |")
+        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|---|")
         for tk in present:
             r = today_rows[tk]
             p = prev_by_ticker.get(tk)
             dflow  = _delta(r.get("flowScore"), p.get("flowScore") if p else None)
             dearly = _delta(r.get("earlyFlow"), p.get("earlyFlow") if p else None)
             macd = "—" if r.get("macdBull") is None else ("▲" if r["macdBull"] else "▼")
+            mech = _flow_mechanical_tag(tk, flow_ctx)
             out.append(
                 f"| {tk} | {_fmt(r.get('price'))} | {_fmt(r.get('d1'),'%')} | {_fmt(r.get('w1'),'%')} | "
                 f"{_fmt(r.get('m1'),'%')} | {_fmt(r.get('m3'),'%')} | {_fmt(r.get('rsi'))} | {macd} | "
                 f"{_fmt(r.get('atrPct'),'%')} | {r.get('konc_alignment') or '—'} | {_fmt(r.get('flowScore'))} | "
-                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} |"
+                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} | {mech} |"
             )
         out.append("")
     return "\n".join(out)
@@ -416,8 +486,9 @@ def build_user_message(today: str) -> tuple[str, str | None]:
     if digest:
         msg += "\n" + digest
     msg += "\n## MACRO / CICLO\n" + build_macro_table(today, prev)
-    msg += "\n## MERCADOS (Market Tracker)\n" + build_equities_table(today, prev)
-    msg += "\n## PORTFOLIO TRACKER\n" + build_portfolio_table(today, prev)
+    flow_ctx = fsl.build_context(ROOT)
+    msg += "\n## MERCADOS (Market Tracker)\n" + build_equities_table(today, prev, flow_ctx)
+    msg += "\n## PORTFOLIO TRACKER\n" + build_portfolio_table(today, prev, flow_ctx)
     return msg, prev
 
 
