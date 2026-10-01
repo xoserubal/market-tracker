@@ -1,274 +1,379 @@
 {
-  "run_id": "2026-10-01_1533",
+  "run_id": "2026-10-01_2357",
   "model": "x-ai/grok-4.3",
   "date": "2026-10-01",
   "summary": {
     "date": "2026-10-01",
-    "run_id": "2026-10-01_1533",
+    "run_id": "2026-10-01_2357",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 33,
-    "input_tokens": 74398,
-    "output_tokens": 6023,
-    "cost_usd": 0.108055,
-    "latency_ms": 53094.0,
+    "candidate_count": 35,
+    "input_tokens": 76130,
+    "output_tokens": 6893,
+    "cost_usd": 0.112395,
+    "latency_ms": 50453.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 0,
-    "quality_score": 90,
+    "hard_rule_violations": 3,
+    "quality_score": 73,
     "selected_count": 0,
-    "watch_count": 16,
-    "rejected_count": 0,
+    "watch_count": 24,
+    "rejected_count": 12,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [],
+    "violations": [
+      "Duplicate ticker: LCX.V",
+      "Duplicate ticker: QQQ",
+      "Duplicate ticker: SLP.L"
+    ],
     "soft_warnings": []
   },
-  "quality_score": 90,
+  "quality_score": 73,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-10-01_1533",
+    "run_id": "2026-10-01_2357",
     "date": "2026-10-01",
     "decision_summary": {
-      "market_read": "Bull Maduro Improving macro regime with score 81.25 and positive delta.",
+      "market_read": "Bull Maduro regime with macro score 68.75 deteriorating 6.25 points over 1w and 1m; multiple HIGH_CONVICTION names crossing below 85 threshold on weak daily flow.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
     "watch": [
       {
+        "ticker": "PLTR",
+        "reason": "PCS 83 crossed down from 88; strong 46% 13w RS but macro deterioration and 3D distribution warrant waiting for stabilization.",
+        "watch_trigger": "PCS rebound above 85 with 3D Koncorde turning up and macro delta flattening"
+      },
+      {
         "ticker": "META",
-        "reason": "PCS 88 but high us_tech_ai concentration already at 28.5 percent and extension_risk high.",
-        "watch_trigger": "Theme exposure drops below 20 percent and extension_risk falls to low."
+        "reason": "PCS 83 crossed down; high extension risk and 4w RS decay signal late position despite 4-week streak.",
+        "watch_trigger": "Ret_4w_vs_spy turning positive and extension_risk dropping to low"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 83 crossed down; spike_flag and 3D distribution despite 6-week streak and 40% 13w RS.",
+        "watch_trigger": "Outperform_d10 above 8 and Konc_3d_state returning to up"
       },
       {
         "ticker": "AMD",
-        "reason": "PCS 87.5 but distribution_warning on Koncorde and extreme extension_risk.",
-        "watch_trigger": "Koncorde alignment turns bullish_aligned and extension_risk falls to low."
+        "reason": "PCS 82.5 crossed down; extreme extension risk and 3D/weekly distribution despite 4-week streak.",
+        "watch_trigger": "Extension flags clearing and dems above 12 with momentum_accel true"
       },
       {
-        "ticker": "NVDA",
-        "reason": "PCS 83.8 but distribution_warning on Koncorde and us_tech_ai already overweight.",
-        "watch_trigger": "Koncorde 3D shifts to up and theme weight declines."
+        "ticker": "SMCI",
+        "reason": "PCS 82.2 crossed down; distribution across daily and 3D with spike_flag.",
+        "watch_trigger": "Konc_alignment shifting to bullish_aligned and ret_4w_vs_spy above 15"
+      },
+      {
+        "ticker": "MSTR",
+        "reason": "PCS 80.5 crossed down; 5-week streak and 61% 13w RS but 3D distribution and crypto concentration risk.",
+        "watch_trigger": "PCS rebound above 82 with Konc_3d_blue turning positive"
+      },
+      {
+        "ticker": "SLG.V",
+        "reason": "PCS 79 crossed up into CONFIRMED_FLOW_LEADERS but macro deterioration and distribution_warning.",
+        "watch_trigger": "Macro_delta_1w turning positive and rot_score holding above 9"
       },
       {
         "ticker": "REG.V",
-        "reason": "PCS 80 but spike_flag true and commodities_copper theme exposure low priority.",
-        "watch_trigger": "outperform_d10 exceeds 8 and no spike_flag."
+        "reason": "PCS 75 crossed down from 80; 8-week streak but spike_flag and oil_gas theme already overweight.",
+        "watch_trigger": "Dems above 12 and theme_concentration_risk falling below high"
       },
       {
         "ticker": "UCO",
-        "reason": "PCS 78 but oil_gas already at 71 percent concentration and spike_flag true.",
-        "watch_trigger": "Oil_gas weight falls below 50 percent and spike_flag clears."
+        "reason": "PCS 73 crossed down; 6-week streak but spike_flag and extreme oil_gas concentration.",
+        "watch_trigger": "Ret_5d_vs_spy stabilizing above 3 and Konc_w_state improving"
       },
       {
         "ticker": "KIST.L",
-        "reason": "PCS 78 but oil_gas concentration extreme and mixed Koncorde alignment.",
-        "watch_trigger": "Koncorde alignment turns bullish_aligned and oil_gas weight declines."
-      },
-      {
-        "ticker": "VGZ",
-        "reason": "PCS 76.2 but distribution_warning on Koncorde and silver_gold_miners already high weight.",
-        "watch_trigger": "Koncorde alignment improves to bullish_aligned."
-      },
-      {
-        "ticker": "PFE",
-        "reason": "PCS 76 but healthcare_largecap already overweight at 24 percent.",
-        "watch_trigger": "Healthcare weight falls below 15 percent."
-      },
-      {
-        "ticker": "MU",
-        "reason": "PCS 76 but us_tech_ai concentration high and rot_score only 7.",
-        "watch_trigger": "rot_score rises to 9 and theme weight declines."
+        "reason": "PCS 73 crossed down; 8-week streak but mixed Koncorde and oil_gas overweight.",
+        "watch_trigger": "Konc_alignment shifting to bullish_aligned with dems above 10"
       },
       {
         "ticker": "NBIS",
-        "reason": "PCS 74.8 but distribution_warning and weak ret_13w_vs_spy of 0.41 percent.",
-        "watch_trigger": "ret_13w_vs_spy exceeds 15 percent and Koncorde improves."
+        "reason": "PCS 69.8 crossed down; weak rot_score 6 and distribution across timeframes.",
+        "watch_trigger": "Rot_score rebound above 8 and ret_13w_vs_spy above 10"
+      },
+      {
+        "ticker": "VLE.TO",
+        "reason": "PCS 68.5 crossed down; 8-week streak but oil_gas concentration already extreme.",
+        "watch_trigger": "PCS recovery above 70 with theme_exposure risk declining"
+      },
+      {
+        "ticker": "TNZ.TO",
+        "reason": "PCS 68.5 crossed down; 7-week streak but negative ret_4w and distribution_warning.",
+        "watch_trigger": "Ret_4w_vs_spy turning positive and Konc_w_state improving"
+      },
+      {
+        "ticker": "COIN",
+        "reason": "PCS 67.2 crossed down; 5-week streak but distribution across daily/3D/weekly.",
+        "watch_trigger": "Konc_alignment to bullish_aligned and dems above 12"
+      },
+      {
+        "ticker": "GHM.AX",
+        "reason": "PCS 67.2 crossed up; rot_score 7 but neutral Koncorde and macro deterioration.",
+        "watch_trigger": "Konc_alignment improving to bullish_pending_3d_confirmation"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "PCS 66.8 crossed down; 2-week streak and silver_gold concentration already high.",
+        "watch_trigger": "Streak extending to 4 weeks with ret_4w_vs_spy above 5"
       },
       {
         "ticker": "VFF",
-        "reason": "PCS 71.8 but cannabis theme low priority and dems only 5.",
-        "watch_trigger": "dems rises above 10 and cannabis theme weight increases."
+        "reason": "PCS 66.8 crossed down; cannabis theme low conviction and distribution_warning.",
+        "watch_trigger": "Rot_score above 8 and theme_flow component improving"
       },
       {
         "ticker": "QQQ",
-        "reason": "PCS 69.5 but global_etf low conviction and ret_13w_vs_spy negative.",
-        "watch_trigger": "ret_13w_vs_spy turns positive and streak_weeks exceeds 5."
+        "reason": "PCS 64.5 crossed down; global_etf low priority amid macro deterioration.",
+        "watch_trigger": "PCS rebound above 68 with macro_score stabilizing"
       },
       {
         "ticker": "LCX.V",
-        "reason": "PCS 68.8 but oil_gas already extreme at 71 percent and dems only 4.",
-        "watch_trigger": "Oil_gas weight declines and dems exceeds 10."
+        "reason": "PCS 63.8 crossed down; oil_gas theme already 71% weight.",
+        "watch_trigger": "Theme_concentration_risk declining below high"
       },
       {
         "ticker": "SLP.L",
-        "reason": "PCS 68.2 with rot_score 7 and 3-week streak but Koncorde 3D distribution and alignment distribution_warning block entry.",
-        "watch_trigger": "Koncorde 3D shifts to accumulation with rot_score rising above 8 and dems above 10"
+        "reason": "PCS 63.2 crossed down; silver_gold already overweight.",
+        "watch_trigger": "PCS recovery above 65 with Konc_3d_state up"
       },
       {
-        "ticker": "KOS",
-        "reason": "PCS 64 with ret_13w_vs_spy +22.6 but rot_score only 4, dems 4 and Koncorde 3D distribution.",
-        "watch_trigger": "rot_score reaches 6 with streak_weeks at least 2 and Koncorde 3D improves to up"
+        "ticker": "CRON",
+        "reason": "PCS 63.2 crossed down; cannabis theme insufficient weekly metrics.",
+        "watch_trigger": "Streak_weeks above 4 and rot_score above 7"
       },
       {
-        "ticker": "CVE",
-        "reason": "PCS 64.5 with ret_13w_vs_spy +24.9 but spike_flag true, dems 3 and medium extension_risk.",
-        "watch_trigger": "spike_flag clears with outperform_d10 above 6 and dems above 10"
+        "ticker": "LCX.V",
+        "reason": "PCS 63.8 with rot_score 6 and streak_weeks 6 but macro deteriorating and oil_gas theme already at 71 percent portfolio weight.",
+        "watch_trigger": "PCS rise above 70 with rot_score above 8 and macro delta turning positive"
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "PCS 64.5 with rot_score 6 and streak_weeks 3 but global_etf theme concentration low yet macro trend deteriorating limits conviction.",
+        "watch_trigger": "PCS above 68 with ret_13w_vs_spy turning positive and macro_score stabilizing above 70"
+      },
+      {
+        "ticker": "SLP.L",
+        "reason": "PCS 63.2 with rot_score 7 and ret_13w_vs_spy 9.95 percent but silver_gold_miners theme at 20.5 percent weight and konc_3d_state distribution.",
+        "watch_trigger": "PCS above 68 with rot_score above 8 and konc_3d_state returning to up"
       }
     ],
-    "rejected": [],
+    "rejected": [
+      {
+        "ticker": "III.TO",
+        "reason": "Signal IGNORAR and rot_score only 4 with negative ret_4w.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SU",
+        "reason": "Signal IGNORAR and PCS below MACRO_THEMATIC threshold after cross down.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "EOS.AX",
+        "reason": "PCS 60.5 below all portfolio thresholds with smallcap_speculative theme.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "EWZ",
+        "reason": "PCS 60.2 below threshold and smallcap_em theme low conviction.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "TAL",
+        "reason": "PCS 60.2 below threshold and china_em theme macro conflict.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "MLX.AX",
+        "reason": "Already open position; new selection prohibited.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "NVDA",
+        "reason": "Already open in related themes; concentration risk high.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "TMO",
+        "reason": "Already open; new selection prohibited.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "VGZ",
+        "reason": "PCS 71.2 but silver_gold concentration already high and distribution_warning.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "DHR",
+        "reason": "Already open; new selection prohibited.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "PFE",
+        "reason": "PCS 71 but healthcare concentration already elevated.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "MU",
+        "reason": "PCS 71 but us_tech_ai already 28.5% weight.",
+        "rejection_category": "better_alternative_available"
+      }
+    ],
     "open_picks_review": [
       {
         "ticker": "BTCC-B.TO",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Current PCS 88 exceeds threshold with strong rot_score 8."
+        "reason": "Mechanical floor ok; 6-week streak and crypto diversification still valid despite macro deterioration."
       },
       {
         "ticker": "PLTR",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Current PCS 88 with sustained leadership metrics."
+        "reason": "Mechanical floor ok; 3-week streak and 46% 13w RS support retention."
       },
       {
         "ticker": "MLX.AX",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 84.2 with 8-week streak intact."
+        "reason": "Mechanical floor ok; 8-week streak and commodities diversification intact."
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 77.2 with 8-week streak."
+        "reason": "Mechanical floor ok; 8-week streak and healthcare exposure maintained."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 73.5 with 8-week streak."
+        "reason": "Mechanical floor ok; 8-week streak provides oil_gas balance."
       },
       {
         "ticker": "TNZ.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 73.5 with 7-week streak."
+        "reason": "Mechanical floor ok; 7-week streak still contributing despite ret_4w weakness."
       },
       {
         "ticker": "COIN",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 72.2 despite recent pullback."
+        "reason": "Mechanical floor ok; dems 18 and zero extension justify holding."
       },
       {
         "ticker": "SMCI",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 87.2 with rot_score 8."
+        "reason": "Mechanical floor ok; dems 15 and us_tech_ai diversification value retained."
       },
       {
         "ticker": "DHR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 76 with rot_score 9."
+        "reason": "Mechanical floor ok; Koncorde aligned and diversification role intact."
       },
       {
         "ticker": "MSTR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 85.5 with 5-week streak."
+        "reason": "Mechanical floor ok; 5-week streak and 61% 13w RS retained."
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 71.8 with bullish Koncorde."
+        "reason": "Mechanical floor ok; zero extension and Koncorde aligned."
       },
       {
         "ticker": "JD",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Entry signal still valid per daily Koncorde."
+        "reason": "Mechanical floor status null; daily reversal signal still active."
       },
       {
         "ticker": "INDA",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Entry signal intact."
+        "reason": "Mechanical floor status null; daily reversal signal still active."
       },
       {
         "ticker": "FDR.AX",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Entry signal intact."
+        "reason": "Mechanical floor status null; daily reversal signal still active."
       },
       {
         "ticker": "GRSL.V",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Entry signal intact."
+        "reason": "Mechanical floor status null; daily reversal signal still active."
       },
       {
         "ticker": "CVE",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Position remains within mandate."
+        "reason": "Mechanical floor status null; position remains within mandate."
       },
       {
         "ticker": "KIST.L",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Position remains within mandate."
+        "reason": "Mechanical floor status null; position remains within mandate."
       },
       {
         "ticker": "UCO",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Position remains within mandate."
+        "reason": "Mechanical floor status null; position remains within mandate."
       },
       {
         "ticker": "QQQ",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Position remains within mandate."
+        "reason": "Mechanical floor status null; position remains within mandate."
       },
       {
         "ticker": "XLU",
         "portfolio": "CRUCE_ROJO_D",
-        "action": "HOLD",
-        "reason": "Position left universe but no exit action required."
+        "action": "EXIT",
+        "reason": "Left universe; position closed by system."
       },
       {
         "ticker": "MAI.L",
         "portfolio": "CRUCE_ROJO_D_25",
         "action": "HOLD",
-        "reason": "Position remains open."
+        "reason": "Mechanical floor status null; daily trend signal active."
       },
       {
         "ticker": "SLP.L",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Current PCS 68.2 above floor."
+        "reason": "Mechanical floor status null; ranking score components intact."
       },
       {
         "ticker": "LCX.V",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Current PCS 68.8 above floor."
+        "reason": "Mechanical floor status null; ranking score components intact."
       },
       {
         "ticker": "KOS",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Current PCS 64 above floor."
+        "reason": "Mechanical floor status null; ranking score components intact."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-10-01\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-10-01_1533\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving macro regime with score 81.25 and positive delta.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"META\",\n      \"reason\": \"PCS 88 but high us_tech_ai concentration already at 28.5 percent and extension_risk high.\",\n      \"watch_trigger\": \"Theme exposure drops below 20 percent and extension_risk falls to low.\"\n    },\n    {\n      \"ticker\": \"AMD\",\n      \"reason\": \"PCS 87.5 but distribution_warning on Koncorde and extreme extension_risk.\",\n      \"watch_trigger\": \"Koncorde alignment turns bullish_aligned and extension_risk falls to low.\"\n    },\n    {\n      \"ticker\": \"NVDA\",\n      \"reason\": \"PCS 83.8 but distribution_warning on Koncorde and us_tech_ai already overweight.\",\n      \"watch_trigger\": \"Koncorde 3D shifts to up and theme weight declines.\"\n    },\n    {\n      \"ticker\": \"REG.V\",\n      \"reason\": \"PCS 80 but spike_flag true and commodities_copper theme exposure low priority.\",\n      \"watch_trigger\": \"outperform_d10 exceeds 8 and no spike_flag.\"\n    },\n    {\n      \"ticker\": \"UCO\",\n      \"reason\": \"PCS 78 but oil_gas already at 71 percent concentration and spike_flag true.\",\n      \"watch_trigger\": \"Oil_gas weight falls below 50 percent and spike_flag clears.\"\n    },\n    {\n      \"ticker\": \"KIST.L\",\n      \"reason\": \"PCS 78 but oil_gas concentration extreme and mixed Koncorde alignment.\",\n      \"watch_trigger\": \"Koncorde alignment turns bullish_aligned and oil_gas weight declines.\"\n    },\n    {\n      \"ticker\": \"VGZ\",\n      \"reason\": \"PCS 76.2 but distribution_warning on Koncorde and silver_gold_miners already high weight.\",\n      \"watch_trigger\": \"Koncorde alignment improves to bullish_aligned.\"\n    },\n    {\n      \"ticker\": \"PFE\",\n      \"reason\": \"PCS 76 but healthcare_largecap already overweight at 24 percent.\",\n      \"watch_trigger\": \"Healthcare "
+  "raw_response_head": "{\n  \"date\": \"2026-10-01\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-10-01_2357\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 68.75 deteriorating 6.25 points over 1w and 1m; multiple HIGH_CONVICTION names crossing below 85 threshold on weak daily flow.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"PLTR\", \"reason\": \"PCS 83 crossed down from 88; strong 46% 13w RS but macro deterioration and 3D distribution warrant waiting for stabilization.\", \"watch_trigger\": \"PCS rebound above 85 with 3D Koncorde turning up and macro delta flattening\"},\n    {\"ticker\": \"META\", \"reason\": \"PCS 83 crossed down; high extension risk and 4w RS decay signal late position despite 4-week streak.\", \"watch_trigger\": \"Ret_4w_vs_spy turning positive and extension_risk dropping to low\"},\n    {\"ticker\": \"BTCC-B.TO\", \"reason\": \"PCS 83 crossed down; spike_flag and 3D distribution despite 6-week streak and 40% 13w RS.\", \"watch_trigger\": \"Outperform_d10 above 8 and Konc_3d_state returning to up\"},\n    {\"ticker\": \"AMD\", \"reason\": \"PCS 82.5 crossed down; extreme extension risk and 3D/weekly distribution despite 4-week streak.\", \"watch_trigger\": \"Extension flags clearing and dems above 12 with momentum_accel true\"},\n    {\"ticker\": \"SMCI\", \"reason\": \"PCS 82.2 crossed down; distribution across daily and 3D with spike_flag.\", \"watch_trigger\": \"Konc_alignment shifting to bullish_aligned and ret_4w_vs_spy above 15\"},\n    {\"ticker\": \"MSTR\", \"reason\": \"PCS 80.5 crossed down; 5-week streak and 61% 13w RS but 3D distribution and crypto concentration risk.\", \"watch_trigger\": \"PCS rebound above 82 with Konc_3d_blue turning positive\"},\n    {\"ticker\": \"SLG.V\", \"reason\": \"PCS 79 crossed up into CONFIRMED_FLOW_LEADERS but macro deterioration and distribution_warning.\", \"watch_trigger\": \"Macro_delta_1w turning positive and rot_score holding above 9\"},\n    {\"ticker\": \"REG.V\", \"reason\": \"PCS 75 crossed down from 8"
 }
