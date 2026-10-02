@@ -7710,6 +7710,31 @@ disciplina de narrativa + lectura discrecional, no toca el motor de picks.
 Un registro persistente de hipótesis con IDs/MFE-MAE (ya descartado el
 2026-09-21 por el mismo motivo: observar antes de construir infraestructura).
 
+### Hallazgo conocido, sin tocar: el veto de Koncorde no mira el diario directo (2026-10-02)
+
+El usuario preguntó por qué OSCR salía como candidato en el filtro de
+Inflexión Temprana con `konc_d_state=distribution`. Causa verificada contra
+`koncorde_signals_history.jsonl`: el veto de `flow_state_lib.py`
+(`KONC_BEARISH`) mira `konc_alignment` (el resumen compuesto D/3D/W de
+`koncorde_calculator.py`), no `konc_d_state` suelto — y ese resumen
+descuenta el diario a propósito desde el fix de TNZ.TO (2026-07-21).
+
+**El caso de OSCR es la situación inversa a la que motivó aquel fix:** su
+`konc_d_state` lleva en `distribution` de forma continua desde el
+2026-09-18 (2+ semanas sin un solo día distinto), mientras el `konc_3d_state`
+oscila `up`/`distribution` de bloque en bloque — cuando el bloque 3D cae en
+`up` (como el 2026-10-02), `konc_alignment` sale `bullish_aligned` y el
+veto no se activa, pese a las 2 semanas de deterioro diario sostenido. El
+fix de TNZ.TO solo contemplaba "D+W persistentes, 3D parpadeando" (para no
+vetar en falso); nunca contempló "D persistente en solitario, 3D
+parpadeando" como caso a vigilar aparte.
+
+**Decisión del usuario: dejarlo así por ahora, no tocar el veto.** No se ha
+modificado `flow_state_lib.py` ni `_konc_alignment()`. Si se revisita, la
+opción discutida era añadir un chequeo directo de persistencia de
+`konc_d_state` (ej. N sesiones seguidas en distribución) como veto
+adicional, independiente de `konc_alignment` — no implementado.
+
 ---
 
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
