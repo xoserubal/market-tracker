@@ -16,6 +16,7 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <script src="/shared/flow-score.js"></script>
   <script src="/shared/flow-state-lib.js"></script>
   <script src="/shared/screener-lib.js"></script>
   <style>
@@ -64,6 +65,10 @@
     .footer-note { font-size: 9px; color: #98a2b3; margin-top: 14px; font-style: italic; }
     .loading { font-size: 11px; color: #98a2b3; padding: 20px 0; text-align: center; }
     .num { font-family: Consolas, monospace; }
+    .tk-link { font-weight: 700; color: #1a6baa; cursor: pointer; background: none; border: none; padding: 0; font-size: 11px; text-decoration: underline dotted; }
+    .tk-link:hover { color: #0d4a7a; text-decoration: underline; }
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 200; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+    .modal { background: white; border-radius: 10px; padding: 18px 22px; width: 100%; max-width: 860px; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
   </style>
 </head>
 <body>
@@ -96,7 +101,8 @@ function filterStatusMeta(filter, status) {
 // mismo patrón que trullas.html con ai_picks.json. Solo se necesitan estos
 // 9 campos por fila; el resto de portfolio_daily_snapshot.jsonl (Koncorde
 // completo, insider activity…) no hace falta aquí.
-const FLOW_HISTORY_FIELDS = ['date', 'flowScore', 'rsi', 'konc_alignment', 'macdHist', 'macdHistDelta1', 'atrPct', 'price', 'm1'];
+const FLOW_HISTORY_FIELDS = ['date', 'flowScore', 'rsi', 'konc_alignment', 'macdHist', 'macdHistDelta1', 'atrPct', 'price', 'm1',
+  'konc_d_state', 'konc_3d_state', 'konc_w_state']; // los 3 últimos: solo para el resumen de ticker (Early Flow vs sesión anterior)
 
 async function fetchFlowHistory() {
   const text = await fetch('/docs/data/portfolio_daily_snapshot.jsonl?t=' + Date.now()).then(r => r.text()).catch(() => '');
@@ -118,6 +124,301 @@ async function fetchFlowHistory() {
   return out;
 }
 
+// Mini-gráfico de barras del histograma MACD (últimas `n` sesiones). Escala
+// propia por fila — muestra forma/inclinación, no magnitud comparable entre
+// tickers. `crossAgo` = sesiones desde el cruce (0 = hoy) para marcarlo.
+function HistBars({ values, n = 20, crossAgo = null }) {
+  if (!Array.isArray(values) || values.length < 2) return <span>—</span>;
+  const v = values.slice(-n);
+  const W = 100, H = 30, gap = 1;
+  const bw = (W - gap * (v.length - 1)) / v.length;
+  const maxAbs = Math.max(...v.map(Math.abs)) || 1;
+  const mid = H / 2;
+  const crossIdx = crossAgo != null ? v.length - 1 - crossAgo : null;
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ verticalAlign: 'middle' }}>
+      <line x1="0" x2={W} y1={mid} y2={mid} stroke="#d0d5dd" strokeWidth="0.5" />
+      {v.map((x, i) => {
+        const h = Math.max(0.8, Math.abs(x) / maxAbs * (mid - 2));
+        const y = x >= 0 ? mid - h : mid;
+        return <rect key={i} x={i * (bw + gap)} y={y} width={bw} height={h}
+                     fill={x >= 0 ? '#2e9e5b' : '#d64545'} opacity={i === v.length - 1 ? 1 : 0.8} />;
+      })}
+      {crossIdx != null && crossIdx >= 0 && crossIdx < v.length && (
+        <circle cx={crossIdx * (bw + gap) + bw / 2} cy={H - 2.5} r="2" fill="#1f4e8c" />
+      )}
+    </svg>
+  );
+}
+
+// ── Resumen de ticker (modal) — mismo dato y mismo formato que la fila del
+// ticker en portfolio.html (retornos, volumen, RSI, Koncorde D/3D/W con
+// mini-gráfico, MACD, ATLAS, ATR%, Flow, Early Flow, insider, notas). Los
+// helpers de presentación de abajo son COPIA de portfolio.html (cada página
+// del proyecto mantiene su propia copia de la capa visual, sin módulo
+// compartido) — si se cambia el criterio de color/formato allí, mantener
+// sincronizado aquí. La matemática (computeFlowScore, etc.) sí es compartida:
+// viene de /shared/flow-score.js, la misma fuente que usa Portfolio Tracker.
+const toN = v => (v != null && !isNaN(v)) ? +v : null;
+const fmtRet = v => { const n=toN(v); if(n==null) return '—'; return n<0?`(${Math.abs(Math.round(n))}%)`:`${Math.round(n)}%`; };
+const retBg   = v => { const n=toN(v); if(n==null) return ''; if(n>=20) return '#0d4e0d'; if(n>=10) return '#1a7a1a'; if(n>=3) return '#5ec45e'; if(n>0) return '#a8d8a8'; if(n===0) return ''; if(n>-3) return '#ffc9c9'; if(n>-10) return '#f48080'; return '#e03030'; };
+const retFg   = v => { const n=toN(v); return n==null?'#555':Math.abs(n)>=10?'white':'#1a1a1a'; };
+const volBg   = v => { const n=toN(v); if(n==null) return ''; if(n>=200) return '#0d2e6e'; if(n>=150) return '#1a5ca0'; if(n>=120) return '#6ab0e0'; if(n<=50) return '#a0a0a0'; if(n<=80) return '#d0d0d0'; return ''; };
+const volFg   = v => { const n=toN(v); if(n==null) return '#aaa'; if(n>=150) return 'white'; if(n<=80) return '#555'; return '#333'; };
+const rsiBg = v => { const n=toN(v); if(n==null) return ''; if(n>=80) return '#6b0000'; if(n>=70) return '#c0392b'; if(n>=60) return '#e8a87c'; if(n<=20) return '#0d4e0d'; if(n<=30) return '#1a7a1a'; if(n<=40) return '#a8d8a8'; return ''; };
+const rsiFg = v => { const n=toN(v); if(n==null) return '#aaa'; if(n>=70||n<=30) return 'white'; if(n>=60||n<=40) return '#222'; return '#444'; };
+const koncStateStyle = s => ({'accumulation':{bg:'#dbeafe',fg:'#1e40af'},'up':{bg:'#dcfce7',fg:'#15803d'},'distribution':{bg:'#fef3c7',fg:'#b45309'},'down':{bg:'#fee2e2',fg:'#b91c1c'}})[s] ?? {bg:'#f3f4f6',fg:'#6b7280'};
+const blueFg   = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a5cb0':n<0?'#7b8ea0':'#888'; };
+const greenFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#1a7a1a':n<0?'#c0392b':'#888'; };
+const trendFg  = v => { const n=toN(v); return n==null?'#aaa':n>0?'#555577':n<0?'#774455':'#888'; };
+const fmtKonc  = (v,d) => { if(v==null) return '—'; const s=v>=0?'+':''; const a=d==null?'':d>0.1?'↑':d<-0.1?'↓':''; return s+v.toFixed(1)+a; };
+const koncPrevTitle = (label, v, d) => {
+  if (v == null) return null;
+  if (d == null) return `${label}: ${v.toFixed(1)} (sin dato de sesión anterior)`;
+  const ds = d >= 0 ? '+' : '';
+  return `${label}: ${v.toFixed(1)} · sesión anterior: ${(v - d).toFixed(1)} (${ds}${d.toFixed(1)})`;
+};
+const macdTriangle = p => {
+  if (p?.macdBull == null) return null;
+  const color = p.macdBull ? '#1a7a1a' : '#c0392b';
+  const up = p.macdHistDelta1 == null ? p.macdBull : p.macdHistDelta1 >= 0;
+  return { glyph: up ? '▲' : '▼', color, weakening: p.macdHistDelta1 != null && up !== p.macdBull };
+};
+const FLOW_STYLE = {
+  'Lider':      { bg:'#1a7a1a', fg:'white' },
+  'Transicion': { bg:'#b8860b', fg:'white' },
+  'Debil':      { bg:'#c0392b', fg:'white' },
+};
+const EARLY_STYLE = {
+  'Fuerte':      { bg:'#1a5ca0', fg:'white' },
+  'Interesante': { bg:'#5b3fa0', fg:'white' },
+  'Sin setup':   { bg:'',       fg:'#aaa'   },
+};
+const INSIDER_SCORE_STYLE = {0:{bg:'#f3f4f6',fg:'#9ca3af'},1:{bg:'#fee2e2',fg:'#b91c1c'},2:{bg:'#f3f4f6',fg:'#6b7280'},3:{bg:'#dcfce7',fg:'#15803d'},4:{bg:'#86efac',fg:'#14532d'},5:{bg:'#22c55e',fg:'#052e16'}};
+const INSIDER_CONTEXT_LBL = {strong_confirmation:'Confirmación fuerte',moderate_confirmation:'Confirmación moderada',neutral:'Neutral',warning:'⚠ Warning',ignored_selling:'Venta 10b5-1 (ignorada)',not_evaluable:'No evaluable'};
+const fmtMoney = v => { const n=toN(v); if(n==null) return '—'; const a=Math.abs(n), s=n<0?'-':''; if(a>=1e6) return `${s}$${(a/1e6).toFixed(1)}M`; if(a>=1e3) return `${s}$${(a/1e3).toFixed(0)}k`; return `${s}$${Math.round(a)}`; };
+
+const TREND_ARROWS = { mildUp:'↑', strongUp:'↑↑', extremeUp:'↑↑↑', mildDown:'↓', strongDown:'↓↓', extremeDown:'↓↓↓' };
+const trendBucket = (delta, mildTh, strongTh, extremeTh) => {
+  const a = Math.abs(delta);
+  if (a < mildTh) return 'flat';
+  const dir = delta > 0 ? 'Up' : 'Down';
+  if (a >= extremeTh) return 'extreme' + dir;
+  if (a >= strongTh)  return 'strong'  + dir;
+  return 'mild' + dir;
+};
+const trendColor = b => ({
+  mildUp:'#4a9e5c', strongUp:'#0d7a2e', extremeUp:'#063d17',
+  mildDown:'#c77c1f', strongDown:'#c0392b', extremeDown:'#7a1810',
+})[b] ?? 'inherit';
+function TrendArrow({ delta, mildTh, strongTh, extremeTh, color }) {
+  if (delta == null || isNaN(delta)) return null;
+  const b = trendBucket(delta, mildTh, strongTh, extremeTh);
+  if (b === 'flat') return null;
+  return (
+    <span title={`${delta>=0?'+':''}${delta.toFixed(2)} vs sesión anterior`}
+      style={{marginLeft:3, fontWeight:700, fontSize:11, color: color ?? trendColor(b)}}>
+      {TREND_ARROWS[b]}
+    </span>
+  );
+}
+
+// Mini-gráfico Koncorde (últimas 5 sesiones) — copia de portfolio.html, algo
+// más grande para el modal. Ver el comentario largo de allí sobre el orden
+// de capas (verde → ocre/trend → azul, roja suelta encima).
+function KoncMiniChart({ blue, green, trend, trendMa }) {
+  const areaSeries = [
+    { arr: green, line: '#1a7a1a', fill: '#a8d5a2' },
+    { arr: trend, line: null,      fill: '#e0c184' },
+    { arr: blue,  line: '#1a5cb0', fill: '#8fb8e6' },
+  ];
+  const allArrs = [...areaSeries.map(s => s.arr), trendMa];
+  const n = Math.max(0, ...allArrs.map(a => Array.isArray(a) ? a.length : 0));
+  if (n < 2) return <span style={{color:'#ddd',fontSize:9}}>—</span>;
+  const W = 96, H = 34, PAD = 2;
+  const vals = allArrs.flatMap(a => (a||[]).filter(v => v != null));
+  vals.push(0);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max - min) || 1;
+  const x = i => PAD + (i / Math.max(n-1,1)) * (W - PAD*2);
+  const y = v => H - PAD - ((v - min) / range) * (H - PAD*2);
+  const baseline = y(0);
+  const pointsFor = arr => (arr||[]).map((v,i) => v==null ? null : [x(i), y(v)]).filter(Boolean);
+  const lineFor = pts => pts.map((p,i)=>`${i===0?'M':'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const areas = areaSeries.map(s => {
+    const pts = pointsFor(s.arr);
+    if (pts.length < 2) return null;
+    const line = lineFor(pts);
+    const area = `${line} L${pts[pts.length-1][0].toFixed(1)},${baseline.toFixed(1)} L${pts[0][0].toFixed(1)},${baseline.toFixed(1)} Z`;
+    return { ...s, line, area };
+  }).filter(Boolean);
+  const redPts = pointsFor(trendMa);
+  const redLine = redPts.length >= 2 ? lineFor(redPts) : null;
+  return (
+    <svg width={W} height={H} style={{display:'block',margin:'0 auto'}}>
+      <line x1={PAD} y1={baseline} x2={W-PAD} y2={baseline} stroke="#ccc" strokeWidth={0.5} />
+      {areas.map((p,i) => <path key={'a'+i} d={p.area} fill={p.fill} fillOpacity={1} stroke="none" />)}
+      {areas.map((p,i) => p.line && <path key={'l'+i} d={p.line} fill="none" stroke={p.line} strokeWidth={1} />)}
+      {redLine && <path d={redLine} fill="none" stroke="#c0392b" strokeWidth={1} />}
+    </svg>
+  );
+}
+
+function SumCard({ label, tip, children }) {
+  return (
+    <div title={tip} style={{border:'1px solid #e6e8eb',borderRadius:6,background:'#fbfcfd',padding:'8px 12px',minWidth:96,textAlign:'center'}}>
+      <div style={{fontSize:9,color:'#98a2b3',textTransform:'uppercase',letterSpacing:.3,marginBottom:3}}>{label}</div>
+      <div style={{fontSize:14,fontWeight:700,fontFamily:'Consolas, monospace'}}>{children}</div>
+    </div>
+  );
+}
+
+function TickerSummaryModal({ ticker, q, item, section, prevRow, onClose }) {
+  React.useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  const p = q;
+  const flow  = p ? computeFlowScore(p) : null;
+  const flowCls = flow != null ? classifyFlow(flow) : null;
+  const flowSt = flowCls ? FLOW_STYLE[flowCls] : null;
+  const prevFlow = prevRow?.flowScore;
+  const flowDelta = (flow != null && prevFlow != null) ? flow - prevFlow : null;
+  const early = p ? computeEarlyFlowScore(p, prevRow) : null;
+  const earlyCls = early != null ? classifyEarlyFlow(early) : null;
+  const earlySt = earlyCls ? EARLY_STYLE[earlyCls] : null;
+  const reading = (early != null && flow != null) ? matrixReading(early, flow) : null;
+  const prevAtr = prevRow?.atrPct;
+  const atrDelta = (p?.atrPct != null && prevAtr != null) ? p.atrPct - prevAtr : null;
+  const tri = p ? macdTriangle(p) : null;
+  const ins = p?.insider;
+  const w3 = ins?.windows?.['0_3m'] ?? {};
+  const insScoreSt = INSIDER_SCORE_STYLE[ins?.insider_activity_score ?? 0];
+
+  const th = { fontSize: 9, textTransform: 'uppercase', color: '#98a2b3', fontWeight: 600, padding: '3px 8px', textAlign: 'center', borderBottom: '1px solid #eef0f2', background: 'transparent', position: 'static' };
+  const td = { textAlign: 'center', padding: '4px 8px', fontFamily: 'Consolas, monospace', fontWeight: 600 };
+  const secTitle = { fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: .5, color: '#344054', margin: '14px 0 6px' };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+          <div>
+            <span style={{fontSize:20,fontWeight:800,color:'#1a6baa'}}>{ticker}</span>
+            {p?.konc_mirror_signal === 'mirror_reversal_confirmed' &&
+              <span title="Espejo CONFIRMADO: giro azul negativo→positivo (verde sigue negativo) en D y 3D, semanal aún negativo."
+                style={{marginLeft:8,fontSize:11,background:'#f3e5f5',color:'#7b1fa2',borderRadius:8,padding:'1px 7px',fontWeight:700}}>🪞 Espejo</span>}
+            {p?.konc_mirror_signal === 'mirror_reversal_daily_only' &&
+              <span title="Espejo (solo D)."
+                style={{marginLeft:8,fontSize:11,background:'#f5f5f5',color:'#9e9e9e',borderRadius:8,padding:'1px 7px',fontWeight:700}}>🪞 D</span>}
+            <div style={{fontSize:11,color:'#667085',marginTop:2}}>
+              {section || '—'}{item?.addedAt ? ` · añadido ${item.addedAt}` : ''}
+              {p?.price != null && <> · <b style={{fontFamily:'Consolas, monospace',color:'#1f2933'}}>{fmtPrice(p.price)}</b></>}
+            </div>
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <a href="/portfolio.html" target="_blank" style={{fontSize:10,color:'#1a6baa'}}>Abrir Portfolio ↗</a>
+            <button onClick={onClose} style={{background:'#98a2b3'}}>✕</button>
+          </div>
+        </div>
+
+        {!p && <div className="gap-note" style={{marginTop:12}}>Sin datos de mercado para este ticker (la consulta a /api/quote falló o aún no ha cargado).</div>}
+
+        {p && (<>
+          <div style={secTitle}>Retornos y volumen</div>
+          <table style={{width:'auto',margin:0}}>
+            <thead><tr>
+              {['1D','2D','3D','1W','1M','3M','YTD','1Y'].map(h => <th key={h} style={th}>{h}</th>)}
+              <th style={th}>Vol 1D</th><th style={th}>Vol 2D</th><th style={th}>Vol 3D</th><th style={th}>RSI</th>
+            </tr></thead>
+            <tbody><tr>
+              {['d1','d2','d3','w1','m1','m3','ytd','y1'].map(k => (
+                <td key={k} style={{...td, background: p[k]!=null?retBg(p[k]):'', color: p[k]!=null?retFg(p[k]):'#aaa'}}>{p[k]!=null ? fmtRet(p[k]) : '—'}</td>
+              ))}
+              {['vol1d','vol2d','vol3d'].map(k => (
+                <td key={k} style={{...td, background: volBg(p[k]), color: volFg(p[k])}} title="Volumen vs media 3M">{p[k]!=null ? p[k]+'%' : '—'}</td>
+              ))}
+              <td style={{...td, background: rsiBg(p.rsi), color: rsiFg(p.rsi)}}>{p.rsi != null ? p.rsi : '—'}</td>
+            </tr></tbody>
+          </table>
+
+          <div style={secTitle}>Koncorde Plus</div>
+          <table style={{width:'auto',margin:0}}>
+            <thead><tr>
+              <th style={th}>TF</th><th style={th}>Blue</th><th style={th}>Green</th><th style={th}>Trend</th><th style={th}>Estado</th><th style={th}>Últ. 5 sesiones</th>
+            </tr></thead>
+            <tbody>
+              {[['D','d'],['3D','3d'],['W','w']].map(([lbl, k]) => {
+                const st = koncStateStyle(p[`konc_${k}_state`]);
+                return (
+                  <tr key={k}>
+                    <td style={{...td, color:'#888'}}>{lbl}</td>
+                    <td style={{...td, color: blueFg(p[`konc_${k}_blue`])}} title={koncPrevTitle('Blue', p[`konc_${k}_blue`], p[`konc_${k}_blue_delta1`])}>{fmtKonc(p[`konc_${k}_blue`], p[`konc_${k}_blue_delta1`])}</td>
+                    <td style={{...td, color: greenFg(p[`konc_${k}_green`])}} title={koncPrevTitle('Green', p[`konc_${k}_green`], p[`konc_${k}_green_delta1`])}>{fmtKonc(p[`konc_${k}_green`], p[`konc_${k}_green_delta1`])}</td>
+                    <td style={{...td, color: trendFg(p[`konc_${k}_trend`])}} title={koncPrevTitle('Trend', p[`konc_${k}_trend`], p[`konc_${k}_trend_delta1`])}>{fmtKonc(p[`konc_${k}_trend`], p[`konc_${k}_trend_delta1`])}</td>
+                    <td style={{...td, fontSize:10, background: p[`konc_${k}_state`]?st.bg:'', color: p[`konc_${k}_state`]?st.fg:'#aaa', whiteSpace:'nowrap'}}>{koncStateLbl(p[`konc_${k}_state`])}</td>
+                    <td style={{...td}}><KoncMiniChart blue={p[`konc_${k}_blue_last5`]} green={p[`konc_${k}_green_last5`]} trend={p[`konc_${k}_trend_last5`]} trendMa={p[`konc_${k}_trend_ma_last5`]} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {p.konc_alignment && <div style={{fontSize:10,color:'#667085',marginTop:4}}>Alineación D/3D/W: <b>{p.konc_alignment}</b></div>}
+
+          <div style={secTitle}>Indicadores y scores</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <SumCard label="MACD hist." tip={p.macdHist!=null ? `Histograma MACD = ${p.macdHist}${p.macdHistDelta1!=null ? ` (Δ1d ${p.macdHistDelta1>=0?'+':''}${p.macdHistDelta1})` : ''}. Color = estado (línea vs señal); flecha = tendencia del histograma vs ayer.` : undefined}>
+              {tri ? <span style={{color:tri.color}}>{tri.glyph}</span> : <span style={{color:'#aaa'}}>—</span>}
+            </SumCard>
+            <SumCard label="MACD línea" tip={p.macdLine!=null ? `Línea MACD (EMA12−EMA26) = ${p.macdLine}` : undefined}>
+              {p.macdLineBull==null ? <span style={{color:'#aaa'}}>—</span>
+                : <span style={{color: p.macdLineBull ? '#1a7a1a' : '#c0392b', fontSize:12}}>
+                    {p.macdLineBull ? '+' : ''}{p.macdLine}
+                    {p.macdLineDelta5 != null && p.macdLineDelta5 !== 0 && <span title={`Tendencia 5 sesiones: ${p.macdLineDelta5>=0?'+':''}${p.macdLineDelta5}`} style={{marginLeft:3,color: p.macdLineDelta5>0?'#0d7a2e':'#c0392b'}}>{p.macdLineDelta5>0?'↑':'↓'}</span>}
+                  </span>}
+            </SumCard>
+            <SumCard label="ATLAS" tip={p.atlasDbb!=null ? `dbb=${p.atlasDbb} · umbral=${p.atlasFactor} · atl=${p.atlasAtl}. ● = estrechamiento de Bollinger (no da dirección).` : undefined}>
+              {p.atlasSignal==null ? <span style={{color:'#aaa'}}>—</span> : p.atlasSignal ? <span style={{color:'#a9720f'}}>●</span> : <span style={{color:'#ddd'}}>·</span>}
+            </SumCard>
+            <SumCard label="ATR%" tip="ATR(14) normalizado por precio.">
+              {p.atrPct != null ? <>{p.atrPct}%<TrendArrow delta={atrDelta} mildTh={0.25} strongTh={0.8} extremeTh={1.5} /></> : '—'}
+            </SumCard>
+            <SumCard label="Flow Score" tip="Momentum + RSI/MACD + ATR + Koncorde + tendencia 52W. Líder ≥ 8 · Transición ≥ 4 · Débil < 4.">
+              {flow != null ? (
+                <span style={{background:flowSt?.bg,color:flowSt?.fg,padding:'1px 8px',borderRadius:4}}>
+                  {flow.toFixed(1)}<TrendArrow delta={flowDelta} mildTh={0.6} strongTh={5} extremeTh={10} color={flowSt?.fg} />
+                </span>) : '—'}
+            </SumCard>
+            <SumCard label="Early Flow" tip={reading ?? 'Detecta setups antes de que el momentum sea evidente. Fuerte ≥ 7 · Interesante ≥ 4.'}>
+              {early != null ? (
+                <span style={{background:earlySt?.bg,color:earlySt?.fg,padding:'1px 8px',borderRadius:4}}>{early.toFixed(1)}</span>) : '—'}
+            </SumCard>
+          </div>
+          {reading && <div style={{fontSize:11,color:'#475467',marginTop:6}}>Lectura combinada: <b>{reading}</b></div>}
+
+          {ins && ins.coverage_status === 'covered' && (<>
+            <div style={secTitle}>Insider activity (Form4API)</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',fontSize:11}}>
+              <span style={{fontWeight:700,fontFamily:'Consolas, monospace',padding:'2px 8px',borderRadius:4,background:insScoreSt.bg,color:insScoreSt.fg}}>Score {ins.insider_activity_score ?? '—'}</span>
+              <span>{INSIDER_CONTEXT_LBL[ins.koncorde_insider_context] ?? '—'}</span>
+              <span style={{fontFamily:'Consolas, monospace'}}>0-3M: {fmtMoney(w3.open_market_buy_value)} / {fmtMoney(w3.open_market_sell_value)} / <b>{fmtMoney(w3.net_open_market_value)}</b></span>
+              <span style={{color:'#667085'}}>compradores: {w3.unique_buyers ?? 0}</span>
+              {(ins.flags||[]).length > 0 && <span style={{color:'#667085'}}>{ins.flags.join(', ')}</span>}
+            </div>
+          </>)}
+
+          {item?.notes && (<>
+            <div style={secTitle}>Notas (Portfolio Tracker)</div>
+            <div style={{fontSize:11,color:'#475467',whiteSpace:'pre-wrap',background:'#fbfcfd',border:'1px solid #e6e8eb',borderRadius:6,padding:'8px 10px'}}>{item.notes}</div>
+          </>)}
+        </>)}
+      </div>
+    </div>
+  );
+}
+
 function useToast() {
   const [toast, setToast] = React.useState(null);
   const show = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
@@ -126,6 +427,11 @@ function useToast() {
 
 function ScreenerPage() {
   const [tickerSection, setTickerSection] = React.useState({});
+  const [tickerItems, setTickerItems] = React.useState({});     // ticker -> item de portfolio.json (notas, addedAt)
+  const [trackRecord, setTrackRecord] = React.useState(null);   // docs/data/screener_signal_report.json
+  const [flowHistory, setFlowHistory] = React.useState({});     // ticker -> filas diarias asc (portfolio_daily_snapshot.jsonl)
+  const [summaryTicker, setSummaryTicker] = React.useState(null);
+  const closeSummary = React.useCallback(() => setSummaryTicker(null), []);
   const [quotes, setQuotes] = React.useState({});
   const [loading, setLoading] = React.useState(true);
   const [updated, setUpdated] = React.useState(null);
@@ -162,8 +468,12 @@ function ScreenerPage() {
     } catch (e) { /* universo vacío si falla — la tabla queda vacía, no rompe la página */ }
 
     const secMap = {};
-    sections.forEach(s => (s.items || []).forEach(i => { if (i.ticker && !(i.ticker in secMap)) secMap[i.ticker] = s.name; }));
+    const itemMap = {};
+    sections.forEach(s => (s.items || []).forEach(i => {
+      if (i.ticker && !(i.ticker in secMap)) { secMap[i.ticker] = s.name; itemMap[i.ticker] = i; }
+    }));
     setTickerSection(secMap);
+    setTickerItems(itemMap);
 
     const tickers = Object.keys(secMap);
     const map = {};
@@ -191,6 +501,8 @@ function ScreenerPage() {
       if (map[ticker]) map[ticker]._flow = fslEvaluateTicker(ticker, flowCtx);
     });
 
+    setFlowHistory(history);
+    fetch('/docs/data/screener_signal_report.json?t=' + Date.now()).then(r => r.ok ? r.json() : null).then(setTrackRecord).catch(() => {});
     setQuotes(map);
     setUpdated(new Date());
     setLoading(false);
@@ -451,6 +763,47 @@ function ScreenerPage() {
         })}
       </div>
 
+      {trackRecord && (
+        <details style={{ margin: '4px 0 10px', fontSize: 10, color: '#475467' }}>
+          <summary style={{ cursor: 'pointer', color: '#667085' }}>
+            Historial propio de estos filtros — qué hicieron sus candidatos después (datos hasta {trackRecord.snapshot_last_date})
+          </summary>
+          <table style={{ width: 'auto', margin: '6px 0 4px' }}>
+            <thead><tr>
+              <th>Filtro</th><th>Desde</th><th>Eventos indep.</th>
+              {['7d', '14d', '30d'].map(h => <th key={h}>{h}: n · exceso medio · aciertos</th>)}
+            </tr></thead>
+            <tbody>
+              {(activeScreener.filters || []).map(f => {
+                const d = trackRecord.filters[f.id];
+                if (!d) return <tr key={f.id}><td>{f.shortLabel || f.label}</td><td colSpan={5} style={{ color: '#98a2b3' }}>sin eventos registrados todavía</td></tr>;
+                return (
+                  <tr key={f.id}>
+                    <td>{f.shortLabel || f.label}</td>
+                    <td className="num">{d.evaluable_from}</td>
+                    <td className="num">{d.independent_events}</td>
+                    {['7d', '14d', '30d'].map(h => {
+                      const x = d.horizons[h];
+                      return (
+                        <td key={h} className="num" style={{ color: x && x.n_matured && !x.conclusive ? '#98a2b3' : '#1f2933' }}
+                            title={x && !x.conclusive ? 'n < ' + trackRecord.min_n_conclusive + ': no concluyente' : undefined}>
+                          {x && x.n_matured ? <>{x.n_matured} · <b style={{ color: x.mean_excess >= 0 ? '#1a7a1a' : '#c0392b' }}>{x.mean_excess >= 0 ? '+' : ''}{x.mean_excess}</b> · {x.hit_rate_excess}%</> : '—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div style={{ color: '#98a2b3', fontStyle: 'italic' }}>
+            Evento independiente = primera aparición de un ticker tras ≥{trackRecord.cooldown_days} días sin ser candidato de ese filtro. Exceso = retorno − mediana del universo
+            ese día, a 7/14/30 días naturales. En gris, n &lt; {trackRecord.min_n_conclusive}: no concluyente — seguimiento descriptivo, sin corrección por comparaciones múltiples ni dev/test.
+            Los filtros MACD solo son evaluables desde que se capturan sus campos (ver "Desde").
+          </div>
+        </details>
+      )}
+
       {activeScreener.extraFilters && activeScreener.extraFilters.length > 0 && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '2px 0 10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 10, color: '#98a2b3' }}>Marcas opcionales (no afectan a quién es candidato, solo filtran la vista):</span>
@@ -533,7 +886,7 @@ function ScreenerPage() {
           <tbody>
             {visibleRows.map(r => (
               <tr key={r.ticker}>
-                <td><b>{r.ticker}</b></td>
+                <td><button className="tk-link" title="Abrir resumen del ticker" onClick={() => setSummaryTicker(r.ticker)}>{r.ticker}</button></td>
                 <td style={{ color: '#98a2b3', fontSize: 10 }}>{r.section}</td>
                 <td className="num">{fmtPrice(r.q?.price)}</td>
                 <td>
@@ -549,7 +902,12 @@ function ScreenerPage() {
                   })}
                 </td>
                 {mergedColumns.map(c => (
-                  <td key={c.header} className="num">{c.format(c.get(r.q, r.results[c.filterId]))}</td>
+                  <td key={c.header} className="num">
+                    {c.kind === 'histbars'
+                      ? <HistBars values={c.get(r.q, r.results[c.filterId])}
+                                  crossAgo={r.results[c.filterId]?.detail?.crossSessionsAgo ?? null} />
+                      : c.format(c.get(r.q, r.results[c.filterId]))}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -561,6 +919,15 @@ function ScreenerPage() {
           </tbody>
         </table>
       )}
+
+      {summaryTicker && (() => {
+        const today = new Date().toISOString().slice(0, 10);
+        const rows = flowHistory[summaryTicker] || [];
+        let prevRow = null;
+        for (let i = rows.length - 1; i >= 0; i--) { if (rows[i].date < today) { prevRow = rows[i]; break; } }
+        return <TickerSummaryModal ticker={summaryTicker} q={quotes[summaryTicker]} item={tickerItems[summaryTicker]}
+                 section={tickerSection[summaryTicker]} prevRow={prevRow} onClose={closeSummary} />;
+      })()}
 
       <div className="footer-note">
         Datos: /api/quote/:symbol (shared/quote-lib.js), en vivo, sobre el universo de Portfolio Tracker

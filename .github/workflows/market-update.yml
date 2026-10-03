@@ -265,6 +265,18 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Registro diario de candidatos del Screener (por filtro individual) +
+      # informe de rendimiento posterior (2026-10-03). Lee el snapshot de
+      # Step 9g, asi que va justo despues. Sin datos privados: solo el
+      # universo publico de portfolio.json. Si ^GSPC no responde, el filtro
+      # de Continuacion se omite ese dia en vez de evaluarse mal. Ver CLAUDE.md.
+      - name: Run pipeline - Step 9g1 Screener candidates log + report
+        run: |
+          node scripts/screener_signal_log.js
+          node scripts/screener_signal_report.js
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Captura diaria del universo de index.html ("Market Tracker" —
       # macro/ciclo + indices/sectores/regiones/materias primas), analoga a
       # Step 9g pero para un universo distinto (portfolio.json no cubre
