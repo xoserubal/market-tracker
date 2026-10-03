@@ -59,6 +59,10 @@ function fredFetchWithCache(cacheKey, fetchFn) {
   return promise;
 }
 app.use(cors());
+// private/ (datos reales de la cuenta IBKR, en .gitignore) NUNCA se sirve como
+// estático — express.static expone toda la raíz del repo, y los XML crudos de
+// Flex llevan el número de cuenta. Solo se accede vía /api/ibkr/* (enmascarado).
+app.use("/private", (req, res) => res.status(404).end());
 app.use(express.static(__dirname));
 
 // ── Indicadores + fetch de Yahoo + assembly de /api/quote ────────────────
@@ -1078,6 +1082,41 @@ app.post("/api/special-situations/delete", express.json({ limit: '5mb' }), (req,
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── IBKR Flex — cartera real (SOLO LOCAL, ver scripts/ibkr_flex_sync.js) ──
+// El repo es público: estos datos viven en private/ibkr/ (.gitignore), nunca
+// se commitean ni pasan por GitHub Actions. Sincronización automática una vez
+// al día (al arrancar si hace falta + comprobación cada 3h) y manual con
+// POST /api/ibkr/sync. Flex es dato de cierre: más de una vez al día no aporta.
+const ibkr = require("./scripts/ibkr_flex_sync.js");
+
+app.get("/api/ibkr/portfolio", (req, res) => {
+  res.json(ibkr.readLatest());
+});
+
+// Resumen del diario de decisiones (operaciones reales × señales). Solo
+// agregados, sin filas de operaciones individuales.
+app.get("/api/ibkr/journal", (req, res) => {
+  try {
+    const summary = require("./scripts/ibkr_decision_journal.js").readSummary();
+    res.json({ summary });
+  } catch (e) { res.json({ summary: null, error: e.message }); }
+});
+
+app.post("/api/ibkr/sync", async (req, res) => {
+  const r = await ibkr.syncIbkr({ log: m => console.log(m) });
+  res.status(r.ok ? 200 : 502).json(r.ok ? { ok: true, counts: r.counts } : r);
+});
+
+function ibkrAutoSync() {
+  if (!ibkr.isConfigured()) return;
+  const { state } = ibkr.readLatest();
+  const today = new Date().toISOString().slice(0, 10);
+  if ((state.last_success || "").slice(0, 10) === today) return;
+  // Tras un fallo, no reintentar en bucle: espera 1h desde el último intento.
+  if (state.last_error && state.last_attempt && Date.now() - Date.parse(state.last_attempt) < 3600e3) return;
+  ibkr.syncIbkr({ log: m => console.log(m) });
+}
+
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
 app.listen(3000, () => {
@@ -1087,4 +1126,6 @@ app.listen(3000, () => {
     if (err) console.log("⚠ git pull al iniciar:", msg);
     else     console.log("✓ git pull al iniciar:", msg);
   });
+  setTimeout(ibkrAutoSync, 30 * 1000);
+  setInterval(ibkrAutoSync, 3 * 3600 * 1000);
 });

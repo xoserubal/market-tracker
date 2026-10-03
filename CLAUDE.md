@@ -6444,6 +6444,131 @@ se usaba para decidir ↑/↓ en las mismas celdas).
 
 ---
 
+## IBKR Flex — cartera real, SOLO LOCAL (implementado 2026-10-03)
+
+Primer paso de la conexión con Interactive Brokers: datos de la cartera real
+(posiciones, NAV diario, operaciones, efectivo) vía **Flex Web Service v3**
+(Activity Flex Query + token). No requiere TWS/Gateway.
+
+**Decisión de privacidad (con el usuario):** el repo es **público** (API de
+GitHub, GitHub Pages y raw.githubusercontent responden sin autenticación,
+verificado). Por eso estos datos **nunca** se commitean ni corren en GitHub
+Actions: viven en `private/ibkr/` (en `.gitignore`; se sincroniza solo con el
+Dropbox privado del usuario). Se descartaron el fichero cifrado en el repo y
+un repo privado aparte. `server.js` bloquea `/private` antes de
+`express.static` (sin eso, los XML crudos con el nº de cuenta serían
+descargables desde la red local). En los ficheros derivados la cuenta va
+enmascarada (`U***567`). El panel **no** entra en "Copiar para LLM"/"Exportar TODO".
+
+**`scripts/ibkr_flex_sync.js`** (Node, no Python: sin dependencias nuevas y
+evita el `py -3` roto de una de las máquinas del usuario): SendRequest →
+ReferenceCode → GetStatement con reintentos ante 1019/1018 (límite 1 req/s,
+10/min por token). Parser XML genérico (guarda todos los atributos de cada
+elemento por sección, tolera `>` en atributos y filas LOT). Salidas:
+`ibkr_latest.json`, `ibkr_positions_daily.jsonl`, `ibkr_nav_daily.jsonl`,
+`ibkr_trades.jsonl` (upsert por clave, idempotente), `raw/flex_*.xml`,
+`ibkr_sync_state.json`. Avisa explícitamente si la query no incluye Open
+Positions / NAV in Base / Trades / Cash Report. CLI: sin args (sincroniza),
+`--from-file x.xml`, `--report`. Tests: `scripts/test_ibkr_flex_parser.js`
+(29 casos, informe sintético; `IBKR_PRIVATE_DIR` redirige la escritura).
+
+**`server.js`:** `GET /api/ibkr/portfolio`, `POST /api/ibkr/sync`. Auto-sync
+30 s tras arrancar y cada 3 h si no hubo sincronización con éxito hoy (tras
+un fallo espera 1 h). Flex es dato de cierre: una vez al día basta. Con el PC
+apagado no captura, pero la query de 365 días rellena NAV y operaciones
+hacia atrás en la siguiente sincronización.
+
+**`portfolio.html` — panel "Cartera real — Interactive Brokers"** bajo la
+barra de resumen: NAV, efectivo, P&L no realizado (en divisa base),
+posiciones con coste medio, valor, P&L, % NAV y enlace a la fila del tracker
+(mapeo bolsa IBKR → sufijo Yahoo, `IBKR_EXCHANGE_SUFFIX`, ej. AEB → `.AS`).
+
+**Verificado:** endpoint real de IBKR con token falso → `1015 Token is
+invalid` en el formato esperado; tests 29/29; panel en Edge headless.
+
+**Primera sincronización real (2026-10-03):** acciones y opciones (varias
+cortas), un año de NAV diario y de operaciones; todos los campos estándar
+llegan rellenos. (Las cifras concretas de la cuenta no se documentan aquí:
+este archivo está en un repo público.) Ajustes hechos con datos reales:
+- El informe de 365 días tardó ~1,5 min en generarse (1019 repetido): el
+  sondeo pasó de 8×8 s a 20×15 s (≈5 min, 4 req/min).
+- **`percentOfNAV` de IBKR no se usa:** en acciones sale ~1,45× (su
+  denominador es NAV − efectivo) y en opciones da valores sin relación con su
+  valor de mercado (una put corta de peso pequeño salía como >50 %). El
+  panel calcula `valor × fxRateToBase / NAV`, con signo. Comprobado que
+  posiciones en base + efectivo = NAV (la diferencia son solo devengos).
+- Enlace con el tracker por **subyacente** (las opciones traen el símbolo
+  OCC del contrato), clases con punto→guion (`BTCC.B` → `BTCC-B.TO`) y bolsas
+  de opciones CDE→`.TO`, EUREX→`.DE`. Enlazan la gran mayoría; las que no,
+  son instrumentos que no están en el tracker.
+
+### Diario de decisiones + registro de candidatos del Screener (implementado 2026-10-03)
+
+Segundo paso acordado: dejar de asumir que las herramientas discrecionales
+ayudan y medirlo, con la misma disciplina que las carteras automáticas.
+
+**1. `scripts/screener_signal_log.js` (público, Step 9g1 del pipeline).**
+Guarda en `docs/data/screener_signal_log.jsonl`, por fecha y por **filtro
+individual** (no por combinación), qué tickers eran candidatos. Reutiliza el
+motor exacto de `screeners.html` (`shared/screener-lib.js` +
+`flow-state-lib.js`) sobre las filas de `portfolio_daily_snapshot.jsonl` (misma
+salida que `/api/quote`). Primera ejecución = backfill de las 44 fechas del
+snapshot (762 filas). `screener_signal_log_state.json` guarda fechas
+procesadas y **cobertura por filtro**: un filtro cuyo campo aún no existía
+(`macdHistRecent` solo desde 2026-09-22) da `no_data` y se registra como
+"no evaluable", no como "sin candidatos". Si ^GSPC no responde, Continuación
+se omite ese día (con benchmark nulo fallaría siempre).
+
+**2. `scripts/screener_signal_report.js`** → `docs/data/screener_signal_report.json`
+y sección desplegable "Historial propio" en `screeners.html`. Método fijado de
+antemano: evento independiente = primera aparición tras ≥10 días sin ser
+candidato de ese filtro (evita contar siete veces un ticker marcado una
+semana); retorno a 7/14/30 días naturales desde la propia serie de precios del
+snapshot (sin fetch); referencia = mediana del universo ese día; "concluyente"
+solo con ≥30 eventos madurados. Descriptivo: sin corrección por comparaciones
+múltiples ni dev/test — promover un filtro a algo operativo exigiría
+preregistro. **Primer resultado (2026-10-02, todo n<30 salvo 7d):** ningún
+filtro Flow se separa del universo (exceso medio a 7d: Inflexión −0,39,
+Continuación +0,85, Reversión −1,33; 30d con n=8-13 y negativo en los tres);
+`hist_cross_confirmed` −1,21 a 7d con n=43 y solo 11 días de historia. No hay
+nada que concluir todavía; es la línea base desde la que medir.
+
+**3. `scripts/ibkr_decision_journal.js` (SOLO LOCAL, salida en `private/ibkr/`).**
+Cruza las aperturas de `ibkr_trades.jsonl` con el contexto del snapshot ese
+día (Flow, Early Flow, Koncorde D/3D/W, RSI, MACD, ATLAS…), con los filtros del
+screener que marcaban el ticker (ese día o ≤3 antes) y con el retorno del
+**subyacente** a 7/14/30 días vs el universo. Sesgo inferido del lado de la
+operación (comprar call / vender put = alcista…) — puede ser cobertura o
+spread, así que es una aproximación declarada. Se regenera tras cada
+sincronización de IBKR; `GET /api/ibkr/journal` expone solo el resumen
+agregado (bloque "Diario de decisiones" bajo el panel de cartera real).
+Límites: contexto solo desde 2026-08-20 (la gran mayoría de las aperturas
+del último año es anterior y se lista "sin contexto"; no se reconstruye), y n
+de decenas. La primera lectura salió no concluyente — seis semanas de mercado
+a la baja no sirven para juzgar nada, solo para tener la medición en marcha.
+Los resultados del diario NO se documentan aquí (son operaciones reales y
+el repo es público): viven en `private/ibkr/decision_journal_summary.json`.
+
+**`shared/ibkr-map.js` (nuevo):** el mapeo símbolo IBKR → ticker del tracker
+sale de `portfolio.html` a un módulo compartido (lo usan el panel y el
+diario). Añade coincidencia por base única, clase de acción en opciones
+(OCC `BTCC` → `BTCC-B.TO`) y la `l` minúscula de Londres (`FXPOl`, `TLWl`);
+si hay varios candidatos no adivina. Tests: `scripts/test_ibkr_flex_parser.js`
+(47 casos).
+
+**Tracker:** se añadieron a Cartera dos tickers que tenían posición real sin
+equivalente. Los subyacentes que sigan sin estar en el tracker no tienen
+contexto de señales en el diario hasta que se añadan (los lista
+`private/ibkr/decision_journal.jsonl`, campo `note`).
+
+**Pendiente / no incluido:** (a) entrada manual de tesis, disparador e
+invalidación por operación (hoy el diario es automático, sin texto tuyo);
+(b) situaciones especiales disparadas no se registran todavía (solo el
+screener); (c) el Step 9g1 del workflow se validó con js-yaml (53 steps, parseable);
+falta ver su primer run real en Actions.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

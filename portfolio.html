@@ -17,6 +17,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
   <script src="/shared/flow-score.js"></script>
+  <script src="/shared/ibkr-map.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f0f2f5; }
@@ -922,6 +923,191 @@ function buildPortfolioMarkdown(portfolio, prices, summary, prevSnapshot = {}, i
 }
 
 // ── Portfolio ─────────────────────────────────────────────────────────────
+// ── Cartera real IBKR (Flex Web Service, SOLO LOCAL) ──────────────────────
+// Datos de private/ibkr/ vía /api/ibkr/portfolio (scripts/ibkr_flex_sync.js).
+// El repo es público: estos datos nunca se commitean, y a propósito NO entran
+// en "Copiar para LLM" / "Exportar TODO" (salen a un servicio externo).
+// Mapeo bolsa IBKR → sufijo Yahoo para enlazar una posición real con su fila
+// del tracker (ej. ASM en AEB ↔ ASM.AS). Primera pasada, ampliable.
+// El mapeo símbolo IBKR → ticker del tracker vive en /shared/ibkr-map.js
+// (ibkrTrackerTicker), compartido con scripts/ibkr_decision_journal.js.
+// Etiqueta legible de una posición: opciones como "QXO 15/01/27 13 C".
+function ibkrLabel(p) {
+  if (p.asset_class !== 'OPT' && p.asset_class !== 'FOP') return p.underlying_symbol || p.symbol;
+  const exp = p.expiry ? `${p.expiry.slice(8,10)}/${p.expiry.slice(5,7)}/${p.expiry.slice(2,4)}` : '?';
+  return `${p.underlying_symbol || p.symbol} ${exp} ${p.strike ?? '?'} ${p.put_call ?? ''}`.trim();
+}
+
+function IbkrPanel({ trackerTickers, showToast }) {
+  const [data, setData] = React.useState(null);
+  const [syncing, setSyncing] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
+  const [journal, setJournal] = React.useState(null);
+  const load = React.useCallback(() => {
+    fetch('/api/ibkr/portfolio').then(r => r.json()).then(setData).catch(() => setData({ error: true }));
+    fetch('/api/ibkr/journal').then(r => r.json()).then(d => setJournal(d.summary || null)).catch(() => {});
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const sync = async () => {
+    setSyncing(true);
+    try {
+      const r = await fetch('/api/ibkr/sync', { method: 'POST' });
+      const d = await r.json();
+      showToast(d.ok ? '✓ IBKR sincronizado' : `❌ IBKR: ${d.error}`);
+    } catch (e) { showToast('❌ IBKR: sin respuesta del servidor'); }
+    setSyncing(false);
+    load();
+  };
+
+  if (!data || data.error) return null;
+  const L = data.latest;
+  const head = {padding:'5px 12px',background:'#1b3a2a',color:'white',fontSize:10,fontWeight:700,letterSpacing:'.5px',
+    textTransform:'uppercase',display:'flex',alignItems:'center',gap:10,cursor:'pointer'};
+  const th = {padding:'4px 10px',fontWeight:600,color:'#555',fontSize:9,textTransform:'uppercase',letterSpacing:'.3px',textAlign:'right'};
+  const td = {padding:'4px 10px',textAlign:'right',fontFamily:'monospace'};
+  const n2 = v => v == null ? '—' : Number(v).toLocaleString('es-ES', {maximumFractionDigits: 2});
+  const base = L?.accounts?.[0]?.base_currency || '';
+  // % NAV propio = valor de mercado en divisa base / NAV total, con signo (una
+  // opción corta resta). NO se usa percentOfNAV de IBKR: con datos reales
+  // (2026-10-03) no cuadraba — acciones infladas ~1,45× (denominador distinto
+  // del NAV) y opciones con valores sin relación con su valor de mercado.
+  const navPct = p => (L?.nav?.total && p.position_value != null)
+    ? p.position_value * (p.fx_to_base ?? 1) / L.nav.total * 100 : null;
+
+  return (
+    <div style={{marginBottom:16,border:'1px solid #cfe0d6',borderRadius:6,overflow:'hidden'}}>
+      <div style={head} onClick={() => setOpen(o => !o)}>
+        <span>{open ? '▾' : '▸'} Cartera real — Interactive Brokers</span>
+        <span style={{fontWeight:400,textTransform:'none',letterSpacing:0,opacity:.75}}>
+          {L ? `posiciones a ${L.positions_date ?? '—'} · sincronizado ${new Date(L.synced_at).toLocaleString('es-ES')}` : 'sin datos'}
+          {data.state?.last_error && ` · ⚠ último intento falló`}
+        </span>
+        <span style={{marginLeft:'auto'}} onClick={e => e.stopPropagation()}>
+          {data.configured && (
+            <button onClick={sync} disabled={syncing}
+              style={{fontSize:10,padding:'2px 10px',border:'none',borderRadius:3,cursor:syncing?'default':'pointer',
+                background:syncing?'#888':'#2e7d4f',color:'white'}}>
+              {syncing ? '⏳ Sincronizando…' : '↻ Sincronizar IBKR'}
+            </button>
+          )}
+        </span>
+      </div>
+      {open && (
+        <div style={{padding:'8px 12px',fontSize:11}}>
+          {!data.configured && (
+            <div style={{color:'#666'}}>
+              No configurado. Añade <code>IBKR_FLEX_TOKEN</code> e <code>IBKR_FLEX_QUERY_ID</code> al <code>.env</code> y reinicia
+              <code> server.js</code>. Los datos se guardan solo en <code>private/ibkr/</code> (fuera de git — el repo es público).
+            </div>
+          )}
+          {data.state?.last_error && (
+            <div style={{color:'#b91c1c',marginBottom:6}}>⚠ {data.state.last_error}</div>
+          )}
+          {L && (L.warnings || []).map((w, i) => <div key={i} style={{color:'#b45309',marginBottom:6}}>⚠ {w}</div>)}
+          {L && (
+            <>
+              <div style={{display:'flex',gap:24,marginBottom:8,flexWrap:'wrap'}}>
+                {[
+                  ['NAV', L.nav ? `${n2(L.nav.total)} ${base}` : '—', L.nav ? `a ${L.nav.date} · ${L.nav_history_days} días de histórico` : null],
+                  ['Efectivo', L.base_cash ? `${n2(L.base_cash.ending_cash)} ${base}` : '—', null],
+                  ['P&L no realizado', L.unrealized_pnl_base != null ? `${L.unrealized_pnl_base>=0?'+':''}${n2(L.unrealized_pnl_base)} ${base}` : '—', null],
+                  ['Posiciones', String(L.positions.length), null],
+                ].map(([lbl, val, sub]) => (
+                  <div key={lbl}>
+                    <div style={{fontSize:9,color:'#999',letterSpacing:'.3px'}}>{lbl}</div>
+                    <div style={{fontSize:16,fontWeight:700,fontFamily:'monospace',
+                      color: lbl==='P&L no realizado' && L.unrealized_pnl_base!=null ? (L.unrealized_pnl_base>=0?'#1a7a1a':'#c0392b') : '#1a3a5c'}}>{val}</div>
+                    {sub && <div style={{fontSize:9,color:'#aaa'}}>{sub}</div>}
+                  </div>
+                ))}
+              </div>
+              {L.positions.length > 0 && (
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                  <thead><tr style={{background:'#f0f6f2'}}>
+                    <th style={{...th,textAlign:'left'}}>Símbolo</th>
+                    <th style={{...th,textAlign:'left'}}>En tracker</th>
+                    <th style={th}>Cantidad</th>
+                    <th style={th}>Coste medio</th>
+                    <th style={th}>Precio</th>
+                    <th style={th}>Valor</th>
+                    <th style={th}>P&L no real.</th>
+                    <th style={th}>P&L %</th>
+                    <th style={th} title="Valor de mercado en divisa base / NAV total, con signo (las posiciones cortas restan). Calculado aquí, no el percentOfNAV de IBKR.">% NAV</th>
+                  </tr></thead>
+                  <tbody>
+                    {[...L.positions].map(p => ({ ...p, _pctNav: navPct(p) }))
+                      .sort((a, b) => Math.abs(b._pctNav ?? 0) - Math.abs(a._pctNav ?? 0)).map(p => {
+                      const tk = ibkrTrackerTicker(p, trackerTickers);
+                      const pnlPct = (p.unrealized_pnl != null && p.cost_basis_money) ? p.unrealized_pnl / Math.abs(p.cost_basis_money) * 100 : null;
+                      return (
+                        <tr key={(p.conid ?? p.symbol) + p.account} style={{borderBottom:'1px solid #f0f0f0'}}>
+                          <td style={{...td,textAlign:'left',fontWeight:700,color:'#1a6baa'}} title={`${p.description} · ${p.symbol}`}>
+                            {ibkrLabel(p)}
+                            {p.asset_class && p.asset_class !== 'STK' && <span style={{fontSize:9,color:'#999',marginLeft:4}}>{p.asset_class}</span>}
+                            {p.quantity < 0 && <span style={{fontSize:9,color:'#b45309',marginLeft:4}}>corta</span>}
+                          </td>
+                          <td style={{...td,textAlign:'left',fontSize:10,color: tk ? '#1a7a1a' : '#bbb'}}>{tk ? `✓ ${tk}` : '—'}</td>
+                          <td style={td}>{n2(p.quantity)}</td>
+                          <td style={td}>{n2(p.cost_basis_price)}</td>
+                          <td style={td}>{n2(p.mark_price)} <span style={{fontSize:9,color:'#aaa'}}>{p.currency}</span></td>
+                          <td style={td}>{n2(p.position_value)}</td>
+                          <td style={{...td,color:plColor(p.unrealized_pnl)}}>{p.unrealized_pnl!=null ? (p.unrealized_pnl>=0?'+':'')+n2(p.unrealized_pnl) : '—'}</td>
+                          <td style={{...td,color:plColor(pnlPct)}}>{fmtPct(pnlPct)}</td>
+                          <td style={td} title={p.pct_of_nav != null ? `IBKR percentOfNAV: ${n2(p.pct_of_nav)}% (otra base de cálculo, no comparable)` : undefined}>
+                            {p._pctNav != null ? n2(p._pctNav) + '%' : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+              {journal && (
+                <div style={{marginTop:12,borderTop:'1px solid #e3ede7',paddingTop:8}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:'.4px',textTransform:'uppercase',color:'#1b3a2a',marginBottom:4}}>
+                    Diario de decisiones — tus aperturas × lo que decían las señales
+                  </div>
+                  <div style={{fontSize:10,color:'#666',marginBottom:6}}>
+                    {journal.openings_total} aperturas en total · <b>{journal.openings_with_context}</b> con contexto de señales
+                    (solo desde {journal.snapshot_start}) · {journal.flagged_by_screener} coincidían con un candidato del screener.
+                    Retorno del <b>subyacente</b> × sesgo inferido (comprar call / vender put = alcista…), exceso vs la mediana del universo.
+                  </div>
+                  <table style={{borderCollapse:'collapse',fontSize:10}}>
+                    <thead><tr style={{background:'#f0f6f2'}}>
+                      <th style={{...th,textAlign:'left'}}>Grupo</th>
+                      {['7d','14d','30d'].map(h => <th key={h} style={th}>{h}: n · exceso medio · aciertos</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {[['Todas con contexto', journal.all_with_context], ['Con candidato del screener', journal.with_screener_flag], ['Sin candidato', journal.without_screener_flag]].map(([lbl, g]) => (
+                        <tr key={lbl} style={{borderBottom:'1px solid #f0f0f0'}}>
+                          <td style={{...td,textAlign:'left',fontFamily:'inherit'}}>{lbl}</td>
+                          {['7d','14d','30d'].map(h => {
+                            const x = g?.[h];
+                            return (
+                              <td key={h} style={{...td,color: x && x.n && !x.conclusive ? '#999' : '#222'}}
+                                  title={x && !x.conclusive ? 'n < 30: no concluyente' : undefined}>
+                                {x && x.n ? <>{x.n} · <b style={{color:plColor(x.mean_signed_excess)}}>{x.mean_signed_excess >= 0 ? '+' : ''}{x.mean_signed_excess}</b> · {x.hit_rate}%</> : '—'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div style={{fontSize:9,color:'#aaa',marginTop:4}}>
+                    En gris, n &lt; 30: no concluyente. El sesgo se infiere del lado de la operación y puede ser cobertura o spread; el retorno es el del subyacente, no el P&amp;L de la opción.
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Portfolio() {
   const [portfolio,   setPortfolio]   = React.useState({ sections: [] });
   const [prices,      setPrices]      = React.useState({});
@@ -1624,6 +1810,10 @@ function Portfolio() {
           </div>
         </div>
       )}
+
+      {/* ── Cartera real IBKR (solo local) ───────────────────────────────── */}
+      <IbkrPanel showToast={showToast}
+        trackerTickers={new Set(portfolio.sections.flatMap(s => (s.items || []).map(i => i.ticker)))} />
 
       {/* ── Setup Ranking ─────────────────────────────────────────────── */}
       {setupRanking.length > 0 && (
