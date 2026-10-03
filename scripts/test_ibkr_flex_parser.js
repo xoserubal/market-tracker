@@ -106,6 +106,8 @@ mapCase('AEB → .AS', { symbol: 'ASM', listing_exchange: 'AEB' }, 'ASM.AS');
 mapCase('desconocido', { symbol: 'XYZ' }, null);
 mapCase('exacto gana sobre prefijo (A vs A.TO)', { symbol: 'A' }, 'A');
 mapCase('subyacente de posición con clase', { underlying_symbol: 'BTCC.B', listing_exchange: 'TSE', symbol: 'BTCC.B' }, 'BTCC-B.TO');
+tk.add('^XSP');
+mapCase('índice Yahoo con ^ (XSP → ^XSP)', { symbol: 'XSP   261113P00760000', exchange: 'CBOE' }, '^XSP');
 tk.add('A.V');   // ahora hay dos tickers con base 'A' además del exacto 'A': el exacto sigue ganando…
 mapCase('exacto sigue ganando con más candidatos', { symbol: 'A' }, 'A');
 tk.delete('A');  // …pero sin el exacto, dos candidatos (A.TO, A.V) → ambiguo → no se adivina

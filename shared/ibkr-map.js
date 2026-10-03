@@ -23,7 +23,7 @@ const IBKR_KNOWN_SUFFIXES = new Set(Object.values(IBKR_EXCHANGE_SUFFIX));
 // Base de un ticker Yahoo para comparar: sin sufijo de bolsa y con punto en
 // vez de guion en clases de acción (BTCC-B.TO → BTCC.B).
 function ibkrYahooBase(t) {
-  const s = String(t || '');
+  const s = String(t || '').replace(/^\^/, '');   // índices Yahoo (^XSP) ↔ símbolo IBKR (XSP)
   const i = s.lastIndexOf('.');
   const noSuffix = (i > 0 && IBKR_KNOWN_SUFFIXES.has(s.slice(i))) ? s.slice(0, i) : s;
   return noSuffix.replace(/-/g, '.');

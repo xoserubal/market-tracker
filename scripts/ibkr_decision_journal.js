@@ -27,7 +27,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { ibkrTrackerTicker } = require('../shared/ibkr-map.js');
+const { ibkrTrackerTicker, ibkrUnderlying } = require('../shared/ibkr-map.js');
 const { makeTools, readJsonl, HORIZONS, addDays, daysBetween, median, mean, r2 } = require('./screener_signal_report.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -58,6 +58,59 @@ function inferBias(t) {
   return null;
 }
 
+// ── Notas manuales por DECISIÓN ─────────────────────────────────────────────
+// Una decisión = todas las patas abiertas el mismo día sobre el mismo subyacente
+// (un spread o una cobertura son UNA decisión con varias operaciones). Clave:
+// "YYYY-MM-DD|SUBYACENTE". Texto libre del usuario: tesis, disparador e
+// invalidación — escritos ANTES de saber cómo acaba, esa es la gracia. Fichero
+// privado (decision_notes.json, en private/): son decisiones reales.
+const NOTES_FILE = path.join(PRIVATE_DIR, 'decision_notes.json');
+const NOTE_FIELDS = ['thesis', 'trigger', 'invalidation'];
+const NOTE_MAX_LEN = 2000;
+const KEY_RE = /^\d{4}-\d{2}-\d{2}\|[A-Za-z0-9.\-^_]{1,20}$/;
+
+function decisionKey(t) { return t.date + '|' + ibkrUnderlying(t).toUpperCase(); }
+
+function readNotes() {
+  try { return JSON.parse(fs.readFileSync(NOTES_FILE, 'utf8')); } catch (e) { return {}; }
+}
+
+function saveNote(key, fields) {
+  if (!KEY_RE.test(String(key || ''))) throw new Error('clave de decisión no válida');
+  const notes = readNotes();
+  const clean = {};
+  NOTE_FIELDS.forEach(f => { clean[f] = String((fields || {})[f] ?? '').trim().slice(0, NOTE_MAX_LEN); });
+  if (!NOTE_FIELDS.some(f => clean[f])) delete notes[key];       // todo vacío → se borra la nota
+  else notes[key] = { ...clean, updated_at: new Date().toISOString() };
+  fs.mkdirSync(PRIVATE_DIR, { recursive: true });
+  fs.writeFileSync(NOTES_FILE, JSON.stringify(notes, null, 2));
+  return notes[key] || null;
+}
+
+function legLabel(t) {
+  const und = ibkrUnderlying(t);
+  if (t.asset_class !== 'OPT' && t.asset_class !== 'FOP') return und;
+  const e = t.expiry ? `${t.expiry.slice(8, 10)}/${t.expiry.slice(5, 7)}/${t.expiry.slice(2, 4)}` : '?';
+  return `${und} ${e} ${t.strike ?? '?'} ${t.put_call ?? ''}`.trim();
+}
+
+// Decisiones recientes (aperturas de los últimos `days` días) con su nota.
+function getDecisionGroups(days = 60) {
+  const trades = readJsonl(TRADES).filter(t => t.open_close === 'O' && t.asset_class !== 'CASH');
+  const since = addDays(new Date().toISOString().slice(0, 10), -days);
+  const portfolio = JSON.parse(fs.readFileSync(PORTFOLIO, 'utf8'));
+  const trackerTickers = new Set((portfolio.sections || []).flatMap(s => (s.items || []).map(i => i.ticker)));
+  const notes = readNotes();
+  const groups = new Map();
+  trades.filter(t => t.date >= since).forEach(t => {
+    const key = decisionKey(t);
+    if (!groups.has(key)) groups.set(key, { key, date: t.date, underlying: ibkrUnderlying(t), tracker_ticker: ibkrTrackerTicker(t, trackerTickers), legs: [] });
+    groups.get(key).legs.push({ label: legLabel(t), side: t.side, quantity: t.quantity, price: t.price, asset_class: t.asset_class });
+  });
+  return [...groups.values()].map(g => ({ ...g, note: notes[g.key] || null }))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.underlying.localeCompare(b.underlying));
+}
+
 function buildJournal() {
   const trades = readJsonl(TRADES);
   if (!trades.length) throw new Error('Sin operaciones: sincroniza primero (node scripts/ibkr_flex_sync.js)');
@@ -75,6 +128,7 @@ function buildJournal() {
   screener.forEach(r => { (flagsByTicker[r.ticker] = flagsByTicker[r.ticker] || []).push(r); });
 
   const openings = trades.filter(t => t.open_close === 'O' && t.asset_class !== 'CASH');
+  const allNotes = readNotes();
   const rows = openings.map(t => {
     const tk = ibkrTrackerTicker(t, trackerTickers);
     const bias = inferBias(t);
@@ -83,6 +137,7 @@ function buildJournal() {
       asset_class: t.asset_class, side: t.side, quantity: t.quantity, price: t.price, currency: t.currency,
       put_call: t.put_call ?? null, strike: t.strike ?? null, expiry: t.expiry ?? null,
       inferred_bias: bias, context_available: false, context: null, screener_flags: [], fwd: {},
+      decision_key: decisionKey(t), note: allNotes[decisionKey(t)] || null,
     };
     if (!tk) { row.note = 'sin ticker equivalente en Portfolio Tracker'; return row; }
     if (t.date < snapStart) { row.note = `anterior al snapshot diario (${snapStart})`; return row; }
@@ -137,6 +192,8 @@ function buildJournal() {
     trades_total: trades.length, openings_total: openings.length, openings_with_context: withCtx.length,
     openings_without_context: openings.length - withCtx.length,
     flagged_by_screener: flagged.length, unflagged: unflagged.length,
+    decisions_total: new Set(rows.map(r => r.decision_key)).size,
+    decisions_with_note: new Set(rows.filter(r => r.note).map(r => r.decision_key)).size,
     all_with_context: summarize(withCtx), with_screener_flag: summarize(flagged), without_screener_flag: summarize(unflagged),
     realized_pnl_base_by_underlying: Object.fromEntries(Object.entries(realized).map(([k, v]) => [k, r2(v)]).sort((a, b) => a[1] - b[1])),
     caveats: ['sesgo inferido del lado de la operación (puede ser cobertura/spread)', 'retorno del subyacente, no P&L de la opción',
@@ -186,4 +243,4 @@ if (require.main === module) {
     console.log('\nEscrito private/ibkr/decision_journal.jsonl y decision_journal_summary.json');
   }
 }
-module.exports = { buildJournal, writeJournal, readSummary, inferBias };
+module.exports = { buildJournal, writeJournal, readSummary, inferBias, getDecisionGroups, saveNote, readNotes, decisionKey };

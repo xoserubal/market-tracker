@@ -35,6 +35,7 @@ const SNAPSHOT = path.join(ROOT, 'docs', 'data', 'portfolio_daily_snapshot.jsonl
 const LOG = path.join(ROOT, 'docs', 'data', 'screener_signal_log.jsonl');
 const STATE = path.join(ROOT, 'docs', 'data', 'screener_signal_log_state.json');
 const OUT = path.join(ROOT, 'docs', 'data', 'screener_signal_report.json');
+const FIRED_LOG = path.join(ROOT, 'docs', 'data', 'special_situations_fired.jsonl');
 
 const HORIZONS = [7, 14, 30];
 const COOLDOWN_DAYS = 10;
@@ -147,8 +148,29 @@ function buildReport() {
     baseline[h + 'd'] = { dates_with_reference: v.length, mean_of_daily_median_ret: r2(mean(v)) };
   });
 
+  // Situaciones Especiales / alertas compuestas DISPARADAS (check_koncorde_alerts.py
+  // las registra al dispararse; son one-shot, así que cada fila es un evento).
+  // Mismo método que los filtros: retorno a 7/14/30 días vs mediana del universo.
+  // Aquí el sentido es siempre "alcista" (las situaciones del usuario se arman
+  // para entrar); si algún día hay una bajista, habrá que añadir el sesgo.
+  const fired = readJsonl(FIRED_LOG);
+  const firedHorizons = {};
+  HORIZONS.forEach(h => {
+    const rets = [], excess = [];
+    fired.forEach(e => {
+      const ret = fwd(e.ticker, e.date, h); const ref = universeMedian(e.date, h);
+      if (ret == null || ref == null) return;
+      rets.push(ret); excess.push(ret - ref);
+    });
+    const n = rets.length;
+    firedHorizons[h + 'd'] = { n_matured: n, mean_ret: r2(mean(rets)), median_ret: r2(median(rets)),
+      mean_excess: r2(mean(excess)), hit_rate_excess: n ? r2(excess.filter(x => x > 0).length / n * 100) : null, conclusive: n >= MIN_N };
+  });
+  const special_situations = { fired_total: fired.length, tickers: new Set(fired.map(e => e.ticker)).size,
+    first_fired: fired.length ? fired.map(e => e.date).sort()[0] : null, horizons: firedHorizons };
+
   return { generated_at: new Date().toISOString(), snapshot_last_date: lastDate, min_n_conclusive: MIN_N,
-    cooldown_days: COOLDOWN_DAYS, horizons_days: HORIZONS, baseline, filters };
+    cooldown_days: COOLDOWN_DAYS, horizons_days: HORIZONS, baseline, filters, special_situations };
 }
 
 function print(rep) {
@@ -161,6 +183,10 @@ function print(rep) {
       console.log(`   ${h.padEnd(4)} n=${String(x.n_matured).padStart(3)}  ret medio ${String(x.mean_ret).padStart(6)}%  mediana ${String(x.median_ret).padStart(6)}%  | exceso vs universo: medio ${String(x.mean_excess).padStart(6)}  mediana ${String(x.median_excess).padStart(6)}  aciertos ${x.hit_rate_excess}%  ${x.conclusive ? '' : '⚠ no concluyente (n<' + rep.min_n_conclusive + ')'}`);
     });
   });
+  const ss = rep.special_situations;
+  console.log(`\n■ Situaciones Especiales disparadas: ${ss.fired_total} (${ss.tickers} tickers${ss.first_fired ? ', desde ' + ss.first_fired : ''})`);
+  if (!ss.fired_total) console.log('   ninguna registrada todavía (el registro empezó el 2026-10-03)');
+  Object.entries(ss.horizons).forEach(([h, x]) => { if (x.n_matured) console.log(`   ${h.padEnd(4)} n=${String(x.n_matured).padStart(3)}  ret medio ${x.mean_ret}%  exceso medio ${x.mean_excess}  aciertos ${x.hit_rate_excess}%  ${x.conclusive ? '' : '⚠ no concluyente'}`); });
   console.log('\nReferencia (media de la mediana diaria del universo): ' + Object.entries(rep.baseline).map(([h, b]) => `${h}: ${b.mean_of_daily_median_ret}%`).join('  '));
 }
 

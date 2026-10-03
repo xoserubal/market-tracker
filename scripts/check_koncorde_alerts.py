@@ -65,6 +65,7 @@ from koncorde_alert_conditions import (
 )
 from ratio_signal import fetch_ratio_trend
 from price_signal import fetch_current_price
+from special_situations_log import append_fired, build_entry
 
 # Fields read off each portfolio_daily_snapshot.jsonl row for "flow"/"macd"/
 # "rsi" conditions — kept as an explicit whitelist (not the whole ~121-field
@@ -80,6 +81,7 @@ load_dotenv(ROOT / ".env")
 ALERTS_PATH   = ROOT / "docs" / "data" / "koncorde_bot_alerts.json"
 KONC_PATH     = ROOT / "docs" / "data" / "koncorde_data.json"
 SNAPSHOT_PATH = ROOT / "docs" / "data" / "portfolio_daily_snapshot.jsonl"
+FIRED_LOG_PATH = ROOT / "docs" / "data" / "special_situations_fired.jsonl"
 
 
 def _load_json(path: Path, default):
@@ -227,6 +229,23 @@ def run(dry_run: bool = False) -> None:
             _send_telegram(msg)
 
     if fired and not dry_run:
+        # Rastro del disparo ANTES de borrar la alerta (one-shot): sin esto no hay
+        # forma de medir después si las situaciones que se armaban funcionaban.
+        # Un fallo aquí nunca debe impedir borrar la alerta ya avisada — si no, se
+        # volvería a disparar y avisar en cada pasada del pipeline.
+        try:
+            entries = []
+            for a in fired:
+                t = a.get("ticker", "")
+                try:
+                    px = _cached_price(t)
+                except Exception:
+                    px = None
+                entries.append(build_entry(a, get_conditions(a), describe_conditions(t, get_conditions(a)), px))
+            n_logged = append_fired(FIRED_LOG_PATH, entries)
+            print(f"Registro de disparos: {n_logged} nuevo(s) en {FIRED_LOG_PATH.name}")
+        except Exception as exc:
+            print(f"⚠ no se pudo registrar el disparo (la alerta se borra igualmente): {exc}")
         ALERTS_PATH.parent.mkdir(parents=True, exist_ok=True)
         ALERTS_PATH.write_text(json.dumps(pending, indent=2), encoding="utf-8")
 

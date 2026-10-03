@@ -1102,6 +1102,23 @@ app.get("/api/ibkr/journal", (req, res) => {
   } catch (e) { res.json({ summary: null, error: e.message }); }
 });
 
+// Decisiones recientes (aperturas agrupadas por día + subyacente) con su nota
+// manual (tesis / disparador / invalidación). Solo local: son operaciones reales.
+app.get("/api/ibkr/decisions", (req, res) => {
+  try {
+    const days = Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 60));
+    res.json({ decisions: require("./scripts/ibkr_decision_journal.js").getDecisionGroups(days) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/ibkr/decision-note", express.json({ limit: "100kb" }), (req, res) => {
+  try {
+    const { key, thesis, trigger, invalidation } = req.body || {};
+    const note = require("./scripts/ibkr_decision_journal.js").saveNote(key, { thesis, trigger, invalidation });
+    res.json({ ok: true, note });
+  } catch (e) { res.status(400).json({ ok: false, error: e.message }); }
+});
+
 app.post("/api/ibkr/sync", async (req, res) => {
   const r = await ibkr.syncIbkr({ log: m => console.log(m) });
   res.status(r.ok ? 200 : 502).json(r.ok ? { ok: true, counts: r.counts } : r);

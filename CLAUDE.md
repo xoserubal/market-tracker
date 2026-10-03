@@ -6561,11 +6561,49 @@ equivalente. Los subyacentes que sigan sin estar en el tracker no tienen
 contexto de señales en el diario hasta que se añadan (los lista
 `private/ibkr/decision_journal.jsonl`, campo `note`).
 
-**Pendiente / no incluido:** (a) entrada manual de tesis, disparador e
-invalidación por operación (hoy el diario es automático, sin texto tuyo);
-(b) situaciones especiales disparadas no se registran todavía (solo el
-screener); (c) el Step 9g1 del workflow se validó con js-yaml (53 steps, parseable);
-falta ver su primer run real en Actions.
+**Tesis manual por decisión (implementado 2026-10-03).** Una *decisión* =
+todas las patas abiertas el mismo día sobre el mismo subyacente (un spread o
+una cobertura son una sola decisión con varias operaciones); clave
+`YYYY-MM-DD|SUBYACENTE`. Bajo el diario, en el panel de cartera real, una lista
+de las aperturas de los últimos 60 días con botón "+ añadir / ✎ editar" que
+abre un modal con **Tesis, Disparador e Invalidación** — pensado para
+escribirse antes de saber cómo acaba. Se guarda en
+`private/ibkr/decision_notes.json` (solo local). Rutas: `GET /api/ibkr/decisions`,
+`POST /api/ibkr/decision-note` (clave validada con regex, máx. 2000 caracteres
+por campo, vaciar los tres campos borra la nota). `ibkr_decision_journal.js`
+funde la nota en cada fila (`decision_key`, `note`) y cuenta
+`decisions_with_note` en el resumen. Verificado en el navegador: abrir,
+precargar, guardar, editar y borrar, sin errores de página.
+
+**Situaciones especiales disparadas (implementado 2026-10-03).**
+`check_koncorde_alerts.py` dispara cada alerta una sola vez y la borra, sin
+dejar rastro salvo el Telegram. Ahora, justo antes de borrar, añade el disparo
+a `docs/data/special_situations_fired.jsonl` (`scripts/special_situations_log.py`,
+solo librería estándar para poder probarlo sin yfinance): fecha, ticker,
+id/label, `kind` (`situation` si viene de la UI, `kalert` si viene de Telegram),
+condiciones, descripción y precio. Dedup por día + identidad. **Un fallo del
+registro nunca impide borrar la alerta ya avisada** (si no, se re-dispararía en
+cada pasada) — probado con un fallo simulado. `screener_signal_report.js`
+mide su retorno a 7/14/30 días vs la mediana del universo con el mismo método
+que los filtros (sección `special_situations` del JSON). El registro empieza
+el 2026-10-03: no hay disparos todavía.
+
+**Tickers añadidos al tracker (sección Opciones):** los subyacentes de tus
+opciones que no estaban (SLV, TLT, SPY, ^XSP). Con eso todas las posiciones del
+panel enlazan con su fila; `ibkr-map.js` ahora reconoce los índices con `^`
+(XSP ↔ ^XSP). Subyacentes sin tracker siguen listándose en el campo `note` del
+diario.
+
+**Aviso de entorno (para futuras sesiones):** en este entorno de Bash las
+barras invertidas de los comandos se consumen una vez, así que una regex escrita
+dentro de un `node -e`/heredoc llega sin escapar (`/^\d/` → `/^d/`) — pasó dos
+veces (`ibkr-map.js` y la regex de claves del diario, que llegó a aceptar claves
+inválidas y escribir basura en `private/`). Para cualquier regex o texto con `\`
+usar la herramienta Edit/Write, y probar siempre con entradas inválidas.
+
+**Pendiente:** primer run real del Step 9g1 en Actions (el YAML se validó con
+js-yaml, 53 steps); acumular semanas de datos antes de leer nada de los
+informes (todos n<30).
 
 ---
 

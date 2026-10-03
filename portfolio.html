@@ -938,7 +938,59 @@ function ibkrLabel(p) {
   return `${p.underlying_symbol || p.symbol} ${exp} ${p.strike ?? '?'} ${p.put_call ?? ''}`.trim();
 }
 
+// Tesis / disparador / invalidación de UNA decisión (todas las patas abiertas
+// el mismo día sobre el mismo subyacente). Se guardan en private/ibkr/ (solo
+// local). Pensado para escribirse ANTES de saber cómo acaba la operación.
+function DecisionNoteModal({ decision, onSave, onClose }) {
+  const [v, setV] = React.useState({
+    thesis: decision.note?.thesis ?? '', trigger: decision.note?.trigger ?? '', invalidation: decision.note?.invalidation ?? '',
+  });
+  const [saving, setSaving] = React.useState(false);
+  const fields = [
+    ['thesis', 'Tesis', '¿Por qué esta operación? ¿Qué tiene que pasar para que salga bien?'],
+    ['trigger', 'Disparador', '¿Qué señal o hecho concreto te hizo entrar hoy y no antes ni después?'],
+    ['invalidation', 'Invalidación', '¿Qué te haría admitir que te equivocaste y salir? (nivel, fecha o hecho)'],
+  ];
+  const save = async () => { setSaving(true); await onSave(decision.key, v); setSaving(false); };
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>Decisión — {decision.underlying} · {decision.date}</h3>
+        <div style={{fontSize:11,color:'#666',marginBottom:10}}>
+          {decision.legs.map((l, i) => <div key={i} style={{fontFamily:'monospace'}}>{l.side} {l.quantity} {l.label} @ {l.price}</div>)}
+        </div>
+        {fields.map(([k, lbl, ph]) => (
+          <div className="field" key={k}>
+            <label style={{fontSize:11,fontWeight:700}}>{lbl}</label>
+            <textarea value={v[k]} onChange={e => setV({ ...v, [k]: e.target.value })} rows={3} maxLength={2000}
+              style={{fontSize:12,lineHeight:1.5}} placeholder={ph} autoFocus={k === 'thesis'} />
+          </div>
+        ))}
+        <div style={{fontSize:10,color:'#aaa',marginBottom:8}}>Se guarda solo en tu equipo (private/ibkr/). Vaciar los tres campos borra la nota.</div>
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function IbkrPanel({ trackerTickers, showToast }) {
+  const [decisions, setDecisions] = React.useState([]);
+  const [noteModal, setNoteModal] = React.useState(null);
+  const loadDecisions = React.useCallback(() => {
+    fetch('/api/ibkr/decisions?days=60').then(r => r.json()).then(d => setDecisions(d.decisions || [])).catch(() => {});
+  }, []);
+  React.useEffect(() => { loadDecisions(); }, [loadDecisions]);
+  const saveDecisionNote = async (key, v) => {
+    try {
+      const r = await fetch('/api/ibkr/decision-note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, ...v }) });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      showToast('✓ Nota guardada'); setNoteModal(null); loadDecisions();
+    } catch (e) { showToast('❌ No se pudo guardar: ' + e.message); }
+  };
   const [data, setData] = React.useState(null);
   const [syncing, setSyncing] = React.useState(false);
   const [open, setOpen] = React.useState(true);
@@ -1100,6 +1152,45 @@ function IbkrPanel({ trackerTickers, showToast }) {
                   </div>
                 </div>
               )}
+              {decisions.length > 0 && (
+                <details style={{marginTop:10}} open={decisions.some(d => !d.note)}>
+                  <summary style={{cursor:'pointer',fontSize:10,fontWeight:700,letterSpacing:'.4px',textTransform:'uppercase',color:'#1b3a2a'}}>
+                    Tesis de tus aperturas recientes — {decisions.filter(d => d.note).length}/{decisions.length} con nota (últimos 60 días)
+                  </summary>
+                  <div style={{fontSize:10,color:'#666',margin:'4px 0 6px'}}>
+                    Una decisión = todas las patas abiertas el mismo día sobre el mismo subyacente. Escribe tesis, disparador e invalidación <b>antes</b> de saber cómo acaba:
+                    es lo que permite medir luego si tu criterio aportaba algo.
+                  </div>
+                  <table style={{borderCollapse:'collapse',fontSize:10,width:'100%'}}>
+                    <thead><tr style={{background:'#f0f6f2'}}>
+                      <th style={{...th,textAlign:'left'}}>Fecha</th><th style={{...th,textAlign:'left'}}>Subyacente</th>
+                      <th style={{...th,textAlign:'left'}}>Operaciones</th><th style={{...th,textAlign:'left'}}>Tesis</th><th style={th}></th>
+                    </tr></thead>
+                    <tbody>
+                      {decisions.map(d => (
+                        <tr key={d.key} style={{borderBottom:'1px solid #f0f0f0'}}>
+                          <td style={{...td,textAlign:'left',whiteSpace:'nowrap'}}>{d.date}</td>
+                          <td style={{...td,textAlign:'left',fontWeight:700,color:'#1a6baa'}}>{d.tracker_ticker || d.underlying}</td>
+                          <td style={{...td,textAlign:'left',fontSize:9,color:'#555',whiteSpace:'normal'}}>
+                            {d.legs.map(l => `${String(l.side).startsWith('B') ? '+' : '−'}${Math.abs(l.quantity)} ${l.label}`).join(' · ')}
+                          </td>
+                          <td style={{...td,textAlign:'left',fontFamily:'inherit',color:d.note ? '#333' : '#bbb',maxWidth:340,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                              title={d.note ? `Tesis: ${d.note.thesis}\nDisparador: ${d.note.trigger}\nInvalidación: ${d.note.invalidation}` : undefined}>
+                            {d.note ? (d.note.thesis || d.note.trigger || d.note.invalidation) : 'sin nota'}
+                          </td>
+                          <td style={td}>
+                            <button onClick={() => setNoteModal(d)}
+                              style={{fontSize:9,padding:'1px 7px',border:'1px solid #ccc',borderRadius:3,cursor:'pointer',whiteSpace:'nowrap',background:d.note ? '#f5f5f5' : '#e8f3ec',color:'#1b3a2a'}}>
+                              {d.note ? '✎ editar' : '+ añadir'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              )}
+              {noteModal && <DecisionNoteModal decision={noteModal} onSave={saveDecisionNote} onClose={() => setNoteModal(null)} />}
             </>
           )}
         </div>
