@@ -1,0 +1,150 @@
+{
+  "run_id": "2026-10-06_0121",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-10-06",
+  "summary": {
+    "date": "2026-10-06",
+    "run_id": "2026-10-06_0121",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 35,
+    "input_tokens": 34057,
+    "output_tokens": 13578,
+    "cost_usd": 0.026628,
+    "latency_ms": 165066.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 4,
+    "rejected_count": 5,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": []
+  },
+  "quality_score": 90,
+  "response": {
+    "date": "2026-10-06",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-10-06_0121",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with macro score 85.7 and +17% weekly delta supports risk-on positioning, but widespread distribution warnings across top candidates and extreme theme concentration in us_tech_ai (50%) and oil_gas (63%) warrant selective restraint on new entries.",
+      "risk_posture": "normal",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "MU",
+        "reason": "PCS 84.0 with rot=9 and the longest streak among non-open candidates (8 weeks), but konc_3d_state=distribution and alignment=distribution_warning override the weekly strength. Ret_13w_vs_spy of 6.46% lags substantially behind top holdings like PLTR at 39.71% and MLX.AX at 54.28%, indicating weaker sustained leadership despite the rotation score.",
+        "watch_trigger": "Select if konc_3d_state shifts from 'distribution' to 'up' or 'accumulation' while PCS stays above 80 and ret_13w_vs_spy exceeds 12%."
+      },
+      {
+        "ticker": "META",
+        "reason": "PCS 85.0 with rot=8 on 4-week streak and ret_4w_vs_spy of 22.07% shows strong recent leadership, but konc_3d=distribution with alignment=distribution_warning signals active intermediate-timeframe selling pressure. Dems=7 cannot independently confirm daily momentum, and us_tech_ai theme already holds ~19% of MIMO_SHADOW across three positions.",
+        "watch_trigger": "Select if konc_3d_state rotates from 'distribution' to 'up' while PCS remains above 82 and streak extends beyond 5 weeks."
+      },
+      {
+        "ticker": "NBIS",
+        "reason": "PCS 82.8 with rot=8 and AI cloud subtheme offers genuine differentiation from existing chips exposure (NVDA) and AI tools (PLTR), but konc_3d=distribution with mixed alignment, spike_flag=true, and only a 2-week streak provide insufficient multi-timeframe confirmation for entry.",
+        "watch_trigger": "Select if streak extends to 4+ weeks, konc_3d_state shifts from distribution to up, and spike_flag clears on subsequent readings."
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 78.0 with rot=8 and 8-week streak shows strong individual conviction, but konc_alignment=distribution_warning with dems=5 provides zero daily momentum support. Oil_gas already represents ~16% of MIMO_SHADOW across VLE.TO and TNZ.TO; adding a third name requires cleaner confirmation.",
+        "watch_trigger": "Select if konc_alignment shifts from distribution_warning to bullish_aligned while dems rises above 10 and PCS stays above 76."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "UCO",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a 2x leveraged crude oil futures ETF, not an equity position; despite 63.50% 13w outperformance and bullish-aligned Koncorde, leveraged commodity derivatives do not qualify as stock picks under portfolio rules.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "AMD",
+        "reason": "Extension risk extreme at 7 points with spike_flag, ret_4w_extended, dist_sma20_atr_high, and rsi_high all flagged simultaneously; despite 37.86% 4w outperformance and bullish-aligned Koncorde, the probability of near-term reversal at these overextension levels outweighs the signal strength for a new entry.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "QQQ",
+        "reason": "13-week outperformance of only 1.11% vs SPY is the weakest among all PCS 73+ candidates; extension_risk=high with spike_flag and dist_sma20_atr_high on minimal relative return provides poor risk-reward, and the broad Nasdaq-100 ETF offers no thematic edge unavailable through existing tech holdings.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "LCX.V",
+        "reason": "IGNORAR signal with ret_4w_vs_spy of -5.21% and zero weekly streak despite PCS 68.8; konc_3d=distribution and dems=4 confirm no active momentum building, and oil_gas theme is already the most concentrated in the portfolio.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "PCS 64.0 falls below MIMO_SHADOW minimum entry threshold of 68.0; ret_4w_vs_spy of -15.17% and zero weekly streak with IGNORAR signal confirm insufficient conviction despite oil_gas theme strength.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Rotation strengthening with rot_score rising from 7 to 9 and streak extending from 4 to 8 weeks despite PCS dip below entry threshold; individual fundamentals improving even as healthcare theme flow weakens."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Fully bullish-aligned Koncorde with 8-week streak and 42.32% 13w outperformance; PCS 82.0 remains well above entry threshold with no deterioration signals."
+      },
+      {
+        "ticker": "TNZ.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "Structural deterioration across multiple independent signals: ret_4w turned negative (-0.91%) with ret_10d=-9.69%, konc_w_state=distribution confirming structural selling pressure, rot_score declining from 8 to 6, and konc_alignment=distribution_warning on both 3D and weekly timeframes."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "7-week streak with 32.02% 13w outperformance and PCS 81.0; konc_3d distribution caution noted but weekly structure and streak remain intact."
+      },
+      {
+        "ticker": "MLX.AX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Rot=9 with 8-week streak and 54.28% 13w outperformance; bullish-aligned Koncorde with PCS 81.8 and commodities_metals diversification still valuable."
+      },
+      {
+        "ticker": "SMCI",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Distribution_warning acknowledged but 57.99% 13w outperformance and PCS 82.8 with 4-week streak and ret_4w=17.25% justify continuation; weekly momentum is leading the signal."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 88 with rot=9, low extension risk, and 39.71% 13w outperformance; strongest composite signal in the portfolio with outperform_d10=6 confirming sustained leadership."
+      },
+      {
+        "ticker": "MSTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "29.05% 4w and 56.09% 13w outperformance on 5-week streak; extension risk high and 3D distribution noted but weekly momentum and ret_4w acceleration justify holding."
+      },
+      {
+        "ticker": "NVDA",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Momentum_accel=true with dems=12 and konc_3d=up confirming accelerating daily momentum; only 4 days post-entry with bullish-aligned structure across daily and weekly timeframes."
+      }
+    ]
+  },
+  "raw_response_head": "{\n  \"date\": \"2026-10-06\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-06_0121\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 85.7 and +17% weekly delta supports risk-on positioning, but widespread distribution warnings across top candidates and extreme theme concentration in us_tech_ai (50%) and oil_gas (63%) warrant selective restraint on new entries.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"MU\",\n      \"reason\": \"PCS 84.0 with rot=9 and the longest streak among non-open candidates (8 weeks), but konc_3d_state=distribution and alignment=distribution_warning override the weekly strength. Ret_13w_vs_spy of 6.46% lags substantially behind top holdings like PLTR at 39.71% and MLX.AX at 54.28%, indicating weaker sustained leadership despite the rotation score.\",\n      \"watch_trigger\": \"Select if konc_3d_state shifts from 'distribution' to 'up' or 'accumulation' while PCS stays above 80 and ret_13w_vs_spy exceeds 12%.\"\n    },\n    {\n      \"ticker\": \"META\",\n      \"reason\": \"PCS 85.0 with rot=8 on 4-week streak and ret_4w_vs_spy of 22.07% shows strong recent leadership, but konc_3d=distribution with alignment=distribution_warning signals active intermediate-timeframe selling pressure. Dems=7 cannot independently confirm daily momentum, and us_tech_ai theme already holds ~19% of MIMO_SHADOW across three positions.\",\n      \"watch_trigger\": \"Select if konc_3d_state rotates from 'distribution' to 'up' while PCS remains above 82 and streak extends beyond 5 weeks.\"\n    },\n    {\n      \"ticker\": \"NBIS\",\n      \"reason\": \"PCS 82.8 with rot=8 and AI cloud subtheme offers genuine differentiation from existing chips exposure (NVDA) and AI tools (PLTR), but konc_3d=distribution with mixed alignment, spike_flag=true, and only a 2-week streak provide insufficient multi-timeframe confirmation for entry.\",\n      \"watch_trigger\": \"Select if streak extends to 4+ week"
+}
