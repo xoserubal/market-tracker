@@ -258,3 +258,42 @@ fix, dejando ~12 días de margen antes del tope). Recordatorio nuevo,
 `zerogex_fase2_collection_check` (2026-09-17), como comprobación temprana de
 que el fix realmente produjo filas — para no repetir el mismo patrón de
 "esperar semanas para descubrir que sigue vacío".
+
+---
+
+## Enmienda 2026-10-08 — decisión (a): se descarta ZeroGEX, se implementa el DIY
+
+**Contexto.** Revisión de Fase 2 con 18 sesiones reales por símbolo (2026-09-14 → 2026-10-07).
+
+**1. Cambio de regla (post-hoc, declarado).** La definición de `uncertain` de §2.1
+(`is_stale=true` en cualquiera de las dos fuentes) dejó **todas** las etiquetas de
+ZeroGEX en `uncertain` (36/36 snapshots), y el `regime_agreement_rate` de SPX salió
+`n/a`. Causa: la antigüedad se mide contra el instante en que *nuestro* script
+recoge el snapshot (horas después del cierre; umbral 180 s), no contra la calidad
+del dato — el `gamma_flip` de ZeroGEX es el calculado en el cierre. Se reevaluó
+sin esa puerta, sobre el dato bruto (`distance_to_flip_pct` de cada fuente, misma
+banda ±0.5%). Es una modificación decidida viendo los datos; se documenta como tal.
+
+**2. Resultado con la regla enmendada (sin el 2026-10-05 SPX, valor roto del DIY, flip a +12% del spot):**
+
+| Símbolo | Acuerdo de régimen | Mismo lado del flip | Dif. mediana flip | Sesgo (media / sd) |
+|---|---:|---:|---:|---|
+| SPX (17) | 82.4% | 100% | 24.5 pts (~0.3% spot) | +11.3 / 46.7 |
+| QQQ (15) | 86.7% | 73.3% | 1.4 pts (~0.2% spot) | +1.4 / 4.5 |
+
+**3. Decisión del usuario (a):** cancelar ZeroGEX y usar el DIY en ambos símbolos,
+aun con SPX ligeramente por debajo del 85% (criterio §2.3 no cumplido de forma
+estricta — decisión de juicio explícita, no una aprobación automática).
+
+**4. Condiciones de la implementación (Fase 3):**
+- `scripts/gex_diy_snapshot.py` (Step 9e3 del pipeline) reutiliza `gex_pilot.py`
+  sin retocar parámetros. Comprobación de cordura: flip a más de ±5% del spot →
+  descartado (`sanity=out_of_range`); evita el caso del 2026-10-05.
+- Solo se muestra la posición del flip y el régimen por banda; **no** el signo del
+  Net GEX (no fiable con datos gratuitos, ver `research/gex_monitor_pilot/HALLAZGOS.md`).
+- Ubicación: sección 4 de `duration.html`. No es señal de compra/venta; no toca PCS,
+  carteras ni HARD_RULES (§5 sin cambios).
+- Cron de `gex-zerogex-fase2.yml` desactivado. Pendiente del usuario: cancelar la
+  suscripción de ZeroGEX (antes de ~2026-10-19) y borrar el secret `ZEROGEX_API_KEY`.
+- Sin forward-validation continua contra una fuente externa: el DIY depende de
+  yfinance; se revisa a mano si aparece `sanity != ok` repetido.

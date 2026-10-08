@@ -210,6 +210,17 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Step 9e3 -- GEX DIY (2026-10-08): gamma flip de SPX/QQQ en casa
+      # (yfinance + Black-Scholes), sustituye a ZeroGEX tras la calibracion
+      # de Fase 2 (wiki/PREREGISTRO_GEX_ZEROGEX_V1.md, enmienda 2026-10-08).
+      # El propio script solo recoge en dias laborables 15:30-21:00 ET
+      # (el run de manana UTC queda fuera de ventana a proposito) y dedupea
+      # por simbolo/dia. Alimenta la seccion 4 de duration.html.
+      - name: Run pipeline - Step 9e3 GEX DIY (gamma flip SPX/QQQ)
+        run: python scripts/gex_diy_snapshot.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       - name: Check if this is the morning run
         id: time_check
         run: |

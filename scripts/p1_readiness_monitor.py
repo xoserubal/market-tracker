@@ -110,6 +110,22 @@ def count_p1a_p1c(picks: dict) -> tuple[int, int]:
     return n_ops, n_events
 
 
+def count_p1b_mature() -> int:
+    """Eventos analizables por P1B: predictor y ret_21d no nulos."""
+    path = ROOT / "docs" / "data" / "p1b_entry_timing_v1_shadow.jsonl"
+    if not path.exists():
+        return 0
+    n = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        if r.get("w1_ret_5d_at_entry") is not None and r.get("ret_21d") is not None:
+            n += 1
+    return n
+
+
 def count_p1b(picks: dict) -> int:
     """Eventos de SELECT independientes post-firma, en cualquier cartera —
     dedup por event_id = ticker+entry_date, contando posiciones abiertas Y
@@ -168,25 +184,30 @@ def evaluate(picks: dict, today: str, state: dict) -> list[str]:
         )
         fired["p1a_p1c_90day_checkpoint"] = today
 
-    # P1B — eventos de SELECT independientes
+    # P1B — eventos de SELECT independientes. El aviso se basa en el n REAL
+    # analizable (predictor + ret_21d maduros en p1b_entry_timing_v1_shadow.jsonl),
+    # no en el conteo bruto de SELECTs (que incluye MIRROR/CRUCE_ROJO_D, no
+    # analizables). Corregido 2026-10-08: el aviso anterior saltaba con 63
+    # brutos cuando solo 11 eran analizables. Clave nueva p1b_mature_ready para
+    # que el aviso antiguo (p1b_ready) ya disparado no lo silencie.
     n_select_events = count_p1b(picks)
-    if n_select_events >= P1B_MIN_EVENTS and "p1b_ready" not in fired:
+    n_mature = count_p1b_mature()
+    if n_mature >= P1B_MIN_EVENTS and "p1b_mature_ready" not in fired:
         messages.append(
-            f"🟢 <b>P1B — umbral de eventos alcanzado (revisar n real antes de leer)</b>\n"
-            f"{n_select_events} eventos de SELECT independientes post-firma en TODAS las "
-            f"carteras — umbral ≥{P1B_MIN_EVENTS} cumplido. Este conteo incluye "
-            f"MIRROR_ESPEJO/CRUCE_ROJO_D*, que p1b_entry_timing_v1_shadow.py NO puede "
-            f"analizar (no escriben en shadow_picks.jsonl) — corre --report en ese script "
-            f"para ver el n realmente analizable (puede ser menor que {n_select_events}) "
-            f"antes de correr el test primario (Spearman w1_ret_5d↔ret_21d). Recuerda: "
-            f"ret_21d se mide sobre precio del ticker, nunca sobre la vida de la posición (H9)."
+            f"🟢 <b>P1B — muestra analizable alcanzada</b>\n"
+            f"{n_mature} eventos con predictor (w1_ret_5d_at_entry) y ret_21d maduros "
+            f"(umbral ≥{P1B_MIN_EVENTS}). Ya puedes correr "
+            f"<code>py -3 scripts/p1b_entry_timing_v1_shadow.py --report</code> "
+            f"(Spearman w1_ret_5d↔ret_21d). Recuerda: ret_21d se mide sobre precio "
+            f"del ticker, nunca sobre la vida de la posición (H9)."
         )
-        fired["p1b_ready"] = today
+        fired["p1b_mature_ready"] = today
 
     state["last_check"] = {
         "date": today, "days_since_firma": d_since,
         "p1a_p1c_ops": n_ops, "p1a_p1c_events": n_events,
         "p1b_select_events": n_select_events,
+        "p1b_mature_events": n_mature,
     }
     return messages
 
@@ -206,7 +227,7 @@ def main():
     print(f"días desde firma ({FIRMA_DATE}): {last['days_since_firma']}")
     print(f"P1A/P1C: {last['p1a_p1c_ops']} ops / {last['p1a_p1c_events']} eventos "
           f"(umbral {P1A_P1C_MIN_OPS}/{P1A_P1C_MIN_EVENTS})")
-    print(f"P1B: {last['p1b_select_events']} eventos de SELECT (umbral {P1B_MIN_EVENTS})")
+    print(f"P1B: {last['p1b_select_events']} eventos de SELECT (umbral {P1B_MIN_EVENTS}); analizables maduros: {last['p1b_mature_events']}")
 
     if not messages:
         print("Sin umbrales nuevos cumplidos — nada que avisar.")

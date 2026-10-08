@@ -310,7 +310,7 @@ function TrullasPage() {
           <div className="section-title">TRULLAS_SHADOW — posiciones abiertas ({shadowPositions.length})</div>
           <table>
             <thead><tr>
-              <th>Ticker</th><th>Entrada</th><th>Precio entrada</th><th>TP</th><th>Stop</th><th>Tier</th>
+              <th title="Símbolo del valor.">Ticker</th><th title="Fecha de entrada de la posición.">Entrada</th><th title="Precio de entrada congelado al abrir la posición.">Precio entrada</th><th title="Objetivo de beneficio congelado en la entrada (Fibonacci 38,2%).">TP</th><th title="Stop: ruptura del mínimo del pivote que originó la divergencia.">Stop</th><th title="Calidad de la señal: T1 solo MACD; T2 MACD + RSI; T3 MACD + RSI + Volumen (el Volumen solo cuenta si RSI también confirma). R✓/✗ V✓/✗ indica qué confirmó.">Tier</th>
             </tr></thead>
             <tbody>
               {shadowPositions.map(p => (
@@ -359,9 +359,9 @@ function TrullasPage() {
         <table>
           <thead>
             <tr>
-              <th>Ticker</th><th>Sección</th><th>Estado</th><th>Tier</th><th>Precio</th><th>RSI14</th>
-              <th>MACD hist</th><th>Swing%</th><th>Pivote1</th><th>Pivote2</th>
-              <th>Zona entrada</th><th>TP 38.2%</th><th>Stop</th><th>Detalle</th>
+              <th title="Símbolo del valor.">Ticker</th><th title="Sección de Portfolio Tracker a la que pertenece el ticker.">Sección</th><th title="Estado de la señal Trullás: divergencia MACD, espera de retroceso, entrada hoy, expirada, invalidada… (ver glosario).">Estado</th><th title="Calidad de la señal: T1 solo MACD; T2 MACD + RSI; T3 MACD + RSI + Volumen (el Volumen solo cuenta si RSI también confirma). R✓/✗ V✓/✗ indica qué confirmó.">Tier</th><th title="Último cierre del ticker.">Precio</th><th title="RSI de Wilder a 14 sesiones.">RSI14</th>
+              <th title="Histograma MACD (12,26,9): línea MACD menos su señal.">MACD hist</th><th title="Caída porcentual entre el máximo previo y el mínimo del segundo pivote. Mínimo 3% para considerarse.">Swing%</th><th title="Primer mínimo fractal (5 sesiones) de la divergencia alcista.">Pivote1</th><th title="Segundo mínimo, más bajo en precio pero con MACD más alto (divergencia).">Pivote2</th>
+              <th title="Zona de retroceso del 23-25% del swing donde se coloca la orden límite de compra.">Zona entrada</th><th title="Objetivo de beneficio: retroceso Fibonacci del 38,2% del swing.">TP 38.2%</th><th title="Stop: ruptura del mínimo del pivote que originó la divergencia.">Stop</th><th title="Información adicional de la señal.">Detalle</th>
             </tr>
           </thead>
           <tbody>

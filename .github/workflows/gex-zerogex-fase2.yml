@@ -33,8 +33,9 @@ name: GEX ZeroGEX Fase 2 — DIY Calibration
 # para casos "no-op" análogos.
 
 on:
-  schedule:
-    - cron: '*/15 18-20 * * 1-5'   # cada 15 min, 18:00-20:45 UTC ≈ 14:00-16:45 ET — cubre con margen la deriva observada del cron de GitHub; el script decide si esa ejecución concreta cae dentro de su propia ventana 15:30-16:15 ET
+  # Cron DESACTIVADO 2026-10-08: se descarta ZeroGEX y se implementa el DIY (ver
+  # wiki/PREREGISTRO_GEX_ZEROGEX_V1.md, enmienda 2026-10-08). Workflow conservado solo
+  # como registro; el usuario debe cancelar la suscripcion y borrar el secret ZEROGEX_API_KEY.
   workflow_dispatch: {}
 
 permissions:

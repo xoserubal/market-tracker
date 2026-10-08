@@ -7927,3 +7927,37 @@ Valoración:
 ## Fix: Sol se saltaba días por snapshot de mercado obsoleto (2026-10-08)
 
 Días sin análisis LLM entre semana (09-22, 09-23, 09-29, 10-06, 10-08): la primera pasada del pipeline del día corre a veces antes de la apertura de EE.UU. (13:30 UTC, con el retraso del cron), así que `market_equities_daily_snapshot.jsonl` guardaba filas con `asOf` del día anterior; el dedup por `(date,ticker)` impedía que la pasada de la tarde las refrescara y `_is_market_open_day()` (correctamente) veía "sin sesión nueva" todo el día. Fix en `market_daily_snapshot.js`: las filas de hoy con `asOf` anterior al dato fresco se sustituyen. Solo equities; las filas macro siguen con dedup simple. Los días ya perdidos no se recuperan.
+
+---
+
+## GEX: se descarta ZeroGEX, se implementa el DIY — Fase 3 (implementado 2026-10-08)
+
+Decisión del usuario (opción (a) del preregistro §2.3/§7): cancelar ZeroGEX y usar el
+gamma flip DIY de SPX y QQQ. Detalle y enmienda en `wiki/PREREGISTRO_GEX_ZEROGEX_V1.md`
+(Enmienda 2026-10-08).
+
+**Hallazgo clave de la revisión:** la etiqueta `uncertain` de ZeroGEX no venía de ZeroGEX —
+era nuestra regla `is_stale` (antigüedad > 180 s medida contra la hora de recogida del
+script, horas después del cierre). Con 36/36 snapshots `uncertain`, el acuerdo de régimen
+de SPX era `n/a`. Sobre el dato bruto (distancia al flip de cada fuente, banda ±0.5%):
+SPX 82.4% de acuerdo (17 sesiones, sin el 2026-10-05), QQQ 86.7%; diferencia mediana del
+flip ≈0.3% / ≈0.2% del spot. Cambio de regla post-hoc, declarado en el preregistro. SPX queda
+algo por debajo del 85%: aprobación por juicio del usuario, no automática. El 2026-10-05 el
+DIY dio flip 8699 con SPX en 7774 (cadena desequilibrada); no se pudo diagnosticar la causa
+porque no se guarda la cadena.
+
+**Implementación:**
+- `scripts/gex_diy_snapshot.py` (Step 9e3): importa `gex_pilot.py` sin retocar parámetros.
+  Solo recoge en días laborables 15:30-21:00 ET (el run de la mañana UTC queda fuera a
+  propósito). Guarda de cordura: flip a más de ±5% del spot → `sanity=out_of_range`, se
+  descarta. Dedup por símbolo/día ET (una fila inválida se sustituye si un run posterior
+  da una válida). Salida: `docs/data/gex_diy_history.jsonl` (sembrada con las 36 filas de
+  la calibración) y `gex_diy_latest.json`.
+- `duration.html` sección 4 "Dealer Gamma": tarjetas SPX/QQQ (spot, flip, distancia,
+  régimen, sparkline) + sección en el export a LLM. Solo posición del flip, **no** el signo
+  del Net GEX (no fiable con datos gratuitos). Observacional, no es señal.
+- `gex-zerogex-fase2.yml`: cron desactivado.
+
+**Pendiente del usuario:** cancelar la suscripción de ZeroGEX (trial/tope ~2026-10-19) y
+borrar el secret `ZEROGEX_API_KEY`. Sin validación externa continua: si aparece
+`sanity != ok` de forma repetida, revisar a mano (el DIY depende de yfinance).

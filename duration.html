@@ -267,11 +267,18 @@ function PhaseChecklist({ checks }) {
   );
 }
 
+const GEX_REGIME = {
+  positive_gamma: { label: 'Gamma positivo', bg: '#c8e6c9', fg: '#1b5e20' },
+  negative_gamma: { label: 'Gamma negativo', bg: '#ffcdd2', fg: '#b71c1c' },
+  transition:     { label: 'Transición',     bg: '#fff9c4', fg: '#e65100' },
+};
+
 function DurationPage() {
   const [quotes, setQuotes] = React.useState({});
   const [fred, setFred] = React.useState({});
   const [histories, setHistories] = React.useState({});
   const [auctions, setAuctions] = React.useState(null);
+  const [gexDiy, setGexDiy] = React.useState(null);
   const [errors, setErrors] = React.useState({});
   const [loading, setLoading] = React.useState(true);
   const [updated, setUpdated] = React.useState(null);
@@ -295,6 +302,11 @@ function DurationPage() {
     const aPromise = fetch('/api/treasury-auctions?t=' + Date.now())
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .catch(e => ({ error: e.message }));
+    // GEX DIY: fichero estático generado por scripts/gex_diy_snapshot.py (pipeline); sin él la sección se oculta
+    fetch('/docs/data/gex_diy_latest.json?t=' + Date.now())
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(setGexDiy)
+      .catch(() => setGexDiy(null));
     const hPromises = HISTORY_TICKERS.map(sym =>
       fetch('/api/history/' + encodeURIComponent(sym) + '?range=6mo&t=' + Date.now())
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -435,6 +447,17 @@ function DurationPage() {
       const badge = AUCTION_BADGE[t.auction_stress_proxy] || AUCTION_BADGE.insufficient_data;
       lines.push(`| ${tenor} | ${t.auction_date} | ${fmt(t.auction_high_yield)}% | ${fmtBps(t.high_yield_vs_recent_avg)} | ${fmt(t.bid_to_cover)} | ${t.bid_to_cover_vs_recent_avg ?? '-'} | ${fmt(t.indirect_pct)}% | ${t.indirect_pct_vs_recent_avg != null ? (t.indirect_pct_vs_recent_avg > 0 ? '+' : '') + t.indirect_pct_vs_recent_avg + 'pp' : '-'} | ${fmt(t.dealer_pct)}% | ${t.dealer_pct_vs_recent_avg != null ? (t.dealer_pct_vs_recent_avg > 0 ? '+' : '') + t.dealer_pct_vs_recent_avg + 'pp' : '-'} | ${badge.label} | n/d |`);
     });
+    if (gexDiy) {
+      lines.push('');
+      lines.push('## Dealer Gamma — gamma flip DIY (yfinance + Black-Scholes, 1 lectura/día al cierre; NO es señal, NO se usa el signo del Net GEX)');
+      lines.push('| Símbolo | Fecha | Spot | Gamma flip | Distancia al flip | Régimen (banda ±0.5%) |');
+      lines.push('|---|---|---:|---:|---:|---|');
+      ['SPX', 'QQQ'].forEach(s => {
+        const l = gexDiy[s]?.latest;
+        if (!l) { lines.push(`| ${s} | sin datos | | | | |`); return; }
+        lines.push(`| ${s} | ${l.date} | ${l.spot} | ${l.gamma_flip} | ${l.distance_to_flip_pct > 0 ? '+' : ''}${l.distance_to_flip_pct}% | ${GEX_REGIME[l.regime]?.label || l.regime} |`);
+      });
+    }
     return lines.join('\n');
   };
 
@@ -674,6 +697,38 @@ function DurationPage() {
         </tbody>
       </table>
       <div className="freshness">Auctions as_of (caché del proxy): {auctions?.as_of ? new Date(auctions.as_of).toLocaleString('es') : '—'}</div>
+
+      {gexDiy && (
+        <React.Fragment>
+          <div className="section-title">4. Dealer Gamma — gamma flip (DIY)</div>
+          <div className="section-sub">
+            Nivel de spot donde el gamma neto de los dealers cambia de signo, estimado en casa con la cadena de opciones de Yahoo (OI + IV, Black-Scholes) una vez al día tras el cierre.
+            Calibrado contra ZeroGEX (diferencia mediana ≈0.3% del spot en SPX, ≈0.2% en QQQ). Spot por encima del flip → gamma positivo (dealers amortiguan movimientos); por debajo → negativo (los amplifican);
+            a menos de ±0.5% → transición, régimen inestable. Solo se usa la posición del flip: el signo del Net GEX no es fiable con datos gratuitos. Observacional — no es señal de compra/venta.
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, marginBottom: 8 }}>
+            {['SPX', 'QQQ'].map(s => {
+              const l = gexDiy[s]?.latest;
+              const series = (gexDiy[s]?.series || []).map(p => ({ y: p.distance_to_flip_pct }));
+              if (!l) return <div key={s} className="card">{s}: sin datos</div>;
+              const reg = GEX_REGIME[l.regime] || { label: l.regime, bg: '#eee', fg: '#444' };
+              return (
+                <div key={s} style={{ border: '1px solid #e0e0e0', borderRadius: 6, padding: 12, background: '#fff' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <b>{s}</b>
+                    <span className="badge" style={{ background: reg.bg, color: reg.fg }}>{reg.label}</span>
+                  </div>
+                  <div style={{ fontSize: 13, margin: '6px 0' }}>
+                    Spot {l.spot} · Flip <b>{l.gamma_flip}</b> · Distancia <b>{l.distance_to_flip_pct > 0 ? '+' : ''}{l.distance_to_flip_pct}%</b>
+                  </div>
+                  <Spark points={series} color="#6a4c93" />
+                  <div style={{ fontSize: 10, color: '#888' }}>Distancia spot–flip (%), últimas {series.length} sesiones · lectura del {l.date}</div>
+                </div>
+              );
+            })}
+          </div>
+        </React.Fragment>
+      )}
 
       <div className="footer-note">
         Fuentes: Yahoo Finance (precios/indicadores vía proxy local), FRED (yields/HY spread, ~1 día de lag), Treasury Fiscal Data API (subastas, caché 6h).
