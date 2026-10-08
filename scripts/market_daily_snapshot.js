@@ -278,7 +278,24 @@ async function main() {
   if (quoteFailures.length) quoteFailures.forEach(f => console.log(`    fallo quote ${f.ticker}: ${f.error}`));
 
   // ── Equity rows ──────────────────────────────────────────────────────
-  const existingEquityRows = readJsonlRows(EQUITY_FILE);
+  let existingEquityRows = readJsonlRows(EQUITY_FILE);
+  // Upsert de filas obsoletas de hoy (2026-10-08): si la primera pasada del dia
+  // corrio antes de la apertura de EE.UU., sus filas llevan asOf del dia
+  // anterior y el dedup por (date,ticker) impedia que la pasada posterior las
+  // refrescara -> el analisis LLM (que exige sesion nueva) se saltaba el dia
+  // entero. Ahora se descartan las filas de hoy cuyo asOf es mas antiguo que
+  // el dato fresco, y se reescriben.
+  const staleKeys = new Set();
+  for (const r of existingEquityRows) {
+    if (r.date !== today) continue;
+    const fresh = quoteMap[r.ticker];
+    if (fresh && fresh.asOf && (!r.asOf || String(r.asOf) < String(fresh.asOf))) staleKeys.add(`${r.date}|${r.ticker}`);
+  }
+  if (staleKeys.size && !DRY_RUN) {
+    existingEquityRows = existingEquityRows.filter(r => !staleKeys.has(`${r.date}|${r.ticker}`));
+    fs.writeFileSync(EQUITY_FILE, existingEquityRows.map(r => JSON.stringify(r)).join(String.fromCharCode(10)) + (existingEquityRows.length ? String.fromCharCode(10) : ""));
+  }
+  if (staleKeys.size) console.log(`  filas de hoy obsoletas (asOf anterior) a refrescar: ${staleKeys.size}`);
   const existingEquityKeys = new Set(existingEquityRows.map(r => `${r.date}|${r.ticker}`));
   const prevByTicker = buildPrevRowMap(existingEquityRows, today);
 

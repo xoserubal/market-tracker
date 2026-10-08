@@ -7921,3 +7921,9 @@ Valoración:
 - Las reglas del modelo van en `HARD_RULES` (paper_trading.py) — se incluyen automáticamente en el payload
 - El evaluador externo recibe `eval_bundle_latest.json` generado con `build_eval_bundle.py`
 - `baselines.jsonl` se actualiza automáticamente con cada run — no editar manualmente
+
+---
+
+## Fix: Sol se saltaba días por snapshot de mercado obsoleto (2026-10-08)
+
+Días sin análisis LLM entre semana (09-22, 09-23, 09-29, 10-06, 10-08): la primera pasada del pipeline del día corre a veces antes de la apertura de EE.UU. (13:30 UTC, con el retraso del cron), así que `market_equities_daily_snapshot.jsonl` guardaba filas con `asOf` del día anterior; el dedup por `(date,ticker)` impedía que la pasada de la tarde las refrescara y `_is_market_open_day()` (correctamente) veía "sin sesión nueva" todo el día. Fix en `market_daily_snapshot.js`: las filas de hoy con `asOf` anterior al dato fresco se sustituyen. Solo equities; las filas macro siguen con dedup simple. Los días ya perdidos no se recuperan.
