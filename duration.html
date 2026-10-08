@@ -268,19 +268,38 @@ function PhaseChecklist({ checks }) {
 }
 
 // Gráfico con ejes para la distancia spot–flip (%): línea 0 = flip, banda ±0.5% = transición.
-function GexChart({ series, color = '#6a4c93', height = 102 }) {
-  const pts = (series || []).filter(p => p.y != null && Number.isFinite(p.y));
+// Eje X a escala temporal real, con marcas mensuales dentro de los últimos 2 años (o del histórico disponible).
+function GexChart({ series, color = '#6a4c93', height = 170 }) {
+  const pts = (series || []).filter(p => p.y != null && Number.isFinite(p.y) && p.date);
   if (pts.length < 2) return <span style={{ color: '#aaa', fontSize: 10 }}>sin datos</span>;
-  const W = 600, padL = 40, padR = 6, padT = 6, padB = 18;
-  const vals = pts.map(p => p.y);
+  const W = 600, padL = 40, padR = 10, padT = 8, padB = 24;
+  const DAY = 86400000;
+  const tOf = s => Date.parse(s + 'T00:00:00Z');
+  const tEnd = tOf(pts[pts.length - 1].date);
+  const tStart = Math.max(tOf(pts[0].date), tEnd - 730 * DAY);
+  const inWin = pts.filter(p => tOf(p.date) >= tStart);
+  const vals = inWin.map(p => p.y);
   let lo = Math.min(...vals, -0.5), hi = Math.max(...vals, 0.5);
   const m = (hi - lo) * 0.08; lo -= m; hi += m;
-  const X = i => padL + i / (pts.length - 1) * (W - padL - padR);
+  const X = t => padL + (t - tStart) / ((tEnd - tStart) || 1) * (W - padL - padR);
   const Y = v => padT + (hi - v) / (hi - lo) * (height - padT - padB);
-  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ');
-  const fmtD = s => s ? s.slice(5).replace('-', '/') : '';
+  const d = inWin.map((p, i) => `${i ? 'L' : 'M'}${X(tOf(p.date)).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ');
+  // marcas mensuales: día 1 de cada mes dentro de [tStart, tEnd]
+  const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const monthTicks = [];
+  const s0 = new Date(tStart);
+  let cy = s0.getUTCFullYear(), cm = s0.getUTCMonth() + (s0.getUTCDate() > 1 ? 1 : 0);
+  for (;;) {
+    const t = Date.UTC(cy, cm, 1);
+    if (t > tEnd) break;
+    if (t >= tStart) monthTicks.push({ t, label: MONTHS[new Date(t).getUTCMonth()] + (new Date(t).getUTCMonth() === 0 || !monthTicks.length ? ' ' + String(new Date(t).getUTCFullYear()).slice(2) : '') });
+    cm++; if (cm > 11) { cm = 0; cy++; }
+  }
+  // si hay muchas marcas, etiquetar solo una de cada n para que no se pisen
+  const every = Math.ceil(monthTicks.length / 12) || 1;
   const ticks = [hi - m, 0, lo + m];
-  const last = pts[pts.length - 1];
+  const last = inWin[inWin.length - 1];
+  const yBase = height - padB;
   return (
     <svg viewBox={`0 0 ${W} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
       <rect x={padL} y={Y(0.5)} width={W - padL - padR} height={Y(-0.5) - Y(0.5)} fill="#fff9c4" opacity="0.7" />
@@ -290,11 +309,15 @@ function GexChart({ series, color = '#6a4c93', height = 102 }) {
           <text x={padL - 3} y={Y(t) + 3} fontSize="10" textAnchor="end" fill="#666">{(t > 0 ? '+' : '') + t.toFixed(1)}%</text>
         </g>
       ))}
+      {monthTicks.map((mt, i) => (
+        <g key={mt.t}>
+          <line x1={X(mt.t)} x2={X(mt.t)} y1={padT} y2={yBase + 4} stroke="#e3e3e3" strokeWidth="0.8" />
+          {i % every === 0 && <text x={X(mt.t)} y={yBase + 15} fontSize="10" textAnchor="middle" fill="#666">{mt.label}</text>}
+        </g>
+      ))}
+      <line x1={padL} x2={W - padR} y1={yBase} y2={yBase} stroke="#bbb" strokeWidth="0.8" />
       <path d={d} fill="none" stroke={color} strokeWidth="1.6" />
-      <circle cx={X(pts.length - 1)} cy={Y(last.y)} r="2.6" fill={color} />
-      <text x={padL} y={height - 4} fontSize="10" fill="#666" textAnchor="start">{fmtD(pts[0].date)}</text>
-      <text x={W - padR} y={height - 4} fontSize="10" fill="#666" textAnchor="end">{fmtD(last.date)}</text>
-      <text x={(padL + W - padR) / 2} y={height - 4} fontSize="10" fill="#999" textAnchor="middle">0 = flip · sombreado = transición ±0.5%</text>
+      <circle cx={X(tOf(last.date))} cy={Y(last.y)} r="2.8" fill={color} />
     </svg>
   );
 }
@@ -754,7 +777,7 @@ function DurationPage() {
                     Spot {l.spot} · Flip <b>{l.gamma_flip}</b> · Distancia <b>{l.distance_to_flip_pct > 0 ? '+' : ''}{l.distance_to_flip_pct}%</b>
                   </div>
                   <GexChart series={series} />
-                  <div style={{ fontSize: 10, color: '#888' }}>Eje Y: distancia spot–flip (%) · últimas {series.length} sesiones · lectura del {l.date}</div>
+                  <div style={{ fontSize: 10, color: '#888' }}>Eje Y: distancia spot–flip (%) · 0 = flip, sombreado = transición ±0.5% · eje X: marcas mensuales (hasta 2 años) · últimas {series.length} sesiones · lectura del {l.date}</div>
                 </div>
               );
             })}
