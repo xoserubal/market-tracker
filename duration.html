@@ -267,6 +267,38 @@ function PhaseChecklist({ checks }) {
   );
 }
 
+// Gráfico con ejes para la distancia spot–flip (%): línea 0 = flip, banda ±0.5% = transición.
+function GexChart({ series, color = '#6a4c93', height = 102 }) {
+  const pts = (series || []).filter(p => p.y != null && Number.isFinite(p.y));
+  if (pts.length < 2) return <span style={{ color: '#aaa', fontSize: 10 }}>sin datos</span>;
+  const W = 600, padL = 40, padR = 6, padT = 6, padB = 18;
+  const vals = pts.map(p => p.y);
+  let lo = Math.min(...vals, -0.5), hi = Math.max(...vals, 0.5);
+  const m = (hi - lo) * 0.08; lo -= m; hi += m;
+  const X = i => padL + i / (pts.length - 1) * (W - padL - padR);
+  const Y = v => padT + (hi - v) / (hi - lo) * (height - padT - padB);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ');
+  const fmtD = s => s ? s.slice(5).replace('-', '/') : '';
+  const ticks = [hi - m, 0, lo + m];
+  const last = pts[pts.length - 1];
+  return (
+    <svg viewBox={`0 0 ${W} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <rect x={padL} y={Y(0.5)} width={W - padL - padR} height={Y(-0.5) - Y(0.5)} fill="#fff9c4" opacity="0.7" />
+      {ticks.map((t, i) => (
+        <g key={i}>
+          <line x1={padL} x2={W - padR} y1={Y(t)} y2={Y(t)} stroke={Math.abs(t) < 1e-9 ? '#888' : '#e3e3e3'} strokeDasharray={Math.abs(t) < 1e-9 ? '3,2' : ''} strokeWidth="0.8" />
+          <text x={padL - 3} y={Y(t) + 3} fontSize="10" textAnchor="end" fill="#666">{(t > 0 ? '+' : '') + t.toFixed(1)}%</text>
+        </g>
+      ))}
+      <path d={d} fill="none" stroke={color} strokeWidth="1.6" />
+      <circle cx={X(pts.length - 1)} cy={Y(last.y)} r="2.6" fill={color} />
+      <text x={padL} y={height - 4} fontSize="10" fill="#666" textAnchor="start">{fmtD(pts[0].date)}</text>
+      <text x={W - padR} y={height - 4} fontSize="10" fill="#666" textAnchor="end">{fmtD(last.date)}</text>
+      <text x={(padL + W - padR) / 2} y={height - 4} fontSize="10" fill="#999" textAnchor="middle">0 = flip · sombreado = transición ±0.5%</text>
+    </svg>
+  );
+}
+
 const GEX_REGIME = {
   positive_gamma: { label: 'Gamma positivo', bg: '#c8e6c9', fg: '#1b5e20' },
   negative_gamma: { label: 'Gamma negativo', bg: '#ffcdd2', fg: '#b71c1c' },
@@ -709,7 +741,7 @@ function DurationPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, marginBottom: 8 }}>
             {['SPX', 'QQQ'].map(s => {
               const l = gexDiy[s]?.latest;
-              const series = (gexDiy[s]?.series || []).map(p => ({ y: p.distance_to_flip_pct }));
+              const series = (gexDiy[s]?.series || []).map(p => ({ y: p.distance_to_flip_pct, date: p.date }));
               if (!l) return <div key={s} className="card">{s}: sin datos</div>;
               const reg = GEX_REGIME[l.regime] || { label: l.regime, bg: '#eee', fg: '#444' };
               return (
@@ -721,8 +753,8 @@ function DurationPage() {
                   <div style={{ fontSize: 13, margin: '6px 0' }}>
                     Spot {l.spot} · Flip <b>{l.gamma_flip}</b> · Distancia <b>{l.distance_to_flip_pct > 0 ? '+' : ''}{l.distance_to_flip_pct}%</b>
                   </div>
-                  <Spark points={series} color="#6a4c93" />
-                  <div style={{ fontSize: 10, color: '#888' }}>Distancia spot–flip (%), últimas {series.length} sesiones · lectura del {l.date}</div>
+                  <GexChart series={series} />
+                  <div style={{ fontSize: 10, color: '#888' }}>Eje Y: distancia spot–flip (%) · últimas {series.length} sesiones · lectura del {l.date}</div>
                 </div>
               );
             })}
