@@ -1355,6 +1355,8 @@ _PORTFOLIO_LABELS = {
     "CRUCE_ROJO_D_25":              "Cruce Rojo D 25",
     "RANKING_SHADOW_EXPERIMENTAL":  "Ranking Score (shadow)",
     "TRULLAS_SHADOW":               "Trullas (shadow)",
+    "TRULLAS_FLEX":                 "Trullas flex (shadow)",
+    "SCREENER_SHADOW":              "Screener (shadow)",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 

@@ -72,11 +72,13 @@ PICKS_PATH = DATA / "ai_picks.json"
 PORTFOLIO_PATH = ROOT / "portfolio.json"
 
 CARTERA_NAME = "TRULLAS_SHADOW"
+FLEX_CARTERA_NAME = "TRULLAS_FLEX"
+PORTFOLIO_NAMES = (CARTERA_NAME, FLEX_CARTERA_NAME)
 
 HISTORY_DAYS = 760  # ~3 años: sobra para varios ciclos de pivotes + warmup MACD(26)/RSI(14)
 
 
-def load_universe() -> tuple[list[str], dict[str, str], dict[str, str]]:
+def load_universe() -> tuple[list[str], dict[str, str], dict[str, dict[str, str]]]:
     """Devuelve (tickers, ticker->sección de portfolio.json, ticker->entry_date
     si está abierto en TRULLAS_SHADOW)."""
     tickers: set[str] = set()
@@ -90,15 +92,18 @@ def load_universe() -> tuple[list[str], dict[str, str], dict[str, str]]:
                     tickers.add(tk)
                     sections.setdefault(tk, sec.get("name", ""))
 
-    entry_dates: dict[str, str] = {}
+    # portfolio -> {ticker: entry_date}. Dos carteras pueden tener el mismo ticker con
+    # fechas de entrada distintas, así que no se aplana a un solo dict.
+    entry_dates: dict[str, dict[str, str]] = {name: {} for name in PORTFOLIO_NAMES}
     if PICKS_PATH.exists():
         picks = json.loads(PICKS_PATH.read_text(encoding="utf-8"))
-        ptf = picks.get("portfolios", {}).get(CARTERA_NAME, {})
-        for pos in ptf.get("positions", []):
-            tk = pos.get("ticker")
-            if tk:
-                tickers.add(tk)
-                entry_dates[tk] = pos.get("entry_date")
+        for name in PORTFOLIO_NAMES:
+            ptf = picks.get("portfolios", {}).get(name, {})
+            for pos in ptf.get("positions", []):
+                tk = pos.get("ticker")
+                if tk:
+                    tickers.add(tk)
+                    entry_dates[name][tk] = pos.get("entry_date")
 
     return sorted(tickers), sections, entry_dates
 
@@ -131,7 +136,7 @@ def download_ohlcv(tickers: list[str]) -> dict[str, pd.DataFrame]:
     return out
 
 
-def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | None) -> dict:
+def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_dates: dict[str, str | None]) -> dict:
     close = df["close"].to_numpy()
     dates = [str(d.date()) for d in df.index]
     vol = df["volume"].to_numpy()
@@ -163,14 +168,19 @@ def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | N
         "entry_signal_date": None,
         "bars_remaining_in_window": None,
         "bars_held_since_entry": None,
+        # Variante flexible (TRULLAS_FLEX): misma señal/TP/stop, zona de entrada desde 20% en vez de 23%.
+        "flex_entry_low": None, "flex_signal_state": None, "flex_entry_signal_date": None,
+        "flex_bars_remaining_in_window": None,
+        "bars_held_by_portfolio": {},
     }
 
-    # Si el ticker está abierto en TRULLAS_SHADOW, calcula cuántas barras
-    # lleva desde la entrada real (índice en ESTA serie, no calendario —
+    # Barras desde la entrada real por cartera (índice en ESTA serie, no calendario --
     # necesario para aplicar el time-stop de 20 sesiones con precisión).
-    if entry_date and entry_date in dates:
-        entry_pos = dates.index(entry_date)
-        result["bars_held_since_entry"] = n - 1 - entry_pos
+    for name, ed in entry_dates.items():
+        if ed and ed in dates:
+            result["bars_held_by_portfolio"][name] = n - 1 - dates.index(ed)
+    # compat: campo histórico, solo TRULLAS_SHADOW
+    result["bars_held_since_entry"] = result["bars_held_by_portfolio"].get(CARTERA_NAME)
 
     pivots = tl.find_pivots_low(close)
     if len(pivots) < 2:
@@ -199,39 +209,50 @@ def compute_signal_for_ticker(ticker: str, df: pd.DataFrame, entry_date: str | N
                    tp=round(tp, 4), stop=round(stop, 4))
 
     window_end = min(b + 1 + tl.ENTRY_WINDOW_BARS, n)
+    # Primera apertura ACCIONABLE: el pivote b solo se confirma con el cierre de b+PIVOT_WINDOW.
+    # Escanear desde b+1 (como hasta 2026-10-09) devolvía rellenos imposibles de operar y
+    # bloqueaba entradas válidas posteriores (entry_in_past). Ver CLAUDE.md.
+    start_idx = b + tl.FIRST_ACTIONABLE_OFFSET
+
     # find_entry_executable() (no find_entry_v1) -- corregido 2026-09-21:
     # orden límite real evaluada por APERTURA, no relleno ingenuo al mismo
     # cierre que genera la señal. Ver CLAUDE.md, "corrección de V1_OPEN".
-    scan = tl.find_entry_executable(open_, entry_low, entry_high, stop, b + 1, window_end)
+    scan = tl.find_entry_executable(open_, entry_low, entry_high, stop, start_idx, window_end)
+    state, sig_date, remaining = _entry_state(scan, b, n, open_, entry_low, entry_high, dates)
+    result["signal_state"], result["entry_signal_date"], result["bars_remaining_in_window"] = state, sig_date, remaining
 
+    # Variante flexible: misma señal, zona desde el 20% de retroceso (techo igual).
+    flex_low = ev["pivot2_close"] + tl.RETR_ENTRY_LOW_FLEX * (ev["pivot1_close"] - ev["pivot2_close"])
+    result["flex_entry_low"] = round(flex_low, 4)
+    fscan = tl.find_entry_executable(open_, flex_low, entry_high, stop, start_idx, window_end)
+    fstate, fdate, frem = _entry_state(fscan, b, n, open_, flex_low, entry_high, dates)
+    result["flex_signal_state"], result["flex_entry_signal_date"], result["flex_bars_remaining_in_window"] = fstate, fdate, frem
+    return result
+
+
+def _entry_state(scan: dict, b: int, n: int, open_, entry_low: float, entry_high: float, dates: list[str]):
+    """Traduce el resultado de find_entry_executable a (estado, fecha de la señal, barras restantes)."""
     if scan["outcome"] == "invalidated":
-        result["signal_state"] = "invalidated"
-        result["entry_signal_date"] = dates[scan["idx"]]
-        return result
-
+        return "invalidated", dates[scan["idx"]], None
     if scan["outcome"] == "no_entry_yet":
         bars_since_pivot2 = (n - 1) - b
         if bars_since_pivot2 >= tl.ENTRY_WINDOW_BARS:
-            result["signal_state"] = "expired_no_pullback"
+            return "expired_no_pullback", None, None
+        # Informativo para la pestaña discrecional, tres casos según dónde abre HOY respecto a la zona:
+        #   por encima del techo -> "ran_ahead": el precio se alejó, espera un retroceso que quizá no llegue.
+        #   por debajo del suelo -> "below_zone": ya cayó MÁS allá de la zona (sigue sobre el stop); no espera
+        #     un retroceso sino un rebote que devuelva la apertura a la zona (o rompe el stop y se invalida).
+        #   dentro de la zona    -> "in_zone": solo ocurre el día que se confirma el pivote (la primera
+        #     apertura accionable es la de mañana); la orden queda armada, no hay fill hoy.
+        if open_[-1] > entry_high:
+            state = "waiting_pullback_ran_ahead"
+        elif open_[-1] < entry_low:
+            state = "waiting_pullback_below_zone"
         else:
-            # Informativo para la pestaña discrecional (no cambia la lógica de
-            # elegibilidad, que sigue siendo "sin entry_idx dentro de la
-            # ventana"): si el precio ya rebasó la zona de entrada, lo más
-            # probable es que ya no vuelva a retroceder tan abajo — distinto
-            # de "todavía no ha rebotado lo suficiente desde el mínimo".
-            # Referencia la apertura de hoy (open_[-1]), no el cierre --
-            # coherente con que la entrada ahora se decide por apertura.
-            if open_[-1] > entry_high:
-                result["signal_state"] = "waiting_pullback_ran_ahead"
-            else:
-                result["signal_state"] = "waiting_pullback_below_zone"
-            result["bars_remaining_in_window"] = tl.ENTRY_WINDOW_BARS - bars_since_pivot2
-        return result
-
+            state = "waiting_in_zone"
+        return state, None, tl.ENTRY_WINDOW_BARS - bars_since_pivot2
     entry_idx = scan["idx"]
-    result["entry_signal_date"] = dates[entry_idx]
-    result["signal_state"] = "entry_today" if entry_idx == n - 1 else "entry_in_past"
-    return result
+    return ("entry_today" if entry_idx == n - 1 else "entry_in_past"), dates[entry_idx], None
 
 
 def _append_history(rows: list[dict]) -> int:
@@ -278,7 +299,7 @@ def run() -> int:
             failed.append(tk)
             continue
         try:
-            sig = compute_signal_for_ticker(tk, df, entry_dates.get(tk))
+            sig = compute_signal_for_ticker(tk, df, {name: entry_dates[name].get(tk) for name in PORTFOLIO_NAMES})
             sig["section"] = sections.get(tk, "")
             sig["updated"] = today
             out[tk] = sig
@@ -294,16 +315,18 @@ def run() -> int:
                 "entry_low": sig["entry_low"], "entry_high": sig["entry_high"],
                 "tp": sig["tp"], "stop": sig["stop"],
                 "signal_state": sig["signal_state"], "entry_signal_date": sig["entry_signal_date"],
+                "flex_entry_low": sig["flex_entry_low"], "flex_signal_state": sig["flex_signal_state"],
             })
         except Exception as e:
             print(f"  [error] {tk}: {e}")
             failed.append(tk)
 
     n_entry_today = sum(1 for s in out.values() if s["signal_state"] == "entry_today")
+    n_flex_today = sum(1 for s in out.values() if s["flex_signal_state"] == "entry_today")
     n_waiting = sum(1 for s in out.values()
-                     if s["signal_state"] in ("waiting_pullback_below_zone", "waiting_pullback_ran_ahead"))
+                     if s["signal_state"] in ("waiting_pullback_below_zone", "waiting_pullback_ran_ahead", "waiting_in_zone"))
     print(f"  Calculados: {len(out)}  Fallos: {len(failed)}")
-    print(f"  entry_today={n_entry_today}  waiting_pullback={n_waiting}")
+    print(f"  entry_today={n_entry_today} (flex={n_flex_today})  waiting_pullback={n_waiting}")
     if failed:
         print(f"  Fallos: {failed[:15]}{'…' if len(failed) > 15 else ''}")
 

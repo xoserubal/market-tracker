@@ -57,6 +57,14 @@ PICKS_JSON = DATA / "ai_picks.json"
 LOG_PATH = DATA / "trullas_shadow_log.jsonl"
 
 NAME = "TRULLAS_SHADOW"
+# Dos carteras con la misma señal, TP, stop y salida; solo cambia el suelo de la zona de entrada:
+#   TRULLAS_SHADOW -> retroceso 23-25% (regla pura)
+#   TRULLAS_FLEX   -> retroceso 20-25% (tolerancia pequeña por debajo; creada 2026-10-09 tras el
+#                     caso HFG.DE, ver CLAUDE.md). Valor redondo, no el mejor de la sonda.
+CONFIGS = [
+    {"name": "TRULLAS_SHADOW", "state_field": "signal_state", "low_field": "entry_low", "signal_date_field": "entry_signal_date"},
+    {"name": "TRULLAS_FLEX", "state_field": "flex_signal_state", "low_field": "flex_entry_low", "signal_date_field": "flex_entry_signal_date"},
+]
 SIZE_PCT = 5.0
 MAX_POSITIONS = 999
 TIME_STOP_BARS = 20
@@ -77,22 +85,23 @@ def _append_jsonl(path: Path, record: dict) -> None:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def qualifies_for_entry(sig: dict) -> bool:
-    return sig.get("signal_state") == "entry_today"
+def qualifies_for_entry(sig: dict, cfg: dict) -> bool:
+    return sig.get(cfg["state_field"]) == "entry_today"
 
 
-def build_candidates(signals: dict[str, dict], already_held: set[str]) -> list[dict]:
+def build_candidates(signals: dict[str, dict], already_held: set[str], cfg: dict) -> list[dict]:
     out = []
     for tk, sig in signals.items():
         if tk in already_held:
             continue
-        if not qualifies_for_entry(sig):
+        if not qualifies_for_entry(sig, cfg):
             continue
         out.append(sig)
     return out
 
 
-def check_exits(picks: dict, signals: dict[str, dict], today: str) -> list[dict]:
+def check_exits(picks: dict, signals: dict[str, dict], today: str, cfg: dict) -> list[dict]:
+    NAME = cfg["name"]
     ptf = picks.setdefault("portfolios", {}).setdefault(NAME, {"positions": [], "history": []})
     positions = ptf.get("positions", [])
     if not positions:
@@ -112,7 +121,9 @@ def check_exits(picks: dict, signals: dict[str, dict], today: str) -> list[dict]
         price = sig["price"]
         tp = pos.get("tp_at_entry")
         stop = pos.get("stop_at_entry")
-        bars_held = sig.get("bars_held_since_entry")
+        bars_held = (sig.get("bars_held_by_portfolio") or {}).get(NAME)
+        if bars_held is None and NAME == "TRULLAS_SHADOW":
+            bars_held = sig.get("bars_held_since_entry")  # compat con ficheros anteriores al 2026-10-09
 
         reason = None
         if stop is not None and price <= stop:
@@ -140,30 +151,21 @@ def check_exits(picks: dict, signals: dict[str, dict], today: str) -> list[dict]
     return closed_events
 
 
-def run(apply: bool) -> int:
-    today = str(date.today())
-    data = _load(SIGNALS_JSON)
-    signals = data.get("tickers", {})
-    if not signals:
-        print("trullas_signals.json vacío o no encontrado — corre trullas_signal_calculator.py primero.")
-        return 1
-
-    picks = _load(PICKS_JSON)
-    if not isinstance(picks, dict):
-        picks = {}
+def run_for_config(cfg: dict, signals: dict, picks: dict, today: str, apply: bool) -> None:
+    NAME = cfg["name"]
     ptf = picks.setdefault("portfolios", {}).setdefault(NAME, {"positions": [], "history": []})
 
     already_held = {p["ticker"] for p in ptf.get("positions", [])}
-    closed = check_exits(picks, signals, today)
+    closed = check_exits(picks, signals, today, cfg)
     if closed:
         print(f"  [{NAME}] {len(closed)} posición(es) cerrada(s).")
     already_held -= {c["ticker"] for c in closed}
 
-    candidates = build_candidates(signals, already_held)
-    print(f"[{NAME}] Candidatos hoy (signal_state=entry_today, no en cartera): {len(candidates)}")
+    candidates = build_candidates(signals, already_held, cfg)
+    print(f"[{NAME}] Candidatos hoy ({cfg['state_field']}=entry_today, no en cartera): {len(candidates)}")
     for c in candidates:
         print(f"  {c['ticker']:10s} tier={c['tier']} swing={c['swing_pct']}% "
-              f"entry_zone=[{c['entry_low']:.4f},{c['entry_high']:.4f}] tp={c['tp']:.4f} stop={c['stop']:.4f}")
+              f"entry_zone=[{c[cfg['low_field']]:.4f},{c['entry_high']:.4f}] tp={c['tp']:.4f} stop={c['stop']:.4f}")
 
     n_open = len(already_held)
     room = MAX_POSITIONS - n_open
@@ -188,7 +190,7 @@ def run(apply: bool) -> int:
                 "pivot2_date_at_entry": c["pivot2_date"],
                 "pivot2_close_at_entry": c["pivot2_close"],
                 "swing_pct_at_entry": c["swing_pct"],
-                "entry_low_at_entry": c["entry_low"],
+                "entry_low_at_entry": c[cfg["low_field"]],
                 "entry_high_at_entry": c["entry_high"],
                 "tp_at_entry": c["tp"],
                 "stop_at_entry": c["stop"],
@@ -197,22 +199,38 @@ def run(apply: bool) -> int:
             print(f"  [{NAME}] SELECT {tk}: tier={c['tier']} entry={c['open']:.4f} "
                   f"tp={c['tp']:.4f} stop={c['stop']:.4f}")
 
-    summary = {
+    _append_jsonl(LOG_PATH, {
         "portfolio": NAME, "date": today, "dry_run": not apply,
         "n_candidates": len(candidates), "n_added": n_added, "n_closed": len(closed),
         "added": [c["ticker"] for c in to_add], "closed": [c["ticker"] for c in closed],
-    }
-    _append_jsonl(LOG_PATH, summary)
+    })
+    if apply:
+        print(f"[{NAME}] {n_added} nueva(s) posición(es) añadida(s), {len(closed)} cerrada(s).")
+
+
+def run(apply: bool) -> int:
+    today = str(date.today())
+    data = _load(SIGNALS_JSON)
+    signals = data.get("tickers", {})
+    if not signals:
+        print("trullas_signals.json vacío o no encontrado — corre trullas_signal_calculator.py primero.")
+        return 1
+
+    picks = _load(PICKS_JSON)
+    if not isinstance(picks, dict):
+        picks = {}
+
+    for cfg in CONFIGS:
+        run_for_config(cfg, signals, picks, today, apply)
 
     if not apply:
-        print("\nDry-run (sin --apply): no se ha escrito ai_picks.json.")
+        print("Dry-run (sin --apply): no se ha escrito ai_picks.json.")
         return 0
 
     # Persistir siempre que --apply esté activo, aunque no haya cambios hoy —
-    # así la cartera aparece en el dashboard desde el primer run, incluso
-    # vacía (mismo criterio que mirror_portfolio.py/cruce_rojo_d_portfolio.py).
+    # así las carteras aparecen en el dashboard desde el primer run, incluso
+    # vacías (mismo criterio que mirror_portfolio.py/cruce_rojo_d_portfolio.py).
     _write_json(PICKS_JSON, picks)
-    print(f"\n[{NAME}] {n_added} nueva(s) posición(es) añadida(s), {len(closed)} cerrada(s).")
     return 0
 
 

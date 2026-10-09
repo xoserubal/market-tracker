@@ -288,6 +288,14 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Cartera sombra SCREENER_SHADOW (2026-10-09): una cartera, una pestaña por filtro del
+      # Screener. 100% mecanica; lee el log de Step 9g1 y el snapshot de Step 9g. Ver
+      # wiki/PREREGISTRO_SCREENER_SHADOW_V0.md y CLAUDE.md. No avisa por Telegram.
+      - name: Run pipeline - Step 9g1b Screener shadow portfolio
+        run: python scripts/screener_shadow_portfolio.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Captura diaria del universo de index.html ("Market Tracker" —
       # macro/ciclo + indices/sectores/regiones/materias primas), analoga a
       # Step 9g pero para un universo distinto (portfolio.json no cubre

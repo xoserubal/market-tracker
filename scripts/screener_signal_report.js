@@ -89,12 +89,60 @@ function makeTools(snap) {
   return { lastDate, series, priceAt, priceAtOrAfter, fwd, tickersByDate, universeMedian };
 }
 
+// ── Retorno EJECUTABLE ───────────────────────────────────────────────────────
+// El retorno "legado" (fwd) parte del precio de la fila del día de la señal, que es el CIERRE en el que
+// se evaluó el filtro: no se puede comprar ahí. Además el snapshot se captura antes de que cierre la sesión
+// en EE.UU. y a veces con retraso, así que la fecha de captura (`date`) NO es la fecha de la barra: el campo
+// `asOf` sí lo es y puede ir 1-2 sesiones por detrás. Aquí se indexa por fecha de BARRA real y la entrada es
+// el cierre de la sesión siguiente a la barra de la señal (la apertura no está en el snapshot; el cierre
+// siguiente es conservador y no tiene look-ahead). Horizonte en días naturales desde la barra de entrada.
+function makeExecTools(snap) {
+  const barSeries = {};                 // ticker -> [{bar, price}] asc, una por fecha de barra
+  const barOf = {};                     // "ticker|captureDate" -> fecha de barra de esa fila
+  snap.forEach(r => {
+    if (!r.ticker || !r.date || !r.asOf || typeof r.price !== 'number' || !(r.price > 0)) return;
+    const bar = String(r.asOf).slice(0, 10);
+    barOf[r.ticker + '|' + r.date] = bar;
+    (barSeries[r.ticker] = barSeries[r.ticker] || []).push({ bar, price: r.price, cap: r.date });
+  });
+  Object.keys(barSeries).forEach(tk => {
+    const byBar = {};
+    barSeries[tk].sort((a, b) => a.cap.localeCompare(b.cap)).forEach(x => { byBar[x.bar] = x; });   // la captura más tardía de esa barra
+    barSeries[tk] = Object.values(byBar).sort((a, b) => a.bar.localeCompare(b.bar));
+  });
+  const lastBar = Object.values(barSeries).reduce((d, a) => { const b = a[a.length - 1]?.bar || ''; return b > d ? b : d; }, '');
+  const entryOf = (tk, date) => {
+    const sigBar = barOf[tk + '|' + date]; const a = barSeries[tk];
+    if (!sigBar || !a) return null;
+    return a.find(x => x.bar > sigBar) || null;                    // primera barra POSTERIOR a la de la señal
+  };
+  const fwdExec = (tk, date, h) => {
+    const e = entryOf(tk, date); if (!e) return null;
+    const target = addDays(e.bar, h);
+    if (target > lastBar) return null;
+    const x1 = barSeries[tk].find(x => x.bar >= target);
+    if (!x1 || daysBetween(target, x1.bar) > 4) return null;
+    return (x1.price / e.price - 1) * 100;
+  };
+  const dates = {};
+  snap.forEach(r => { (dates[r.date] = dates[r.date] || new Set()).add(r.ticker); });
+  const uniCache = {};
+  const universeMedianExec = (date, h) => {
+    const k = date + '|' + h;
+    if (k in uniCache) return uniCache[k];
+    const v = [...(dates[date] || [])].map(t => fwdExec(t, date, h)).filter(x => x != null);
+    return (uniCache[k] = v.length >= 20 ? median(v) : null);
+  };
+  return { fwdExec, universeMedianExec, lastBar };
+}
+
 function buildReport() {
   const snap = readJsonl(SNAPSHOT);
   const log = readJsonl(LOG);
   let state = {};
   try { state = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch (e) { /* sin estado */ }
   const { lastDate, fwd, tickersByDate, universeMedian } = makeTools(snap);
+  const ex = makeExecTools(snap);
 
   // Eventos independientes por filtro.
   const byFilter = {};
@@ -112,7 +160,7 @@ function buildReport() {
     });
 
     const cov = Object.entries(state.coverage || {}).filter(([, f]) => (f[filter] || 0) > 0).map(([d]) => d).sort();
-    const horizons = {};
+    const horizons = {}, horizonsExec = {};
     HORIZONS.forEach(h => {
       const rets = [], excess = [];
       events.forEach(e => {
@@ -121,6 +169,21 @@ function buildReport() {
         rets.push(ret); excess.push(ret - ref);
       });
       const n = rets.length;
+      // misma medición pero con entrada ejecutable (cierre de la sesión siguiente) — ver makeExecTools
+      const erets = [], eexcess = [];
+      events.forEach(e => {
+        const ret = ex.fwdExec(e.ticker, e.date, h); const ref = ex.universeMedianExec(e.date, h);
+        if (ret == null || ref == null) return;
+        erets.push(ret); eexcess.push(ret - ref);
+      });
+      const en = erets.length;
+      horizonsExec[h + 'd'] = {
+        n_matured: en,
+        mean_ret: r2(mean(erets)), median_ret: r2(median(erets)),
+        mean_excess: r2(mean(eexcess)), median_excess: r2(median(eexcess)),
+        hit_rate_excess: en ? r2(eexcess.filter(x => x > 0).length / en * 100) : null,
+        conclusive: en >= MIN_N,
+      };
       horizons[h + 'd'] = {
         n_matured: n,
         mean_ret: r2(mean(rets)), median_ret: r2(median(rets)),
@@ -137,6 +200,7 @@ function buildReport() {
       independent_events: events.length,
       tickers: new Set(events.map(e => e.ticker)).size,
       horizons,
+      horizons_executable: horizonsExec,
     };
   });
 
@@ -180,7 +244,9 @@ function print(rep) {
     console.log(`■ ${f}  (${d.screener}) — evaluable desde ${d.evaluable_from} (${d.evaluable_days} días) · ${d.independent_events} eventos independientes en ${d.tickers} tickers`);
     Object.entries(d.horizons).forEach(([h, x]) => {
       if (!x.n_matured) { console.log(`   ${h.padEnd(4)} sin eventos madurados todavía`); return; }
-      console.log(`   ${h.padEnd(4)} n=${String(x.n_matured).padStart(3)}  ret medio ${String(x.mean_ret).padStart(6)}%  mediana ${String(x.median_ret).padStart(6)}%  | exceso vs universo: medio ${String(x.mean_excess).padStart(6)}  mediana ${String(x.median_excess).padStart(6)}  aciertos ${x.hit_rate_excess}%  ${x.conclusive ? '' : '⚠ no concluyente (n<' + rep.min_n_conclusive + ')'}`);
+      console.log(`   ${h.padEnd(4)} n=${String(x.n_matured).padStart(3)}  ret medio ${String(x.mean_ret).padStart(6)}%  mediana ${String(x.median_ret).padStart(6)}%  | exceso vs universo: medio ${String(x.mean_excess).padStart(6)}  mediana ${String(x.median_excess).padStart(6)}  aciertos ${x.hit_rate_excess}%  ${x.conclusive ? '' : '⚠ no concluyente (n<' + rep.min_n_conclusive + ')'}   [entrada = cierre de la señal, no ejecutable]`);
+      const y = d.horizons_executable?.[h];
+      if (y && y.n_matured) console.log(`   ${' '.repeat(4)} n=${String(y.n_matured).padStart(3)}  ret medio ${String(y.mean_ret).padStart(6)}%  mediana ${String(y.median_ret).padStart(6)}%  | exceso vs universo: medio ${String(y.mean_excess).padStart(6)}  mediana ${String(y.median_excess).padStart(6)}  aciertos ${y.hit_rate_excess}%   [entrada = cierre de la sesión SIGUIENTE, ejecutable]`);
     });
   });
   const ss = rep.special_situations;
@@ -195,4 +261,4 @@ if (require.main === module) {
   print(rep);
   if (!process.argv.includes('--no-write')) { fs.writeFileSync(OUT, JSON.stringify(rep, null, 2)); console.log('\nEscrito ' + path.relative(ROOT, OUT)); }
 }
-module.exports = { buildReport, makeTools, readJsonl, HORIZONS, addDays, daysBetween, median, mean, r2 };
+module.exports = { buildReport, makeTools, makeExecTools, readJsonl, HORIZONS, addDays, daysBetween, median, mean, r2 };

@@ -32,6 +32,14 @@ PIVOT_WINDOW = 5
 MIN_SWING_PCT = 3.0
 RETR_ENTRY_LOW = 0.23
 RETR_ENTRY_HIGH = 0.25
+# Variante "flexible" (TRULLAS_FLEX, 2026-10-09): mismo techo, suelo de la zona al 20% en vez
+# del 23%. Valor redondo elegido a propósito (no el mejor de la sonda, que fue 22%) para no
+# sobreajustar a lo visto en research/trullas_early_detector_v1/flex_entry_probe.py.
+RETR_ENTRY_LOW_FLEX = 0.20
+# Primera apertura ACCIONABLE tras un pivote: el pivote en `b` solo se confirma con el cierre
+# de b+PIVOT_WINDOW, así que la primera orden posible se evalúa en la apertura de b+PIVOT_WINDOW+1.
+# Escanear desde b+1 era look-ahead (ver CLAUDE.md, 2026-10-09).
+FIRST_ACTIONABLE_OFFSET = PIVOT_WINDOW + 1
 RETR_TP = 0.382
 ENTRY_WINDOW_BARS = 15
 TIME_STOP_BARS = 20

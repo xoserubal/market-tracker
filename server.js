@@ -113,12 +113,14 @@ app.get("/api/fred/:series", async (req, res) => {
 
   const isMonthly = req.query.monthly === "1";
   const isWeekly  = req.query.weekly  === "1";
-  const cacheKey = `${req.params.series}:${isMonthly}:${isWeekly}`;
+  // ?hist=N amplía el historial compacto para sparklines (por defecto 90; máx. 2000)
+  const histN = Math.min(Math.max(parseInt(req.query.hist, 10) || 90, 90), 2000);
+  const cacheKey = `${req.params.series}:${isMonthly}:${isWeekly}:${histN}`;
   const seriesId = req.params.series;
 
   try {
     const result = await fredFetchWithCache(cacheKey, async () => {
-      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${key}&sort_order=desc&limit=300&file_type=json`;
+      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${key}&sort_order=desc&limit=${Math.max(300, histN)}&file_type=json`;
       const r = await fetch(url, { headers: { Accept: "application/json" } });
       const data = await r.json();
       if (data.error_message) throw Object.assign(new Error(data.error_message), { fredError: true });
@@ -135,7 +137,7 @@ app.get("/api/fred/:series", async (req, res) => {
         v6m: isWeekly ? val(26) : isMonthly ? val(6)  : val(130),
         v1y: isWeekly ? val(52) : isMonthly ? val(12) : val(252),
         // Compact history for sparklines (last ~90 observations, ascending date order)
-        history: obs.slice(0, 90).reverse().map(o => ({ date: o.date, value: parseFloat(o.value) })),
+        history: obs.slice(0, histN).reverse().map(o => ({ date: o.date, value: parseFloat(o.value) })),
       };
     });
     res.json(result);

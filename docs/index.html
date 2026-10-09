@@ -756,6 +756,8 @@ const PTF_LABELS = {
   CRUCE_ROJO_D_25:              'Cruce Rojo D 25',
   RANKING_SHADOW_EXPERIMENTAL:  'Ranking Score (shadow)',
   TRULLAS_SHADOW:               'Trullás (shadow)',
+  TRULLAS_FLEX:                 'Trullás flex (shadow)',
+  SCREENER_SHADOW:              'Screener (shadow)',
 };
 const PTF_THRESHOLDS = {
   HIGH_CONVICTION: 85, CONFIRMED_FLOW_LEADERS: 78,
@@ -768,6 +770,13 @@ const PTF_THRESHOLDS = {
   // cae al fallback ||70 solo para la lista de "candidatos vistos por el
   // modelo", que no es relevante para ninguna de ellas).
 };
+// SCREENER_SHADOW: una sola cartera con una "pestaña" por filtro del Screener (campo `filter` de cada posición).
+const SCREENER_FILTER_LABELS = {
+  flow_inflexion: 'Flow Inflexión', flow_continuacion: 'Flow Continuación', flow_reversion: 'Flow Reversión',
+  line_near_zero_up: 'MACD línea → 0', hist_cross_confirmed: 'MACD cruce histograma',
+};
+let _screenerShadowFilter = 'all';
+function setScreenerShadowFilter(id) { _screenerShadowFilter = id; renderPtfContent('SCREENER_SHADOW'); }
 let _activePtfTab = 'HIGH_CONVICTION';
 let _aipicksData = null;
 let _aicandidatesData = null;
@@ -834,8 +843,21 @@ function renderPtfContent(ptfId) {
   const el = document.getElementById('aipicks-content');
   const picks = _aipicksData || {};
   const ptf = (picks.portfolios || {})[ptfId] || {};
-  const positions = ptf.positions || [];
-  const history   = ptf.history   || [];
+  let positions = ptf.positions || [];
+  let history   = ptf.history   || [];
+  let screenerChips = '';
+  if (ptfId === 'SCREENER_SHADOW') {
+    const allPos = positions, allHist = history;
+    const cnt = id => `${allPos.filter(p => id === 'all' || p.filter === id).length} abiertas · ${allHist.filter(h => id === 'all' || h.filter === id).length} cerradas`;
+    screenerChips = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">` +
+      [['all', 'Todos'], ...Object.entries(SCREENER_FILTER_LABELS)].map(([id, lab]) =>
+        `<button class="ptf-tab${id === _screenerShadowFilter ? ' active' : ''}" title="${cnt(id)}" onclick="setScreenerShadowFilter('${id}')">${lab} <span style="opacity:.7;font-size:10px">(${allPos.filter(p => id === 'all' || p.filter === id).length}/${allHist.filter(h => id === 'all' || h.filter === id).length})</span></button>`).join('') +
+      `</div><div style="color:var(--text2);font-size:11px;margin-bottom:8px">Una cartera, una pestaña por filtro del Screener. Entrada al cierre de la sesión siguiente a la señal · hard stop 1.5×ATR · trailing 2×ATR (se activa con +5% o 1.5×ATR) · time-stop 14 días · tamaño 5% provisional. (abiertas/cerradas)</div>`;
+    if (_screenerShadowFilter !== 'all') {
+      positions = allPos.filter(p => p.filter === _screenerShadowFilter);
+      history = allHist.filter(h => h.filter === _screenerShadowFilter);
+    }
+  }
   const review    = (picks.last_ai_review && picks.last_ai_review.date) ? picks.last_ai_review : null;
   const threshold = PTF_THRESHOLDS[ptfId] || 70;
   const cands     = (_aicandidatesData?.candidates || [])
@@ -845,7 +867,7 @@ function renderPtfContent(ptfId) {
 
   const riskColor = { aggressive: 'var(--green)', normal: 'var(--text1)', cautious: '#d4a520', defensive: 'var(--red)' };
 
-  let html = '';
+  let html = screenerChips;
 
   // Last review summary
   if (review) {

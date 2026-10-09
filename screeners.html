@@ -783,7 +783,7 @@ function ScreenerPage() {
                     <td className="num">{d.evaluable_from}</td>
                     <td className="num">{d.independent_events}</td>
                     {['7d', '14d', '30d'].map(h => {
-                      const x = d.horizons[h];
+                      const x = (d.horizons_executable || d.horizons)[h];
                       return (
                         <td key={h} className="num" style={{ color: x && x.n_matured && !x.conclusive ? '#98a2b3' : '#1f2933' }}
                             title={x && !x.conclusive ? 'n < ' + trackRecord.min_n_conclusive + ': no concluyente' : undefined}>
@@ -797,8 +797,8 @@ function ScreenerPage() {
             </tbody>
           </table>
           <div style={{ color: '#98a2b3', fontStyle: 'italic' }}>
-            Evento independiente = primera aparición de un ticker tras ≥{trackRecord.cooldown_days} días sin ser candidato de ese filtro. Exceso = retorno − mediana del universo
-            ese día, a 7/14/30 días naturales. En gris, n &lt; {trackRecord.min_n_conclusive}: no concluyente — seguimiento descriptivo, sin corrección por comparaciones múltiples ni dev/test.
+            Evento independiente = primera aparición de un ticker tras ≥{trackRecord.cooldown_days} días sin ser candidato de ese filtro. Entrada ejecutable = cierre de la sesión SIGUIENTE a la señal
+            (no el cierre en que se detecta, que no se puede comprar). Exceso = retorno − mediana del universo ese día, a 7/14/30 días naturales desde la entrada. En gris, n &lt; {trackRecord.min_n_conclusive}: no concluyente — seguimiento descriptivo, sin corrección por comparaciones múltiples ni dev/test.
             Los filtros MACD solo son evaluables desde que se capturan sus campos (ver "Desde").
           </div>
         </details>

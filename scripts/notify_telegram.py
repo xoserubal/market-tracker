@@ -67,6 +67,8 @@ PORTFOLIO_LABELS = {
     "CRUCE_ROJO_D_25":              "Cruce Rojo D 25",
     "RANKING_SHADOW_EXPERIMENTAL":  "Ranking Score (shadow)",
     "TRULLAS_SHADOW":               "Trullas (shadow)",
+    "TRULLAS_FLEX":                 "Trullas flex (shadow)",
+    "SCREENER_SHADOW":              "Screener (shadow)",
 }
 
 CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
@@ -105,6 +107,10 @@ def send_telegram(token: str, chat_id: str, text: str) -> bool:
         return False
 
 
+# Carteras que se registran pero NO avisan por Telegram (muchos eventos/día, solo recogida de datos).
+SILENT_PORTFOLIOS = {"SCREENER_SHADOW"}
+
+
 def _find_unnotified(picks: dict, state: dict) -> tuple[list[dict], list[dict]]:
     """
     Returns (new_opens, new_closes) that are NOT yet in the state file.
@@ -117,6 +123,8 @@ def _find_unnotified(picks: dict, state: dict) -> tuple[list[dict], list[dict]]:
     new_closes: list[dict] = []
 
     for ptf_id, ptf in picks.get("portfolios", {}).items():
+        if ptf_id in SILENT_PORTFOLIOS:
+            continue
         for pos in ptf.get("positions", []):
             key = _open_key(ptf_id, pos["ticker"], pos.get("entry_date", ""))
             if key not in notified_opens:
