@@ -1,0 +1,131 @@
+{
+  "run_id": "2026-10-09_0023",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-10-09",
+  "summary": {
+    "date": "2026-10-09",
+    "run_id": "2026-10-09_0023",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 33,
+    "input_tokens": 34881,
+    "output_tokens": 3924,
+    "cost_usd": 0.018587,
+    "latency_ms": 64819.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 89,
+    "selected_count": 0,
+    "watch_count": 2,
+    "rejected_count": 2,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": []
+  },
+  "quality_score": 89,
+  "response": {
+    "date": "2026-10-09",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-10-09_0023",
+    "decision_summary": {
+      "market_read": "Macro regime Bull Maduro but deteriorating at -6.25 over one month with zero weekly delta; broad PCS compression across all themes signals defensive rotation rather than conviction adding.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "WCP.TO",
+        "reason": "PCS 74.0 with 8-week streak and rot=7 in strong oil_gas theme, but konc_d_state=distribution, konc_w_state=distribution yielding mixed alignment, and ret_4w_vs_spy is -2.4% showing short-term underperformance despite strong 13w at +18.8%. Declining PCS (74.0 vs 78 threshold crossing event) warns of rotational weakening.",
+        "watch_trigger": "Select if konc_d_state flips from distribution to up AND dems rises above 10, confirming daily momentum reversal within the sustained 8-week weekly structure."
+      },
+      {
+        "ticker": "OXY",
+        "reason": "PCS 72.0 with rot=7 and 13w outperformance of +8.2% in strong oil_gas theme, but konc_3d_state=distribution with blue at -11.69 signals active intermediate selling pressure. Spike_flag=true on ret_5d=+3.31 means most recent gains came from one session, and ret_4w_vs_spy is -5.3% showing near-term weakness. Konc_alignment=distribution_warning is the most urgent reading.",
+        "watch_trigger": "Select if spike_flag clears and konc_3d_state shifts from distribution to up with outperform_d10 rising above 6, confirming multi-day momentum rather than single-session bounce."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "AMD",
+        "reason": "PCS 75.5 with rot=7 and strong 4w at +25.98% and 13w at +14.48%, but extension_risk=5 (extreme) with all three flags firing: dist_sma20_atr_high, ret_4w_extended, rsi_high. Dems=9 is below 10 meaning daily momentum cannot independently confirm the weekly signal. Adding to MIMO_SHADOW would increase already extreme us_tech_ai concentration from 55.5% higher; the 5-point extension risk with declining PCS (75.5 vs 78 threshold) warns that the weekly leadership may be peaking rather than building.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a leveraged commodity ETF tracking crude oil futures with daily reset; hard rules prohibit selecting futures, commodities, or macro indices directly regardless of PCS or signal strength.",
+        "rejection_category": "not_tradable"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS declined to 64.8 below 68 threshold but streak extended to 8 weeks with rot=9 and +8.15% ret_4w_vs_spy; no independent fundamental exit reason beyond the PCS dip which is subject to hysteresis confirmation."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.2 remains the highest in the oil_gas theme with 8-week streak, rot=8, +12.8% ret_4w, and bullish-aligned Koncorde across all timeframes; extension_risk medium acknowledged but streak strength justifies continuation."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 68.0 on 7-week streak with rot=7 and +25.8% 13w outperformance; konc_3d_state=distribution noted but konc_alignment is bullish_pending_3d_confirmation (softer caution) and weekly trend remains up."
+      },
+      {
+        "ticker": "MLX.AX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.8 with rot=9 (highest rotation score in candidate set) on 8-week streak and +40.3% 13w outperformance; konc_d_state=distribution is tactical noise within bullish-aligned weekly structure, dems=4 reflects short-term pause not trend break."
+      },
+      {
+        "ticker": "SMCI",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.5 with rot=8, dems=14, momentum_accel=true, and +55.5% 13w outperformance on 5-week streak; extension_risk=low and spike_flag=false confirm clean organic accumulation despite konc_3d_state=distribution caution."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.5 with rot=8, 4-week streak, +12.3% ret_4w, and bullish-aligned Koncorde; extension_risk=low with only RSI high flag; dems=5 is weak but weekly metrics drive conviction per framework guidance for CONFIRMED leaders."
+      },
+      {
+        "ticker": "MSTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 67.8 on 6-week streak with rot=7 and extraordinary +59.7% 13w outperformance; konc_3d_state=distribution acknowledged but weekly up confirms structural accumulation; crypto theme diversification remains valuable."
+      },
+      {
+        "ticker": "NVDA",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 74.2 with rot=7, 4-week streak, bullish-aligned Koncorde, and +13.6% 13w outperformance; momentum_accel=true and outperform_d10=5 show building daily momentum with medium extension risk acknowledged."
+      },
+      {
+        "ticker": "META",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.0 with rot=8, 5-week streak, and best-in-class +15.95% ret_4w_vs_spy; konc_alignment=distribution_warning is the most urgent reading, but weekly konc_w_state=up and the exceptional 4-week acceleration justify holding while monitoring for deterioration."
+      },
+      {
+        "ticker": "QQQ",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 68.5 with 4-week streak, bullish-aligned Koncorde, and lowest theme concentration (global_etf at 9.5%) providing critical diversification against extreme us_tech_ai and oil_gas overweights; entry from yesterday warrants patience."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-10-09\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-09_0023\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro regime Bull Maduro but deteriorating at -6.25 over one month with zero weekly delta; broad PCS compression across all themes signals defensive rotation rather than conviction adding.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"WCP.TO\",\n      \"reason\": \"PCS 74.0 with 8-week streak and rot=7 in strong oil_gas theme, but konc_d_state=distribution, konc_w_state=distribution yielding mixed alignment, and ret_4w_vs_spy is -2.4% showing short-term underperformance despite strong 13w at +18.8%. Declining PCS (74.0 vs 78 threshold crossing event) warns of rotational weakening.\",\n      \"watch_trigger\": \"Select if konc_d_state flips from distribution to up AND dems rises above 10, confirming daily momentum reversal within the sustained 8-week weekly structure.\"\n    },\n    {\n      \"ticker\": \"OXY\",\n      \"reason\": \"PCS 72.0 with rot=7 and 13w outperformance of +8.2% in strong oil_gas theme, but konc_3d_state=distribution with blue at -11.69 signals active intermediate selling pressure. Spike_flag=true on ret_5d=+3.31 means most recent gains came from one session, and ret_4w_vs_spy is -5.3% showing near-term weakness. Konc_alignment=distribution_warning is the most urgent reading.\",\n      \"watch_trigger\": \"Select if spike_flag clears and konc_3d_state shifts from distribution to up with outperform_d10 rising above 6, confirming multi-day momentum rather than single-session bounce.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"AMD\",\n      \"reason\": \"PCS 75.5 with rot=7 and strong 4w at +25.98% and 13w at +14.48%, but extension_risk=5 (extreme) with all three flags firing: dist_sma20_atr_high, ret_4w_extended, rsi_high. Dems=9 is below 10 meaning daily momentum cannot independently confirm the weekly signal. Adding to MIMO_SHADOW would increase alre"
+}
