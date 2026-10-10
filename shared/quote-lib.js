@@ -147,6 +147,91 @@ function calcMACD(closes) {
 }
 
 // ── ATLAS Mini (Blai5) — estrechamiento significativo de Bollinger Bands ──
+// ── RSI mensual provisional + ruptura de máximo del histórico disponible ──
+// Pedido por el usuario 2026-10-10 (filtro "RSI mensual > 70 + máximos"). El
+// RSI mensual es el RSI(14) de Wilder sobre cierres MENSUALES; la barra del
+// mes en curso usa el último precio como cierre provisional, de modo que se
+// puede avisar sin esperar al cierre del mes. `monthClosed` distingue lectura
+// provisional (mes abierto) de definitiva (la última barra es el último día
+// hábil del mes, o es de un mes ya terminado). Festivos ignorados: el último
+// día hábil se aproxima como "el siguiente lunes-viernes cae en otro mes".
+// El "máximo histórico" es en realidad el máximo de cierres de la ventana
+// descargada (~3 años) — se etiqueta así en el screener, pendiente de
+// verificación manual. Sin calibrar: primera pasada, fase de observación.
+function _rsiWilderFloat(c, period = 14) {
+  if (c.length < period + 1) return null;
+  let avgGain = 0, avgLoss = 0;
+  for (let i = 1; i <= period; i++) {
+    const d = c[i] - c[i - 1];
+    if (d > 0) avgGain += d / period; else avgLoss += -d / period;
+  }
+  for (let i = period + 1; i < c.length; i++) {
+    const d = c[i] - c[i - 1];
+    avgGain = (avgGain * (period - 1) + Math.max(d, 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + Math.max(-d, 0)) / period;
+  }
+  if (avgLoss === 0) return 100;
+  return 100 - 100 / (1 + avgGain / avgLoss);
+}
+
+function calcMonthlyRsi(closes, timestamps, gmtoffset = 0) {
+  const empty = {
+    rsiMonthly: null, rsiMonthlyPrevClosed: null, monthClosed: null, monthlyBars: 0,
+    rsiMonthlyMarginPct: null, newHighThisMonth: null, maxCloseWindow: null, distFromMaxPct: null,
+  };
+  const key = ts => { const d = new Date((ts + gmtoffset) * 1000); return d.getUTCFullYear() * 12 + d.getUTCMonth(); };
+  const mClose = [], mKey = [], mMax = [];   // por mes: último cierre, clave, máximo de cierres del mes
+  for (let i = 0; i < closes.length; i++) {
+    if (closes[i] == null || timestamps[i] == null) continue;
+    const k = key(timestamps[i]);
+    if (mKey.length && mKey[mKey.length - 1] === k) {
+      mClose[mClose.length - 1] = closes[i];
+      mMax[mMax.length - 1] = Math.max(mMax[mMax.length - 1], closes[i]);
+    } else { mKey.push(k); mClose.push(closes[i]); mMax.push(closes[i]); }
+  }
+  const n = mClose.length;
+  if (n < 16) return { ...empty, monthlyBars: n };   // 14 periodos + margen para que Wilder converja mínimamente
+
+  const lastTs = timestamps[timestamps.length - 1];
+  const last = new Date((lastTs + gmtoffset) * 1000);
+  const nowLocal = new Date(Date.now() + gmtoffset * 1000);
+  const todayKey = nowLocal.getUTCFullYear() * 12 + nowLocal.getUTCMonth();
+  const next = new Date(last.getTime() + 86400000);
+  while (next.getUTCDay() === 0 || next.getUTCDay() === 6) next.setUTCDate(next.getUTCDate() + 1);
+  const monthClosed = mKey[n - 1] < todayKey || next.getUTCMonth() !== last.getUTCMonth();
+
+  const rsiNow = _rsiWilderFloat(mClose);
+  const rsiPrev = _rsiWilderFloat(mClose.slice(0, -1));
+
+  // Margen: cuánto puede caer el precio (%) antes de que el RSI mensual de la
+  // barra actual baje de 70. Bisección (el RSI crece de forma monótona con el
+  // último cierre). Solo si hoy ya está por encima.
+  let margin = null;
+  if (rsiNow != null && rsiNow >= 70) {
+    const base = mClose.slice(0, -1);
+    let lo = 0, hi = mClose[n - 1];
+    for (let it = 0; it < 40; it++) {
+      const mid = (lo + hi) / 2;
+      (_rsiWilderFloat([...base, mid]) >= 70) ? (hi = mid) : (lo = mid);
+    }
+    margin = (mClose[n - 1] - hi) / mClose[n - 1] * 100;
+  }
+
+  const priorMax = Math.max(...mMax.slice(0, -1));
+  const maxClose = Math.max(priorMax, mMax[n - 1]);
+  const price = mClose[n - 1];
+  return {
+    rsiMonthly: rsiNow != null ? +rsiNow.toFixed(1) : null,
+    rsiMonthlyPrevClosed: rsiPrev != null ? +rsiPrev.toFixed(1) : null,
+    monthClosed,
+    monthlyBars: n,
+    rsiMonthlyMarginPct: margin != null ? +margin.toFixed(1) : null,
+    newHighThisMonth: mMax[n - 1] > priorMax,
+    maxCloseWindow: +maxClose.toPrecision(6),
+    distFromMaxPct: +((price - maxClose) / maxClose * 100).toFixed(1),
+  };
+}
+
 // Fórmula pública (ProRealCode "Blai5 ATLAS Mini"), verbatim:
 //   dbb    = sqrt((BBupper20 - BBlower20) / BBupper20) * 20
 //   dbbmed = EMA(dbb, 120)
@@ -361,6 +446,7 @@ async function buildQuoteData(symbol) {
     rsi: calcRSI(closes.slice(-100)),
     ...calcMACD(closes),
     ...calcAtlasMini(closes),
+    ...calcMonthlyRsi(closes, timestamps, result.meta?.gmtoffset ?? 0),
     ...calcATR(closes, highs, lows),
     cmf20: calcCMF(closes, highs, lows, volumes, 20),
     ...(getKoncordeData()[symbol.toUpperCase()] ?? {}),
@@ -388,7 +474,7 @@ async function buildQuoteData(symbol) {
 }
 
 module.exports = {
-  calcRSI, calcMACD, calcAtlasMini, calcATR, calcSMA, calcCMF, calcOBV,
+  calcRSI, calcMACD, calcAtlasMini, calcMonthlyRsi, calcATR, calcSMA, calcCMF, calcOBV,
   getKoncordeData, getInsiderActivityData,
   fetchYahooChartRaw, fetchYahooChartFresh,
   buildQuoteData,

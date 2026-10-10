@@ -137,6 +137,39 @@ function evalMacdHistCrossUp(q) {
   return { status: 'candidate', pass: true, sortValue: -magnitude, detail };
 }
 
+// ── Filtro: RSI mensual > 70 + nuevo máximo (idea del usuario 2026-10-10) ─
+// "Monthly RSI moving above 70 which coincides with a price move above
+// all-time highs". Decisiones del usuario: basta con que el RSI mensual
+// PROVISIONAL (último precio como cierre del mes en curso) esté por encima
+// de 70, sin exigir que el mes anterior cerrara por debajo; y hay que
+// distinguir lectura provisional (mes abierto) de definitiva (mes cerrado).
+// "Máximo histórico" = máximo de cierres de la ventana descargada (~3 años),
+// pendiente de verificación manual. "Coincide" = se ha marcado un nuevo
+// máximo de esa ventana DURANTE el mes de la barra actual (no exige estar
+// exactamente en el máximo hoy). Cálculo en shared/quote-lib.js → calcMonthlyRsi.
+const MONTHLY_RSI_THRESHOLD = 70;
+
+function evalMonthlyRsiAth(q) {
+  if (!q || q.rsiMonthly == null || q.newHighThisMonth == null || q.monthClosed == null) {
+    return { status: 'no_data', pass: false, sortValue: null, detail: {} };
+  }
+  const rsiOk = q.rsiMonthly >= MONTHLY_RSI_THRESHOLD;
+  const athOk = q.newHighThisMonth === true;
+  const detail = {
+    rsi: q.rsiMonthly, prevClosed: q.rsiMonthlyPrevClosed, margin: q.rsiMonthlyMarginPct,
+    newHigh: athOk, distMax: q.distFromMaxPct, definitive: q.monthClosed === true,
+  };
+  if (rsiOk && athOk) {
+    return {
+      status: q.monthClosed ? 'candidate_definitive' : 'candidate_provisional',
+      pass: true, sortValue: -q.rsiMonthly, detail,
+    };
+  }
+  if (rsiOk) return { status: 'rsi_only', pass: false, sortValue: null, detail };
+  if (athOk) return { status: 'high_only', pass: false, sortValue: null, detail };
+  return { status: 'none', pass: false, sortValue: null, detail };
+}
+
 // ── Filtro: línea MACD en tendencia alcista, cerca de cruzar el 0 ───────
 // Versión original del screener (2026-09-21), restaurada 2026-09-22 como
 // filtro independiente y combinable en vez de sustituida — el usuario
@@ -428,6 +461,54 @@ const SCREENERS = [
         tooltip: 'Filtro opcional, no forma parte de la regla de ningún filtro de arriba. Actívalo para ver solo candidatos con la SMA50 por encima de la SMA200 (tendencia de fondo confirmada); apágalo para ver todos, incluidos los que giran al alza antes de que esa media lenta lo confirme (como pasó con META).' },
     ],
   },
+  {
+    id: 'monthly_screener',
+    label: 'RSI mensual',
+    shortLabel: 'RSI mensual',
+    color: '#4527a0',
+    description: 'Setups de momentum en escala mensual. Los filtros son independientes y combinables: un ticker es candidato solo si cumple TODOS los que tengas activos.',
+    filters: [
+      {
+        id: 'monthly_rsi_ath',
+        label: 'RSI mensual > 70 + nuevo máximo',
+        shortLabel: 'RSI>70 + máx.',
+        defaultActive: true,
+        description: 'El RSI mensual (14, Wilder) está por encima de 70 y el precio ha marcado un nuevo máximo de la ventana disponible (~3 años) durante el mes en curso. Se distingue lectura provisional (mes abierto) de definitiva (mes cerrado).',
+        rulesText: [
+          'RSI mensual = RSI de 14 periodos (Wilder) sobre cierres mensuales. La barra del mes en curso usa el último precio como cierre provisional, así que el aviso salta sin esperar al cierre del mes.',
+          'Condición: RSI mensual ≥ 70 (no exige que el mes anterior cerrara por debajo — basta con estar por encima).',
+          'Coincidencia con máximos: durante el mes de la barra actual se ha marcado un cierre por encima de todos los anteriores de la ventana. No hace falta estar exactamente en el máximo hoy (mira la columna "Dist. a máx.").',
+          '"Máximo histórico" es en realidad el máximo de cierres de los ~3 años descargados: verifícalo a mano antes de darlo por bueno (un valor que sube desde un suelo reciente puede tener su máximo real muy por encima).',
+          'Provisional = el mes sigue abierto: si el precio cae, el RSI puede bajar de 70 antes del cierre. La columna "Margen" indica cuánto puede caer el precio antes de que eso ocurra. Definitiva = la última barra es el último día hábil del mes (festivos ignorados) o de un mes ya terminado.',
+          'Muy pocas barras mensuales (≈36 con 3 años): el RSI de Wilder converge de forma justa, tómalo como orientativo.',
+        ],
+        statuses: {
+          candidate_definitive:  { label: 'Definitivo (mes cerrado)', badge: 'green'   },
+          candidate_provisional: { label: 'Provisional (mes abierto)', badge: 'yellow'  },
+          rsi_only:              { label: 'RSI>70, sin nuevo máximo',  badge: 'blue'    },
+          high_only:             { label: 'Nuevo máximo, RSI<70',      badge: 'neutral' },
+          none:                  { label: 'Ninguna condición',         badge: 'neutral' },
+          no_data:               { label: 'Histórico insuficiente',    badge: 'neutral' },
+        },
+        columns: [
+          { header: 'RSI mensual',     get: q => q.rsiMonthly,            format: v => v == null ? '—' : v.toFixed(1),
+            tooltip: 'RSI(14, Wilder) sobre cierres mensuales. Si el mes está abierto, incluye el último precio como cierre provisional.' },
+          { header: 'RSI mes cerrado', get: q => q.rsiMonthlyPrevClosed,  format: v => v == null ? '—' : v.toFixed(1),
+            tooltip: 'RSI mensual al cierre del mes anterior (lectura definitiva). Sirve para ver si el RSI ya estaba por encima de 70 o acaba de cruzar este mes.' },
+          { header: 'Margen',          get: q => q.rsiMonthlyMarginPct,   format: v => v == null ? '—' : v.toFixed(1) + '%',
+            tooltip: 'Cuánto puede caer el precio (%) antes de que el RSI mensual de la barra actual baje de 70. Pequeño = aviso frágil, cerca del borde.' },
+          { header: 'Dist. a máx.',    get: q => q.distFromMaxPct,        format: v => v == null ? '—' : fmtSigned(v, 1, '%'),
+            tooltip: 'Distancia del precio al máximo de cierres de la ventana (~3 años). 0% = en el máximo.' },
+          { header: 'Máx. este mes',   get: q => q.newHighThisMonth,      format: fmtBool,
+            tooltip: '✓ si durante el mes en curso se ha marcado un nuevo máximo de cierres de la ventana (~3 años) — proxy de "máximo histórico", pendiente de verificación manual.' },
+          { header: 'Lectura',         get: q => q.monthClosed,           format: v => v == null ? '—' : (v ? 'definitiva' : 'provisional'),
+            tooltip: 'Provisional = el mes sigue abierto y el RSI puede cambiar hasta el cierre. Definitiva = la barra mensual está cerrada.' },
+        ],
+        evaluate: evalMonthlyRsiAth,
+      },
+    ],
+    extraFilters: [],
+  },
 ];
 
 function getScreener(id) {
@@ -473,7 +554,7 @@ function runScreenerFilters(screener, activeFilterIds, quotesByTicker) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     SCREENERS, getScreener, getFilter, defaultActiveFilterIds, runScreenerFilters,
-    evalMacdHistCrossUp, evalMacdZeroCrossUp, smaTrendUp,
+    evalMacdHistCrossUp, evalMacdZeroCrossUp, evalMonthlyRsiAth, smaTrendUp,
     evalFlowInflexion, evalFlowContinuacion, evalFlowReversion,
   };
 }
