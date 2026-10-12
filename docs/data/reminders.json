@@ -43,5 +43,10 @@
     "id": "zerogex_cancelar_suscripcion",
     "date": "2026-10-22",
     "message": "📅 <b>ZeroGEX — cancelar la suscripción</b>\n\nDecisión tomada el 2026-10-08: se descarta ZeroGEX y se usa el gamma flip DIY (ver <code>wiki/PREREGISTRO_GEX_ZEROGEX_V1.md</code>, enmienda 2026-10-08).\n\n1. Cancela la suscripción en zerogex.io (si no lo has hecho ya) y comprueba que no queden cobros pendientes.\n2. Borra el secret <code>ZEROGEX_API_KEY</code> en GitHub (Settings → Secrets and variables → Actions).\n3. Opcional: borra <code>.github/workflows/gex-zerogex-fase1.yml</code> y <code>gex-zerogex-fase2.yml</code>."
+  },
+  {
+    "id": "inverse_etf_estudio_primas",
+    "date": "2026-11-12",
+    "message": "📅 <b>ETFs inversos — lanzar el estudio de primas</b>\n\nYa deberían haberse acumulado ~20 sesiones de snapshots de cadenas de opciones (UVXY/SQQQ/GLL/BOIL, desde 2026-10-13).\n\n1. Comprueba que hay datos: <code>docs/data/inverse_etf_options_summary.jsonl</code> (una fila por ticker y día). Si hay menos de ~15 días, o el snapshot falló en CI (Step 9e4), revisa el log antes de seguir.\n2. Lanza: <code>py -3 scripts/inverse_etf_premium_study.py --save</code> (genera <code>docs/analysis/inverse_etf_premium_study.md</code>).\n3. Preguntas clave: (a) ¿el carry implícito de la cadena ya descuenta el decay histórico de UVXY (≈ −30% a 63 sesiones)? Si sí, comprar la put no tiene ventaja. (b) ¿la curva de IV 3m/1m está invertida en los spikes? (c) ¿el call spread vendido paga lo suficiente frente a su pérdida máxima? (d) spreads bid-ask de GLL y BOIL: ¿son operables?\n4. Revisa también si el aviso <code>inverse_etf_alert.js</code> ha saltado algún spike real y qué pasó después (<code>docs/data/inverse_etf_alert_state.json</code>).\n5. Si el n es insuficiente, reprograma este recordatorio un mes más en vez de forzar una conclusión."
   }
 ]

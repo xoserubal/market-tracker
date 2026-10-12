@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ETFs Inversos — Market Tracker</title>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0b3d63"/>
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32"/>
+  <link rel="icon" href="/icons/favicon-16.png" sizes="16x16"/>
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});}</script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  <script src="/shared/inverse-etf-lib.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
+    .wrap { background: white; min-width: 960px; min-height: 100vh; padding: 16px 20px; overflow-x: auto; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    .title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; color: #111; line-height: 1; }
+    .nav-link { font-size: 11px; text-decoration: none; padding: 2px 10px; border: 1px solid; border-radius: 12px; line-height: 20px; }
+    .meta { font-size: 9px; color: #999; margin-top: 4px; font-style: italic; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    button { border: none; border-radius: 3px; padding: 5px 12px; cursor: pointer; font-size: 11px; font-weight: 600; color: white; }
+    button:disabled { cursor: default; opacity: 0.65; }
+    .btn-copy { background: #1a6b3c; } .btn-export { background: #37474f; } .btn-refresh { background: #3a6ca0; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a6b3c; color: white; padding: 10px 22px; border-radius: 20px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 10; }
+    .section-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #344054; margin: 18px 0 4px; padding-bottom: 4px; border-bottom: 2px solid #e6e8eb; }
+    .section-sub { font-size: 10px; color: #98a2b3; margin-bottom: 10px; font-style: italic; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .card { border: 1px solid #e6e8eb; border-radius: 6px; background: #fbfcfd; padding: 12px 14px; border-left-width: 5px; }
+    .card h2 { font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card .sub { font-size: 10.5px; color: #667085; margin-top: 3px; }
+    .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px; margin: 10px 0; }
+    .kv .k { font-size: 9px; text-transform: uppercase; letter-spacing: .3px; color: #98a2b3; }
+    .kv .v { font-size: 13px; font-weight: 700; font-family: Consolas, monospace; }
+    .checks { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+    .chk { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+    .chk.ok { background: #c8e6c9; color: #1b5e20; } .chk.no { background: #f0f0f0; color: #667085; } .chk.na { background: #fff9c4; color: #e65100; }
+    .opt { border-top: 1px dashed #d0d5dd; margin-top: 8px; padding-top: 8px; font-size: 11px; }
+    .opt .warn { color: #b71c1c; font-weight: 700; }
+    details { margin-top: 8px; font-size: 10.5px; color: #475467; }
+    details summary { cursor: pointer; font-weight: 700; color: #344054; }
+    details ul { margin: 4px 0 0 18px; }
+    .pos { color: #1b5e20; } .neg { color: #b71c1c; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef0f2; white-space: nowrap; }
+    th { font-size: 9px; text-transform: uppercase; color: #98a2b3; letter-spacing: .3px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .gap-note { border: 1px solid #ffe0b2; background: #fff8ef; color: #8a5200; border-radius: 6px; padding: 8px 12px; font-size: 10px; margin-bottom: 10px; }
+    .footer-note { font-size: 9px; color: #98a2b3; margin-top: 14px; font-style: italic; }
+    .loading { font-size: 11px; color: #98a2b3; padding: 20px 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const BADGE = {
+  green:   { bg: '#c8e6c9', fg: '#1b5e20' },
+  orange:  { bg: '#ffe0b2', fg: '#bf360c' },
+  neutral: { bg: '#f0f0f0', fg: '#555' },
+};
+const STATE_BORDER = { fading: '#2e7d32', spike: '#ef6c00', calm: '#cfd4da', no_data: '#cfd4da' };
+
+const fmtPct = v => v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+const fmtN = (v, d = 2) => v == null ? '—' : v.toFixed(d);
+const signCls = v => v == null ? '' : v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+
+function useToast() {
+  const [toast, setToast] = React.useState(null);
+  const show = React.useCallback(msg => { setToast(msg); setTimeout(() => setToast(null), 3000); }, []);
+  return [toast, show];
+}
+
+async function fetchQuote(sym) {
+  try { const d = await fetch(`/api/quote/${encodeURIComponent(sym)}`).then(r => r.json()); return d.error ? null : d; }
+  catch (e) { return null; }
+}
+
+// Última fila de opciones por ticker (el fichero puede no existir todavía).
+async function fetchOptionsLatest() {
+  try {
+    const r = await fetch('/docs/data/inverse_etf_options_summary.jsonl?t=' + Date.now());
+    if (!r.ok) return {};
+    const out = {};
+    (await r.text()).split('\n').filter(Boolean).forEach(l => {
+      try { const x = JSON.parse(l); if (!out[x.ticker] || x.date >= out[x.ticker].date) out[x.ticker] = x; } catch (e) {}
+    });
+    return out;
+  } catch (e) { return {}; }
+}
+
+function Check({ label, v }) {
+  const cls = v == null ? 'na' : v ? 'ok' : 'no';
+  return <span className={'chk ' + cls}>{v == null ? '? ' : v ? '✓ ' : '✗ '}{label}</span>;
+}
+
+function EtfCard({ etf, q, u, c, o }) {
+  const meta = INV_STATE_META[c.state];
+  const b = BADGE[meta.badge];
+  return (
+    <div className="card" style={{ borderLeftColor: STATE_BORDER[c.state] }}>
+      <h2>
+        <span style={{ color: etf.color }}>{etf.ticker}</span>
+        <span className="badge" style={{ background: b.bg, color: b.fg }}>{meta.label}</span>
+      </h2>
+      <div className="sub">{etf.name}</div>
+      {q ? (
+        <>
+          <div className="kv">
+            <div><div className="k">Precio</div><div className="v">{fmtN(q.price)}</div></div>
+            <div><div className="k">1D</div><div className={'v ' + signCls(q.d1)}>{fmtPct(q.d1)}</div></div>
+            <div><div className="k">1M</div><div className={'v ' + signCls(q.m1)}>{fmtPct(q.m1)}</div></div>
+            <div><div className="k">Dist. SMA20 (ATR)</div><div className="v">{fmtN(invDistAtr(q))}</div></div>
+            <div><div className="k">RSI14</div><div className="v">{q.rsi ?? '—'}</div></div>
+            <div><div className="k">Δ hist. MACD</div><div className={'v ' + signCls(q.macdHistDelta1)}>{q.macdHistDelta1 == null ? '—' : (q.macdHistDelta1 >= 0 ? '+' : '') + q.macdHistDelta1.toFixed(3)}</div></div>
+          </div>
+          <div className="checks">
+            {c.checks.map((k, i) => <Check key={i} label={k.label} v={k.v} />)}
+          </div>
+          <div className="sub">
+            Subyacente {etf.under}: {u ? <b>{fmtN(u.price)}</b> : '—'} · 1S <span className={signCls(u && u.w1)}>{u ? fmtPct(u.w1) : '—'}</span> · 1D <span className={signCls(u && u.d1)}>{u ? fmtPct(u.d1) : '—'}</span>
+            {etf.coolW1 != null && <>{' '}(umbral de enfriamiento: {etf.sign > 0 ? '−' : '+'}{etf.coolW1}% semanal)</>}
+          </div>
+          <div className="sub" style={{ marginTop: 6 }}><i>{meta.desc}</i></div>
+        </>
+      ) : <div className="loading">Sin datos del ETF</div>}
+
+      <div className="opt">
+        <b>Opciones</b>{' '}
+        {o ? (
+          <>
+            <span style={{ color: '#98a2b3' }}>({o.date}, venc. {o.expiry}, {o.dte} DTE)</span><br/>
+            IV ATM <b>{(o.atmIv * 100).toFixed(0)}%</b> · RV20 {o.rv20 != null ? (o.rv20 * 100).toFixed(0) + '%' : '—'} ·
+            IV/RV20 <b>{o.ivRv != null ? o.ivRv.toFixed(2) : '—'}</b>{o.rich ? ' (prima rica)' : ''} ·
+            skew call−put {o.skew != null ? (o.skew * 100).toFixed(0) + 'pp' : '—'} ·
+            spread {o.spread != null ? (o.spread * 100).toFixed(0) + '%' : '—'}{o.illiquid && <span className="warn"> ⚠ ilíquido</span>} ·
+            OI C/P {o.oiCalls?.toLocaleString('es-ES')}/{o.oiPuts?.toLocaleString('es-ES')}
+            {o.term && (o.term.front || o.term.long) && (
+              <div style={{ marginTop: 4 }}>
+                <b>Plazos:</b>{' '}
+                {o.term.front ? `~1m (${o.term.front.dte} DTE) IV ${(o.term.front.atmIv * 100).toFixed(0)}%` : '~1m sin dato'} ·{' '}
+                {o.term.long ? `~3m (${o.term.long.dte} DTE) IV ${(o.term.long.atmIv * 100).toFixed(0)}%` : '~3m sin dato'}
+                {o.term.ratio != null && <> · ratio 3m/1m <b>{o.term.ratio.toFixed(2)}</b> {o.term.inverted ? '(curva invertida: la put a 3m sale más barata por unidad de vol)' : '(curva normal: la put a 3m no es más barata que la de 1m)'}</>}
+                {o.term.long && o.term.long.ivPut80 != null && <> · put 80% a 3m IV {(o.term.long.ivPut80 * 100).toFixed(0)}%</>}
+                {o.term.front && o.term.front.ivCall120 != null && <> · call 120% a 1m IV {(o.term.front.ivCall120 * 100).toFixed(0)}%</>}
+              </div>
+            )}
+          </>
+        ) : <span style={{ color: '#98a2b3' }}>sin snapshot todavía (se acumula a diario en horario de mercado)</span>}
+      </div>
+
+      {etf.strategy && (
+        <details open={c.state === 'fading' || c.state === 'spike'}>
+          <summary>{etf.strategy.title}</summary>
+          <ul>{etf.strategy.lines.map((n, i) => <li key={i}>{n}</li>)}</ul>
+        </details>
+      )}
+      <details>
+        <summary>Peculiaridades de {etf.ticker}</summary>
+        <div style={{ marginTop: 4 }}><b>Decay:</b> {etf.decay}</div>
+        <ul>{etf.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+      </details>
+    </div>
+  );
+}
+
+function InversosPage() {
+  const [data, setData] = React.useState({ quotes: {}, unders: {}, options: {} });
+  const [loading, setLoading] = React.useState(true);
+  const [updated, setUpdated] = React.useState(null);
+  const [toast, showToast] = useToast();
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    const quotes = {}, unders = {};
+    const underSyms = [...new Set(INVERSE_ETFS.map(e => e.under))];
+    const [options] = await Promise.all([
+      fetchOptionsLatest(),
+      Promise.all(INVERSE_ETFS.map(async e => { quotes[e.ticker] = await fetchQuote(e.ticker); })),
+      Promise.all(underSyms.map(async s => { unders[s] = await fetchQuote(s); })),
+    ]);
+    setData({ quotes, unders, options });
+    setUpdated(new Date());
+    setLoading(false);
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const rows = INVERSE_ETFS.map(e => {
+    const q = data.quotes[e.ticker], u = data.unders[e.under];
+    return { etf: e, q, u, c: classifyInverseEtf(e, q, u), o: summarizeOptions(data.options[e.ticker]) };
+  });
+
+  const buildMarkdown = () => {
+    let md = `## ETFs INVERSOS — venta de prima (${new Date().toLocaleString('es-ES')})\n\n`;
+    md += `| ETF | Estado | Precio | 1D | 1M | Dist SMA20 ATR | Δhist MACD | Subyacente | Sub 1S | IV ATM | IV/RV20 | Skew | Spread |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    rows.forEach(({ etf, q, u, c, o }) => {
+      md += `| ${etf.ticker} | ${INV_STATE_META[c.state].label} | ${q ? fmtN(q.price) : '—'} | ${q ? fmtPct(q.d1) : '—'} | ${q ? fmtPct(q.m1) : '—'} | ${q ? fmtN(invDistAtr(q)) : '—'} | ${q && q.macdHistDelta1 != null ? q.macdHistDelta1.toFixed(3) : '—'} | ${etf.under} ${u ? fmtN(u.price) : '—'} | ${u ? fmtPct(u.w1) : '—'} | ${o ? (o.atmIv * 100).toFixed(0) + '%' : '—'} | ${o && o.ivRv != null ? o.ivRv.toFixed(2) : '—'} | ${o && o.skew != null ? (o.skew * 100).toFixed(0) + 'pp' : '—'} | ${o && o.spread != null ? (o.spread * 100).toFixed(0) + '%' : '—'} |\n`;
+    });
+    md += `\nReglas: UVXY (calibrada, 5 años): spike = VIX ≥ 25; ventana de venta de prima = además UVXY girando a la baja (1D<0 y Δhist MACD<0). SQQQ/GLL/BOIL (sin calibrar): extendido (≥${INV_EXT_ATR} ATR sobre SMA20 o 1M ≥${INV_EXT_M1}%) + girando + subyacente enfriándose. Estructura acordada para UVXY: put/put spread a 2-3 meses + call spread vendido o call ~30d rodando (no naked a 3m). Solo observación.\n`;
+    rows.forEach(({ etf, o }) => {
+      if (o && o.term && o.term.ratio != null) md += `- ${etf.ticker} plazos: IV 1m ${o.term.front ? (o.term.front.atmIv * 100).toFixed(0) + '%' : '—'} · 3m ${o.term.long ? (o.term.long.atmIv * 100).toFixed(0) + '%' : '—'} · ratio ${o.term.ratio.toFixed(2)} (${o.term.inverted ? 'invertida' : 'normal'})\n`;
+    });
+    return md;
+  };
+
+  React.useEffect(() => {
+    if (loading) return;
+    try {
+      localStorage.setItem('llm_export_inversos', buildMarkdown());
+      localStorage.setItem('llm_export_inversos_ts', Date.now().toString());
+    } catch (e) {}
+  }, [loading, data]);
+
+  const copyMarkdown = () => navigator.clipboard.writeText(buildMarkdown()).then(() => showToast('✅ Copiado')).catch(() => showToast('❌ Error al copiar'));
+
+  const copyAllForLLM = () => {
+    const parts = [
+      { key: 'llm_export_market', label: 'Market Tracker' }, { key: 'llm_export_portfolio', label: 'Portfolio' },
+      { key: 'llm_export_cycle', label: 'Cycle' }, { key: 'llm_export_relative', label: 'Relative Flow' },
+      { key: 'llm_export_rotacion', label: 'Flujos & Rotación' }, { key: 'llm_export_duration', label: 'Duration' },
+      { key: 'llm_export_sentiment', label: 'Sentiment' }, { key: 'llm_export_positioning', label: 'Positioning' },
+      { key: 'llm_export_trullas', label: 'Trullás' }, { key: 'llm_export_screeners', label: 'Screener' },
+      { key: 'llm_export_inversos', label: 'Inversos' },
+    ];
+    const now = Date.now(); const found = [], missing = [], stale = [];
+    const sections = parts.map(({ key, label }) => {
+      const md = localStorage.getItem(key);
+      if (md) {
+        found.push(label);
+        const ts = parseInt(localStorage.getItem(key + '_ts') || '0');
+        const hours = ts ? Math.round((now - ts) / 3600000) : null;
+        if (!ts || hours > 23) stale.push(hours != null ? `${label} (${hours}h)` : label);
+        return md;
+      }
+      missing.push(label); return null;
+    }).filter(Boolean);
+    if (!sections.length) { showToast('⚠️ Abre cada pestaña primero para generar datos'); return; }
+    const header = `**Exportado:** ${new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })}` +
+      (stale.length ? `\n⚠️ **Secciones desactualizadas (>24h):** ${stale.join(', ')}\n` : '\n');
+    navigator.clipboard.writeText(header + '\n---\n\n' + sections.join('\n\n---\n\n'))
+      .then(() => showToast(missing.length ? `✅ ${found.length}/${parts.length} pestañas — Falta: ${missing.join(', ')}` : '✅ Todas las pestañas copiadas'))
+      .catch(() => showToast('❌ Error al copiar'));
+  };
+
+  return (
+    <div className="wrap">
+      {toast && <div className="toast">{toast}</div>}
+      <div className="topbar">
+        <div>
+          <div className="title-row">
+            <h1>ETFs Inversos</h1>
+            <a href="/index.html" className="nav-link" style={{ color: '#1a6b3c', borderColor: '#1a6b3c' }}>Market Tracker</a>
+            <a href="/portfolio.html" className="nav-link" style={{ color: '#3a6ca0', borderColor: '#3a6ca0' }}>Portfolio</a>
+            <a href="/relative.html" className="nav-link" style={{ color: '#7b1fa2', borderColor: '#7b1fa2' }}>Relative Flow</a>
+            <a href="/cycle.html" className="nav-link" style={{ color: '#7f0000', borderColor: '#7f0000' }}>Cycle</a>
+            <a href="/rotacion.html" className="nav-link" style={{ color: '#e65100', borderColor: '#e65100' }}>Flujos & Rotación</a>
+            <a href="/duration.html" className="nav-link" style={{ color: '#37474f', borderColor: '#37474f' }}>Duration</a>
+            <a href="/sentiment.html" className="nav-link" style={{ color: '#00695c', borderColor: '#00695c' }}>Sentiment</a>
+            <a href="/positioning.html" className="nav-link" style={{ color: '#5d4037', borderColor: '#5d4037' }}>Positioning</a>
+            <a href="/trullas.html" className="nav-link" style={{ color: '#ad1457', borderColor: '#ad1457' }}>Trullás</a>
+            <a href="/screeners.html" className="nav-link" style={{ color: '#00838f', borderColor: '#00838f' }}>Screener</a>
+          </div>
+          <div className="meta">UVXY · SQQQ · GLL · BOIL — monitor de spikes y ventanas de venta de prima con opciones · observacional, no ejecuta ni recomienda trades{updated ? ` · actualizado ${updated.toLocaleTimeString('es-ES')}` : ''}</div>
+        </div>
+        <div className="actions">
+          <button className="btn-refresh" onClick={load} disabled={loading}>{loading ? 'Cargando…' : 'Refrescar'}</button>
+          <button className="btn-copy" onClick={copyMarkdown}>Copy for LLM</button>
+          <button className="btn-export" onClick={copyAllForLLM}>🗂️ Exportar TODO a LLM</button>
+        </div>
+      </div>
+
+      <div className="gap-note">
+        <b>UVXY</b> (regla calibrada con 5 años de datos): <b>Spike en curso</b> = VIX ≥ 25; <b>Ventana de venta de prima</b> = además UVXY gira a la baja
+        (1D&lt;0 y MACD cediendo). Estructura acordada: put o put spread a 2-3 meses + call spread vendido o call a ~30 días rodando (no naked a 3 meses).
+        <b>SQQQ, GLL y BOIL</b> siguen con la regla genérica sin calibrar (ETF extendido ≥{INV_EXT_ATR} ATR sobre SMA20 o ≥{INV_EXT_M1}% a 1 mes + girando +
+        subyacente enfriándose). Aviso por Telegram al subir de nivel. La parte de opciones sale del snapshot diario de cadenas
+        (<code>inverse_etf_options_snapshot.py</code>) y el estudio de primas (<code>inverse_etf_premium_study.py</code>) cuando hay datos en horario de mercado.
+      </div>
+
+      <div className="section-title">Estado por ETF</div>
+      <div className="section-sub">Ordenados por prioridad: ventana de prima, spike, calma. El riesgo de cola de vender calls sin cobertura (gaps de +50-100% en UVXY) no aparece en ninguna métrica — es decisión tuya.</div>
+      {loading && !updated ? <div className="loading">Cargando…</div> : (
+        <div className="cards">
+          {[...rows].sort((a, b) => INV_STATE_META[b.c.state].rank - INV_STATE_META[a.c.state].rank).map(r => (
+            <EtfCard key={r.etf.ticker} {...r} />
+          ))}
+        </div>
+      )}
+
+      <div className="section-title">Tabla resumen</div>
+      <table>
+        <thead><tr><th>ETF</th><th>Estado</th><th>Precio</th><th>1D</th><th>1M</th><th>Dist SMA20 (ATR)</th><th>RSI</th><th>Subyacente</th><th>Sub 1S</th><th>IV ATM</th><th>IV/RV20</th><th>Skew</th><th>Spread</th></tr></thead>
+        <tbody>
+          {rows.map(({ etf, q, u, c, o }) => {
+            const m = INV_STATE_META[c.state], b = BADGE[m.badge];
+            return (
+              <tr key={etf.ticker}>
+                <td><b style={{ color: etf.color }}>{etf.ticker}</b></td>
+                <td><span className="badge" style={{ background: b.bg, color: b.fg }}>{m.short}</span></td>
+                <td>{q ? fmtN(q.price) : '—'}</td>
+                <td className={signCls(q && q.d1)}>{q ? fmtPct(q.d1) : '—'}</td>
+                <td className={signCls(q && q.m1)}>{q ? fmtPct(q.m1) : '—'}</td>
+                <td>{q ? fmtN(invDistAtr(q)) : '—'}</td>
+                <td>{q ? q.rsi : '—'}</td>
+                <td>{etf.under} {u ? fmtN(u.price) : ''}</td>
+                <td className={signCls(u && u.w1)}>{u ? fmtPct(u.w1) : '—'}</td>
+                <td>{o ? (o.atmIv * 100).toFixed(0) + '%' : '—'}</td>
+                <td>{o && o.ivRv != null ? o.ivRv.toFixed(2) : '—'}</td>
+                <td>{o && o.skew != null ? (o.skew * 100).toFixed(0) + 'pp' : '—'}</td>
+                <td>{o && o.spread != null ? (o.spread * 100).toFixed(0) + '%' : '—'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div className="footer-note">
+        Panel puramente observacional — no toca PCS, rot_score, HARD_RULES del motor de picks ni ninguna cartera.
+        Clasificación en <code>shared/inverse-etf-lib.js</code> (misma fuente que el aviso de Telegram, <code>scripts/inverse_etf_alert.js</code>).
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<InversosPage />);
+</script>
+</body>
+</html>

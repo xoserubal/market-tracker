@@ -221,6 +221,24 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Snapshot diario de cadenas de opciones de ETFs inversos (UVXY/SQQQ/GLL/BOIL)
+      # para estudiar venta de prima. Solo observacion. Mismo gating de ventana
+      # que el GEX DIY (>= 15:30 ET, dias laborables); dedupea por ticker/dia.
+      - name: Run pipeline - Step 9e4 Inverse ETF options snapshot
+        run: python scripts/inverse_etf_options_snapshot.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
+      # Aviso Telegram cuando un ETF inverso (UVXY/SQQQ/GLL/BOIL) entra en punto
+      # de venta de prima (screener "Inversos", solo precio). Dedup por transicion.
+      - name: Run pipeline - Step 9e5 Inverse ETF alert
+        run: node scripts/inverse_etf_alert.js
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
       - name: Check if this is the morning run
         id: time_check
         run: |
