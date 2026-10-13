@@ -1,35 +1,191 @@
 {
-  "run_id": "2026-10-13_0206",
+  "run_id": "2026-10-13_1601",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-10-13",
   "summary": {
     "date": "2026-10-13",
-    "run_id": "2026-10-13_0206",
+    "run_id": "2026-10-13_1601",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 52,
-    "input_tokens": 40015,
-    "output_tokens": 1639,
-    "cost_usd": 0.018832,
-    "latency_ms": 27158.0,
-    "json_valid": false,
-    "schema_valid": false,
+    "candidate_count": 51,
+    "input_tokens": 36988,
+    "output_tokens": 17134,
+    "cost_usd": 0.030996,
+    "latency_ms": 514478.0,
+    "json_valid": true,
+    "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 0,
-    "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 0,
+    "quality_score": 97,
+    "selected_count": 1,
+    "watch_count": 2,
+    "rejected_count": 7,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": []
+    "soft_warnings": [
+      "numeric_hallucination_suspected: SELECT OSCR cited pcs=68.0 for OSCR (actual=78.5)"
+    ]
   },
-  "quality_score": 0,
-  "response": null,
-  "raw_response_head": "{\n  \"date\": \"2026-10-13\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-13_0206\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with improving macro, but the portfolio is already heavily concentrated across oil_gas, US tech, commodities and healthcare, so selectivity matters more than adding gross exposure.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"ABBV\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"8-week streak, full Koncorde alignment, trades near 52w high\",\n      \"reason_full\": \"ABBV performs best on the metrics that survive a high-PCS screen: 8 consecutive weeks of outperformance (tied for the longest streak in the candidate set), full bullish Koncorde alignment across daily, 3D and weekly, and only 0.06% below its 52-week high. Dems=13 with momentum_accel=true and outperform_d10=6 confirm the daily flow is genuinely building rather than a one-day gap, and the 4.8 vol ratio shows the move is orderly. Extension is only medium (2 pts, dist_sma20_atr_high), which I accept because the 8-week streak and the proximity to highs indicate trend continuation rather than a late chase.\",\n      \"comparative_edge\": \"Chosen over DHR (PCS 81.0, same healthcare theme) because ABBV gains +5.36% over 5 days with dems=13 and momentum_accel=true, versus DHR's -0.43% and dems=4; DHR also carries a spike flag in its entry history and a weaker 8.66% 4w edge versus ABBV's steady acceleration to within 0.06% of its high.\",\n      \"key_supporting_factors\": [\n        \"Eight consecutive weeks of outperformance ties the longest streak among all candidates in the set.\",\n        \"Koncorde reads up on daily, 3D and weekly simultaneously, the cleanest alignment available.\",\n        \"Dems=13 with momentum_accel=true confirms daily flow is accelerating, not fading.\",\n        \"Trades only 0.06% below the 52-week high, showi"
+  "quality_score": 97,
+  "response": {
+    "date": "2026-10-13",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-10-13_1601",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime at 81.25 with accelerating weekly delta of +12.5 supports risk-on positioning, but extreme theme concentration across all major sectors constrains new entry options to diversifying themes only.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "early_rotation",
+        "confidence": "medium",
+        "reason_short": "Dems 16 clean momentum with zero extension risk in lowest-concentration theme at 10% weight",
+        "reason_full": "OSCR posts dems=16 with spike_flag=false, the strongest clean daily momentum signal among all non-MIMO candidates with PCS 68+, on a 5-day outperformance streak (outperform_d10=8). Healthcare_special sits at only 10% portfolio weight — the lowest concentration of any eligible theme — providing critical diversification from extreme overweight in oil_gas (88%), us_tech_ai (71%), and commodities_metals (58.5%). Konc_3d_state=distribution is acknowledged as intermediate caution, but daily and weekly Koncorde both read 'up' with rot=8 confirming institutional accumulation. Extension risk is zero with no overextension flags.",
+        "comparative_edge": "Over PFE (PCS=77.0, dems=8): OSCR dems=16 gives 2x daily momentum; healthcare_special 10% diversifies vs 51% largecap concentration.",
+        "key_supporting_factors": [
+          "Dems=16 with spike_flag=false is the strongest clean daily momentum signal among all non-MIMO candidates with PCS >= 68.",
+          "Healthcare_special at only 10% portfolio weight provides the most meaningful diversification from extreme oil_gas (88%) and us_tech_ai (71%) concentration.",
+          "Outperform_d10=8 with 5-day winning streak confirms robust multi-day institutional accumulation without single-session spike risk.",
+          "Zero extension risk with no overextension flags offers the cleanest risk profile among all PCS 75+ non-MIMO candidates."
+        ],
+        "key_risks_or_contradictions": [
+          "Konc_3d_state=distribution signals intermediate-timeframe selling pressure that could accelerate despite daily and weekly uptrends.",
+          "Only 2-week streak is the shortest among PCS 75+ candidates, requiring weekly follow-through to validate sustained leadership.",
+          "Ret_13w_vs_spy of +5.7% is modest compared to portfolio leaders like VLE.TO at +49% and PLTR at +53%, indicating shorter-term momentum rather than deep multi-month conviction."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "PFE",
+        "reason": "8-week streak with bullish-aligned Koncorde and zero extension risk is attractive, but healthcare_largecap already at 51% portfolio weight makes adding another position in that theme counterproductive for diversification.",
+        "watch_trigger": "Healthcare_largecap portfolio weight drops below 35% via exits in TMO or DHR, or PFE streak extends to 12+ weeks with ret_4w accelerating above +5%."
+      },
+      {
+        "ticker": "ABBV",
+        "reason": "Bullish-aligned Koncorde with dems=12 and ret_4w=+7.3% shows building momentum, but the 2-week streak is too short for confirmed leadership and healthcare_largecap at 51% weight limits allocation.",
+        "watch_trigger": "Streak extends to 4+ weeks while healthcare_largecap portfolio weight drops below 35%, confirming both sustained leadership and reduced concentration risk."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "UCO",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a 2x leveraged commodity ETF tracking crude oil futures, which violates the rule against direct futures and commodity instruments. Oil_gas theme already at 88% portfolio weight.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "TNZ.TO",
+        "reason": "Triple distribution_warning across all Koncorde timeframes (D, 3D, W) combined with deeply negative ret_4w of -9.8% shows active momentum deterioration despite strong dems=17. Oil_gas at 88% weight further prohibits entry.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "SU",
+        "reason": "Oil_gas theme already at 88% portfolio weight with VLE.TO (PCS=87.2, rot=8, streak=8w) and WCP.TO (PCS=86.0, rot=8, streak=8w) already held at stronger PCS and superior metrics.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "VAL",
+        "reason": "Only 1-week streak with negative ret_4w of -0.6% and modest ret_13w of +4.5% provide insufficient conviction despite low extension risk. Oil_gas at 88% weight further limits viability.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "MRK",
+        "reason": "Zero-week streak with negative ret_4w of -0.4%, triple distribution_warning alignment, spike_flag=true, and dems=3 indicate weak flow and deteriorating momentum across all timeframes.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "AMR",
+        "reason": "Deeply negative ret_4w of -13.4% with distribution_warning and spike_flag=true despite recent PCS upgrade to 70.2. Commodities_metals at 58.5% weight already extremely overweight.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "SLS",
+        "reason": "PCS 62.2 falls below the 68.0 minimum entry threshold for MIMO_SHADOW with zero-week streak, ret_13w of only +2.1%, and mixed Koncorde alignment offering no compelling signal.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved from 70.8 to 81.8 with rot jumping to 9 and streak extending to 8 weeks; ret_4w at +6.6% sustains the uptrend."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Top PCS at 87.2 with 8-week streak, ret_4w of +10.2% and ret_13w of +49.2% — strongest sustained leadership in the portfolio."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS declined from 86.0 to 73.5 but streak extended to 7 weeks with ret_4w still positive at +6.8%; monitoring for further PCS erosion."
+      },
+      {
+        "ticker": "MLX.AX",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS stable at 81.2 with 8-week streak and ret_4w of +8.9%; distribution_warning acknowledged but weekly structure remains supportive."
+      },
+      {
+        "ticker": "SMCI",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS stable at 80.5 with 6-week streak; ret_4w dipped to -2.4% but ret_13w of +40.8% and bullish-aligned Koncorde support continued hold."
+      },
+      {
+        "ticker": "PLTR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "ret_4w surged to +22.9% — highest in the portfolio — with PCS 80.5, 5-week streak, and bullish-aligned Koncorde confirming momentum acceleration."
+      },
+      {
+        "ticker": "NVDA",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS declined from 78.8 to 72.2 with distribution_warning; ret_4w modest at +1.6% but still above 68 min entry and 5-week streak intact."
+      },
+      {
+        "ticker": "META",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS stable at 81.0 with streak extending to 6 weeks and ret_4w improving to +12.7%; distribution_warning noted but weekly metrics support."
+      },
+      {
+        "ticker": "QQQ",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS stable at 74.0 with 5-week streak and bullish-aligned Koncorde; provides critical global_etf diversification at only 14.5% theme weight."
+      },
+      {
+        "ticker": "AMD",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 76.5 with ret_4w accelerating to +13.1% on 6-week streak; distribution_warning noted but rot=7 and weekly momentum intact."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS surged from 72.0 to 81.0 with rot=8 and 5-week streak; ret_4w improved to +8.7% confirming accelerating institutional flow."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved from 81.0 to 86.0 with 8-week streak and bullish-aligned Koncorde; ret_4w of -2.8% is a pause, not reversal, given +20.1% 13w."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-10-13\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-13_1601\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime at 81.25 with accelerating weekly delta of +12.5 supports risk-on positioning, but extreme theme concentration across all major sectors constrains new entry options to diversifying themes only.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"OSCR\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"medium\",\n      \"reason_short\": \"Dems 16 clean momentum with zero extension risk in lowest-concentration theme at 10% weight\",\n      \"reason_full\": \"OSCR posts dems=16 with spike_flag=false, the strongest clean daily momentum signal among all non-MIMO candidates with PCS 68+, on a 5-day outperformance streak (outperform_d10=8). Healthcare_special sits at only 10% portfolio weight — the lowest concentration of any eligible theme — providing critical diversification from extreme overweight in oil_gas (88%), us_tech_ai (71%), and commodities_metals (58.5%). Konc_3d_state=distribution is acknowledged as intermediate caution, but daily and weekly Koncorde both read 'up' with rot=8 confirming institutional accumulation. Extension risk is zero with no overextension flags.\",\n      \"comparative_edge\": \"Over PFE (PCS=77.0, dems=8): OSCR dems=16 gives 2x daily momentum; healthcare_special 10% diversifies vs 51% largecap concentration.\",\n      \"key_supporting_factors\": [\n        \"Dems=16 with spike_flag=false is the strongest clean daily momentum signal among all non-MIMO candidates with PCS >= 68.\",\n        \"Healthcare_special at only 10% portfolio weight provides the most meaningful diversification from extreme oil_gas (88%) and us_tech_ai (71%) concentration.\",\n        \"Outperform_d10=8 with 5-day winning streak confirms robust multi-day institutional accumulation without single-session spike risk.\",\n        \"Zero extens"
 }

@@ -1,61 +1,41 @@
 {
-  "run_id": "2026-10-13_0206",
+  "run_id": "2026-10-13_1601",
   "model": "x-ai/grok-4.3",
   "date": "2026-10-13",
   "summary": {
     "date": "2026-10-13",
-    "run_id": "2026-10-13_0206",
+    "run_id": "2026-10-13_1601",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 30,
-    "candidate_count": 52,
-    "input_tokens": 156887,
-    "output_tokens": 8626,
-    "cost_usd": 0.217674,
-    "latency_ms": 93495.0,
+    "candidate_count": 51,
+    "input_tokens": 156511,
+    "output_tokens": 14363,
+    "cost_usd": 0.231546,
+    "latency_ms": 207289.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 8,
-    "quality_score": 73,
+    "hard_rule_violations": 0,
+    "quality_score": 92,
     "selected_count": 0,
-    "watch_count": 28,
-    "rejected_count": 28,
+    "watch_count": 25,
+    "rejected_count": 10,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [
-      "Duplicate ticker: KOS",
-      "Duplicate ticker: AMR",
-      "Duplicate ticker: DPM.TO",
-      "Duplicate ticker: SLS",
-      "Duplicate ticker: LCX.V",
-      "Duplicate ticker: MSTR",
-      "Duplicate ticker: BSX",
-      "Duplicate ticker: MRK"
-    ],
-    "soft_warnings": [
-      "numeric_hallucination_suspected: WATCH KOS cited dems=6.0 for KOS (actual=12)",
-      "numeric_hallucination_suspected: WATCH AMR cited streak_weeks=6.0 for AMR (actual=2)",
-      "numeric_hallucination_suspected: REJECT SLS cited dems=62.2 for SLS (actual=5)",
-      "numeric_hallucination_suspected: REJECT LCX.V cited dems=-15.05 for LCX.V (actual=4)",
-      "numeric_hallucination_suspected: REJECT MSTR cited dems=-7.57 for MSTR (actual=3)",
-      "numeric_hallucination_suspected: REJECT NVDA cited dems=-5.69 for NVDA (actual=4)",
-      "numeric_hallucination_suspected: REJECT BSX cited dems=66.2 for BSX (actual=3)",
-      "numeric_hallucination_suspected: REJECT VRTX cited dems=63.5 for VRTX (actual=2)",
-      "open_picks_review_missing: MSTR not included in open_picks_review",
-      "open_picks_review_missing: TNZ.TO not included in open_picks_review"
-    ]
+    "violations": [],
+    "soft_warnings": []
   },
-  "quality_score": 73,
+  "quality_score": 92,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-10-13_0206",
+    "run_id": "2026-10-13_1601",
     "date": "2026-10-13",
     "decision_summary": {
-      "market_read": "Bull Maduro improving with macro delta +6.25 but extreme concentration across oil_gas, us_tech_ai, healthcare and crypto at 50-88% weights each.",
+      "market_read": "Bull Maduro Improving regime with extreme concentration in oil_gas, us_tech_ai, healthcare_largecap and commodities_metals.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
@@ -63,284 +43,179 @@
     "watch": [
       {
         "ticker": "VLE.TO",
-        "reason": "PCS 87.2, dems 15, 8-week streak but medium extension and 3D distribution in high oil concentration",
-        "watch_trigger": "konc_3d_state turns up with extension_risk dropping to low"
+        "reason": "PCS 87.2 but oil_gas already 88 percent weight; konc_3d_state distribution and theme_concentration_risk high.",
+        "watch_trigger": "PCS hold above 82 and oil_gas weight drops below 70 percent"
       },
       {
         "ticker": "WCP.TO",
-        "reason": "PCS 86.0, 8-week streak, zero extension but dems only 8 and daily distribution",
-        "watch_trigger": "dems rises above 12 with 3D confirmation"
+        "reason": "PCS 86.0 but oil_gas already 88 percent weight; daily konc distribution.",
+        "watch_trigger": "Oil_gas weight falls below 70 percent with rot_score above 7"
       },
       {
         "ticker": "UCO",
-        "reason": "PCS 82.5, dems 15 but leveraged crude ETF adds commodity exposure in already high oil weight",
-        "watch_trigger": "theme concentration falls below 40% and extension drops to low"
+        "reason": "PCS 82.5 but leveraged ETF and oil_gas weight extreme; extension_risk medium.",
+        "watch_trigger": "Oil_gas weight below 60 percent and dems above 14 with no spike"
       },
       {
         "ticker": "TNZ.TO",
-        "reason": "PCS 82.2, 8-week streak but spike_flag, distribution_warning across timeframes",
-        "watch_trigger": "konc_alignment shifts to bullish_aligned with no spike"
+        "reason": "PCS 82.2 but oil_gas weight extreme and konc_alignment distribution_warning.",
+        "watch_trigger": "Oil_gas weight reduction plus bullish 3D confirmation"
       },
       {
         "ticker": "TMO",
-        "reason": "PCS 81.8, rot 9, clean low extension but healthcare already 51% weight",
-        "watch_trigger": "healthcare weight falls below 30%"
+        "reason": "PCS 81.8 but healthcare_largecap already 51 percent weight; spike_flag true.",
+        "watch_trigger": "Healthcare weight below 35 percent and dems above 10"
       },
       {
         "ticker": "MLX.AX",
-        "reason": "PCS 81.2, 8-week streak but 3D distribution and high metals concentration",
-        "watch_trigger": "konc_3d_state turns up and metals weight below 30%"
+        "reason": "PCS 81.2 but commodities_metals already 58.5 percent weight; konc distribution_warning.",
+        "watch_trigger": "Commodities_metals weight below 40 percent"
       },
       {
         "ticker": "META",
-        "reason": "PCS 81.0, 6-week streak but us_tech_ai at 71% weight and 3D distribution",
-        "watch_trigger": "us_tech_ai weight below 40% and 3D turns up"
+        "reason": "PCS 81.0 but us_tech_ai already 71 percent weight; spike_flag true.",
+        "watch_trigger": "Us_tech_ai weight below 50 percent and rot_score above 8"
       },
       {
         "ticker": "DHR",
-        "reason": "PCS 81.0, rot 8, bullish aligned but healthcare concentration extreme",
-        "watch_trigger": "healthcare weight falls below 30%"
+        "reason": "PCS 81.0 but healthcare_largecap weight 51 percent; dems only 7.",
+        "watch_trigger": "Healthcare weight reduction and dems above 12"
       },
       {
         "ticker": "SMCI",
-        "reason": "PCS 80.5, rot 6 but 3D distribution warning in overloaded us_tech_ai",
-        "watch_trigger": "konc_alignment to bullish_aligned and theme weight below 40%"
+        "reason": "PCS 80.5 but us_tech_ai weight 71 percent and konc_3d distribution.",
+        "watch_trigger": "Us_tech_ai weight below 50 percent"
       },
       {
         "ticker": "PLTR",
-        "reason": "PCS 80.5, dems 15 but high extension and already open in multiple portfolios",
-        "watch_trigger": "extension_risk to low and new position size available"
+        "reason": "PCS 80.5 but us_tech_ai weight 71 percent; already open in multiple portfolios.",
+        "watch_trigger": "Us_tech_ai weight reduction"
       },
       {
         "ticker": "SU",
-        "reason": "PCS 80.5, 8-week streak but medium extension and oil at 88% weight",
-        "watch_trigger": "oil weight below 50% and extension drops"
+        "reason": "PCS 80.5 but oil_gas weight 88 percent; extension_risk medium.",
+        "watch_trigger": "Oil_gas weight below 70 percent"
       },
       {
         "ticker": "OSCR",
-        "reason": "PCS 78.5, dems 15, outperform_d10 8 but healthcare concentration risk",
-        "watch_trigger": "healthcare weight below 30%"
+        "reason": "PCS 78.5 but healthcare_special weight low yet overall healthcare high; dems 16 strong.",
+        "watch_trigger": "Healthcare weight below 40 percent"
       },
       {
         "ticker": "ISRG",
-        "reason": "PCS 78.5, 1-week streak, medium extension and 3D distribution",
-        "watch_trigger": "streak extends to 4 weeks with 3D turning up"
+        "reason": "PCS 78.5 but healthcare_largecap weight 51 percent; streak_weeks only 1.",
+        "watch_trigger": "Healthcare weight reduction and streak above 4"
       },
       {
         "ticker": "HUM",
-        "reason": "PCS 78.5, dems 13 but spike_flag and high extension in healthcare",
-        "watch_trigger": "spike resolves with dems above 14 and extension low"
+        "reason": "PCS 78.5 but healthcare weight high; spike_flag true.",
+        "watch_trigger": "Healthcare weight below 35 percent"
       },
       {
         "ticker": "OXY",
-        "reason": "PCS 78.0, 3-week streak but spike_flag and oil concentration",
-        "watch_trigger": "spike resolves, oil weight below 50%"
-      },
-      {
-        "ticker": "BTCC-B.TO",
-        "reason": "PCS 77.5, 7-week streak but crypto at 36.5% and already open positions",
-        "watch_trigger": "crypto weight below 20% and new allocation opens"
+        "reason": "PCS 78.0 but oil_gas weight extreme; spike_flag true.",
+        "watch_trigger": "Oil_gas weight below 70 percent"
       },
       {
         "ticker": "TOU.TO",
-        "reason": "PCS 77.0, 1-week streak, 3D and daily distribution in high oil weight",
-        "watch_trigger": "konc_alignment to bullish_aligned and oil weight declines"
+        "reason": "PCS 77.0 but oil_gas weight extreme; konc distribution_warning.",
+        "watch_trigger": "Oil_gas weight reduction"
       },
       {
         "ticker": "PFE",
-        "reason": "PCS 77.0, 8-week streak but healthcare already overloaded",
-        "watch_trigger": "healthcare weight below 30%"
+        "reason": "PCS 77.0 but healthcare weight high; dems 8 weak.",
+        "watch_trigger": "Healthcare weight below 35 percent"
       },
       {
         "ticker": "AMD",
-        "reason": "PCS 76.5, 6-week streak but 3D distribution and us_tech_ai at 71%",
-        "watch_trigger": "3D turns up and theme weight below 40%"
+        "reason": "PCS 76.5 but us_tech_ai weight 71 percent; konc distribution_warning.",
+        "watch_trigger": "Us_tech_ai weight below 50 percent"
       },
       {
         "ticker": "ABBV",
-        "reason": "PCS 76.5, dems 13, 2-week streak but healthcare concentration",
-        "watch_trigger": "healthcare weight below 30% and streak extends"
+        "reason": "PCS 76.5 but healthcare weight high; dems 12.",
+        "watch_trigger": "Healthcare weight reduction"
       },
       {
         "ticker": "SLG.V",
-        "reason": "PCS 75.8, 4-week streak but 3D and weekly distribution warning",
-        "watch_trigger": "konc_alignment shifts to bullish_aligned"
+        "reason": "PCS 75.8 but commodities_metals weight high; konc distribution_warning.",
+        "watch_trigger": "Commodities_metals weight below 40 percent"
       },
       {
         "ticker": "VAL",
-        "reason": "PCS 75.5, 1-week streak, spike_flag and oil concentration",
-        "watch_trigger": "spike resolves and oil weight below 50%"
+        "reason": "PCS 75.5 but oil_gas weight extreme; dems 14 but streak 1.",
+        "watch_trigger": "Oil_gas weight below 70 percent"
       },
       {
         "ticker": "VGZ",
-        "reason": "PCS 74.0, 4-week streak but distribution_warning across timeframes",
-        "watch_trigger": "konc_alignment to bullish_aligned"
+        "reason": "PCS 74.0 but silver_gold_miners weight high; konc distribution_warning.",
+        "watch_trigger": "Silver_gold_miners weight below 10 percent"
       },
       {
         "ticker": "QQQ",
-        "reason": "PCS 74.0, 5-week streak, low extension but global_etf already held",
-        "watch_trigger": "new allocation capacity opens in global_etf"
+        "reason": "PCS 74.0 but global_etf weight already present; us_tech_ai indirect exposure high.",
+        "watch_trigger": "Global_etf weight below 3 percent"
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "reason": "PCS 73.5 but crypto weight 36.5 percent; already open.",
+        "watch_trigger": "Crypto weight below 25 percent"
       },
       {
         "ticker": "GLEN.L",
-        "reason": "PCS 73.5, 1-week streak, ret_4w negative vs SPY",
-        "watch_trigger": "ret_4w_vs_spy turns positive with rot above 7"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "PCS 71.5 with rot 6 dems 12 and ret_13w_vs_spy +5.05 but distribution_warning and oil_gas at 88 percent weight.",
-        "watch_trigger": "Koncorde 3D shifts to up with rot_score >=7 and dems >=14 without spike_flag"
-      },
-      {
-        "ticker": "AMR",
-        "reason": "PCS 70.2 rot 6 streak_weeks 2 ret_13w_vs_spy +16.83 but distribution_warning and commodities_metals at 58.5 percent weight.",
-        "watch_trigger": "Koncorde alignment improves to bullish_aligned and streak_weeks reaches 3"
-      },
-      {
-        "ticker": "DPM.TO",
-        "reason": "PCS 65.8 rot 6 ret_13w_vs_spy +17.15 but spike_flag true extension_risk medium and silver_gold_miners at 20 percent weight.",
-        "watch_trigger": "outperform_d10 >=6 and extension_risk drops to low with no spike_flag"
+        "reason": "PCS 73.5 but us_tech_ai weight extreme; spike_flag true.",
+        "watch_trigger": "Us_tech_ai weight below 50 percent"
       }
     ],
     "rejected": [
       {
         "ticker": "MRK",
-        "reason": "PCS 71.8 but healthcare already 51% weight and signal IGNORAR",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "KOS",
-        "reason": "PCS 71.5 but multiple signals yet oil at 88% and IGNORAR on several",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "FRU.TO",
-        "reason": "PCS 71.5 but oil concentration extreme and no unique edge",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "LLY",
-        "reason": "PCS 70.8 but healthcare overload and EN_RADAR only",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "AMR",
-        "reason": "PCS 70.2 but commodities_metals at 58.5% and distribution_warning",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "HCC",
-        "reason": "PCS 70.2 but metals concentration high and distribution",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "CVE",
-        "reason": "PCS 70.0 but IGNORAR and oil overload",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "LCX.V",
-        "reason": "PCS 69.8 but oil concentration and IGNORAR",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "GHM.AX",
-        "reason": "PCS 67.8 but metals concentration and IGNORAR",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "MSTR",
-        "reason": "PCS 67.5 but crypto at 36.5% and IGNORAR",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "FCX",
-        "reason": "PCS 67.2 but us_cyclical and EN_RADAR only",
+        "reason": "PCS 71.8 with dems 3, spike_flag true, and distribution_warning on all Koncorde timeframes limits conviction despite rs_leader flag.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "HIMS",
-        "reason": "PCS 66.8 but healthcare overload and EN_RADAR",
-        "rejection_category": "macro_conflict"
+        "ticker": "AMR",
+        "reason": "PCS 70.2 with streak_weeks only 2, dems 11 but spike_flag true, and distribution_warning on 3D limits entry despite rot_good.",
+        "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "KIST.L",
-        "reason": "PCS 66.5 but oil concentration and EN_RADAR",
-        "rejection_category": "macro_conflict"
+        "ticker": "MSTR",
+        "reason": "PCS 63.5 with dems 4, ret_5d_vs_spy -6.55, and bullish_pending_3d_confirmation but extension risk low yet overall flow weak.",
+        "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "BSX",
-        "reason": "PCS 66.2 but healthcare overload and IGNORAR",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "REG.V",
-        "reason": "PCS 66.0 but copper and EN_RADAR",
+        "ticker": "YAL.AX",
+        "reason": "PCS 66.2 with streak_weeks 1, dems 8, and mixed Koncorde alignment despite rot_good and macro_improving.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "DPM.TO",
-        "reason": "PCS 65.8 but silver_gold_miners and VIGILAR",
+        "reason": "PCS 65.8 with dems 8, spike_flag true, and mixed alignment despite rs_leader and rot_good flags.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "VIT-B.ST",
-        "reason": "PCS 65.8 but europa and EN_RADAR",
+        "ticker": "KOS",
+        "reason": "PCS 71.5 with dems 13 but distribution_warning on 3D and ret_4w_vs_spy -11.99 limits conviction despite theme_strong.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "TK",
-        "reason": "PCS 63.8 but pcs crossed down and us_cyclical",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "SLS",
-        "reason": "PCS 62.2 but healthcare and VIGILAR only",
+        "ticker": "BSX",
+        "reason": "PCS 66.2 with dems 3, spike_flag true, and distribution_warning on 3D despite macd_rsi_positive.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "MU",
-        "reason": "PCS 55.8 but pcs crossed down and us_tech_ai overload",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "NUE",
-        "reason": "PCS 53.5 but us_cyclical and signal upgraded only",
+        "ticker": "NVDA",
+        "reason": "PCS 72.2 with streak_weeks 5 but dems 4, distribution_warning on 3D, and high theme concentration risk.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "SLS",
-        "reason": "PCS 62.2 dems 5 spike_flag true distribution_warning on all timeframes with healthcare_special already at 10 percent.",
+        "reason": "PCS 62.2 with dems 13 but distribution_warning on 3D and ret_13w_vs_spy -14.65 despite rot_good.",
         "rejection_category": "insufficient_conviction"
       },
       {
         "ticker": "LCX.V",
-        "reason": "PCS 69.8 ret_4w_vs_spy -15.05 dems 4 distribution_warning and oil_gas already 88 percent weight.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "MSTR",
-        "reason": "PCS 67.5 ret_5d_vs_spy -7.57 dems 3 distribution_warning and crypto already 36.5 percent weight.",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "NVDA",
-        "reason": "PCS 72.2 ret_5d_vs_spy -5.69 dems 4 distribution_warning and us_tech_ai at 71 percent weight.",
-        "rejection_category": "technical_overextension"
-      },
-      {
-        "ticker": "BSX",
-        "reason": "PCS 66.2 dems 3 spike_flag true distribution_warning and healthcare_largecap at 51 percent weight.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "VRTX",
-        "reason": "PCS 63.5 dems 2 spike_flag true distribution_warning and healthcare_largecap already overweight.",
-        "rejection_category": "insufficient_conviction"
-      },
-      {
-        "ticker": "MRK",
-        "reason": "dems 9 below 10 threshold and signal IGNORAR despite PCS 71.8 and 17.4 percent 13w outperformance.",
+        "reason": "PCS 69.8 with dems 3, spike_flag true, and distribution_warning on 3D despite rs_outperform.",
         "rejection_category": "insufficient_conviction"
       }
     ],
@@ -349,321 +224,327 @@
         "ticker": "BTCC-B.TO",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Current PCS 77.5 streak 7 rot 8 crypto diversification intact."
+        "reason": "mechanical_floor_status ok; crypto diversification still needed"
       },
       {
         "ticker": "PLTR",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Current PCS 80.5 streak 5 ret_4w_vs_spy +22.92 us_tech_ai leadership holds."
+        "reason": "mechanical_floor_status ok; strong 13w outperformance continues"
       },
       {
         "ticker": "MLX.AX",
         "portfolio": "CONFIRMED_FLOW_LEADERS",
         "action": "HOLD",
-        "reason": "Current PCS 81.2 streak 8 rot 8 commodities_metals low concentration."
+        "reason": "mechanical_floor_status ok; 8-week streak intact"
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.8 streak 8 rot 9 zero extension risk."
+        "reason": "mechanical_floor_status ok; clean Koncorde alignment"
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 87.2 streak 8 rot 8 oil_gas diversification."
+        "reason": "mechanical_floor_status ok; zero extension risk"
       },
       {
         "ticker": "SMCI",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 80.5 dems 15 rot 6 us_tech_ai momentum."
+        "reason": "mechanical_floor_status ok; dems 15 clean"
+      },
+      {
+        "ticker": "NVDA",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "META",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 81.0 streak 6 ret_4w_vs_spy +12.68."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "QQQ",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 74.0 streak 5 global_etf low concentration."
-      },
-      {
-        "ticker": "AMD",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 76.5 streak 6 rot 7 ret_4w_vs_spy +13.07."
-      },
-      {
-        "ticker": "DHR",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 81.0 streak 5 rot 8 healthcare low concentration."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 86.0 streak 8 rot 8 oil_gas clean entry."
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "MSTR",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "UCO",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "TNZ.TO",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "FDR.AX",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Current PCS 54.2 daily mirror setup intact."
-      },
-      {
-        "ticker": "^GDAXI",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
-      },
-      {
-        "ticker": "GRSL.V",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "HOLD",
-        "reason": "Current PCS 35.0 daily mirror holding."
-      },
-      {
-        "ticker": "KTOS",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "HOLD",
-        "reason": "Current PCS 35.8 daily mirror holding."
-      },
-      {
-        "ticker": "EXH7.DE",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "GOLD",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Current PCS 31.0 daily mirror holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
-        "ticker": "BUR",
+        "ticker": "RYM.NZ",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Current PCS 28.8 daily mirror holding."
-      },
-      {
-        "ticker": "^FCHI",
-        "portfolio": "MIRROR_ESPEJO",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
-      },
-      {
-        "ticker": "XLU",
-        "portfolio": "CRUCE_ROJO_D",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "SLP.L",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Current PCS 52.8 review due but signal stable."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "LCX.V",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Current PCS 69.8 review due but signal stable."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Current PCS 65.8 review due but signal stable."
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "KOS",
+        "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "GGAL",
         "portfolio": "TRULLAS_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 30.5 pivot setup holding."
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "BBAR",
+        "portfolio": "TRULLAS_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "HFG.DE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 40.2 flow inflexion holding."
-      },
-      {
-        "ticker": "ROOT",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "PFE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 77.0 streak 8 rot 7."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "OSCR",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 78.5 streak 2 rot 8."
-      },
-      {
-        "ticker": "^XSP",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "NKE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 40.5 flow reversion holding."
-      },
-      {
-        "ticker": "TLT",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "SU",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 80.5 streak 8 rot 6."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "SUPV",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 30.5 hist cross holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "WHC.AX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 49.0 hist cross holding."
-      },
-      {
-        "ticker": "GTE",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "VAL",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 75.5 streak 1 rot 6."
-      },
-      {
-        "ticker": "KOS",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 71.5 streak 1 rot 6."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "PAM",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 40.2 flow inflexion holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "BSX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 66.2 flow inflexion holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "VRTX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 63.5 flow inflexion holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "MRK",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 71.8 flow inflexion holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "YAL.AX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 53.0 flow inflexion holding."
-      },
-      {
-        "ticker": "SPY",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
-      },
-      {
-        "ticker": "R9U2.F",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Left universe but position open per list."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "JD",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 39.5 flow reversion holding."
-      },
-      {
-        "ticker": "UCO",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 82.5 streak 8 rot 7."
-      },
-      {
-        "ticker": "CEPU",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 35.8 hist cross holding."
-      },
-      {
-        "ticker": "SLS",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Current PCS 62.2 hist cross holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "AMR",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 70.2 flow reversion holding."
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "CEPU",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "SLS",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "VIST",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 44.0 line near zero holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
-        "ticker": "NVDA",
+        "ticker": "AMD",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 72.2 monthly rsi holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "ABBV",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 76.5 monthly rsi holding."
+        "reason": "mechanical_floor_status ok"
       },
       {
         "ticker": "ADS.DE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Current PCS 40.2 flow continuation holding."
+        "reason": "mechanical_floor_status ok"
+      },
+      {
+        "ticker": "^GDAXI",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "Position remains open with no mechanical floor breach."
+      },
+      {
+        "ticker": "EXH7.DE",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "Position remains open with no mechanical floor breach."
+      },
+      {
+        "ticker": "^FCHI",
+        "portfolio": "MIRROR_ESPEJO",
+        "action": "HOLD",
+        "reason": "Position remains open with no mechanical floor breach."
+      },
+      {
+        "ticker": "XLU",
+        "portfolio": "CRUCE_ROJO_D",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
+      },
+      {
+        "ticker": "ROOT",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
+      },
+      {
+        "ticker": "^XSP",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
+      },
+      {
+        "ticker": "TLT",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
+      },
+      {
+        "ticker": "GTE",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
+      },
+      {
+        "ticker": "SPY",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
+      },
+      {
+        "ticker": "R9U2.F",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Left universe status noted but no exit signal beyond floor."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-10-13\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-10-13_0206\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro improving with macro delta +6.25 but extreme concentration across oil_gas, us_tech_ai, healthcare and crypto at 50-88% weights each.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"VLE.TO\", \"reason\": \"PCS 87.2, dems 15, 8-week streak but medium extension and 3D distribution in high oil concentration\", \"watch_trigger\": \"konc_3d_state turns up with extension_risk dropping to low\"},\n    {\"ticker\": \"WCP.TO\", \"reason\": \"PCS 86.0, 8-week streak, zero extension but dems only 8 and daily distribution\", \"watch_trigger\": \"dems rises above 12 with 3D confirmation\"},\n    {\"ticker\": \"UCO\", \"reason\": \"PCS 82.5, dems 15 but leveraged crude ETF adds commodity exposure in already high oil weight\", \"watch_trigger\": \"theme concentration falls below 40% and extension drops to low\"},\n    {\"ticker\": \"TNZ.TO\", \"reason\": \"PCS 82.2, 8-week streak but spike_flag, distribution_warning across timeframes\", \"watch_trigger\": \"konc_alignment shifts to bullish_aligned with no spike\"},\n    {\"ticker\": \"TMO\", \"reason\": \"PCS 81.8, rot 9, clean low extension but healthcare already 51% weight\", \"watch_trigger\": \"healthcare weight falls below 30%\"},\n    {\"ticker\": \"MLX.AX\", \"reason\": \"PCS 81.2, 8-week streak but 3D distribution and high metals concentration\", \"watch_trigger\": \"konc_3d_state turns up and metals weight below 30%\"},\n    {\"ticker\": \"META\", \"reason\": \"PCS 81.0, 6-week streak but us_tech_ai at 71% weight and 3D distribution\", \"watch_trigger\": \"us_tech_ai weight below 40% and 3D turns up\"},\n    {\"ticker\": \"DHR\", \"reason\": \"PCS 81.0, rot 8, bullish aligned but healthcare concentration extreme\", \"watch_trigger\": \"healthcare weight falls below 30%\"},\n    {\"ticker\": \"SMCI\", \"reason\": \"PCS 80.5, rot 6 but 3D distribution warning in overloaded us_tech_ai\", \"watch_trigger\": \"konc_alignment to b"
+  "raw_response_head": "{\n  \"date\": \"2026-10-13\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-10-13_1601\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro Improving regime with extreme concentration in oil_gas, us_tech_ai, healthcare_largecap and commodities_metals.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"VLE.TO\", \"reason\": \"PCS 87.2 but oil_gas already 88 percent weight; konc_3d_state distribution and theme_concentration_risk high.\", \"watch_trigger\": \"PCS hold above 82 and oil_gas weight drops below 70 percent\"},\n    {\"ticker\": \"WCP.TO\", \"reason\": \"PCS 86.0 but oil_gas already 88 percent weight; daily konc distribution.\", \"watch_trigger\": \"Oil_gas weight falls below 70 percent with rot_score above 7\"},\n    {\"ticker\": \"UCO\", \"reason\": \"PCS 82.5 but leveraged ETF and oil_gas weight extreme; extension_risk medium.\", \"watch_trigger\": \"Oil_gas weight below 60 percent and dems above 14 with no spike\"},\n    {\"ticker\": \"TNZ.TO\", \"reason\": \"PCS 82.2 but oil_gas weight extreme and konc_alignment distribution_warning.\", \"watch_trigger\": \"Oil_gas weight reduction plus bullish 3D confirmation\"},\n    {\"ticker\": \"TMO\", \"reason\": \"PCS 81.8 but healthcare_largecap already 51 percent weight; spike_flag true.\", \"watch_trigger\": \"Healthcare weight below 35 percent and dems above 10\"},\n    {\"ticker\": \"MLX.AX\", \"reason\": \"PCS 81.2 but commodities_metals already 58.5 percent weight; konc distribution_warning.\", \"watch_trigger\": \"Commodities_metals weight below 40 percent\"},\n    {\"ticker\": \"META\", \"reason\": \"PCS 81.0 but us_tech_ai already 71 percent weight; spike_flag true.\", \"watch_trigger\": \"Us_tech_ai weight below 50 percent and rot_score above 8\"},\n    {\"ticker\": \"DHR\", \"reason\": \"PCS 81.0 but healthcare_largecap weight 51 percent; dems only 7.\", \"watch_trigger\": \"Healthcare weight reduction and dems above 12\"},\n    {\"ticker\": \"SMCI\", \"reason\": \"PCS 80.5 but us_tech_ai weight 71 percent and konc_3d distribution.\", \"watc"
 }
