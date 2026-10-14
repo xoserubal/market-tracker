@@ -1,206 +1,77 @@
 {
-  "run_id": "2026-10-14_1348",
+  "run_id": "2026-10-14_2315",
   "model": "xiaomi/mimo-v2.5-pro",
   "date": "2026-10-14",
   "summary": {
     "date": "2026-10-14",
-    "run_id": "2026-10-14_1348",
+    "run_id": "2026-10-14_2315",
     "model": "xiaomi/mimo-v2.5-pro",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 29,
     "candidate_count": 56,
-    "input_tokens": 37859,
-    "output_tokens": 12414,
-    "cost_usd": 0.027269,
-    "latency_ms": 260232.0,
+    "input_tokens": 39431,
+    "output_tokens": 13714,
+    "cost_usd": 0.029084,
+    "latency_ms": 354673.0,
     "json_valid": true,
     "schema_valid": true,
     "hard_rule_violations": 0,
-    "quality_score": 100,
-    "selected_count": 2,
-    "watch_count": 16,
-    "rejected_count": 7,
+    "quality_score": 89,
+    "selected_count": 0,
+    "watch_count": 1,
+    "rejected_count": 5,
     "fallback_used": false,
     "error": null
   },
   "validation": {
     "violations": [],
-    "soft_warnings": [
-      "numeric_hallucination_suspected: REJECT KOS cited ret_4w_vs_spy=-7.3 for SU (actual=6.9243)",
-      "numeric_hallucination_suspected: REJECT KOS cited streak_weeks=1.0 for SU (actual=8)"
-    ]
+    "soft_warnings": []
   },
-  "quality_score": 100,
+  "quality_score": 89,
   "response": {
     "date": "2026-10-14",
     "model": "xiaomi/mimo-v2.5-pro",
-    "run_id": "2026-10-14_1348",
+    "run_id": "2026-10-14_2315",
     "decision_summary": {
-      "market_read": "Bull Maduro regime with macro score 81.25 and a +12.5 one-week delta keeps risk appetite broad, though every major theme in the book is already crowded and several tech names show 3D distribution.",
-      "risk_posture": "normal",
-      "should_select_picks": true
+      "market_read": "Bull Maduro regime with macro score 81.25 and +12.5 weekly delta supports risk-on positioning, but the portfolio's extreme theme concentration — oil_gas at 126%, healthcare at 71.5%, us_tech_ai at 71% — binds new entry decisions more than macro does.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
     },
-    "selected": [
-      {
-        "ticker": "SU",
-        "portfolio": "MIMO_SHADOW",
-        "signal_type": "confirmed_leader",
-        "confidence": "high",
-        "reason_short": "8-week streak with +21.5% 13w edge, dems 15 and bull-aligned Koncorde",
-        "reason_full": "Suncor pairs an 8-week streak (+21.5% 13w vs SPY, +6.9% 4w) with dems=15 and spike_flag=false so weekly and daily flows agree, and Koncorde reads up on daily, 3D and weekly. Preferred over KOS (streak 1, -7.3% 4w) which lacks sustained leadership. Medium extension offset by outperform_d10=7.",
-        "comparative_edge": "Selected over KOS (PCS 76.2): SU's 8-week streak, +6.9% 4w outperformance and dems=15 outweigh KOS's 1-week streak and -7.3% 4w.",
-        "key_supporting_factors": [
-          "8-week unbroken streak with +21.5% 13-week outperformance vs SPY shows sustained institutional buying.",
-          "dems=15 with spike_flag=false and outperform_d10=7 confirms clean multi-day momentum, not a one-day spike.",
-          "Koncorde reads up on daily, 3D and weekly — full structural alignment with green at 118.65 on the 3D.",
-          "ret_4w_vs_spy of +6.9% keeps the near-term trend intact while several peers show flat or negative 4-week reads."
-        ],
-        "key_risks_or_contradictions": [
-          "Extension flag dist_sma20_atr_extreme: price sits far above its 20-day average and a pullback is plausible.",
-          "oil_gas exposure already totals about 16% of the shadow book via VLE.TO and WCP.TO, so this deepens that theme.",
-          "rot_score of 6 trails ABBV's 9, so Suncor is mid-pack on rotation rank despite the strong streak."
-        ]
-      },
-      {
-        "ticker": "ABBV",
-        "portfolio": "MIMO_SHADOW",
-        "signal_type": "early_rotation",
-        "confidence": "medium",
-        "reason_short": "Rotation score jumped to 9 with zero extension flags and bull-aligned Koncorde",
-        "reason_full": "AbbVie's rotation score jumped from 7 to 9, the highest in the set, with momentum_accel=true and zero extension flags. Koncorde reads up on daily, 3D and weekly. Preferred over PFE whose 8-week streak has stalled at -0.2% 4w as ABBV accelerates.",
-        "comparative_edge": "Beats PFE (PCS 77.0, streak 8 but ret_4w -0.2%): ABBV's rot=9 vs 7 and positive 4-week acceleration decide it.",
-        "key_supporting_factors": [
-          "Rotation score surged from 7 to 9 in the latest reading, the strongest rotation rank in the candidate set.",
-          "momentum_accel=true with ret_4w_vs_spy +2.3% and outperform_d10=7 shows the advance is broadening, not fading.",
-          "Koncorde is up on daily, 3D and weekly with 3D green at 111.91 — no distribution state on any timeframe.",
-          "Extension risk is low with no overextension flags, the cleanest entry profile among high-rotation names."
-        ],
-        "key_risks_or_contradictions": [
-          "Streak of only 2 weeks is short versus SU and PFE at 8 weeks each, so weekly persistence is unproven.",
-          "ret_13w_vs_spy of +9.1% is modest next to SU at +21.5%, indicating a newer rather than entrenched leader.",
-          "healthcare_largecap already holds about 11% of the shadow book through TMO and DHR."
-        ]
-      }
-    ],
+    "selected": [],
     "watch": [
       {
         "ticker": "PFE",
-        "reason": "8-week streak and +13.0% 13w edge are real, but ret_4w_vs_spy of -0.2% and dems=6 show the advance has stalled.",
-        "watch_trigger": "ret_4w_vs_spy turns positive with momentum_accel=true, or rotation score moves above 8."
-      },
-      {
-        "ticker": "TNZ.TO",
-        "reason": "PCS 85.5 with +47.0% 13w edge is strong, but spike_flag=true, weekly Koncorde in distribution and -2.4% 4w argue against entry now.",
-        "watch_trigger": "Weekly Koncorde returns to up and the 4-week edge turns positive without a single-day spike."
-      },
-      {
-        "ticker": "VAL",
-        "reason": "dems=14 with outperform_d10=7 is promising, but daily and 3D Koncorde both read distribution and the streak is only 1 week.",
-        "watch_trigger": "Koncorde 3D flips to up and the weekly streak extends past 3 weeks."
-      },
-      {
-        "ticker": "VLE.TO",
-        "reason": "Already held in MIMO_SHADOW at 8% size with PCS at 87.2 and an 8-week streak; no duplicate entry needed.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "Already held in MIMO_SHADOW at 8% size with PCS 85.5 and an 8-week streak; signal remains supportive in place.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "MLX.AX",
-        "reason": "Already held in MIMO_SHADOW; weekly metrics remain strong with an 8-week streak despite a soft 5-day tape.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "TMO",
-        "reason": "Already held in MIMO_SHADOW; PCS has risen to 81.2 with the streak now at 8 weeks and rotation at 8.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "DHR",
-        "reason": "Already held in MIMO_SHADOW; score climbed to 81.0 with rotation 8 and +7.3% 4-week edge since entry.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "SMCI",
-        "reason": "Already held in MIMO_SHADOW; 13-week edge of +42.0% supports the thesis even as the 5-day tape weakens.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "PLTR",
-        "reason": "Already held in MIMO_SHADOW; +52.7% 13-week edge keeps it among the book's leaders despite extension flags.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "AMD",
-        "reason": "Already held in MIMO_SHADOW; +20.2% 4-week edge is the strongest recent momentum in the book.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "META",
-        "reason": "Already held in MIMO_SHADOW; 6-week streak and +12.1% 4-week edge remain intact despite the score drift to 76.5.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "OSCR",
-        "reason": "Already held in MIMO_SHADOW since yesterday; dems=13 and outperform_d10=7 keep the early rotation alive.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "BTCC-B.TO",
-        "reason": "Already held in MIMO_SHADOW; streak has extended to 8 weeks with a +29.4% 13-week edge despite PCS drifting to 73.5.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "NVDA",
-        "reason": "Already held in MIMO_SHADOW; score stabilized at 72.8 on a 5-week streak with +5.8% 4-week edge.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
-      },
-      {
-        "ticker": "QQQ",
-        "reason": "Already held in MIMO_SHADOW; the 67.0 score is a single reading and exits are handled mechanically, so no discretionary action.",
-        "watch_trigger": "Owned position — a new SELECT would duplicate the open holding."
+        "reason": "Eight-week unbroken streak with PCS 77.0, bullish-aligned Koncorde across all three timeframes, and zero extension risk flags. However ret_4w_vs_spy is -0.2% indicating weekly momentum has stalled, and healthcare_largecap already holds 71.5% portfolio weight across TMO, DHR, and ABBV — adding a fourth healthcare name into extreme concentration requires clear momentum resumption to justify.",
+        "watch_trigger": "ret_4w_vs_spy turns positive confirming the 8-week streak is accelerating rather than stalling, ideally paired with healthcare theme weight declining below 60% through other position exits."
       }
     ],
     "rejected": [
       {
+        "ticker": "TNZ.TO",
+        "reason": "Eight-week streak and +47% 13w outperformance are strong, but ret_4w_vs_spy is -2.4% showing recent momentum has rolled over. Koncorde alignment is mixed with both daily and weekly in distribution state, spike_flag=true flags single-session concentration in recent gains, and oil_gas already commands 126% portfolio weight via VLE.TO, WCP.TO, and SU — the three held positions offer cleaner signals without distribution flags.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
         "ticker": "UCO",
-        "reason": "A 2x leveraged crude-oil commodity ETF is barred from direct selection; SU and WCP.TO express the same theme through equities.",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a 2x leveraged crude oil derivative that tracks commodity futures rather than equities. Hard rules prohibit selecting commodities directly, and oil_gas equity exposure is already at 126% via VLE.TO, WCP.TO, and SU — the appropriate equity proxies are already held.",
         "rejection_category": "not_tradable"
       },
       {
         "ticker": "KOS",
-        "reason": "Same oil_gas theme as SU but with a 1-week streak and -7.3% 4-week return versus SU's 8-week streak and +6.9%, so SU is the better energy entry.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "FRU.TO",
-        "reason": "Only +2.7% 13-week edge with -4.0% 4-week return, and Koncorde reads distribution on daily, 3D and weekly simultaneously — the weakest structure among energy candidates.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "HCC",
-        "reason": "Spike-driven move with -4.1% 4-week return, 3D Koncorde in distribution and commodities_metals already at 73.5% theme weight; MLX.AX covers metals with far stronger weekly metrics.",
+        "reason": "Only one week into its streak with ret_4w_vs_spy at -7.3% — the worst 4-week return among PCS 70+ candidates. Spike_flag=true means the recent 5.6% 5-day move concentrated in fewer sessions. VIGILAR signal (not EN_RADAR) and oil_gas at 126% portfolio weight eliminate any marginal entry value.",
         "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "CEPU",
-        "reason": "Score of 40.2 with -8.5% 4-week and -15.5% 13-week returns versus SPY and a zero-week streak shows no leadership in any timeframe.",
-        "rejection_category": "weak_relative_strength"
+        "ticker": "VAL",
+        "reason": "One-week streak is the shortest among PCS 70+ candidates, Koncorde 3D reads distribution with distribution_warning alignment, and spike_flag=true on a stock already 25% below its 52-week high. Oil_gas theme at 126% portfolio weight makes incremental allocation in an africa_oil subtheme unjustifiable.",
+        "rejection_category": "insufficient_conviction"
       },
       {
-        "ticker": "BSX",
-        "reason": "Score of 57.8 is below the 68 entry floor with -6.4% 4-week and -2.7% 13-week returns versus SPY and price 59% below its 52-week high.",
-        "rejection_category": "weak_relative_strength"
-      },
-      {
-        "ticker": "SEDANA.ST",
-        "reason": "Score of 52.0 with -14.8% 4-week return versus SPY, rotation score 1, and distribution warnings on daily and weekly timeframes.",
-        "rejection_category": "weak_relative_strength"
+        "ticker": "FRU.TO",
+        "reason": "All three Koncorde timeframes read distribution simultaneously — daily, 3D, and weekly — the most bearish structural alignment among all PCS 68+ candidates. Ret_4w_vs_spy is -4.0% and ret_13w_vs_spy is only +2.7%, the weakest long-term momentum among oil_gas peers. Oil_gas at 126% weight adds no diversification value.",
+        "rejection_category": "weak_flow"
       }
     ],
     "open_picks_review": [
@@ -208,81 +79,93 @@
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Score improved to 81.2 from 70.8 at entry with the streak now at 8 weeks and rotation at 8, so the healthcare leadership thesis is intact."
+        "reason": "PCS 81.2 (up from 70.8 entry), rotation score 8, 8-week streak with +5.6% 4w outperformance, Koncorde 3D and weekly both up — daily distribution is tactical noise within the structural uptrend."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Highest score in the universe at 87.2 with an 8-week streak and +10.6% 4-week edge; no reason to disturb the book's best position."
+        "reason": "PCS 87.2 (up from 85.5 entry), rotation score 8, 8-week streak with +10.6% 4w and +41.5% 13w outperformance, dems=18 confirming strong daily momentum acceleration."
       },
       {
         "ticker": "BTCC-B.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Streak has extended to 8 weeks with a +29.4% 13-week edge; the crypto diversifier is working despite the score drifting to 73.5."
+        "reason": "PCS 73.5 (down from 86.0 entry but rotation score sustained at 8), 8-week streak with +29.4% 13w outperformance provides crypto diversification from extreme oil_gas and us_tech_ai concentrations."
       },
       {
         "ticker": "MLX.AX",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Weekly metrics stay strong with an 8-week streak and +30.4% 13-week edge; the -9.8% 5-day slide is daily noise against that trend."
+        "reason": "PCS 81.2, rotation score 8, 8-week streak with +30.4% 13w outperformance. Daily distribution and dems=2 are tactical concerns but weekly structure remains intact at PCS well above floor."
       },
       {
         "ticker": "SMCI",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "A +42.0% 13-week edge and 6-week streak outweigh the -17.4% 5-day slide; weekly metrics lead, so no independent exit reason despite the distribution warning."
+        "reason": "PCS 80.5 with +42.0% 13w outperformance — the deepest multi-month leadership in the portfolio. Ret_5d of -19.4% and distribution_warning alignment are noted, but 6-week streak and weekly metrics remain above mechanical floor thresholds."
       },
       {
         "ticker": "PLTR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "A 5-week streak with +52.7% 13-week and +17.9% 4-week edges keeps it among the strongest positions in the book."
+        "reason": "PCS 80.5 with +52.7% 13w and +17.9% 4w outperformance — strongest 4-week return in the portfolio. Koncorde 3D distribution is intermediate caution but daily and weekly support the structure."
       },
       {
         "ticker": "NVDA",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Score stabilized at 72.8 on a 5-week streak with a +5.8% 4-week edge; no independent fundamental reason to exit beyond normal tape noise."
+        "reason": "PCS 72.8, 5-week streak with +5.8% 4w outperformance. Distribution_warning alignment noted but weekly metrics and 5-week streak justify holding above mechanical floor."
       },
       {
         "ticker": "META",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "6-week streak with +12.1% 4-week edge and 3D Koncorde up; the drop to 76.5 is a single score reading, not a thesis break."
+        "reason": "PCS 76.5, 6-week streak with +12.1% 4w outperformance — strong near-term momentum. Spike_flag noted but PCS well above floor and weekly structure intact."
       },
       {
         "ticker": "QQQ",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "The 67.0 score is one reading and deterministic floor handling governs exits; the 5-week streak and up-trending 3D still support the position."
+        "reason": "PCS 67.0 has fallen below the 68.0 entry threshold; mechanical floor system will manage exit via hysteresis and two-reading confirmation if breach is confirmed."
       },
       {
         "ticker": "AMD",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "The strongest 4-week edge in the book at +20.2% with a 6-week streak; hold despite the 3D distribution caution."
+        "reason": "PCS 76.5 with +20.2% 4w outperformance — second-strongest near-term momentum after PLTR. Distribution_warning noted but 6-week streak and PCS above floor support holding."
       },
       {
         "ticker": "DHR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Score climbed to 81.0 from 72.0 at entry with rotation at 8 and a +7.3% 4-week edge; the healthcare diversifier thesis is intact."
+        "reason": "PCS 81.0 (up from 72.0 entry), rotation score 8, 5-week streak with +7.3% 4w outperformance and dems=11 — daily momentum strengthening alongside weekly structure."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Score up to 85.5 with an 8-week streak and bull-aligned Koncorde; it remains the cleanest energy position in the book."
+        "reason": "PCS 85.5 (up from 81.0 entry), rotation score 8, 8-week streak with dems=17 showing fresh daily momentum acceleration. Daily distribution is tactical within the rising 3D and weekly structure."
       },
       {
         "ticker": "OSCR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Entered yesterday with dems=13 and outperform_d10=7; the -2.6% 4-week reading is noise at this stage of the position."
+        "reason": "PCS 74.5 with dems=15 — the strongest daily momentum score in the portfolio — and outperform_d10=8 confirming broad multi-day institutional accumulation. Healthcare_special diversifies from extreme largecap concentration."
+      },
+      {
+        "ticker": "SU",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Entered today at PCS 82.2, rotation score 6, 8-week streak with +21.5% 13w outperformance, dems=17 with spike_flag=false confirming clean daily momentum. Full Koncorde alignment across all timeframes."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "Entered today at PCS 79.0 with the highest rotation score in the candidate set at 9, momentum_accel=true, and bullish-aligned Koncorde. Short 2-week streak requires monitoring for weekly follow-through."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-10-14\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-14_1348\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 81.25 and a +12.5 one-week delta keeps risk appetite broad, though every major theme in the book is already crowded and several tech names show 3D distribution.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"SU\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"confirmed_leader\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"8-week streak with +21.5% 13w edge, dems 15 and bull-aligned Koncorde\",\n      \"reason_full\": \"Suncor pairs an 8-week streak (+21.5% 13w vs SPY, +6.9% 4w) with dems=15 and spike_flag=false so weekly and daily flows agree, and Koncorde reads up on daily, 3D and weekly. Preferred over KOS (streak 1, -7.3% 4w) which lacks sustained leadership. Medium extension offset by outperform_d10=7.\",\n      \"comparative_edge\": \"Selected over KOS (PCS 76.2): SU's 8-week streak, +6.9% 4w outperformance and dems=15 outweigh KOS's 1-week streak and -7.3% 4w.\",\n      \"key_supporting_factors\": [\n        \"8-week unbroken streak with +21.5% 13-week outperformance vs SPY shows sustained institutional buying.\",\n        \"dems=15 with spike_flag=false and outperform_d10=7 confirms clean multi-day momentum, not a one-day spike.\",\n        \"Koncorde reads up on daily, 3D and weekly — full structural alignment with green at 118.65 on the 3D.\",\n        \"ret_4w_vs_spy of +6.9% keeps the near-term trend intact while several peers show flat or negative 4-week reads.\"\n      ],\n      \"key_risks_or_contradictions\": [\n        \"Extension flag dist_sma20_atr_extreme: price sits far above its 20-day average and a pullback is plausible.\",\n        \"oil_gas exposure already totals about 16% of the shadow book via VLE.TO and WCP.TO, so this deepens that theme.\",\n        \"rot_score of 6 trails ABBV's 9, so Suncor is mid-pack on rotation rank despite th"
+  "raw_response_head": "{\n  \"date\": \"2026-10-14\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-14_2315\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with macro score 81.25 and +12.5 weekly delta supports risk-on positioning, but the portfolio's extreme theme concentration — oil_gas at 126%, healthcare at 71.5%, us_tech_ai at 71% — binds new entry decisions more than macro does.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"PFE\",\n      \"reason\": \"Eight-week unbroken streak with PCS 77.0, bullish-aligned Koncorde across all three timeframes, and zero extension risk flags. However ret_4w_vs_spy is -0.2% indicating weekly momentum has stalled, and healthcare_largecap already holds 71.5% portfolio weight across TMO, DHR, and ABBV — adding a fourth healthcare name into extreme concentration requires clear momentum resumption to justify.\",\n      \"watch_trigger\": \"ret_4w_vs_spy turns positive confirming the 8-week streak is accelerating rather than stalling, ideally paired with healthcare theme weight declining below 60% through other position exits.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"TNZ.TO\",\n      \"reason\": \"Eight-week streak and +47% 13w outperformance are strong, but ret_4w_vs_spy is -2.4% showing recent momentum has rolled over. Koncorde alignment is mixed with both daily and weekly in distribution state, spike_flag=true flags single-session concentration in recent gains, and oil_gas already commands 126% portfolio weight via VLE.TO, WCP.TO, and SU — the three held positions offer cleaner signals without distribution flags.\",\n      \"rejection_category\": \"insufficient_conviction\"\n    },\n    {\n      \"ticker\": \"UCO\",\n      \"reason\": \"ProShares Ultra Bloomberg Crude Oil is a 2x leveraged crude oil derivative that tracks commodity futures rather than equities. Hard rules prohibit selecting commodities directly, and oil_gas equity exposure is already at 126% via VLE.TO, WCP."
 }
