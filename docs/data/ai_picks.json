@@ -9783,7 +9783,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 16.670000076293945
+          "high_water_mark": 16.850000381469727
         },
         {
           "ticker": "UCO",
@@ -9806,7 +9806,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 61.505001068115234
+          "high_water_mark": 63.59000015258789
         },
         {
           "ticker": "TNZ.TO",
@@ -9909,7 +9909,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 19.65999984741211
+          "high_water_mark": 20.170000076293945
         },
         {
           "ticker": "PFE",
@@ -9928,7 +9928,7 @@
             "2024-04-12",
             "2026-07-17"
           ],
-          "high_water_mark": 29.440000534057617
+          "high_water_mark": 29.579999923706055
         },
         {
           "ticker": "HUM",
@@ -9952,7 +9952,7 @@
         {
           "ticker": "TMO",
           "entry_date": "2026-10-16",
-          "entry_price": null,
+          "entry_price": 690.0,
           "entry_pcs": 80.0,
           "size_pct": 8.0,
           "equal_weight_pct": 100.0,
@@ -9965,7 +9965,8 @@
           "corpus_date_range": [
             "2024-04-12",
             "2026-07-17"
-          ]
+          ],
+          "high_water_mark": 690.0
         }
       ],
       "history": [
@@ -12890,106 +12891,46 @@
   },
   "last_ai_review": {
     "date": "2026-10-16",
-    "market_read": "Macro regime is Bull Maduro but deteriorating sharply with a -12.5 1-month delta, creating a risk-off environment that penalizes high-beta momentum trades.",
+    "market_read": "Bull Maduro regime is deteriorating (macro down 6.25 points in a week and 12.5 in a month) while healthcare_largecap and oil_gas sit at extreme portfolio concentration, so the 12 open MIMO positions (leaders like VLE.TO at PCS 85.2 with an 8-week streak and PFE at 78.5) are held but no new capital is deployed into a narrowing, over-owned leadership.",
     "risk_posture": "cautious",
     "should_select": false,
     "watch": [
       {
+        "ticker": "HUM",
+        "reason": "Best non-open candidate on recent flow (4-week edge of +9.7% vs SPY, rotation score 8, extension risk low) but the weekly leadership is only a 2-week streak with a modest +4.0% 13-week edge, and it adds to healthcare_largecap which already carries 134% open weight across 25 positions.",
+        "watch_trigger": "Streak extends to 4+ weeks with the 13-week edge vs SPY rising above 10%, or healthcare_largecap open weight drops below 100% making room for a new laggard-to-leader entry."
+      },
+      {
         "ticker": "DPM.TO",
-        "reason": "PCS=67.5 with rot_score=8, bullish-aligned Koncorde and strong 13w outperformance of +22.7% vs SPY, but only a 2-week streak and a modest 4w return of +0.74% fail to justify entry against a deteriorating macro backdrop and existing 25% silver_gold_miners exposure.",
-        "watch_trigger": "A sustained 4-week streak with positive 4w outperformance vs SPY while PCS remains above 68."
+        "reason": "Rotation score of 8 with a +22.7% 13-week edge vs SPY and fully bullish Koncorde is attractive, but PCS of 67.5 sits below the 68.0 minimum entry level and the daily move is concentrated in one session (spike_flag with only 4 of 10 days beating SPY).",
+        "watch_trigger": "PCS prints above 68.5 for two consecutive readings while outperform_d10 reaches 6 or more, confirming the move is multi-day rather than a single-session spike."
       }
     ],
     "rejected": [
       {
         "ticker": "UCO",
-        "reason": "Leveraged commodity ETF tracking crude oil, which violates the hard rule against selecting commodities or macro indices directly.",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a 2x leveraged crude commodity vehicle; despite an 8-week streak and +44.4% 13-week edge it is not an eligible direct holding, and its 5-point extension reading with extreme RSI flags a late chase in an oil theme already at 146% open weight.",
         "rejection_category": "not_tradable"
       },
       {
         "ticker": "TNZ.TO",
-        "reason": "Koncorde alignment shows distribution_warning across 3D and weekly timeframes, and the -9.67% 4w return vs SPY indicates active momentum deterioration despite an 8-week streak.",
-        "rejection_category": "technical_overextension"
-      },
-      {
-        "ticker": "HUM",
-        "reason": "Healthcare_largecap theme already holds 126% portfolio weight, making this a high-concentration risk; combined with a spike_flag and only a 2-week streak, the signal is insufficient for new entry.",
-        "rejection_category": "macro_conflict"
-      },
-      {
-        "ticker": "CVE",
-        "reason": "Only a 1-week streak with a negative -4.30% 4w return vs SPY and a spike_flag, offering weak relative strength compared to established oil_gas leaders like VLE.TO.",
+        "reason": "Recent momentum has rolled over with a -9.7% 4-week return vs SPY and all three Koncorde timeframes reading distribution, so the 8-week streak and +29.9% 13-week edge are historical rather than current leadership.",
         "rejection_category": "weak_relative_strength"
       },
       {
         "ticker": "KOS",
-        "reason": "Negative -9.23% 4w return vs SPY with only a 1-week streak, and Koncorde 3D state is distribution, signaling intermediate-timeframe selling pressure.",
-        "rejection_category": "weak_flow"
+        "reason": "Only a 1-week streak with a -9.2% 4-week return vs SPY, spike-flagged daily move, and 3D Koncorde in distribution at trend 63.19; SU and WCP.TO already provide cleaner oil exposure with 8-week streaks.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "Rotation score 6 with a -4.3% 4-week return vs SPY and a 1-week streak offers no edge over the already-held SU (+7.1% 4w, 8-week streak) and WCP.TO, and oil_gas is the most concentrated theme in the book at 146% open weight.",
+        "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "FRU.TO",
-        "reason": "Koncorde alignment shows distribution_warning across all timeframes (daily, 3D, weekly), and the -6.87% 4w return vs SPY indicates deteriorating momentum.",
-        "rejection_category": "technical_overextension"
-      },
-      {
-        "ticker": "AMD",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "META",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "PLTR",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "DHR",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "PFE",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "ABBV",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "WCP.TO",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "SU",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "TMO",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "VLE.TO",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "BTCC-B.TO",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
-      },
-      {
-        "ticker": "OSCR",
-        "reason": "Already an open MIMO_SHADOW position; cannot be re-selected.",
-        "rejection_category": "better_alternative_available"
+        "reason": "Individual relative strength is neutral with a -6.9% 4-week and only +2.1% 13-week edge vs SPY, PCS 67.2 is below the 68.0 entry floor, and daily, 3D and weekly Koncorde all read distribution.",
+        "rejection_category": "weak_relative_strength"
       }
     ]
   }
