@@ -450,4 +450,4 @@
   global.RATIO_TYPES = RATIO_TYPES;
   global.RATIO_REGISTRY = RATIO_REGISTRY;
 
-})(window);
+})(typeof window !== 'undefined' ? window : module.exports);  // navegador: globals; Node: require() devuelve {RATIO_TYPES, RATIO_REGISTRY}

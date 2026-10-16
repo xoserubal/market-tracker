@@ -306,6 +306,15 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Registro diario de señales de Relative Flow Lab + informe de rendimiento posterior
+      # (2026-10-16). Mismo motor que relative.html (shared/relative-lib.js). Descarga ~5 años
+      # de Yahoo para los ~48 tickers del registry; la primera ejecucion hace backfill
+      # (source=backfill), las siguientes solo anaden barras nuevas (source=live). Ver CLAUDE.md.
+      - name: Run pipeline - Step 9g1c RFL signals log + report
+        run: node scripts/relative_signal_log.js
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Cartera sombra SCREENER_SHADOW (2026-10-09): una cartera, una pestaña por filtro del
       # Screener. 100% mecanica; lee el log de Step 9g1 y el snapshot de Step 9g. Ver
       # wiki/PREREGISTRO_SCREENER_SHADOW_V0.md y CLAUDE.md. No avisa por Telegram.

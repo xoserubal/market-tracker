@@ -17,6 +17,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
   <script src="/shared/relative-ratio-registry.js"></script>
+  <script src="/shared/relative-lib.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f0f2f5; color: #1f2933; }
@@ -161,80 +162,9 @@ const RATIO_GROUPS = CLUSTER_ORDER.map(id => ({ id, items: ALL_RATIO_DEFS.filter
 const toN = v => v != null && Number.isFinite(+v) ? +v : null;
 const fmtPct = v => { const n = toN(v); if (n == null) return "-"; return (n >= 0 ? "+" : "") + n.toFixed(1) + "%"; };
 const fmtNum = v => { const n = toN(v); if (n == null) return "-"; return n.toFixed(2); };
-const ret = (arr, bars) => {
-  if (!arr || arr.length <= bars) return null;
-  const last = arr[arr.length - 1]?.value, prev = arr[arr.length - 1 - bars]?.value;
-  return last && prev ? (last / prev - 1) * 100 : null;
-};
-const retWindow = (arr, endOffset, bars) => {
-  if (!arr || arr.length <= endOffset + bars) return null;
-  const end = arr[arr.length - 1 - endOffset]?.value, start = arr[arr.length - 1 - endOffset - bars]?.value;
-  return end && start ? (end / start - 1) * 100 : null;
-};
-const avg = arr => arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : null;
-const sma = (values, len) => values.length >= len ? avg(values.slice(-len)) : null;
-
-function calcRSI(values, period = 14) {
-  const v = values.filter(x => x != null);
-  if (v.length < period + 1) return null;
-  let gain = 0, loss = 0;
-  for (let i = 1; i <= period; i++) {
-    const d = v[i] - v[i-1];
-    if (d > 0) gain += d / period; else loss += -d / period;
-  }
-  for (let i = period + 1; i < v.length; i++) {
-    const d = v[i] - v[i-1];
-    gain = (gain * (period-1) + Math.max(d, 0)) / period;
-    loss = (loss * (period-1) + Math.max(-d, 0)) / period;
-  }
-  if (loss === 0) return 100;
-  return 100 - 100 / (1 + gain / loss);
-}
-
-function alignRatio(aSeries, bSeries) {
-  const bMap = Object.fromEntries((bSeries || []).map(p => [p.date, p.close]));
-  return (aSeries || [])
-    .filter(p => bMap[p.date] != null && p.close != null)
-    .map(p => ({ date: p.date, value: p.close / bMap[p.date] }))
-    .filter(p => Number.isFinite(p.value));
-}
-
-function buildRow(pair, history) {
-  const a = history[pair.a]?.series;
-  const b = history[pair.b]?.series;
-  const ratio = alignRatio(a, b);
-  if (ratio.length < 70) return { ...pair, error: true, ratio };
-
-  const values = ratio.map(p => p.value);
-  const last = values[values.length - 1];
-  const s20 = sma(values, 20);
-  const s63 = sma(values, 63);
-  const r1w = ret(ratio, 5);
-  const r1m = ret(ratio, 21);
-  const r3m = ret(ratio, 63);
-  const r6m = ret(ratio, 126);
-  const flowNow  = retWindow(ratio, 0, 5);
-  const flowPrev = retWindow(ratio, 5, 5);
-  const flowChange = flowNow != null && flowPrev != null ? flowNow - flowPrev : null;
-  const rsi = calcRSI(values);
-  const high52 = Math.max(...values.slice(-252));
-  const fromHigh = high52 ? (last / high52 - 1) * 100 : null;
-  const trend = last > s20 && s20 > s63 ? "Up" : last < s20 && s20 < s63 ? "Down" : "Mixed";
-  const trendAdj = trend === "Up" ? 2 : trend === "Down" ? -2 : 0;
-  const rsiAdj = rsi > 65 ? 1.5 : rsi > 55 ? 0.8 : rsi < 35 ? -1.5 : rsi < 45 ? -0.8 : 0;
-  const flowChangeAdj = flowChange == null ? 0 : Math.max(-3, Math.min(3, flowChange * 0.4));
-  const score = Math.round((((r1w ?? 0) * 0.5) + ((r1m ?? 0) * 0.7) + ((r3m ?? 0) * 0.25) + trendAdj + rsiAdj + flowChangeAdj) * 10) / 10;
-  return { ...pair, ratio, last, r1w, r1m, r3m, r6m, flowNow, flowPrev, flowChange, rsi, fromHigh, trend, score };
-}
-
-function classify(row) {
-  if (!row || row.error) return { label: "No data", bg: "#f0f0f0", fg: "#888" };
-  if (row.score >= 8)  return { label: "Leader",    bg: "#c8e6c9", fg: "#1b5e20" };
-  if (row.score >= 3)  return { label: "Improving",  bg: "#d0e8ff", fg: "#0d2e6e" };
-  if (row.score <= -8) return { label: "Laggard",    bg: "#ffcdd2", fg: "#b71c1c" };
-  if (row.score <= -3) return { label: "Weakening",  bg: "#fff0cc", fg: "#8a5200" };
-  return { label: "Neutral", bg: "#f0f0f0", fg: "#555" };
-}
+// ret/retWindow/avg/sma/calcRSI/alignRatio/buildRow/classify/coherentFlowDirection/
+// RATIO_SIGNAL_RANK viven ahora en /shared/relative-lib.js (compartido con el registro
+// diario de señales, scripts/relative_signal_log.js) — globals cargados en el <head>.
 
 function cellStyle(v) {
   const n = toN(v);
@@ -277,12 +207,7 @@ function flowChangeLabel(v) {
 // de entrada/salida. Formulación simétrica acordada con el usuario:
 //   Entrantes: flowChange > 0  AND score >= 0  AND trend !== "Down"
 //   Salientes: flowChange < 0  AND score <= 0  AND trend !== "Up"
-function coherentFlowDirection(row) {
-  if (!row || row.error || row.flowChange == null || row.score == null) return null;
-  if (row.flowChange > 0 && row.score >= 0 && row.trend !== "Down") return "in";
-  if (row.flowChange < 0 && row.score <= 0 && row.trend !== "Up") return "out";
-  return null;
-}
+// (coherentFlowDirection vive en /shared/relative-lib.js)
 
 // ── Coherencia Cross-Módulos (Fase 5a RFL v2) ───────────────────────────────
 // Ver wiki/MAPPING_SECTORIAL_CANONICO.md para el mapping sector→fase de Cycle
@@ -420,7 +345,7 @@ function findHistEntryAtOrBefore(history, daysAgo) {
 
 // Orden de "calidad" de clasificación, análogo a SIGNAL_RANK en rotacion.html — usado
 // solo para decidir UPGRADED/DOWNGRADED, no cambia classify().
-const RATIO_SIGNAL_RANK = { "Leader": 5, "Improving": 4, "Neutral": 3, "Weakening": 2, "Laggard": 1, "No data": 0 };
+// (RATIO_SIGNAL_RANK vive en /shared/relative-lib.js)
 
 // Δ score 1W + badge de cambio de clasificación + semanas consecutivas en la clasificación
 // actual. currentSignal debe ser classify(row).label ya calculado (post score), para que el
@@ -636,8 +561,147 @@ function QuestionBlock({ typeKey, rows, bootstrapReady, rowById, extraRows }) {
   );
 }
 
+// ── Historial propio de las señales (docs/data/relative_signal_report.json) ────────────
+// Generado por scripts/relative_signal_log.js (Step 9g1c del pipeline). Mide qué hizo el
+// ratio DESPUÉS de cada señal, con entrada ejecutable (cierre de la sesión siguiente).
+const SIGNAL_EVENT_LABELS = {
+  to_improving:  "Pasa a Improving",
+  to_leader:     "Pasa a Leader",
+  upgrade_1w:    "Sube de clasificación (vs 1 sem.)",
+  flow_in_top3:  "Top 3 Flow In",
+  // Salto diario del flow change: Δ = flow change de hoy − el de ayer, en puntos (lo que se ve en la tabla)
+  flow_jump_up:         "Salto del flow change ↑ (cualquier tamaño registrado)",
+  flow_jump_up_abs4:    "Flow change sube ≥ 4 pp en un día",
+  flow_jump_up_abs6:    "Flow change sube ≥ 6 pp en un día",
+  flow_jump_up_abs8:    "Flow change sube ≥ 8 pp en un día",
+  flow_jump_up_z25:     "Salto ↑ ≥ 2.5× la volatilidad habitual de ESE ratio",
+  flow_jump_up_z35:     "Salto ↑ ≥ 3.5× la volatilidad habitual de ESE ratio",
+  flow_jump_up_cross0:  "Salto ↑ que cruza el flow change de negativo a positivo",
+  flow_jump_up_coh:     "Salto ↑ coherente con el filtro de la página (score/trend de acuerdo)",
+  to_weakening:  "Pasa a Weakening",
+  to_laggard:    "Pasa a Laggard",
+  downgrade_1w:  "Baja de clasificación (vs 1 sem.)",
+  flow_out_top3: "Top 3 Flow Out",
+  flow_jump_down:        "Salto del flow change ↓ (cualquier tamaño registrado)",
+  flow_jump_down_abs4:   "Flow change baja ≥ 4 pp en un día",
+  flow_jump_down_abs6:   "Flow change baja ≥ 6 pp en un día",
+  flow_jump_down_abs8:   "Flow change baja ≥ 8 pp en un día",
+  flow_jump_down_z25:    "Salto ↓ ≥ 2.5× la volatilidad habitual de ESE ratio",
+  flow_jump_down_z35:    "Salto ↓ ≥ 3.5× la volatilidad habitual de ESE ratio",
+  flow_jump_down_cross0: "Salto ↓ que cruza el flow change de positivo a negativo",
+  flow_jump_down_coh:    "Salto ↓ coherente con el filtro de la página (score/trend de acuerdo)",
+};
+const SIGNAL_IN_ORDER  = ["to_improving", "to_leader", "upgrade_1w", "flow_in_top3",
+  "flow_jump_up_abs4", "flow_jump_up_abs6", "flow_jump_up_abs8", "flow_jump_up_z25", "flow_jump_up_z35", "flow_jump_up_cross0", "flow_jump_up_coh"];
+const SIGNAL_OUT_ORDER = ["to_weakening", "to_laggard", "downgrade_1w", "flow_out_top3",
+  "flow_jump_down_abs4", "flow_jump_down_abs6", "flow_jump_down_abs8", "flow_jump_down_z25", "flow_jump_down_z35", "flow_jump_down_cross0", "flow_jump_down_coh"];
+
+function SignalTrackRecord({ rep }) {
+  const [source, setSource] = React.useState("all");     // all | live | backfill
+  const [universe, setUniverse] = React.useState("market");   // market (solo ratios contra SPY/URTH) | all
+  const [regime, setRegime] = React.useState("all");     // all | bull | lateral | not_bear | bear
+  const [showOut, setShowOut] = React.useState(false);
+  if (!rep) return null;
+  const hs = rep.horizons_sessions || [1, 3, 5, 10, 21];
+  const pick = nm => rep.groups?.[universe]?.[regime]?.[source]?.[nm];
+  const order = showOut ? SIGNAL_IN_ORDER.concat(SIGNAL_OUT_ORDER) : SIGNAL_IN_ORDER;
+  const cell = x => {
+    if (!x || !x.n_matured) return <span style={{color:"#bbb"}}>—</span>;
+    const col = x.mean_excess >= 0 ? "#1a7a1a" : "#c0392b";
+    return (
+      <span style={{color: x.conclusive ? "#1f2933" : "#98a2b3"}} title={x.conclusive ? undefined : `n < ${rep.min_n_conclusive}: no concluyente`}>
+        <b style={{color: col}}>{x.mean_excess >= 0 ? "+" : ""}{x.mean_excess}</b> · {x.hit_rate_excess}% <span style={{fontSize:9}}>({x.n_matured})</span>
+      </span>
+    );
+  };
+  const recent = (rep.recent_events || []).filter(e => e.direction === "in" &&
+    (universe === "all" || e.vs_market) &&
+    (source === "all" || e.source === source)).slice(0, 24);
+  const REGIME_NAME = { bull: "alcista", lateral: "lateral", bear: "bajista" };
+  const mkBtn = (cur, set) => (id, label, title) => (
+    <button key={id} onClick={() => set(id)} title={title} style={{
+      background: cur === id ? "#0d47a1" : "#eef0f2", color: cur === id ? "#fff" : "#344054",
+      border: "1px solid " + (cur === id ? "#0d47a1" : "#d0d5dd"), borderRadius: 14, padding: "2px 10px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+  );
+  const btnU = mkBtn(universe, setUniverse), btnR = mkBtn(regime, setRegime), btn = mkBtn(source, setSource);
+  return (
+    <div className="panel" style={{marginBottom:12}}>
+      <div className="panel-title">Qué hizo el ratio después de cada señal (datos hasta {rep.last_bar_date})</div>
+      <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px 0",flexWrap:"wrap"}}>
+        <span style={{fontSize:10,color:"#667085"}}>Ratios:</span>
+        {btnU("market", `Solo contra el mercado (${rep.n_ratios_vs_market})`, "Ratios con SPY o URTH de denominador: XLV/SPY, XLE/SPY, IWM/SPY…")}
+        {btnU("all", `Todos (${rep.n_ratios})`, "Incluye pares intra-tema (AMR/BTU, JPY/Nikkei…)")}
+        <span style={{fontSize:10,color:"#667085",marginLeft:10}}>Mercado (SPY):</span>
+        {btnR("all", "Cualquiera")}{btnR("bull", "Alcista")}{btnR("lateral", "Lateral")}{btnR("not_bear", "Alcista + lateral", "Todo menos bajista")}{btnR("bear", "Bajista")}
+        <span style={{fontSize:10,color:"#98a2b3"}}>ahora: <b>{REGIME_NAME[rep.current_regime] || "—"}</b></span>
+      </div>
+      <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",flexWrap:"wrap"}}>
+        <span style={{fontSize:10,color:"#667085"}}>Fuente:</span>
+        {btn("all", "Todo")}{btn("live", `Solo live (${rep.live_events})`)}{btn("backfill", "Solo backfill")}
+        <label style={{fontSize:10.5,color:"#475467",marginLeft:10,cursor:"pointer"}}>
+          <input type="checkbox" checked={showOut} onChange={e => setShowOut(e.target.checked)} /> mostrar espejos de salida
+        </label>
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table>
+          <thead><tr>
+            <th style={{textAlign:"left"}}>Señal</th><th>Eventos indep.</th>
+            {hs.map(h => <th key={h}>{h} ses.: exceso · acierto (n)</th>)}
+          </tr></thead>
+          <tbody>
+            {order.map(nm => {
+              const d = pick(nm);
+              return (
+                <tr key={nm}>
+                  <td className="name" style={{textAlign:"left"}}>{SIGNAL_EVENT_LABELS[nm]}{SIGNAL_OUT_ORDER.includes(nm) ? <span style={{color:"#98a2b3",fontWeight:400}}> (salida · + = la señal acertó)</span> : null}</td>
+                  <td className="num">{d ? d.independent_events : "—"}</td>
+                  {hs.map(h => <td key={h} className="num">{d ? cell(d.horizons[h]) : <span style={{color:"#bbb"}}>—</span>}</td>)}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {recent.length > 0 && (
+        <div style={{padding:"8px 10px 2px"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#344054",marginBottom:4}}>Señales de entrada de las últimas semanas — lo que llevan hecho (retorno del ratio desde la entrada ejecutable)</div>
+          <table>
+            <thead><tr><th style={{textAlign:"left"}}>Señal el</th><th style={{textAlign:"left"}}>Ratio</th><th style={{textAlign:"left"}}>Evento</th><th>Estado</th><th>Flow chg</th><th>Δ flow (1 día)</th><th>Entrada</th><th>Sesiones</th><th>Hasta hoy</th>{hs.map(h => <th key={h}>{h} ses.</th>)}</tr></thead>
+            <tbody>
+              {recent.map((e, i) => (
+                <tr key={i}>
+                  <td className="num" style={{textAlign:"left"}}>{e.date}</td>
+                  <td className="name" style={{textAlign:"left"}}>{e.pair}</td>
+                  <td style={{textAlign:"left"}}>{SIGNAL_EVENT_LABELS[e.event]}</td>
+                  <td>{e.label} <span style={{color:"#999"}}>({e.score})</span></td>
+                  <td className="num">{e.flow_change == null ? "—" : fmtPct(e.flow_change)}</td>
+                  <td className="num" style={{fontWeight: e.d_flow != null ? 700 : 400, color: e.d_flow == null ? "#bbb" : e.d_flow >= 0 ? "#1a7a1a" : "#c0392b"}}>{e.d_flow == null ? "—" : (e.d_flow >= 0 ? "+" : "") + e.d_flow.toFixed(1) + (e.z != null ? " (" + e.z.toFixed(1) + "×)" : "")}</td>
+                  <td className="num">{e.entry_date || "mañana"}</td>
+                  <td className="num">{e.bars_since_entry ?? "—"}</td>
+                  <td className="num" style={{color: e.ret_to_date == null ? "#bbb" : e.ret_to_date >= 0 ? "#1a7a1a" : "#c0392b", fontWeight:700}}>{e.ret_to_date == null ? "—" : fmtPct(e.ret_to_date)}</td>
+                  {hs.map(h => <td key={h} className="num" style={{color: e.by_horizon[h] == null ? "#bbb" : e.by_horizon[h] >= 0 ? "#1a7a1a" : "#c0392b"}}>{e.by_horizon[h] == null ? "—" : fmtPct(e.by_horizon[h])}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="xmod-note">
+        Entrada ejecutable = cierre de la sesión <b>siguiente</b> a la señal (el cierre en que se detecta no se puede comprar). El ratio A/B ya es retorno relativo: «exceso» = retorno del ratio − mediana de los {rep.n_ratios} ratios esa misma fecha;
+        «acierto» = % de eventos con exceso positivo. Régimen de mercado según SPY en la fecha de la señal: bajista = cierre &lt; SMA200 · alcista = cierre ≥ SMA200, ≥ SMA50 y SMA50 ≥ SMA200 · lateral = el resto por encima de SMA200. «Contra el mercado» mide el exceso frente a la mediana de esos mismos ratios ese día. «Δ flow» = cambio del flow change de un día para otro, en puntos; entre paréntesis, cuántas veces su volatilidad habitual (media del |Δ| de las 126 sesiones previas de ese ratio, sin mirar al futuro). Evento independiente = sin otro del mismo ratio y tipo en las {rep.cooldown_bars} sesiones previas. En gris, n &lt; {rep.min_n_conclusive}: no concluyente.
+        <b> Backfill</b> = reconstrucción de ~5 años con las reglas actuales (<i>no</i> es fuera de muestra); <b>live</b> = capturado en el momento por el pipeline: solo esa fuente es evidencia limpia (hoy {rep.live_events} eventos).
+        Seguimiento descriptivo, sin corrección por comparaciones múltiples ni dev/test. Nota: medir a un plazo fijo no evalúa la señal de salida — ese es otro estudio.
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────
 function RelativeFlowLab() {
+  const [signalReport, setSignalReport] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/docs/data/relative_signal_report.json?t=" + Date.now()).then(r => r.ok ? r.json() : null).then(setSignalReport).catch(() => {});
+  }, []);
   const [history, setHistory] = React.useState({});
   const [loading, setLoading] = React.useState(new Set());
   const [toast,   setToast]   = React.useState(null);
@@ -1277,6 +1341,10 @@ function RelativeFlowLab() {
           Inputs) por no compartir el mismo ticker en los tres módulos.
         </div>
       </div>
+
+      {/* ── Historial propio de las señales (log diario en pipeline) ── */}
+      {signalReport && <div className="section-label">📈 Historial propio de las señales de entrada — qué hizo el ratio después</div>}
+      <SignalTrackRecord rep={signalReport} />
 
       {/* ── Cluster View (secundaria) ── */}
       <div className="section-label">🟡 Cluster Coherence View (secondary)</div>

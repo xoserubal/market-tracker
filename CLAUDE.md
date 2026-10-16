@@ -8024,3 +8024,52 @@ Idea del usuario ("monthly RSI moving above 70 which coincides with a price move
 - Columna "Margen": cuánto puede caer el precio antes de que el RSI provisional baje de 70 (bisección). Verificado: justo debajo del margen RSI 69,8, justo encima 70,1.
 - Limitaciones: "máximo histórico" = máximo de la ventana de ~3 años; con ~36 barras Wilder converge justo; sin calibrar contra rendimiento (observación). `screener_signal_log.js` recoge el filtro nuevo automáticamente (filas antiguas sin los campos → `no_data`, no cuenta como "sin candidatos").
 - Verificado con datos reales 2026-10-10: NVDA y SPY `candidate_provisional`, AAPL `rsi_only` (RSI 72, sin nuevo máximo), resto `none`. Requiere reiniciar `node server.js` (cambio en módulo compartido).
+
+---
+
+## Relative Flow Lab — registro diario de señales + historial propio (implementado 2026-10-16)
+
+Petición del usuario: tener para RFL el mismo seguimiento que el Screener (qué hicieron las señales después, a varios plazos). Fase 1 = RFL; **Flujos & Rotación queda para una fase 2** (su lógica está inline en `rotacion.html` y depende de estado persistido —régimen con histéresis, rachas—, así que la extracción es bastante más grande).
+
+**Por qué en el pipeline y no en la pestaña:** `relative_flow_history` (`state.json`) es local y solo se escribe al abrir la página (ya hubo una semana entera sin guardar por el 413 de `/api/state`, ver sección 2026-08-28).
+
+**Extracción a `shared/relative-lib.js` (nuevo):** `ret/retWindow/avg/sma/calcRSI/alignRatio/buildRow/classify/coherentFlowDirection/RATIO_SIGNAL_RANK` salen de `relative.html` (borradas ahí, ahora globals cargados por `<script>`) para que página y script usen EXACTAMENTE el mismo cálculo. Se añadió `buildRowFromRatio(pair, ratio)` (el núcleo de `buildRow`, sin realinear) para evaluar "el estado a fecha X" con `ratio.slice(0, i+1)`. `shared/relative-ratio-registry.js` ahora también es `require()`-able (`})(typeof window !== 'undefined' ? window : module.exports)`).
+
+**`scripts/relative_signal_log.js` (Step 9g1c, `continue-on-error`):** descarga ~5 años de Yahoo de los ~48 tickers del registry (~7 s), recorre cada ratio día a día y registra en `docs/data/relative_signal_log.jsonl` (~9 MB, dedup `date|ratio|event`, watermark por ratio en `relative_signal_log_state.json`) estos eventos: `to_improving`, `to_leader`, `upgrade_1w` (sube de clasificación vs 5 sesiones antes), `flow_in_top3` (Top 3 Flow In con el filtro de coherencia de la Fase 4) y sus espejos de salida (`to_weakening`, `to_laggard`, `downgrade_1w`, `flow_out_top3`) para ver si discriminan. La primera ejecución hace backfill (`source=backfill`); lo posterior es `source=live`. **El backfill NO es fuera de muestra** (las reglas se diseñaron mirando este tipo de datos); solo el live es evidencia limpia. Escribe también `docs/data/relative_signal_report.json`.
+
+**Medición:** el ratio A/B ya es retorno relativo → el retorno del evento es el del propio ratio. Entrada ejecutable = cierre de la sesión SIGUIENTE a la barra de la señal. Horizontes en **sesiones**: 1/3/5/10/21. Exceso = retorno − mediana de todos los ratios en esa fecha de entrada (con signo: en eventos de salida, + = la señal acertó). Evento independiente = sin otro del mismo ratio+tipo en las 10 sesiones previas. Concluyente solo con n ≥ 30. Descriptivo: sin corrección por comparaciones múltiples ni dev/test. El informe incluye `recent_events` (todo evento de los últimos 20 días con lo que lleva hecho hasta hoy, p. ej. el caso Healthcare).
+
+**Detalle de robustez:** la barra de HOY se descarta si es de hoy y aún no son las 21 UTC (Yahoo sirve el precio intradía si EE.UU. sigue abierto; un evento sobre una vela parcial quedaría registrado para siempre por el dedup).
+
+**UI:** sección "📈 Historial propio de las señales de entrada" en `relative.html` (antes de Cluster View): tabla por evento × horizonte con selector Todo/Solo live/Solo backfill, interruptor para mostrar los espejos de salida y tabla de señales recientes. Se lee de `/docs/data/relative_signal_report.json`.
+
+**Primer resultado (backfill, 50 ratios, ~38 000 eventos, ~1 100-1 500 independientes por señal):** a 1-21 sesiones ninguna señal de entrada se separa de cero (exceso medio ~0, acierto ~48-51 %, |t| < 2), coherente con el backtest previo (score↔alfa ≈ 0). Matices post-hoc, sin valor confirmatorio: `to_improving` en `regions` (n=176) +0.4 / 55 % a 3 sesiones y en `risk_appetite` por debajo del 50 %. Caso Healthcare: `XLV/SPY` `to_improving` el 2026-10-09 lleva +4.3 % desde la entrada ejecutable; pero el mismo ratio daba `to_laggard` el 2026-10-06 y `to_improving` 2026-09-28 con -3 a -4 % a 5 sesiones — el score gira muy deprisa. Un caso no es evidencia; para eso está el live.
+
+**Verificado:** log idempotente (2ª ejecución: 0 eventos nuevos), YAML del workflow válido (58 steps), JSX de `relative.html` transpila y el componente nuevo renderiza con el informe real (renderToStaticMarkup). Edge headless no devolvió nada en esta sesión (mismo problema ya documentado) → sin captura visual; revisar la sección en el navegador.
+
+**Fuera de alcance:** señales de salida como estudio (medir a plazo fijo no las evalúa), Flujos & Rotación (fase 2), umbrales calibrados, cualquier cambio a carteras/PCS/HARD_RULES. Ningún reinicio de `server.js` necesario (solo estáticos).
+
+### Adenda 2026-10-16: salto diario del flow change como señal propia
+
+El usuario señaló que en RFL mira tanto o más el **flow change** que la etiqueta, sobre todo cuando el número cambia mucho de un día para otro. Se añaden los eventos `flow_jump_up` / `flow_jump_down` (Δ = flowChange de hoy − el de ayer, en puntos) en `relative_signal_log.js`. Se registran si |Δ| ≥ 4 pp **o** |z| ≥ 2.5, con z = Δ / media(|Δ| de las 126 sesiones previas del PROPIO ratio, sin mirar al futuro). Motivo del z: un umbral absoluto único no es comparable entre ratios (salto mediano de `hyg_lqd` 0.5 pp frente a 5.2 pp en `vvix_vix`). Cada fila guarda `d_flow`, `z`, `cross0` (el salto cruza el flow change por cero) y `coherent` (coincide con `coherentFlowDirection`, el filtro de la página).
+
+El informe expande cada salto en tramos con independencia propia (`_abs4/6/8`, `_z25/_z35`, `_cross0`, `_coh`). El log pasa a ~13 MB (50 810 eventos de backfill). La tabla "Recientes" de `relative.html` muestra Flow chg y Δ flow (con las "×" su volatilidad habitual).
+
+**Primer resultado (backfill, sin valor confirmatorio):** los saltos AL ALZA son la primera señal con algo de estadística a favor: `flow_jump_up_abs6` n≈870, exceso medio +0.27 a 5 sesiones (t≈1.8) y +0.93 a 21 (t≈3.0, acierto ~51 %, mediana +0.16); `abs4` y `cross0` similares. Los saltos a la baja NO son simétricos (exceso ≈ 0 o ligeramente negativo): una fuerte caída del flow change no predice que el ratio siga cayendo. El filtro de coherencia de la página (`_coh`) no mejora al salto sin filtrar. Cautelas: ~25 tramos × 5 horizontes probados sin corrección por comparaciones múltiples, ratios del mismo día correlacionados (el t real es menor), ventanas de 5D solapadas. Es una pista para vigilar en el live, no un hallazgo.
+
+### Adenda 2 2026-10-16: solo ratios contra el mercado + régimen de mercado + 10 años
+
+A petición del usuario: los saltos que vigila son los de ratios **contra el mercado** (no pares intra-tema tipo AMR/BTU o JPY/Nikkei) y hay que ver la utilidad según el mercado sea alcista o, como mucho, lateral.
+
+- **"Contra el mercado"** = denominador SPY o URTH (`MARKET_BENCH`): 19 ratios (los `X/SPY` de sectores, IWM, TLT, HYG, GLD, BIL, XME… más EEM/URTH y URNM/URTH). El exceso de este universo se mide contra la mediana de **esos mismos** ratios ese día.
+- **Régimen** (según SPY en la fecha de la señal, sin mirar al futuro): bajista = cierre < SMA200 · alcista = cierre ≥ SMA200, ≥ SMA50 y SMA50 ≥ SMA200 · lateral = el resto por encima de SMA200. "No bajista" = alcista + lateral. Es una definición elegida por mí (el usuario no fijó una); si no encaja con su idea de "lateral", se cambia en `buildReport`.
+- **Rango 5y → 10y** (`RANGE`): con 5 años la SMA200 de SPY solo existe desde ~ago-2022 y el bajista de 2022 quedaba fuera. Con 10 años: 1 429 días alcistas, 448 laterales, 438 bajistas. Log: 97 367 filas, 16 MB (se compactó: `pair/type/rsi/trend/ratio_value` ya no se guardan, se derivan del registro). Rebuild ~14 s.
+- **Informe:** `groups[universo all|market][régimen all|bull|lateral|not_bear|bear][fuente all|live|backfill][evento]`. La vista de `relative.html` tiene selectores de Ratios (por defecto "Solo contra el mercado"), Mercado (SPY) y Fuente. La barra de hoy de SPY también se descarta si es parcial.
+
+**Resultado (backfill 10 años, solo contra el mercado; sin valor confirmatorio):**
+- **Plazos cortos (1-5 sesiones): nada.** Exceso medio ≈ 0, acierto 46-52 %, en ningún régimen. Los saltos del flow change al alza no dan ventaja a corto plazo.
+- **A 21 sesiones** sí aparece algo modesto: salto ↑ ≥ 4 pp +0.60 (t 2.8, n=751), ≥ 6 pp +0.92 (t 2.2, n=367); pero el acierto es ~46-48 % (< 50 %), es decir la media la sostienen pocos ganadores grandes. Por régimen, mejor en alcista y lateral que en bajista, sin diferencias claras.
+- **Saltos ↓ grandes: señal invertida** (21 ses.: exceso con signo -0.53, t -2.7): tras un hundimiento del flow change el ratio tiende a rebotar, no a seguir cayendo (coherente con la reversión a la media del análisis de Fase 4/5a, 2026-09-17).
+- Lo más consistente en alcista/no-bajista fue **`to_improving`** (+0.15 a +0.5, t≈2 en 1-21 ses.) y **`flow_in_top3`** (5-21 ses., t≈2.2-2.5), pero efectos pequeños (< 0.8 pp) y acierto ~50 %. En bajista, nada.
+- Cautelas: ~40 señales × 5 horizontes × 5 regímenes sin corrección por comparaciones múltiples; ratios del mismo día correlacionados; ventanas de 5D solapadas. Pistas para el live, no hallazgos.
+- **Saltos recientes contra el mercado** (régimen alcista en todos): XLE/SPY +9.0 pp (28-sep, +7.1 % desde entrada), XLP/SPY +7.8 (+4.9 %), XLV/SPY +5.4 (+2.8 %), pero URNM/URTH repite saltos de +5 a +9 pp sobre un ratio en Laggard y lleva -8 a -12 %: un salto fuerte desde un nivel muy negativo no equivale a recuperación (el nivel importa, de ahí el tramo `cross0`).
