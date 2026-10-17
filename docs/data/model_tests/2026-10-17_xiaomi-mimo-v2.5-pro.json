@@ -1,0 +1,150 @@
+{
+  "run_id": "2026-10-17_1215",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-10-17",
+  "summary": {
+    "date": "2026-10-17",
+    "run_id": "2026-10-17_1215",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 26,
+    "candidate_count": 61,
+    "input_tokens": 33972,
+    "output_tokens": 11862,
+    "cost_usd": 0.025098,
+    "latency_ms": 230289.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 90,
+    "selected_count": 0,
+    "watch_count": 2,
+    "rejected_count": 7,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": []
+  },
+  "quality_score": 90,
+  "response": {
+    "date": "2026-10-17",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-10-17_1215",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with accelerating deterioration — macro delta dropped 11.25 points in one week and 17.5 over a month, constraining new entries to only the strongest confirmed signals.",
+      "risk_posture": "cautious",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "DPM.TO",
+        "reason": "Rotation score 8 with +24.85% 13-week outperformance and +2.87% 4-week is strong, but konc_3d_state reads distribution with blue at -1.14 and spike_flag is true — the 3D timeframe must confirm the uptrend before entry.",
+        "watch_trigger": "Select if konc_3d_state returns to 'up' with spike_flag clearing while dems stays above 10."
+      },
+      {
+        "ticker": "HUM",
+        "reason": "Ret_4w of +7.11% shows recent acceleration with zero extension risk and bullish 3D/weekly Koncorde, but 13-week outperformance at only +0.65% is far too shallow versus peers delivering 10-48%, and dems=7 is weak.",
+        "watch_trigger": "Select if ret_13w_vs_spy exceeds 10% while maintaining ret_4w above 5% and dems rises above 10."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "TNZ.TO",
+        "reason": "Koncorde reads distribution_warning across all three timeframes — daily, 3D (blue at -13.23), and weekly — while ret_4w_vs_spy is negative at -1.41%. Despite PCS 85 and 8-week streak, the structural breakdown across every timeframe overrides the composite score.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a 2x leveraged derivative tracking crude oil futures, falling under the hard rule prohibiting direct commodity and futures selections regardless of its PCS 77.5 and strong momentum metrics.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "Only 1-week streak with negative ret_4w_vs_spy of -0.24% and VIGILAR signal (not EN_RADAR) indicates weak and unconfirmed leadership — peers like SU hold 8-week streaks with +11.98% 4w in the same canadian_oil subtheme.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "One-week streak with -2.45% ret_4w_vs_spy and spike_flag=true means recent gains concentrated in a single session; dist_52w_high at -16.77% shows deep drawdown from highs, and rot_score=6 trails the top candidates at 8-9.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "VAL",
+        "reason": "Koncorde distribution_warning with 3D blue at -11.34 and daily in distribution, combined with only 1-week streak, spike_flag=true, and dist_52w_high of -25.24% showing persistent weakness far from highs.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "reason": "Ret_4w_vs_spy deeply negative at -5.46% with only 1-week streak and mixed Koncorde alignment (daily up but weekly in distribution), indicating the signal lacks structural support despite the recent signal upgrade to VIGILAR.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "FRU.TO",
+        "reason": "Ret_13w_vs_spy of only +4.42% is the weakest among all PCS 70+ candidates — despite dems=13 and no spike flag, the shallow longer-term outperformance with just a 2-week streak does not justify entry versus peers delivering 10-48% on 8-week streaks.",
+        "rejection_category": "insufficient_conviction"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 83.0 with rot=9, 8-week streak, +28.12% 13w outperformance, and bullish-aligned Koncorde — the strongest position in the portfolio."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "8-week streak with +48.29% 13w and +11.48% 4w outperformance; bullish Koncorde alignment intact despite extension_risk at 5 points."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS declined to 64 from 86 entry but 8-week streak and +24.11% 13w persist; crypto theme_flow weakened (component_B from 22 to 10) — monitoring weekly continuation."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 79.0 with rot=9 and streak extended to 5 weeks; momentum accelerating with +7.64% 4w outperformance."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "8-week streak with +27.06% 13w and +8.89% 4w; extension_risk high at 4 points but weekly leadership and bullish Koncorde remain intact."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "EXIT",
+        "reason": "Early rotation thesis broken: dems collapsed from 16 to 7, konc_3d and daily both in distribution (blue at -6.11), ret_4w turned negative at -0.62%, and streak_days=0 — every signal that justified the 4-day-old entry has deteriorated."
+      },
+      {
+        "ticker": "SU",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "8-week streak with +23.08% 13w and +11.98% 4w; bullish-aligned Koncorde and dems=16 with no spike flag confirm clean momentum."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 71.5 with rot=7 and ret_4w +8.44%; konc_alignment is bullish_pending_3d_confirmation which is a softer caution than distribution_warning, not yet a trigger to exit."
+      },
+      {
+        "ticker": "PFE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 78.5 with rot=8, 8-week streak, +18.50% 13w; bullish-aligned Koncorde with dems=14 and spike_flag=false confirming clean multi-day momentum."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-10-17\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-17_1215\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with accelerating deterioration — macro delta dropped 11.25 points in one week and 17.5 over a month, constraining new entries to only the strongest confirmed signals.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"DPM.TO\",\n      \"reason\": \"Rotation score 8 with +24.85% 13-week outperformance and +2.87% 4-week is strong, but konc_3d_state reads distribution with blue at -1.14 and spike_flag is true — the 3D timeframe must confirm the uptrend before entry.\",\n      \"watch_trigger\": \"Select if konc_3d_state returns to 'up' with spike_flag clearing while dems stays above 10.\"\n    },\n    {\n      \"ticker\": \"HUM\",\n      \"reason\": \"Ret_4w of +7.11% shows recent acceleration with zero extension risk and bullish 3D/weekly Koncorde, but 13-week outperformance at only +0.65% is far too shallow versus peers delivering 10-48%, and dems=7 is weak.\",\n      \"watch_trigger\": \"Select if ret_13w_vs_spy exceeds 10% while maintaining ret_4w above 5% and dems rises above 10.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"TNZ.TO\",\n      \"reason\": \"Koncorde reads distribution_warning across all three timeframes — daily, 3D (blue at -13.23), and weekly — while ret_4w_vs_spy is negative at -1.41%. Despite PCS 85 and 8-week streak, the structural breakdown across every timeframe overrides the composite score.\",\n      \"rejection_category\": \"technical_overextension\"\n    },\n    {\n      \"ticker\": \"UCO\",\n      \"reason\": \"ProShares Ultra Bloomberg Crude Oil is a 2x leveraged derivative tracking crude oil futures, falling under the hard rule prohibiting direct commodity and futures selections regardless of its PCS 77.5 and strong momentum metrics.\",\n      \"rejection_category\": \"not_tradable\"\n    },\n    {\n      \"ticker\": \"CVE\",\n      \"reason\": \"Only 1-week str"
+}
