@@ -1,56 +1,154 @@
 {
-  "run_id": "2026-10-17_1215",
+  "run_id": "2026-10-17_2220",
   "model": "x-ai/grok-4.3",
   "date": "2026-10-17",
   "summary": {
     "date": "2026-10-17",
-    "run_id": "2026-10-17_1215",
+    "run_id": "2026-10-17_2220",
     "model": "x-ai/grok-4.3",
     "provider": "openrouter",
     "should_call_ai": true,
     "forced_run": false,
     "event_count": 26,
-    "candidate_count": 61,
-    "input_tokens": 188841,
-    "output_tokens": 18427,
-    "cost_usd": 0.282119,
-    "latency_ms": 120700.0,
+    "candidate_count": 59,
+    "input_tokens": 184808,
+    "output_tokens": 15963,
+    "cost_usd": 0.270917,
+    "latency_ms": 169125.0,
     "json_valid": true,
     "schema_valid": true,
-    "hard_rule_violations": 0,
-    "quality_score": 88,
+    "hard_rule_violations": 1,
+    "quality_score": 81,
     "selected_count": 0,
-    "watch_count": 0,
-    "rejected_count": 2,
+    "watch_count": 14,
+    "rejected_count": 7,
     "fallback_used": false,
     "error": null
   },
   "validation": {
-    "violations": [],
+    "violations": [
+      "Duplicate ticker: MRK"
+    ],
     "soft_warnings": []
   },
-  "quality_score": 88,
+  "quality_score": 81,
   "response": {
     "model": "x-ai/grok-4.3",
-    "run_id": "2026-10-17_1215",
+    "run_id": "2026-10-17_2220",
     "date": "2026-10-17",
     "decision_summary": {
-      "market_read": "Macro score 57.5 deteriorating sharply with -11.25 weekly and -17.5 monthly delta in Bull Maduro regime signals caution.",
+      "market_read": "Macro score 57.5 deteriorating sharply with -11.25 weekly delta in Bull Maduro regime; extreme healthcare and oil_gas concentrations.",
       "risk_posture": "cautious",
       "should_select_picks": false
     },
     "selected": [],
-    "watch": [],
-    "rejected": [
+    "watch": [
+      {
+        "ticker": "TNZ.TO",
+        "reason": "PCS 85 meets HIGH_CONVICTION threshold but distribution_warning on Koncorde 3D/weekly and macro deterioration advise caution.",
+        "watch_trigger": "Koncorde alignment shifts to bullish_aligned with rot_score sustaining above 8"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "PCS 77.5 with strong 13w outperformance but high extension_risk and oil_gas concentration already elevated.",
+        "watch_trigger": "Extension flags clear and macro_delta stabilizes"
+      },
+      {
+        "ticker": "OXY",
+        "reason": "PCS 76.2 but ret_4w_vs_spy only 4.88 and streak_weeks 3 limit conviction amid macro weakness.",
+        "watch_trigger": "streak_weeks reaches 6 with rot_score >=8"
+      },
+      {
+        "ticker": "TOU.TO",
+        "reason": "PCS 76 and rot_score jump to 8 but ret_13w_vs_spy only 3.81 and oil_gas concentration risk high.",
+        "watch_trigger": "ret_13w_vs_spy exceeds 15 with no distribution states"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "PCS 75 but ret_4w_vs_spy negative and streak_weeks only 1.",
+        "watch_trigger": "streak_weeks reaches 4 and dems >=14"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "PCS 74.5 with short streak and negative ret_4w_vs_spy.",
+        "watch_trigger": "streak_weeks >=4 and outperform_d10 >=7"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "PCS 74 but distribution_warning on Koncorde and weak ret_4w_vs_spy.",
+        "watch_trigger": "Koncorde alignment improves to bullish_aligned"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 73.5 with dems 7 and pending 3D confirmation only.",
+        "watch_trigger": "dems >=14 and outperform_d10 >=6"
+      },
+      {
+        "ticker": "LLY",
+        "reason": "PCS 73.2 but distribution_warning across multiple Koncorde timeframes.",
+        "watch_trigger": "Koncorde shifts fully bullish_aligned with no distribution"
+      },
+      {
+        "ticker": "VGZ",
+        "reason": "PCS 69.8 with distribution_warning and dems 5.",
+        "watch_trigger": "rot_score sustains 9 and Koncorde clears distribution"
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "reason": "PCS 69.2 with mixed Koncorde alignment and negative ret_4w_vs_spy.",
+        "watch_trigger": "ret_4w_vs_spy turns positive and streak_weeks >=3"
+      },
+      {
+        "ticker": "COST",
+        "reason": "PCS 68.2 but high extension_risk and pending 3D confirmation only.",
+        "watch_trigger": "extension_risk drops to low with outperform_d10 >=7"
+      },
+      {
+        "ticker": "CI",
+        "reason": "PCS 67.5 with dems 16 offset by short streak and macro deterioration.",
+        "watch_trigger": "streak_weeks reaches 4 with rot_score >=8"
+      },
       {
         "ticker": "BTCC-B.TO",
-        "reason": "Already open in multiple portfolios; no new entry permitted.",
+        "reason": "PCS 64 but already open in multiple portfolios; crypto theme at 28.5 percent weight requires monitoring before adding.",
+        "watch_trigger": "PCS above 75 with rot_score sustained above 8 and theme weight below 20 percent."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "DPM.TO",
+        "reason": "PCS 71 but already open in active_picks_relevant and distribution states on Koncorde.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "FRU.TO",
+        "reason": "PCS 70.8 but already open in active_picks_relevant.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "VAL",
+        "reason": "PCS 70.5 but already open in active_picks_relevant and distribution_warning.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "HUM",
+        "reason": "PCS 70 but already open in active_picks_relevant.",
         "rejection_category": "better_alternative_available"
       },
       {
         "ticker": "MRK",
-        "reason": "Already open in multiple portfolios; no new entry permitted.",
+        "reason": "PCS 66.5 but already open in active_picks_relevant.",
         "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "LCX.V",
+        "reason": "PCS 64 with rot_score only 4 and ret_4w_vs_spy -10.83 percent; oil_gas already 151 percent weight creates excessive concentration.",
+        "rejection_category": "macro_conflict"
+      },
+      {
+        "ticker": "MRK",
+        "reason": "PCS 66.5 but signal IGNORAR and healthcare_largecap at 151 percent weight with deteriorating macro delta.",
+        "rejection_category": "macro_conflict"
       }
     ],
     "open_picks_review": [
@@ -58,369 +156,363 @@
         "ticker": "BTCC-B.TO",
         "portfolio": "HIGH_CONVICTION",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok and crypto diversification still valuable despite macro deterioration."
       },
       {
         "ticker": "TMO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok with sustained 8-week streak."
       },
       {
         "ticker": "VLE.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok and oil_gas exposure provides diversification."
       },
       {
         "ticker": "DHR",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok with rot_score 9 and clean Koncorde."
       },
       {
         "ticker": "WCP.TO",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "OSCR",
-        "portfolio": "MIMO_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok with 8-week streak."
       },
       {
         "ticker": "SU",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok with dems 16 and full Koncorde alignment."
       },
       {
         "ticker": "ABBV",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok with rot_score jump to 9."
       },
       {
         "ticker": "PFE",
         "portfolio": "MIMO_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok with 8-week streak."
       },
       {
         "ticker": "^GDAXI",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Mirror position; mechanical status not applicable."
+        "reason": "mirror setup still active per entry rationale."
       },
       {
         "ticker": "EXH7.DE",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Mirror position; mechanical status not applicable."
+        "reason": "mirror setup still active per entry rationale."
       },
       {
         "ticker": "^FCHI",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Mirror position; mechanical status not applicable."
+        "reason": "mirror setup still active per entry rationale."
       },
       {
         "ticker": "RYM.NZ",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Mirror position; mechanical status not applicable."
+        "reason": "mirror setup still active per entry rationale."
       },
       {
         "ticker": "EXK",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Mirror position; mechanical status not applicable."
+        "reason": "mirror setup still active per entry rationale."
       },
       {
         "ticker": "IWM",
         "portfolio": "MIRROR_ESPEJO",
         "action": "HOLD",
-        "reason": "Mirror position; mechanical status not applicable."
+        "reason": "mirror setup still active per entry rationale."
       },
       {
         "ticker": "UCO",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "TNZ.TO",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "PLTR",
-        "portfolio": "CAVA_MACRO",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "META",
-        "portfolio": "CAVA_MACRO",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "HUM",
         "portfolio": "CAVA_MACRO",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "ISRG",
+        "portfolio": "CAVA_MACRO",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "XLU",
         "portfolio": "CRUCE_ROJO_D",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "setup still active."
       },
       {
         "ticker": "SLP.L",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "review_due but mechanical status supports hold."
       },
       {
         "ticker": "LCX.V",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "review_due but mechanical status supports hold."
       },
       {
         "ticker": "DPM.TO",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "review_due but mechanical status supports hold."
       },
       {
         "ticker": "KOS",
         "portfolio": "RANKING_SHADOW_EXPERIMENTAL",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "review_due but mechanical status supports hold."
       },
       {
         "ticker": "BBAR",
         "portfolio": "TRULLAS_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "HFG.DE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "ROOT",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "OSCR",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "NKE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "TLT",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "FRU.TO",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "SUPV",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "WHC.AX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "GTE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "VAL",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "PAM",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "BSX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "VRTX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "MRK",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "YAL.AX",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "JD",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "BNKR.TO",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "SSV.V",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "CEPU",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "VIST",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "AMR",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "HCC",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "SEDANA.ST",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "SE",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "TDOC",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "GGAL",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "TGS",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "ADS.DE",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "YPF",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "CVE",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "IRS",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
-      },
-      {
-        "ticker": "SMR.AX",
-        "portfolio": "SCREENER_SHADOW",
-        "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "CMCSA",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "CVS",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "SMR.AX",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "AMR",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "HCC",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "ADS.DE",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "SYK",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
       },
       {
         "ticker": "HIMS",
         "portfolio": "SCREENER_SHADOW",
         "action": "HOLD",
-        "reason": "Mechanical floor ok; maintain existing position."
+        "reason": "mechanical_floor_status ok."
+      },
+      {
+        "ticker": "YPF",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 43.8 and rot_score 5 remain under review."
+      },
+      {
+        "ticker": "CVE",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 75 and rot_score 6 remain under review."
+      },
+      {
+        "ticker": "IRS",
+        "portfolio": "SCREENER_SHADOW",
+        "action": "HOLD",
+        "reason": "Current PCS 30.8 and rot_score 3 remain under review."
       }
     ]
   },
-  "raw_response_head": "{\n  \"date\": \"2026-10-17\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-10-17_1215\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro score 57.5 with deteriorating trend and -11.25 weekly delta signals weakening regime support across themes.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"TNZ.TO\", \"reason\": \"PCS 85.0 but macro deteriorating and oil_gas concentration already extreme at 151 percent open weight\", \"watch_trigger\": \"Macro delta turns positive for two consecutive weeks and theme weight drops below 80 percent\"},\n    {\"ticker\": \"TMO\", \"reason\": \"PCS 83.0 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"VLE.TO\", \"reason\": \"PCS 82.2 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"DHR\", \"reason\": \"PCS 79.0 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"PFE\", \"reason\": \"PCS 78.5 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"ISRG\", \"reason\": \"PCS 78.0 with short streak_weeks=1 and healthcare concentration 139 percent\", \"watch_trigger\": \"streak_weeks reaches 4 and healthcare weight falls below 100 percent\"},\n    {\"ticker\": \"UCO\", \"reason\": \"PCS 77.5 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"WCP.TO\", \"reason\": \"PCS 77.5 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"SU\", \"reason\": \"PCS 77.2 already open in active picks\", \"watch_trigger\": \"Position closed and macro improves\"},\n    {\"ticker\": \"OXY\", \"reason\": \"PCS 76.2 but ret_13w_vs_spy only 10.44 and macro deteriorating\", \"watch_trigger\": \"ret_4w_vs_spy turns positive and macro delta improves\"},\n    {\"ticker\": \"TOU.TO\", \"reason\": \"PCS 76.0 already open in active picks\", \"watch_trigger\": \"Position closed and mac"
+  "raw_response_head": "{\n  \"date\": \"2026-10-17\",\n  \"model\": \"x-ai/grok-4.3\",\n  \"run_id\": \"2026-10-17_2220\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro score 57.5 deteriorating sharply with -11.25 weekly delta in Bull Maduro regime; extreme healthcare and oil_gas concentrations.\",\n    \"risk_posture\": \"cautious\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\"ticker\": \"TNZ.TO\", \"reason\": \"PCS 85 meets HIGH_CONVICTION threshold but distribution_warning on Koncorde 3D/weekly and macro deterioration advise caution.\", \"watch_trigger\": \"Koncorde alignment shifts to bullish_aligned with rot_score sustaining above 8\"},\n    {\"ticker\": \"UCO\", \"reason\": \"PCS 77.5 with strong 13w outperformance but high extension_risk and oil_gas concentration already elevated.\", \"watch_trigger\": \"Extension flags clear and macro_delta stabilizes\"},\n    {\"ticker\": \"OXY\", \"reason\": \"PCS 76.2 but ret_4w_vs_spy only 4.88 and streak_weeks 3 limit conviction amid macro weakness.\", \"watch_trigger\": \"streak_weeks reaches 6 with rot_score >=8\"},\n    {\"ticker\": \"TOU.TO\", \"reason\": \"PCS 76 and rot_score jump to 8 but ret_13w_vs_spy only 3.81 and oil_gas concentration risk high.\", \"watch_trigger\": \"ret_13w_vs_spy exceeds 15 with no distribution states\"},\n    {\"ticker\": \"CVE\", \"reason\": \"PCS 75 but ret_4w_vs_spy negative and streak_weeks only 1.\", \"watch_trigger\": \"streak_weeks reaches 4 and dems >=14\"},\n    {\"ticker\": \"KOS\", \"reason\": \"PCS 74.5 with short streak and negative ret_4w_vs_spy.\", \"watch_trigger\": \"streak_weeks >=4 and outperform_d10 >=7\"},\n    {\"ticker\": \"OSCR\", \"reason\": \"PCS 74 but distribution_warning on Koncorde and weak ret_4w_vs_spy.\", \"watch_trigger\": \"Koncorde alignment improves to bullish_aligned\"},\n    {\"ticker\": \"KIST.L\", \"reason\": \"PCS 73.5 with dems 7 and pending 3D confirmation only.\", \"watch_trigger\": \"dems >=14 and outperform_d10 >=6\"},\n    {\"ticker\": \"LLY\", \"reason\": \"PCS 73.2 but distribution_warning across multiple Koncorde timeframes.\", \"watch_trigger\": \"Koncorde "
 }
