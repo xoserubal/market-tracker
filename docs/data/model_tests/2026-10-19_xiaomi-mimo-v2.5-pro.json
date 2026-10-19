@@ -1,0 +1,187 @@
+{
+  "run_id": "2026-10-19_2340",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-10-19",
+  "summary": {
+    "date": "2026-10-19",
+    "run_id": "2026-10-19_2340",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 28,
+    "candidate_count": 60,
+    "input_tokens": 33448,
+    "output_tokens": 5663,
+    "cost_usd": 0.019477,
+    "latency_ms": 124011.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 1,
+    "quality_score": 81,
+    "selected_count": 0,
+    "watch_count": 2,
+    "rejected_count": 14,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [
+      "Duplicate ticker: OXY"
+    ],
+    "soft_warnings": [
+      "numeric_hallucination_suspected: WATCH ISRG cited dems=9.0 for PFE (actual=12)",
+      "numeric_hallucination_suspected: REJECT VAL cited dems=15.0 for VAL (actual=12)",
+      "numeric_hallucination_suspected: REJECT HUM cited pcs=83.5 for HUM (actual=75.0)",
+      "numeric_hallucination_suspected: REJECT HUM cited streak_weeks=8.0 for HUM (actual=2)",
+      "numeric_hallucination_suspected: REJECT MRK cited pcs=62.0 for MRK (actual=71.5)"
+    ]
+  },
+  "quality_score": 81,
+  "response": {
+    "date": "2026-10-19",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-10-19_2340",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime at macro_score 100 with improving trend (+42.5 delta 1w), but dems across the candidate set are broadly weak — no candidate offers a clean high-conviction entry to justify new positions.",
+      "risk_posture": "normal",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "ISRG",
+        "reason": "PCS 83, rot=8 with +10.9% ret_4w and +17.7% ret_13w vs SPY, and outperform_d10=8 confirms multi-day momentum. However, streak_weeks=1 is far too short vs peers like TMO and PFE at 8 weeks each; dems=9 with spike_flag=true means daily flow cannot independently support entry. Extension_risk medium (2 pts) is manageable, but the thin weekly persistence keeps this as WATCH.",
+        "watch_trigger": "Add 2-3 more consecutive weeks to the streak with ret_4w remaining positive and dems rising above 10, validating sustained leadership beyond the single breakout week."
+      },
+      {
+        "ticker": "UCO",
+        "reason": "PCS 82.5 with an 8-week streak, rot=7, +21.4% ret_4w and +50.3% ret_13w vs SPY — the strongest raw momentum profile in the entire set. Extensions risk is high (5 pts) with rsi_extreme and dist_sma20_atr_extreme flags, and dems=14 with spike_flag=false confirms daily momentum is genuine, not a one-day spike. The risk/reward favors patience: a consolidation phase that resets extension flags while preserving the 8-week streak would offer a superior entry.",
+        "watch_trigger": "Extension flags clearing (rsi returning below 70, dist_sma20_atr normalizing) while the 8-week streak and ret_4w remain positive, or a pullback to 20-day support with dems holding above 14."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "TNZ.TO",
+        "reason": "PCS 90 is the highest candidate, but konc_alignment is distribution_warning across all three timeframes (D=distribution, 3D=distribution with blue at -13.23, W=distribution). The ret_4w_vs_spy of -1.4% means the weekly streak is stale — 13-week leadership is not translating into recent gains. Selecting into a triple-distribution setup would be reckless regardless of PCS.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "OXY",
+        "reason": "Extension_risk extreme (6 pts) with rsi_extreme, dist_sma20_atr_high, and spike_flag=true — the worst extension profile in the set. Only a 3-week streak, daily konc_d_state=distribution, dems=8, and ret_4w of +4.9% does not compensate for the triple extension flags. The combination of extreme extension and daily distribution makes this untradeable at current levels.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "CVE",
+        "reason": "Weak weekly leadership: rot=6 is mid-pack, streak_weeks=1, ret_4w_vs_spy of -0.2%, and dems=12 with spike_flag=true means the recent 5d surge (+5.8%) concentrated in fewer sessions. Compared to SU (PCS=82.2, streak=8, +12% ret_4w, spike_flag=false), CVE's profile is categorically inferior across every leadership metric.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "Negative ret_4w_vs_spy of -2.4% and ret_10d of +11.8% with spike_flag=true — the recent 10-day advance is a single-session phenomenon on top of a deteriorating weekly trend. Streak_weeks=1 and rot=6 confirm this is not a sustained leader. Advanced metrics (konc_3d green at 65.11, trend at 69.02) are the weakest among oil_gas leaders, confirming under-the-hood deterioration.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "OXY",
+        "reason": "Duplicate entry removed — already listed above with extension risk as primary rejection.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "konc_3d_state=distribution (blue at -0.96) despite D and W reading up, creating a warning divergence. Streak_weeks=8 is strong but ret_4w of +3.8% and dems=7 with outperform_d10=5 show weakening near-term leadership. PCS 78.5 is lower than peers like PFE (83.5) and ABBV (76.5) without compensating advantages — no decisive edge exists.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "OSCR",
+        "reason": "konc_alignment=distribution_warning (3D blue at -6.11, green at 96.4) with dems=6, ret_4w of -0.6%, and rot=8 but only a 2-week streak. The 3D distribution state combined with negative 4-week return contradicts the rotation score. Healthcare_special theme also carries high concentration risk at 40% open weight.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "konc_3d_state=distribution (blue at -1.14) while D and W read up — the 3D timeframe is warning while weekly structure holds. dems=6 and ret_5d of -0.4% show daily flow has stalled. ret_13w of +24.9% is attractive but the distribution on 3D combined with weak daily momentum makes this a poor entry point.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "FRU.TO",
+        "reason": "konc_d_state=distribution despite the 3D reading up, creating a mixed alignment. dems=13 is close to the 14 threshold but remains below it. ret_13w_vs_spy of +4.4% is mediocre compared to WCP.TO (+27%) and SU (+23%) in the same oil_gas royalty subtheme. Only a 2-week streak with rot=7 offers no decisive edge over existing oil positions already in the portfolio.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "VAL",
+        "reason": "konc_alignment=distribution_warning across D, 3D (blue -11.35) and 3D distribution state. dems=15 at extreme level with extension_risk high (4 pts) and spike_flag creates the triple-warning combination (DEMS_EXTREME + extension_high + konc_distribution) that demands caution per framework guidance. ret_13w of +10.8% is moderate and does not justify the elevated risk profile.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "HUM",
+        "reason": "ret_13w_vs_spy of +0.65% is effectively flat — this is not demonstrating sustained leadership. dems=6, ret_5d of -2.8%, and rot=7 with only a 2-week streak. Compared to PFE which already occupies the healthcare slot with PCS 83.5, 8-week streak, and +18.5% 13w outperformance, HUM offers no compelling reason to add a weaker position in the same theme.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "reason": "konc_alignment is mixed (D up, 3D up with trend at 44.9 — structurally weak, W=distribution). ret_4w_vs_spy of -5.5% shows recent underperformance despite longer-term +11.3% edge. dems=11 with spike_flag=true and outperform_d10=4 suggests the recent run is concentrated in single sessions. PCS 74.2 is the lowest among actionable candidates, well below the better-confirmed names.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "MRK",
+        "reason": "konc_alignment=distribution_warning (3D blue at -15.48, W=distribution) with ret_4w of -1.1%, dems=8, streak_weeks=0, and rot=5 — the weakest combination of all candidates above PCS 62. The distribution state across multiple timeframes combined with zero weekly streak makes this unmonitorable at current levels.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "BSX",
+        "reason": "ret_13w_vs_spy of -1.7% is negative on the longer timeframe despite recent 7d outperformance of +7.3%. dems=11 with spike_flag=true and only a 0-week streak (streak_weeks=0) means the recent surge lacks structural confirmation. PCS 66.2 is marginal and rot=5 is the weakest among all non-trivially-eligible candidates.",
+        "rejection_category": "weak_relative_strength"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS surged to 88 from 57 entry, rot improved to 9 with 8-week streak at +28.1% 13w outperformance — strongest long-term read in the portfolio despite dems=10 remaining mediocre."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 87.2 with rot=8, 8-week streak, and +48.3% ret_13w_vs_spy — the best oil_gas leadership read, bullish-aligned across all timeframes."
+      },
+      {
+        "ticker": "BTCC-B.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS dropped to 69.0 entry-level but 8-week streak with +24% 13w outperformance persists; dems=5 is weak but weekly structure holds and crypto diversifies the portfolio."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS jumped to 84.0 from 72.0 entry with rot improving from 8 to 9, now on a 5-week streak with +7.6% ret_4w versus SPY — momentum is accelerating."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.5, dems surged to 18 (the highest in the enrollment), 8-week streak with +8.9% ret_4w and spike_flag=false — clean multi-day momentum confirmed."
+      },
+      {
+        "ticker": "SU",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.2, dems=14 with spike_flag=false on an 8-week streak at +23% 13w outperformance — weekly structure intact despite rsi_extreme flag."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 76.5, rot=7, 2-week streak with robust +10.2% 13w and +8.4% ret_4w acceleration, splitting the fastest short-term momentum in the healthcare bloc alongside PFE."
+      },
+      {
+        "ticker": "PFE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 83.5 with rot=8, 8-week streak, and +18.5% ret_13w — the strongest confirmed healthcare_largecap weekly leadership among all non-open names."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-10-19\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-19_2340\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime at macro_score 100 with improving trend (+42.5 delta 1w), but dems across the candidate set are broadly weak — no candidate offers a clean high-conviction entry to justify new positions.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"ISRG\",\n      \"reason\": \"PCS 83, rot=8 with +10.9% ret_4w and +17.7% ret_13w vs SPY, and outperform_d10=8 confirms multi-day momentum. However, streak_weeks=1 is far too short vs peers like TMO and PFE at 8 weeks each; dems=9 with spike_flag=true means daily flow cannot independently support entry. Extension_risk medium (2 pts) is manageable, but the thin weekly persistence keeps this as WATCH.\",\n      \"watch_trigger\": \"Add 2-3 more consecutive weeks to the streak with ret_4w remaining positive and dems rising above 10, validating sustained leadership beyond the single breakout week.\"\n    },\n    {\n      \"ticker\": \"UCO\",\n      \"reason\": \"PCS 82.5 with an 8-week streak, rot=7, +21.4% ret_4w and +50.3% ret_13w vs SPY — the strongest raw momentum profile in the entire set. Extensions risk is high (5 pts) with rsi_extreme and dist_sma20_atr_extreme flags, and dems=14 with spike_flag=false confirms daily momentum is genuine, not a one-day spike. The risk/reward favors patience: a consolidation phase that resets extension flags while preserving the 8-week streak would offer a superior entry.\",\n      \"watch_trigger\": \"Extension flags clearing (rsi returning below 70, dist_sma20_atr normalizing) while the 8-week streak and ret_4w remain positive, or a pullback to 20-day support with dems holding above 14.\"\n    }\n  ],\n  \"rejected\": [\n    {\n      \"ticker\": \"TNZ.TO\",\n      \"reason\": \"PCS 90 is the highest candidate, but konc_alignment is distribution_warning across all three timeframes (D=distribution, 3D=distribu"
+}
