@@ -596,6 +596,30 @@ const SIGNAL_IN_ORDER  = ["to_improving", "to_leader", "upgrade_1w", "flow_in_to
 const SIGNAL_OUT_ORDER = ["to_weakening", "to_laggard", "downgrade_1w", "flow_out_top3",
   "flow_jump_down_abs4", "flow_jump_down_abs6", "flow_jump_down_abs8", "flow_jump_down_z25", "flow_jump_down_z35", "flow_jump_down_cross0", "flow_jump_down_coh"];
 
+// Sparkline del flow change diario desde la barra de la señal hasta hoy, con línea de cero.
+// Escala simétrica no necesaria: se incluye el 0 en el rango para que la línea siempre se vea.
+function FlowPathSpark({ path }) {
+  const vals = (path || []).filter(v => v != null);
+  if (vals.length < 2) return <span style={{color:"#aaa",fontSize:10}} title="Aún no hay más de una barra desde la señal">1 día</span>;
+  const W = 96, H = 28, pad = 3;
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
+  const span = max - min || 1;
+  const X = i => pad + i / (vals.length - 1) * (W - 2 * pad);
+  const Y = v => H - pad - (v - min) / span * (H - 2 * pad);
+  const d = vals.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const last = vals[vals.length - 1];
+  const col = last >= 0 ? "#1a7a1a" : "#c0392b";
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{display:"block",margin:"0 auto"}}>
+      <title>{`Flow change desde la señal: ${vals.map(v => (v >= 0 ? "+" : "") + v.toFixed(1)).join(" → ")}`}</title>
+      <line x1="0" y1={Y(0)} x2={W} y2={Y(0)} stroke="#98a2b3" strokeWidth="1" strokeDasharray="3 2"/>
+      <path d={d} fill="none" stroke={col} strokeWidth="1.6"/>
+      <circle cx={X(0)} cy={Y(vals[0])} r="2.2" fill="#fff" stroke="#667085" strokeWidth="1.2"/>
+      <circle cx={X(vals.length - 1)} cy={Y(last)} r="2.2" fill={col}/>
+    </svg>
+  );
+}
+
 function SignalTrackRecord({ rep }) {
   const [source, setSource] = React.useState("all");     // all | live | backfill
   const [universe, setUniverse] = React.useState("market");   // market (solo ratios contra SPY/URTH) | all
@@ -643,7 +667,7 @@ function SignalTrackRecord({ rep }) {
         </label>
       </div>
       <div style={{overflowX:"auto"}}>
-        <table>
+        <table className="flow-table">
           <thead><tr>
             <th style={{textAlign:"left"}}>Señal</th><th>Eventos indep.</th>
             {hs.map(h => <th key={h}>{h} ses.: exceso · acierto (n)</th>)}
@@ -665,8 +689,9 @@ function SignalTrackRecord({ rep }) {
       {recent.length > 0 && (
         <div style={{padding:"8px 10px 2px"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#344054",marginBottom:4}}>Señales de entrada de las últimas semanas — lo que llevan hecho (retorno del ratio desde la entrada ejecutable)</div>
-          <table>
-            <thead><tr><th style={{textAlign:"left"}}>Señal el</th><th style={{textAlign:"left"}}>Ratio</th><th style={{textAlign:"left"}}>Evento</th><th>Estado</th><th>Flow chg</th><th>Δ flow (1 día)</th><th>Entrada</th><th>Sesiones</th><th>Hasta hoy</th>{hs.map(h => <th key={h}>{h} ses.</th>)}</tr></thead>
+          <div style={{overflowX:"auto"}}>
+          <table className="flow-table">
+            <thead><tr><th style={{textAlign:"left"}}>Señal el</th><th style={{textAlign:"left"}}>Ratio</th><th style={{textAlign:"left"}}>Evento</th><th>Estado</th><th>Flow chg</th><th>Δ flow (1 día)</th><th title="Evolución diaria del flow change desde la barra de la señal hasta hoy. Línea discontinua = 0; círculo vacío = día de la señal; punto = hoy.">Flow chg desde la señal</th><th>Entrada</th><th>Sesiones</th><th>Hasta hoy</th>{hs.map(h => <th key={h}>{h} ses.</th>)}</tr></thead>
             <tbody>
               {recent.map((e, i) => (
                 <tr key={i}>
@@ -676,6 +701,7 @@ function SignalTrackRecord({ rep }) {
                   <td>{e.label} <span style={{color:"#999"}}>({e.score})</span></td>
                   <td className="num">{e.flow_change == null ? "—" : fmtPct(e.flow_change)}</td>
                   <td className="num" style={{fontWeight: e.d_flow != null ? 700 : 400, color: e.d_flow == null ? "#bbb" : e.d_flow >= 0 ? "#1a7a1a" : "#c0392b"}}>{e.d_flow == null ? "—" : (e.d_flow >= 0 ? "+" : "") + e.d_flow.toFixed(1) + (e.z != null ? " (" + e.z.toFixed(1) + "×)" : "")}</td>
+                  <td><FlowPathSpark path={e.flow_path} /></td>
                   <td className="num">{e.entry_date || "mañana"}</td>
                   <td className="num">{e.bars_since_entry ?? "—"}</td>
                   <td className="num" style={{color: e.ret_to_date == null ? "#bbb" : e.ret_to_date >= 0 ? "#1a7a1a" : "#c0392b", fontWeight:700}}>{e.ret_to_date == null ? "—" : fmtPct(e.ret_to_date)}</td>
@@ -684,6 +710,7 @@ function SignalTrackRecord({ rep }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
       <div className="xmod-note">

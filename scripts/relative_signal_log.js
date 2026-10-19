@@ -383,12 +383,21 @@ function buildReport(R, events, hist) {
 
   // Eventos recientes con lo que llevan hecho hasta hoy (todos, no solo independientes)
   const cutoff = new Date(Date.now() - RECENT_DAYS * 86400000).toISOString().slice(0, 10);
+  // Evolución del flow change (el de la tabla de la página) desde la barra de la señal hasta hoy,
+  // para el sparkline. Se cachea por ratio+barra: varios eventos del mismo ratio comparten barras.
+  const fcCache = {};
+  const flowAt = (rr, j) => {
+    const k = rr.entry.id + '|' + j;
+    if (!(k in fcCache)) { const row = lib.buildRowFromRatio(rr.entry, rr.ratio.slice(0, j + 1)); fcCache[k] = row.error ? null : r2(row.flowChange, 1); }
+    return fcCache[k];
+  };
   const recent = evsBase.filter(x => x.ev.date >= cutoff).map(x => {
     const ratio = x.rr.ratio;
+    const flow_path = []; for (let j = x.i; j < ratio.length; j++) flow_path.push(flowAt(x.rr, j));
     const toDate = x.e < ratio.length ? (ratio[ratio.length - 1].value / ratio[x.e].value - 1) * 100 : null;
     return {
       date: x.ev.date, ratio_id: x.ev.ratio_id, pair: x.ev.pair, type: x.ev.type, event: x.ev.event, direction: x.ev.direction,
-      vs_market: x.market, regime: x.regime, source: x.ev.source, label: x.ev.label, score: x.ev.score, flow_change: x.ev.flow_change ?? null, d_flow: x.ev.d_flow ?? null, z: x.ev.z ?? null, entry_date: x.entryDate,
+      vs_market: x.market, regime: x.regime, source: x.ev.source, label: x.ev.label, score: x.ev.score, flow_change: x.ev.flow_change ?? null, d_flow: x.ev.d_flow ?? null, z: x.ev.z ?? null, entry_date: x.entryDate, flow_path,
       bars_since_entry: x.e < ratio.length ? ratio.length - 1 - x.e : null,
       ret_to_date: r2(toDate), signed_to_date: r2(toDate == null ? null : (x.ev.direction === 'in' ? 1 : -1) * toDate),
       by_horizon: Object.fromEntries(HORIZONS.map(h => [h, x.per[h] ? r2(x.per[h].signed) : null])),

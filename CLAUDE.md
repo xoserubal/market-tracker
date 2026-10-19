@@ -8073,3 +8073,9 @@ A petición del usuario: los saltos que vigila son los de ratios **contra el mer
 - Lo más consistente en alcista/no-bajista fue **`to_improving`** (+0.15 a +0.5, t≈2 en 1-21 ses.) y **`flow_in_top3`** (5-21 ses., t≈2.2-2.5), pero efectos pequeños (< 0.8 pp) y acierto ~50 %. En bajista, nada.
 - Cautelas: ~40 señales × 5 horizontes × 5 regímenes sin corrección por comparaciones múltiples; ratios del mismo día correlacionados; ventanas de 5D solapadas. Pistas para el live, no hallazgos.
 - **Saltos recientes contra el mercado** (régimen alcista en todos): XLE/SPY +9.0 pp (28-sep, +7.1 % desde entrada), XLP/SPY +7.8 (+4.9 %), XLV/SPY +5.4 (+2.8 %), pero URNM/URTH repite saltos de +5 a +9 pp sobre un ratio en Laggard y lleva -8 a -12 %: un salto fuerte desde un nivel muy negativo no equivale a recuperación (el nivel importa, de ahí el tramo `cross0`).
+
+### Adenda 3 2026-10-19: estilo de tabla y sparkline del flow change en "Historial propio"
+
+- Las dos tablas del bloque "Historial propio de las señales de entrada" (`relative.html`, `SignalTrackRecord`) eran `<table>` sin clase, por eso tenían otra fuente/tamaño/cabecera que el resto de la página. Ahora usan `className="flow-table"` (11px, cabecera azul, mismo estilo que las demás) y la tabla de señales recientes va envuelta en `overflowX:auto`.
+- Columna nueva **"Flow chg desde la señal"** en la tabla de señales recientes: sparkline (`FlowPathSpark`) del flow change diario desde la barra de la señal hasta hoy, con línea de cero discontinua, círculo vacío = día de la señal, punto = hoy (verde si hoy ≥ 0, rojo si < 0). Con una sola barra (señal de hoy) muestra "1 día".
+- Dato: `recent_events[].flow_path` en `relative_signal_report.json`, generado por `scripts/relative_signal_log.js` recalculando `buildRowFromRatio` en cada barra (cache por ratio+barra). Es el mismo flow change de la tabla de la página. El informe pasa a ~780 KB (+~230 KB). No toca el log ni los eventos.
