@@ -8079,3 +8079,11 @@ A petición del usuario: los saltos que vigila son los de ratios **contra el mer
 - Las dos tablas del bloque "Historial propio de las señales de entrada" (`relative.html`, `SignalTrackRecord`) eran `<table>` sin clase, por eso tenían otra fuente/tamaño/cabecera que el resto de la página. Ahora usan `className="flow-table"` (11px, cabecera azul, mismo estilo que las demás) y la tabla de señales recientes va envuelta en `overflowX:auto`.
 - Columna nueva **"Flow chg desde la señal"** en la tabla de señales recientes: sparkline (`FlowPathSpark`) del flow change diario desde la barra de la señal hasta hoy, con línea de cero discontinua, círculo vacío = día de la señal, punto = hoy (verde si hoy ≥ 0, rojo si < 0). Con una sola barra (señal de hoy) muestra "1 día".
 - Dato: `recent_events[].flow_path` en `relative_signal_report.json`, generado por `scripts/relative_signal_log.js` recalculando `buildRowFromRatio` en cada barra (cache por ratio+barra). Es el mismo flow change de la tabla de la página. El informe pasa a ~780 KB (+~230 KB). No toca el log ni los eventos.
+
+### Adenda 4 2026-10-20: la lista de señales recientes no perdía datos, pero el informe la recortaba
+
+El usuario vio la tabla de «señales recientes» más corta que el día anterior. El log (`relative_signal_log.jsonl`) siempre estuvo completo; el recorte era de presentación, por dos sitios:
+- `RECENT_DAYS = 20` en `relative_signal_log.js`: el informe solo conservaba 20 días naturales (~14 sesiones), así que ninguna señal llegaba nunca a madurar a 21 sesiones y las más antiguas desaparecían de la tabla cada día.
+- `.slice(0, 24)` fijo en `SignalTrackRecord` (`relative.html`): con el filtro «contra el mercado» había 53 señales de entrada y solo se veían 24.
+
+Fix: `RECENT_DAYS = 60` (~42 sesiones); `flow_path` solo se calcula para señales de entrada (las de salida no pintan sparkline). Informe: ~790 KB → ~1,4 MB. La tabla muestra las 15 más recientes con botón «Ver las N anteriores» y un checkbox «solo las que ya tienen 21 sesiones» (con el filtro actual, 142 de 230 señales de entrada ya tienen el horizonte de 21 sesiones). Sin cambios en eventos, medición ni tabla de agregados.

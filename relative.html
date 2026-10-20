@@ -625,6 +625,8 @@ function SignalTrackRecord({ rep }) {
   const [universe, setUniverse] = React.useState("market");   // market (solo ratios contra SPY/URTH) | all
   const [regime, setRegime] = React.useState("all");     // all | bull | lateral | not_bear | bear
   const [showOut, setShowOut] = React.useState(false);
+  const [showAllRecent, setShowAllRecent] = React.useState(false);
+  const [onlyMatured, setOnlyMatured] = React.useState(false);
   if (!rep) return null;
   const hs = rep.horizons_sessions || [1, 3, 5, 10, 21];
   const pick = nm => rep.groups?.[universe]?.[regime]?.[source]?.[nm];
@@ -638,9 +640,13 @@ function SignalTrackRecord({ rep }) {
       </span>
     );
   };
-  const recent = (rep.recent_events || []).filter(e => e.direction === "in" &&
+  const maxH = hs[hs.length - 1];
+  const recentAll = (rep.recent_events || []).filter(e => e.direction === "in" &&
     (universe === "all" || e.vs_market) &&
-    (source === "all" || e.source === source)).slice(0, 24);
+    (source === "all" || e.source === source) &&
+    (!onlyMatured || e.by_horizon[maxH] != null));
+  const RECENT_COLLAPSED = 15;
+  const recent = showAllRecent ? recentAll : recentAll.slice(0, RECENT_COLLAPSED);
   const REGIME_NAME = { bull: "alcista", lateral: "lateral", bear: "bajista" };
   const mkBtn = (cur, set) => (id, label, title) => (
     <button key={id} onClick={() => set(id)} title={title} style={{
@@ -686,9 +692,16 @@ function SignalTrackRecord({ rep }) {
           </tbody>
         </table>
       </div>
-      {recent.length > 0 && (
+      {(recentAll.length > 0 || onlyMatured) && (
         <div style={{padding:"8px 10px 2px"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"#344054",marginBottom:4}}>Señales de entrada de las últimas semanas — lo que llevan hecho (retorno del ratio desde la entrada ejecutable)</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#344054",marginBottom:4,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+            <span>Señales de entrada de los últimos ~60 días — lo que llevan hecho (retorno del ratio desde la entrada ejecutable)</span>
+            <label style={{fontSize:10.5,fontWeight:400,color:"#475467",cursor:"pointer"}}>
+              <input type="checkbox" checked={onlyMatured} onChange={e => setOnlyMatured(e.target.checked)} /> solo las que ya tienen {maxH} sesiones
+            </label>
+            <span style={{fontSize:10.5,fontWeight:400,color:"#98a2b3"}}>{recentAll.length} señales</span>
+          </div>
+          {recentAll.length === 0 && <div style={{fontSize:11,color:"#98a2b3",padding:"4px 0 8px"}}>Ninguna señal con estos filtros ha llegado todavía a {maxH} sesiones.</div>}
           <div style={{overflowX:"auto"}}>
           <table className="flow-table">
             <thead><tr><th style={{textAlign:"left"}}>Señal el</th><th style={{textAlign:"left"}}>Ratio</th><th style={{textAlign:"left"}}>Evento</th><th>Estado</th><th>Flow chg</th><th>Δ flow (1 día)</th><th title="Evolución diaria del flow change desde la barra de la señal hasta hoy. Línea discontinua = 0; círculo vacío = día de la señal; punto = hoy.">Flow chg desde la señal</th><th>Entrada</th><th>Sesiones</th><th>Hasta hoy</th>{hs.map(h => <th key={h}>{h} ses.</th>)}</tr></thead>
@@ -711,6 +724,12 @@ function SignalTrackRecord({ rep }) {
             </tbody>
           </table>
           </div>
+          {recentAll.length > RECENT_COLLAPSED && (
+            <button onClick={() => setShowAllRecent(v => !v)} style={{
+              margin:"6px 0 4px",background:"#eef0f2",color:"#344054",border:"1px solid #d0d5dd",borderRadius:14,padding:"3px 12px",fontSize:10.5,fontWeight:700,cursor:"pointer"}}>
+              {showAllRecent ? "▲ Mostrar solo las " + RECENT_COLLAPSED + " más recientes" : "▼ Ver las " + (recentAll.length - RECENT_COLLAPSED) + " anteriores"}
+            </button>
+          )}
         </div>
       )}
       <div className="xmod-note">

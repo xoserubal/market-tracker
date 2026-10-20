@@ -57,7 +57,7 @@ const HORIZONS = [1, 3, 5, 10, 21];       // sesiones desde la entrada ejecutabl
 const COOLDOWN_BARS = 10;
 const MIN_N_CONCLUSIVE = 30;
 const MIN_BARS = 70;                       // mismo mínimo que buildRowFromRatio
-const RECENT_DAYS = 20;
+const RECENT_DAYS = 60;   // ~42 sesiones: suficiente para que las señales maduren a 21 sesiones y seguir viéndolas
 const RANGE = '10y';   // 10 anios: con 5 el regimen (SMA200 de SPY) solo existe desde ~ago-2022 y el bajista de 2022 queda fuera
 // "Contra el mercado" = ratios cuyo denominador es un indice amplio (SPY, URTH). Son los que el usuario
 // vigila para saltos del flow change; el resto (AMR/BTU, JPY/Nikkei...) son pares intra-tema, otra cosa.
@@ -393,7 +393,8 @@ function buildReport(R, events, hist) {
   };
   const recent = evsBase.filter(x => x.ev.date >= cutoff).map(x => {
     const ratio = x.rr.ratio;
-    const flow_path = []; for (let j = x.i; j < ratio.length; j++) flow_path.push(flowAt(x.rr, j));
+    // el sparkline solo se pinta para señales de entrada; en las de salida se omite para no inflar el informe
+    const flow_path = []; if (x.ev.direction === 'in') for (let j = x.i; j < ratio.length; j++) flow_path.push(flowAt(x.rr, j));
     const toDate = x.e < ratio.length ? (ratio[ratio.length - 1].value / ratio[x.e].value - 1) * 100 : null;
     return {
       date: x.ev.date, ratio_id: x.ev.ratio_id, pair: x.ev.pair, type: x.ev.type, event: x.ev.event, direction: x.ev.direction,
