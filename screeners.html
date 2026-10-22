@@ -776,7 +776,8 @@ function ScreenerPage() {
               {['7d', '14d', '30d'].map(h => <th key={h}>{h}: n · exceso medio · aciertos</th>)}
             </tr></thead>
             <tbody>
-              {(activeScreener.filters || []).map(f => {
+              {[...(activeScreener.filters || []),
+                ...(activeScreener.id === 'macd_screener' ? [{ id: 'hist_cross_confirmed+line_near_zero_up', shortLabel: 'Cruce confirmado + Cerca de 0 (ambos)' }] : [])].map(f => {
                 const d = trackRecord.filters[f.id];
                 if (!d) return <tr key={f.id}><td>{f.shortLabel || f.label}</td><td colSpan={5} style={{ color: '#98a2b3' }}>sin eventos registrados todavía</td></tr>;
                 return (

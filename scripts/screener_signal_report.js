@@ -40,6 +40,8 @@ const FIRED_LOG = path.join(ROOT, 'docs', 'data', 'special_situations_fired.json
 const HORIZONS = [7, 14, 30];
 const COOLDOWN_DAYS = 10;
 const MIN_N = 30;
+// Combinaciones de filtros (candidato en TODOS a la vez el mismo día) que también se siguen.
+const COMBOS = [['hist_cross_confirmed', 'line_near_zero_up']];
 
 function readJsonl(file) {
   if (!fs.existsSync(file)) return [];
@@ -147,6 +149,15 @@ function buildReport() {
   // Eventos independientes por filtro.
   const byFilter = {};
   log.forEach(r => { (byFilter[r.filter] = byFilter[r.filter] || []).push(r); });
+  // Combinaciones: el registro guarda cada filtro en solitario, así que "ambos a la vez" se reconstruye
+  // cruzando por (fecha, ticker). Mismo método de eventos/horizontes que un filtro simple.
+  COMBOS.forEach(ids => {
+    const sets = ids.map(id => new Set((byFilter[id] || []).map(r => r.date + '|' + r.ticker)));
+    const base = byFilter[ids[0]] || [];
+    const rows = base.filter(r => sets.every(st => st.has(r.date + '|' + r.ticker)))
+      .map(r => ({ ...r, filter: ids.join('+') }));
+    if (rows.length) byFilter[ids.join('+')] = rows;
+  });
   const filters = {};
   Object.entries(byFilter).forEach(([filter, rows]) => {
     rows.sort((a, b) => a.date.localeCompare(b.date));
@@ -159,7 +170,8 @@ function buildReport() {
       events.push(r);
     });
 
-    const cov = Object.entries(state.coverage || {}).filter(([, f]) => (f[filter] || 0) > 0).map(([d]) => d).sort();
+    const parts = filter.split('+');
+    const cov = Object.entries(state.coverage || {}).filter(([, f]) => parts.every(p => (f[p] || 0) > 0)).map(([d]) => d).sort();
     const horizons = {}, horizonsExec = {};
     HORIZONS.forEach(h => {
       const rets = [], excess = [];

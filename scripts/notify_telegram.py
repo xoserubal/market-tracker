@@ -69,6 +69,8 @@ PORTFOLIO_LABELS = {
     "TRULLAS_SHADOW":               "Trullas (shadow)",
     "TRULLAS_FLEX":                 "Trullas flex (shadow)",
     "SCREENER_SHADOW":              "Screener (shadow)",
+    "MACD_COMBO_CD":                "MACD combo (con cooldown)",
+    "MACD_COMBO_SD":                "MACD combo (sin cooldown)",
 }
 
 CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
@@ -108,7 +110,7 @@ def send_telegram(token: str, chat_id: str, text: str) -> bool:
 
 
 # Carteras que se registran pero NO avisan por Telegram (muchos eventos/día, solo recogida de datos).
-SILENT_PORTFOLIOS = {"SCREENER_SHADOW"}
+SILENT_PORTFOLIOS = {"SCREENER_SHADOW", "MACD_COMBO_CD", "MACD_COMBO_SD"}
 
 
 def _find_unnotified(picks: dict, state: dict) -> tuple[list[dict], list[dict]]:

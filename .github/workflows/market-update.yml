@@ -323,6 +323,15 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Carteras MACD_COMBO_CD / MACD_COMBO_SD (2026-10-22): entran con 'Cruce confirmado' + 'Cerca de 0' a la
+      # vez, salen con cruce a la baja del histograma MACD. Mecanicas, sin Telegram. Tambien guarda el PCS diario
+      # (pcs_daily_log.jsonl) y el seguimiento por barra (macd_combo_tracking.jsonl). Ver
+      # wiki/PREREGISTRO_MACD_COMBO_V0.md.
+      - name: Run pipeline - Step 9g1d MACD combo portfolios
+        run: python scripts/macd_combo_portfolio.py --apply
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Captura diaria del universo de index.html ("Market Tracker" —
       # macro/ciclo + indices/sectores/regiones/materias primas), analoga a
       # Step 9g pero para un universo distinto (portfolio.json no cubre

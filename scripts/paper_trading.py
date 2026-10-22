@@ -1357,6 +1357,8 @@ _PORTFOLIO_LABELS = {
     "TRULLAS_SHADOW":               "Trullas (shadow)",
     "TRULLAS_FLEX":                 "Trullas flex (shadow)",
     "SCREENER_SHADOW":              "Screener (shadow)",
+    "MACD_COMBO_CD":                "MACD combo (con cooldown)",
+    "MACD_COMBO_SD":                "MACD combo (sin cooldown)",
 }
 _CONVICTION_EMOJI = {"high": "🟢", "medium": "🟡", "low": "⚪"}
 
