@@ -1,0 +1,144 @@
+{
+  "run_id": "2026-10-22_1351",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-10-22",
+  "summary": {
+    "date": "2026-10-22",
+    "run_id": "2026-10-22_1351",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 30,
+    "candidate_count": 58,
+    "input_tokens": 33783,
+    "output_tokens": 3517,
+    "cost_usd": 0.017755,
+    "latency_ms": 132303.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 89,
+    "selected_count": 0,
+    "watch_count": 4,
+    "rejected_count": 5,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": []
+  },
+  "quality_score": 89,
+  "response": {
+    "date": "2026-10-22",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-10-22_1351",
+    "decision_summary": {
+      "market_read": "Bull Maduro regime with strong macro delta (+23.75 weekly) and improving trend, but nearly every high-PCS candidate is either already open in MIMO_SHADOW or carries distribution_warning on Koncorde 3D, leaving no fresh high-conviction entries.",
+      "risk_posture": "normal",
+      "should_select_picks": false
+    },
+    "selected": [],
+    "watch": [
+      {
+        "ticker": "TNZ.TO",
+        "reason": "Highest PCS in the universe at 89.2 with 8-week streak, +27.2% 13w outperformance, and rot=8, but konc_3d_state='distribution' with konc_alignment='distribution_warning' and ret_4w_vs_spy of only +2.6% — the 4-week momentum has decelerated sharply while price tries to reaccelerate behind a spike_flag. Current daily distribution plus weekly distribution is too conflicted for a fresh MIMO_SHADOW entry.",
+        "watch_trigger": "Select if konc_3d_state clears from distribution to 'up' on the next reading, WITH ret_4w_vs_spy > 5% confirming the acceleration is real and not just a single-day bounce."
+      },
+      {
+        "ticker": "OXY",
+        "reason": "PCS 86.0 with rot=8, +11.4% 4w outperformance, and strong oil_gas theme flow; konc_3d and weekly are up confirming structural support. However, konc_d_state='distribution', extension_risk=high with 5 extension points including dist_sma20_atr_high and rsi_high, and the stock already sits 7% below its 52w high after a spike. Entering here would be chasing the oil_gas move late.",
+        "watch_trigger": "Select if daily timeframes clears distribution, extension_points falls below 3, and a pullback to the 20-day SMA provides a cleaner risk/reward entry point."
+      },
+      {
+        "ticker": "VNOM",
+        "reason": "PCS 77.2 with dems=15 and momentum_accel=true — the cleanest early-momentum signal among non-open candidates. However, PCS 77.2 is below the MIMO_SHADOW 68 minimum entry (wait — re-checking: pcs_min_entry=68, so 77.2 does clear). The real blocker: konc_alignment is bullish_aligned but 13w ret_4w of +12.1% paired with negative 13w_vs_spy of -2.2% means short-term outperformance is racing well ahead of the structural trend — this is a momentum spike not a confirmed leader.",
+        "watch_trigger": "Select when ret_13w_vs_spy turns positive (>0%), confirming the weekly trend has turned alongside the daily momentum burst; VNOM with bullish 13w and dems=15 would be a clean confirmed_leader signal."
+      },
+      {
+        "ticker": "MRK",
+        "reason": "PCS 73.5 with dems=14, momentum_accel=true, and 3-day streak — the only candidate combining clean bullish 3D Koncorde with both satisfying high dems and no extension flags. The constraint: konc_alignment is 'mixed' with weekly in distribution, and ret_4w_vs_spy is -0.6% indicating the 4-week trend has not yet turned positive. Mixed alignment plus negative near-term relative returns makes this a watch, not a select.",
+        "watch_trigger": "Select if weekly konc clears distribution, ret_4w_vs_spy turns positive (>1%), and PCS crosses above 76, confirming institutional rotation has taken hold."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "CRON",
+        "reason": "Despite dems=14 and 6-day streak, konc_3d_state and konc_w_state are both 'distribution' with alignment='distribution_warning', and ret_4w_vs_spy is -1.1%. The green reading at 87.97 and 3D trend at 72.64 are well below the clean up-state peers (DHR's 129.93, VLE.TO's 150.31). Cannabis theme is already 25% concentrated. Selecting into a dual-distribution reading on a decelerating weekly trend would be chasing a daily spike, not accumulating a structural leader.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "SEDANA.ST",
+        "reason": "PCS 82.2 with weeks 2 but dems=5, ret_5d_vs_spy=-1.7%, streak_days=0, and konc_3d_state='up' but konc_w in distribution with mixed alignment. The -1.7% 5d return means the stock is actively underperforming SPY this week — daily flow is negative. Weekly distribution contradicts the 3D up reading, and with 0 streak days the most recent daily momentum has already broken.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "PCS 74.5 but konc_3d_state='distribution' with 3D blue at -0.84, ret_4w_vs_spy=-2.8%, and dems=6. An 8-week history streak is notable, but the 4-week return has turned negative (-2.8%) while the 3D timeframe signals active distribution. With extension_risk=low but a deteriorating short-term trend inside 3D distribution, the better oil_gas plays (VLE.TO, WCP.TO already in the portfolio) are structurally cleaner.",
+        "rejection_category": "better_alternative_available"
+      },
+      {
+        "ticker": "DPM.TO",
+        "reason": "PCS 62.0 with theme_flow component at just 8.0 out of 24 ceiling (theme_avg_weak flag), ret_4w_vs_spy=-2.8%, dems=7, and konc_3d_state='distribution' at -3.12. The weekly trend is still up but the 3D actively distributes with the lowest blue reading (-3.12) among all candidates. Silver_gold_miners theme is already 45% concentrated. This is a failing weekly leader rotating downward, not an early entry opportunity.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "BSX",
+        "reason": "PCS 62.2 with rot=4, ret_4w=-0.9%, 13w=-2.9%, streak_weeks=0, dist_52w_high=-57.9%, and component_C_individual_rs at just 7/23 — the weakest relative strength in any candidate above PCS 60. Meanwhile konc_d_state='distribution' with 3D green at only 36.22. There is no flow, no streak, and no structural support, placing it 30+ points below the clean leaders like DHR (84.2, rot=9, streak=6).",
+        "rejection_category": "weak_relative_strength"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved from 70.8 at entry to 84.8, rot_score rose from 7 to 10 (highest in the set), streak extended to 8 weeks; konc_alignment is bullish_pending_3d_confirmation with positive 3D trend at 103.89 — weekly leadership remains fully intact."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS rose to 87.2 with 8-week streak now delivering +12.9% ret_4w_vs_spy, rot=8, and bullish-aligned Koncorde with green at 150.31 — the strongest 3D green reading in the entire candidate set; spike_flag noted but extension_points only 3."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS surged from 72.0 at entry to 84.2, rot=9 up from 8, streak extended from 4 to 6 weeks; konc_green=129.93 is the second-highest 3D reading among all candidates, outperform_d10=8, bullish-aligned across all three timeframes."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS at 82.5, 8-week streak intact with +10.2% ret_4w_vs_spy improving from the -2.8% reading at entry; extension_risk extreme acknowledged but the weekly trend is reaccelerating and konc_3d green=129.68 confirms institutional accumulation."
+      },
+      {
+        "ticker": "SU",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS at 83.0 with 8-week streak now delivering +18.1% ret_4w_vs_spy — the strongest 4-week return among all oil_gas candidates; extension_risk extreme acknowledged but dems=11 is improving and weekly trend is accelerating sharply, not rolling over."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved from 79.0 to 83.5 and the weekly streak extended from 2 to 3 weeks with ret_4w accelerating to +8.1%; rot=8 with bullish-aligned Koncorde, low extension risk, and outperform_d10=7 — the weekly momentum is broadening as expected."
+      },
+      {
+        "ticker": "PFE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS at 83.5 (up from 78.5), 8-week streak intact with +6.9% 4w and +16.5% 13w outperformance. Konc_d=distribution is acknowledged — this is tactical noise in a structurally bullish setup per framework guidance. Extension risk high (4 pts) flagged but weekly trend has not reversed."
+      },
+      {
+        "ticker": "ISRG",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS rose from 78.5 to 87.0, rot=8, +6.5% 4w and +24.0% 13w outperformance vs SPY remain intact; outperform_d10=8 confirms multi-day continuation despite spike_flag. Bullish_pending_3d_confirmation noted with konc_w=up and 3D green=111.71 — structural accumulation ongoing."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-10-22\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-10-22_1351\",\n  \"decision_summary\": {\n    \"market_read\": \"Bull Maduro regime with strong macro delta (+23.75 weekly) and improving trend, but nearly every high-PCS candidate is either already open in MIMO_SHADOW or carries distribution_warning on Koncorde 3D, leaving no fresh high-conviction entries.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": false\n  },\n  \"selected\": [],\n  \"watch\": [\n    {\n      \"ticker\": \"TNZ.TO\",\n      \"reason\": \"Highest PCS in the universe at 89.2 with 8-week streak, +27.2% 13w outperformance, and rot=8, but konc_3d_state='distribution' with konc_alignment='distribution_warning' and ret_4w_vs_spy of only +2.6% — the 4-week momentum has decelerated sharply while price tries to reaccelerate behind a spike_flag. Current daily distribution plus weekly distribution is too conflicted for a fresh MIMO_SHADOW entry.\",\n      \"watch_trigger\": \"Select if konc_3d_state clears from distribution to 'up' on the next reading, WITH ret_4w_vs_spy > 5% confirming the acceleration is real and not just a single-day bounce.\"\n    },\n    {\n      \"ticker\": \"OXY\",\n      \"reason\": \"PCS 86.0 with rot=8, +11.4% 4w outperformance, and strong oil_gas theme flow; konc_3d and weekly are up confirming structural support. However, konc_d_state='distribution', extension_risk=high with 5 extension points including dist_sma20_atr_high and rsi_high, and the stock already sits 7% below its 52w high after a spike. Entering here would be chasing the oil_gas move late.\",\n      \"watch_trigger\": \"Select if daily timeframes clears distribution, extension_points falls below 3, and a pullback to the 20-day SMA provides a cleaner risk/reward entry point.\"\n    },\n    {\n      \"ticker\": \"VNOM\",\n      \"reason\": \"PCS 77.2 with dems=15 and momentum_accel=true — the cleanest early-momentum signal among non-open candidates. However, PCS 77.2 is below the MIMO_SHADOW 68 minimum entry (wait — re-checking"
+}
