@@ -24,6 +24,7 @@ try { require('dotenv').config(); } catch (e) { /* dotenv opcional en CI */ }
 const DATA = path.join(__dirname, '..', 'docs', 'data');
 const STATE = path.join(DATA, 'inverse_etf_alert_state.json');
 const OPTIONS = path.join(DATA, 'inverse_etf_options_summary.jsonl');
+const RECS = path.join(DATA, 'inverse_etf_recommendations.json');
 const DRY = process.argv.includes('--dry-run');
 
 function loadState() {
@@ -37,6 +38,27 @@ function latestOptionsByTicker() {
     try { const r = JSON.parse(l); if (!out[r.ticker] || r.date >= out[r.ticker].date) out[r.ticker] = r; } catch (e) { /* línea corrupta */ }
   });
   return out;
+}
+
+// Estructuras acordadas (put spread + call spread vendido) de
+// inverse_etf_recommendations.json, calificadas por scripts/inverse_etf_recommendations.py.
+function loadRecs() {
+  try { return JSON.parse(fs.readFileSync(RECS, 'utf8')); } catch (e) { return null; }
+}
+const GRADE_TXT = { ok: 'operable', marginal: 'con cautelas', avoid: 'NO fiable' };
+function recoLines(recs, ticker) {
+  const r = recs && recs.tickers && recs.tickers[ticker];
+  if (!r || r.error) return '';
+  const pick = (list, id) => (list || []).find(s => s.id === id);
+  const parts = [pick(r.put, r.agreed && r.agreed.put), pick(r.call, r.agreed && r.agreed.call)].filter(Boolean);
+  if (!parts.length) return '\n<b>Opciones sugeridas:</b> la cadena guardada no ofrece las estructuras acordadas.';
+  let t = `\n<b>Opciones sugeridas</b> (cadena ${r.chain_date}):`;
+  parts.forEach(x => {
+    const k = x.kind === 'call_spread' ? `vende ${x.strikes.short}/compra ${x.strikes.long}` : `compra ${x.strikes.long}/vende ${x.strikes.short}`;
+    t += `\n• ${x.label} ${x.expiry} (${x.dte}d) ${k}: ${x.premium.type === 'credit' ? 'crédito' : 'débito'} ${x.premium.est}, riesgo máx ${x.max_loss}${x.grade === 'avoid' ? '' : `, rent. máx ${x.ret_max_pct}% (TAE ${x.tae_max_pct}%)`} → ${GRADE_TXT[x.grade]}`;
+  });
+  if (parts.every(x => x.grade === 'avoid')) t += '\n⚠️ Con estas cotizaciones guardadas ninguna es fiable: contrasta la cadena en vivo antes de operar.';
+  return t;
 }
 
 async function sendTelegram(text) {
@@ -60,6 +82,7 @@ const pct = v => v == null ? '—' : (v >= 0 ? '+' : '') + v + '%';
     ...unders.map(async s => { try { underQuotes[s] = await buildQuoteData(s); } catch (err) { console.log(`${s}: error ${err.message}`); } }),
   ]);
   const opts = latestOptionsByTicker();
+  const recs = loadRecs();
 
   const state = loadState();
   const today = new Date().toISOString().slice(0, 10);
@@ -93,6 +116,8 @@ const pct = v => v == null ? '—' : (v >= 0 ? '+' : '') + v + '%';
           (o.spread != null ? ` · spread ${(o.spread * 100).toFixed(0)}%${o.illiquid ? ' ⚠️ ilíquido' : ''}` : '');
         if (o.term && o.term.ratio != null) t += `\nPlazos: IV 3m/1m ${o.term.ratio.toFixed(2)} ${o.term.inverted ? '(invertida: put 3m más barata por unidad de vol)' : '(normal)'}`;
       } else t += '\nOpciones: sin snapshot todavía.';
+      if (c.state === 'fading') t += recoLines(recs, e.ticker);
+      else t += '\nEsperar el giro antes de entrar; estructuras preparadas en la página Inversos.';
       return t;
     });
     const msg = `📉 <b>ETFs inversos</b>\n\n${blocks.join('\n\n')}\n\n<i>Solo observación. Revisa la cadena y el riesgo de cola antes de operar.</i>`;

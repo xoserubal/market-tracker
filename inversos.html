@@ -172,8 +172,261 @@ function EtfCard({ etf, q, u, c, o }) {
   );
 }
 
+// ── Recomendación de operación con opciones ─────────────────────────────────
+// Generada por scripts/inverse_etf_recommendations.py (menú fijo de estructuras
+// con la última cadena guardada). La página solo decide CUÁNDO mostrarla según
+// el estado en vivo del ETF (ventana / spike / calma).
+async function fetchRecommendations() {
+  try {
+    const r = await fetch('/docs/data/inverse_etf_recommendations.json?t=' + Date.now());
+    return r.ok ? await r.json() : null;
+  } catch (e) { return null; }
+}
+
+const GRADE_META = {
+  ok:       { label: 'Operable',         bg: '#c8e6c9', fg: '#1b5e20' },
+  marginal: { label: 'Con cautelas',     bg: '#fff3cd', fg: '#8a5200' },
+  avoid:    { label: 'No fiable',        bg: '#ffcdd2', fg: '#b71c1c' },
+};
+const money = v => v == null ? '—' : (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('es-ES', { maximumFractionDigits: 0 });
+const per100 = v => v == null ? null : v * 100;
+
+function legsText(s) {
+  if (s.kind === 'put') return `compra ${s.strikes.long}`;
+  if (s.kind === 'call_spread') return `vende ${s.strikes.short} / compra ${s.strikes.long}`;
+  return `compra ${s.strikes.long} / vende ${s.strikes.short}`;
+}
+
+function contractsFor(maxLossPerShare, budget) {
+  const per = maxLossPerShare * 100;
+  return per > 0 ? Math.floor(budget / per) : 0;
+}
+
+function evText(s) {
+  const ev = s.ev_by_basis && s.ev_by_basis[s.primary_basis];
+  if (!ev) return { txt: 'sin distribución', cls: '' };
+  if (!s.ev_reliable) return { txt: 'no fiable (cadena ilíquida)', cls: '' };
+  const sign = ev.ev_pnl >= 0 ? '+' : '−';
+  return {
+    txt: `${sign}${money(Math.abs(ev.ev_pnl) * 100)}/contrato (${ev.ev_ret_pct >= 0 ? '+' : ''}${ev.ev_ret_pct}% · TAE ${ev.tae_ev_pct >= 0 ? '+' : ''}${ev.tae_ev_pct}%)`,
+    cls: ev.ev_pnl >= 0 ? 'pos' : 'neg',
+  };
+}
+
+function StructTable({ list, budget, title }) {
+  if (!list || !list.length) return <div className="sub" style={{ margin: '4px 0 8px' }}>{title}: sin estructura utilizable con la cadena guardada.</div>;
+  return (
+    <div style={{ overflowX: 'auto', marginBottom: 6 }}>
+      <table>
+        <caption style={{ textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#344054', padding: '4px 0' }}>{title}</caption>
+        <thead><tr>
+          <th>Estructura</th><th>Venc. (DTE)</th><th>Strikes</th><th>Prima estimada</th><th>Rango (media–peor)</th>
+          <th>Riesgo máx.</th><th>Gan. máx.</th><th>Breakeven</th><th>Rent. máx. (TAE)</th>
+          <th>Valor esperado (histórico)</th><th>P ganar / P pérd. máx.</th><th>Calidad</th><th>Contratos</th>
+        </tr></thead>
+        <tbody>
+          {list.map(s => {
+            const g = GRADE_META[s.grade];
+            const ev = s.ev_by_basis && s.ev_by_basis[s.primary_basis];
+            const n = contractsFor(s.max_loss, budget);
+            const isCredit = s.premium.type === 'credit';
+            const e = evText(s);
+            return (
+              <tr key={s.id} style={s.agreed ? { background: '#f6fbf7' } : null}>
+                <td><b>{s.label}</b>{s.agreed && <span title="Estructura acordada" style={{ color: '#2e7d32' }}> ★</span>}</td>
+                <td>{s.expiry} ({s.dte})</td>
+                <td>{legsText(s)}</td>
+                <td><b>{isCredit ? 'crédito ' : 'débito '}{fmtN(s.premium.est)}</b> <span style={{ color: '#98a2b3' }}>({money(s.premium.est * 100)}/contr.)</span></td>
+                <td style={{ color: '#667085' }}>{fmtN(s.premium.mid)} – {fmtN(s.premium.worst)}</td>
+                <td className="neg">{fmtN(s.max_loss)} ({money(s.max_loss * 100)})</td>
+                <td className="pos">{fmtN(s.max_gain)} ({money(s.max_gain * 100)})</td>
+                <td>{fmtN(s.breakeven)} ({fmtPct(s.breakeven_pct)})</td>
+                <td>{s.ret_max_pct}% (TAE {s.tae_max_pct}%)</td>
+                <td className={e.cls}>{e.txt}</td>
+                <td>{ev && s.ev_reliable ? `${ev.p_profit}% / ${ev.p_max_loss}%` : '—'}{ev && <span style={{ color: '#98a2b3' }}> n={ev.n}</span>}</td>
+                <td><span className="badge" title={s.grade_reason} style={{ background: g.bg, color: g.fg }}>{g.label}</span></td>
+                <td>{n > 0 ? <b>{n}</b> : <span style={{ color: '#98a2b3' }} title="El riesgo de 1 contrato supera el presupuesto">0</span>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PayoffTable({ r }) {
+  const all = [...(r.put || []), ...(r.call || [])];
+  if (!all.length) return null;
+  const moves = all[0].payoff.map(p => p.move_pct);
+  return (
+    <details>
+      <summary>Escenarios al vencimiento (P&amp;L por contrato según lo que haga el ETF)</summary>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ marginTop: 6 }}>
+          <thead><tr><th>Estructura</th>{moves.map(m => <th key={m}>{m > 0 ? '+' : ''}{m}%</th>)}</tr></thead>
+          <tbody>
+            {all.map(s => (
+              <tr key={s.id}>
+                <td>{s.label} <span style={{ color: '#98a2b3' }}>({s.dte}d)</span></td>
+                {s.payoff.map(p => <td key={p.move_pct} className={p.pnl > 0 ? 'pos' : p.pnl < 0 ? 'neg' : ''}>{money(per100(p.pnl))}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="sub">P&amp;L a su propio vencimiento (la call vence antes que la put), sin gestión intermedia ni comisiones.</div>
+    </details>
+  );
+}
+
+function RecoBlock({ etf, state, r: rSaved, budget, live, onRefresh, onClearLive }) {
+  const r = (live && live.reco) || rSaved;
+  const meta = INV_STATE_META[state];
+  const b = BADGE[meta.badge];
+  const active = state === 'fading' || state === 'spike';
+  const ap = r && r.put && r.put.find(s => s.id === (r.agreed && r.agreed.put));
+  const ac = r && r.call && r.call.find(s => s.id === (r.agreed && r.agreed.call));
+  const stale = r && r.chain_date && !r.live ? Math.round((Date.now() - new Date(r.chain_date + 'T12:00:00').getTime()) / 86400000) : null;
+
+  let banner;
+  if (!r || r.error) banner = { bg: '#f0f0f0', fg: '#555', txt: 'Sin recomendaciones generadas para este ETF (faltan snapshots de cadena).' };
+  else if (state === 'fading') {
+    const goods = [ap, ac].filter(s => s && s.grade !== 'avoid');
+    if (!ap && !ac) banner = { bg: '#fff3cd', fg: '#8a5200', txt: 'Ventana de venta de prima activa, pero la cadena guardada no ofrece las estructuras acordadas.' };
+    else if (!goods.length) banner = { bg: '#ffcdd2', fg: '#b71c1c', txt: 'Ventana de venta de prima ACTIVA, pero con las cotizaciones guardadas ninguna de las estructuras acordadas es fiable: contrasta la cadena en vivo en tu broker antes de operar. No hay base para recomendar entrada con estas primas.' };
+    else banner = { bg: '#c8e6c9', fg: '#1b5e20', txt: 'Ventana de venta de prima ACTIVA: estas son las estructuras evaluadas con la cadena guardada. Confírmalas con cotizaciones en vivo (spreads reales) antes de enviar la orden.' };
+  } else if (state === 'spike') banner = { bg: '#ffe0b2', fg: '#bf360c', txt: 'Spike en curso, pero el ETF aún no gira: ESPERAR. Vender prima ahora es ir contra el movimiento. Estructuras mostradas como preparación, no como orden.' };
+  else banner = { bg: '#f0f0f0', fg: '#555', txt: 'Sin spike: no hay setup. Estructuras mostradas solo como referencia (la prima suele estar barata y el riesgo de spike no está pagado).' };
+
+  const pkgLoss = ap && ac ? ap.max_loss + ac.max_loss : null;
+  const pkgN = pkgLoss ? contractsFor(pkgLoss, budget) : null;
+
+  return (
+    <div className="card" style={{ borderLeftColor: STATE_BORDER[state], marginBottom: 12 }}>
+      <h2>
+        <span style={{ color: etf.color }}>{etf.ticker}</span>
+        <span className="badge" style={{ background: b.bg, color: b.fg }}>{meta.label}</span>
+        {r && r.chain_date && !r.live && <span style={{ fontSize: 10, fontWeight: 400, color: stale > 3 ? '#b71c1c' : '#98a2b3' }}>cadena guardada del {r.chain_date}{stale != null ? ` (hace ${stale} d)` : ''} · spot {fmtN(r.spot)}</span>}
+        {r && r.live && <span className="badge" style={{ background: r.data_type === 'live' ? '#c8e6c9' : '#fff3cd', color: r.data_type === 'live' ? '#1b5e20' : '#8a5200' }}>
+          IBKR {r.data_type === 'live' ? 'EN VIVO' : r.data_type === 'delayed' ? 'RETRASADO ~15 min' : r.data_type === 'frozen' ? 'CONGELADO (cierre)' : ''} · {(r.collected_at || '').slice(11, 16)} ET · spot {fmtN(r.spot)}
+        </span>}
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
+          {r && r.live && <button className="btn-export" onClick={onClearLive} style={{ fontSize: 10 }}>Volver a la cadena guardada</button>}
+          <button className="btn-refresh" onClick={onRefresh} disabled={live && live.loading} style={{ fontSize: 10 }}
+                  title="Pide a TWS/IB Gateway (abierto en este PC, API activada) las cotizaciones actuales de las opciones y recalcula las estructuras">
+            {live && live.loading ? 'Pidiendo a IBKR…' : '⟳ Cadena en vivo (IBKR)'}
+          </button>
+        </span>
+      </h2>
+      {live && live.error && (
+        <div style={{ background: '#ffebee', color: '#b71c1c', borderRadius: 4, padding: '7px 10px', fontSize: 11, margin: '8px 0' }}>
+          <b>No se pudo obtener la cadena en vivo{live.code ? ` (${live.code})` : ''}:</b> {live.error}
+          {r && !r.live && <div style={{ marginTop: 3, color: '#667085' }}>Se sigue mostrando la cadena guardada.</div>}
+        </div>
+      )}
+      <div style={{ background: banner.bg, color: banner.fg, borderRadius: 4, padding: '7px 10px', fontSize: 11, fontWeight: 600, margin: '8px 0' }}>{banner.txt}</div>
+      {r && !r.error && (
+        <>
+          {(r.notes || []).map((n, i) => <div key={i} className="sub" style={{ color: '#8a5200' }}>⚠ {n}</div>)}
+          {r.implied_carry && (
+            <div className="sub">
+              Carry implícito (parity, {r.implied_carry.dte} DTE): la cadena descuenta una deriva de <b>{r.implied_carry.implied_drift_pct}%</b>
+              {r.implied_carry.hist_median_pct != null && <> frente a la mediana histórica del ETF de <b>{r.implied_carry.hist_median_pct}%</b></>}
+              {r.implied_carry.signal_median_pct != null && <> (<b>{r.implied_carry.signal_median_pct}%</b> tras la señal)</>}
+              {r.implied_carry.hist_median_pct != null && (r.implied_carry.implied_drift_pct <= r.implied_carry.hist_median_pct * 0.7 ? ' → el decay ya está en el precio.' : ' → la cadena implica bastante menos caída que la histórica: hay hueco, con la cautela de que el pasado no garantiza.')}
+            </div>
+          )}
+          <div className="sub" style={{ marginBottom: 6 }}>Valor esperado medido sobre: <b>{r.primary_basis === 'signal' ? `días con la señal (${r.distributions.signal.n_at_60d} observaciones solapadas, ~${r.distributions.signal.episodes_at_60d} episodios independientes)` : `todo el historial del ETF (${r.distributions.uncond ? r.distributions.uncond.n_at_60d : '—'} observaciones solapadas; señal sin calibrar)`}</b>.</div>
+          <StructTable list={r.put} budget={budget} title="Lado bajista — comprar puts (~90 DTE): aprovecha el decay, riesgo limitado a la prima" />
+          <StructTable list={r.call} budget={budget} title="Lado vendedor — call spread vendido (~30 DTE): cobra prima, riesgo limitado al ancho del spread" />
+          {ap && ac && (
+            <div className="opt">
+              <b>Paquete acordado (★ put spread + ★ call spread):</b> prima neta {ap.premium.est - ac.premium.est >= 0 ? 'a pagar' : 'a cobrar'} <b>{fmtN(Math.abs(ap.premium.est - ac.premium.est))}</b>/acción
+              ({money(Math.abs(ap.premium.est - ac.premium.est) * 100)}/contrato) · peor caso combinado (ETF se dispara) <span className="neg"><b>{money(pkgLoss * 100)}/contrato</b></span>
+              {pkgN != null && <> · con tu presupuesto: <b>{pkgN}</b> contrato(s)</>}.
+              <div className="sub">La call vence a ~30 días y la put a ~90: el paquete solo es un cálculo de prima y riesgo, no un payoff conjunto. Al vencer la call hay que decidir si se rueda.</div>
+            </div>
+          )}
+          <PayoffTable r={r} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// Resumen en texto de las recomendaciones para el export a LLM: solo ETFs en
+// spike/ventana (con el resto, una línea), mismas cifras que la tabla de la página.
+function recoMarkdown(rows, recs, budget, live = {}) {
+  const NL = String.fromCharCode(10);
+  let md = NL + `### Recomendación de opciones (presupuesto de riesgo $${budget})` + NL;
+  if (!recs) return md + 'Sin inverse_etf_recommendations.json todavía.' + NL;
+  const active = rows.filter(x => x.c.state === 'fading' || x.c.state === 'spike');
+  if (!active.length) md += 'Ningún ETF en spike ni ventana de venta de prima: sin recomendación.' + NL;
+  active.forEach(({ etf, c }) => {
+    const r = (live[etf.ticker] && live[etf.ticker].reco) || (recs.tickers && recs.tickers[etf.ticker]);
+    md += NL + `**${etf.ticker}** — ${INV_STATE_META[c.state].label}${c.state === 'spike' ? ' (esperar giro, no entrar aún)' : ''}`;
+    if (!r || r.error) { md += ': sin estructuras generadas.' + NL; return; }
+    md += ` · ${r.live ? `cadena IBKR ${r.data_type} ${(r.collected_at || '').slice(11, 16)} ET` : `cadena guardada ${r.chain_date}`}, spot ${r.spot}, EV medido sobre ${r.primary_basis === 'signal' ? 'días con señal' : 'historial completo (señal sin calibrar)'}` + NL;
+    (r.notes || []).forEach(n => { md += `- ⚠ ${n}` + NL; });
+    md += '| Estructura | Venc (DTE) | Strikes | Prima est. | Riesgo máx | Gan. máx | Breakeven | Rent. máx (TAE) | EV (TAE) | Calidad |' + NL + '|---|---|---|---|---|---|---|---|---|---|' + NL;
+    [...r.put, ...r.call].forEach(s => {
+      const e = evText(s);
+      md += `| ${s.label}${s.agreed ? ' ★' : ''} | ${s.expiry} (${s.dte}) | ${legsText(s)} | ${s.premium.type === 'credit' ? 'crédito' : 'débito'} ${fmtN(s.premium.est)} | ${fmtN(s.max_loss)} | ${fmtN(s.max_gain)} | ${fmtN(s.breakeven)} (${fmtPct(s.breakeven_pct)}) | ${s.ret_max_pct}% (${s.tae_max_pct}%) | ${e.txt} | ${GRADE_META[s.grade].label}: ${s.grade_reason} |` + NL;
+    });
+  });
+  return md;
+}
+
+function RecoSection({ rows, recs, budget, setBudget, showAll, setShowAll, live, refreshLive, clearLive }) {
+  const shown = rows.filter(x => showAll || x.c.state === 'fading' || x.c.state === 'spike')
+    .sort((a, b) => INV_STATE_META[b.c.state].rank - INV_STATE_META[a.c.state].rank);
+  return (
+    <>
+      <div className="section-title">Recomendación de operación con opciones</div>
+      <div className="section-sub">
+        Menú fijo de estructuras (no optimizado) valoradas con la última cadena guardada y la distribución histórica del ETF. Solo se activan con spike o ventana de venta de prima;
+        el resto de ETFs aparece solo si marcas «mostrar referencia». Observacional: no envía órdenes ni sustituye las cotizaciones en vivo de tu broker.
+      </div>
+      <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', margin: '6px 0 10px', fontSize: 11 }}>
+        <label>Presupuesto de riesgo máximo ($):{' '}
+          <input type="number" min="0" step="100" value={budget} onChange={e => setBudget(Math.max(0, +e.target.value || 0))}
+                 style={{ width: 90, padding: '3px 6px', border: '1px solid #d0d5dd', borderRadius: 3, fontSize: 11 }} />
+        </label>
+        <label><input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> Mostrar referencia aunque no haya señal</label>
+      </div>
+      {!recs && <div className="gap-note">Aún no hay <code>inverse_etf_recommendations.json</code> (se genera tras el snapshot de cadenas: <code>scripts/inverse_etf_recommendations.py</code>).</div>}
+      {recs && !shown.length && <div className="loading">Ningún ETF en spike ni ventana de venta de prima ahora mismo. Marca «mostrar referencia» para ver las estructuras evaluadas igualmente.</div>}
+      {recs && shown.map(({ etf, c }) => <RecoBlock key={etf.ticker} etf={etf} state={c.state} r={recs.tickers && recs.tickers[etf.ticker]} budget={budget}
+                                                    live={live[etf.ticker]} onRefresh={() => refreshLive(etf.ticker)} onClearLive={() => clearLive(etf.ticker)} />)}
+      {recs && (
+        <div className="footer-note" style={{ marginTop: 6 }}>
+          Metodología: prima estimada = {recs.method && recs.method.price_est}; valor esperado = {recs.method && recs.method.ev}; {recs.method && recs.method.tae}; calidad: {recs.method && recs.method.grades}.
+          Rentabilidad máxima y TAE máxima son el techo de la estructura (casi nunca se alcanza); la TAE esperada ya pondera la distribución histórica. Las muestras son días solapados: el nº de episodios independientes es mucho menor que el de observaciones.
+        </div>
+      )}
+    </>
+  );
+}
+
 function InversosPage() {
-  const [data, setData] = React.useState({ quotes: {}, unders: {}, options: {} });
+  const [data, setData] = React.useState({ quotes: {}, unders: {}, options: {}, recs: null });
+  const [budget, setBudget] = React.useState(() => { try { return +localStorage.getItem('inv_budget') || 1000; } catch (e) { return 1000; } });
+  const [showAll, setShowAll] = React.useState(false);
+  const [live, setLive] = React.useState({});     // ticker -> { loading, error, code, reco, info }
+  const refreshLive = React.useCallback(async ticker => {
+    setLive(m => ({ ...m, [ticker]: { ...(m[ticker] || {}), loading: true, error: null, code: null } }));
+    try {
+      const r = await fetch('/api/inverse-etf/live-reco', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticker }) });
+      const j = await r.json().catch(() => ({ ok: false, error: `Respuesta no válida del servidor (HTTP ${r.status}). ¿Reiniciaste node server.js tras la actualización?` }));
+      if (!j.ok) setLive(m => ({ ...m, [ticker]: { ...(m[ticker] || {}), loading: false, error: j.error || 'Error desconocido', code: j.code || null } }));
+      else setLive(m => ({ ...m, [ticker]: { loading: false, error: null, code: null, reco: j.reco, info: j.info } }));
+    } catch (e) {
+      setLive(m => ({ ...m, [ticker]: { ...(m[ticker] || {}), loading: false, error: 'No se pudo contactar con el servidor local: ' + e.message } }));
+    }
+  }, []);
+  const clearLive = React.useCallback(ticker => setLive(m => { const n = { ...m }; delete n[ticker]; return n; }), []);
+  React.useEffect(() => { try { localStorage.setItem('inv_budget', String(budget)); } catch (e) {} }, [budget]);
   const [loading, setLoading] = React.useState(true);
   const [updated, setUpdated] = React.useState(null);
   const [toast, showToast] = useToast();
@@ -182,12 +435,13 @@ function InversosPage() {
     setLoading(true);
     const quotes = {}, unders = {};
     const underSyms = [...new Set(INVERSE_ETFS.map(e => e.under))];
-    const [options] = await Promise.all([
+    const [options, recs] = await Promise.all([
       fetchOptionsLatest(),
+      fetchRecommendations(),
       Promise.all(INVERSE_ETFS.map(async e => { quotes[e.ticker] = await fetchQuote(e.ticker); })),
       Promise.all(underSyms.map(async s => { unders[s] = await fetchQuote(s); })),
     ]);
-    setData({ quotes, unders, options });
+    setData({ quotes, unders, options, recs });
     setUpdated(new Date());
     setLoading(false);
   }, []);
@@ -208,6 +462,7 @@ function InversosPage() {
     rows.forEach(({ etf, o }) => {
       if (o && o.term && o.term.ratio != null) md += `- ${etf.ticker} plazos: IV 1m ${o.term.front ? (o.term.front.atmIv * 100).toFixed(0) + '%' : '—'} · 3m ${o.term.long ? (o.term.long.atmIv * 100).toFixed(0) + '%' : '—'} · ratio ${o.term.ratio.toFixed(2)} (${o.term.inverted ? 'invertida' : 'normal'})\n`;
     });
+    md += recoMarkdown(rows, data.recs, budget, live);
     return md;
   };
 
@@ -217,7 +472,7 @@ function InversosPage() {
       localStorage.setItem('llm_export_inversos', buildMarkdown());
       localStorage.setItem('llm_export_inversos_ts', Date.now().toString());
     } catch (e) {}
-  }, [loading, data]);
+  }, [loading, data, budget, live]);
 
   const copyMarkdown = () => navigator.clipboard.writeText(buildMarkdown()).then(() => showToast('✅ Copiado')).catch(() => showToast('❌ Error al copiar'));
 
@@ -321,6 +576,8 @@ function InversosPage() {
           })}
         </tbody>
       </table>
+
+      <RecoSection rows={rows} recs={data.recs} budget={budget} setBudget={setBudget} showAll={showAll} setShowAll={setShowAll} live={live} refreshLive={refreshLive} clearLive={clearLive} />
 
       <div className="footer-note">
         Panel puramente observacional — no toca PCS, rot_score, HARD_RULES del motor de picks ni ninguna cartera.

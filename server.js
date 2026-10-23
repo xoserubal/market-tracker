@@ -1126,6 +1126,58 @@ app.post("/api/ibkr/sync", async (req, res) => {
   res.status(r.ok ? 200 : 502).json(r.ok ? { ok: true, counts: r.counts } : r);
 });
 
+// ── Cadena de opciones EN VIVO de un ETF inverso (TWS/Gateway) → recomendaciones ──
+// Botón de inversos.html. Pide a TWS solo los contratos que necesita el
+// recomendador (scripts/ibkr_option_chain.js), guarda la cadena en private/ibkr/
+// (datos de mercado con licencia personal: nunca en docs/data) y ejecuta
+// scripts/inverse_etf_recommendations.py --live-chain para devolver las mismas
+// estructuras que la página ya pinta, pero con cotizaciones en vivo.
+const INVERSE_ETF_TICKERS = ["UVXY", "SQQQ", "GLL", "BOIL"];
+let liveChainBusy = false;
+
+function runPython(args, timeoutMs) {
+  const { execFile } = require("child_process");
+  const candidates = process.platform === "win32" ? [["py", ["-3"]], ["python", []]] : [["python3", []], ["python", []]];
+  return new Promise((resolve, reject) => {
+    const attempt = i => {
+      if (i >= candidates.length) return reject(new Error("No se encontró Python (py -3 / python)."));
+      const [cmd, pre] = candidates[i];
+      execFile(cmd, [...pre, ...args], { cwd: __dirname, timeout: timeoutMs, windowsHide: true, maxBuffer: 5e6, env: { ...process.env, PYTHONIOENCODING: "utf-8" } },
+        (err, stdout, stderr) => {
+          if (err && err.code === "ENOENT") return attempt(i + 1);
+          if (err) return reject(new Error((stderr || err.message || "").toString().trim().split("\n").slice(-3).join(" | ")));
+          resolve(stdout);
+        });
+    };
+    attempt(0);
+  });
+}
+
+app.post("/api/inverse-etf/live-reco", express.json({ limit: "10kb" }), async (req, res) => {
+  const ticker = String((req.body || {}).ticker || "").toUpperCase();
+  if (!INVERSE_ETF_TICKERS.includes(ticker)) return res.status(400).json({ ok: false, code: "BAD_TICKER", error: "Ticker no permitido." });
+  if (liveChainBusy) return res.status(429).json({ ok: false, code: "BUSY", error: "Ya hay una petición a IBKR en curso; espera a que termine." });
+  liveChainBusy = true;
+  try {
+    const { fetchLiveChain } = require("./scripts/ibkr_option_chain.js");
+    const { row, info } = await fetchLiveChain(ticker);
+    const dir = path.join(__dirname, "private", "ibkr", "live_chains");
+    fs.mkdirSync(dir, { recursive: true });
+    const chainFile = path.join(dir, `${ticker}.json`), outFile = path.join(dir, `${ticker}_reco.json`);
+    fs.writeFileSync(chainFile, JSON.stringify(row));
+    await runPython(["scripts/inverse_etf_recommendations.py", "--live-chain", chainFile, "--only", ticker, "--out", outFile], 180000);
+    const reco = JSON.parse(fs.readFileSync(outFile, "utf8")).tickers[ticker];
+    if (!reco || reco.error) throw Object.assign(new Error((reco && reco.error) || "El recomendador no devolvió resultado."), { code: "RECO_FAILED" });
+    console.log(`✓ Cadena en vivo ${ticker}: ${info.quoted}/${info.requested} contratos (${row.data_type}) en ${info.elapsed_ms} ms`);
+    res.json({ ok: true, reco, info: { ...info, data_type: row.data_type, fetched_at: row.collected_at } });
+  } catch (e) {
+    console.log(`⚠ Cadena en vivo ${ticker}:`, e.code || "", e.message);
+    res.status(e.code === "NO_TWS" || e.code === "CONNECT_TIMEOUT" ? 503 : 502).json({ ok: false, code: e.code || "ERROR", error: e.message });
+  } finally {
+    liveChainBusy = false;
+  }
+});
+
 function ibkrAutoSync() {
   if (!ibkr.isConfigured()) return;
   const { state } = ibkr.readLatest();

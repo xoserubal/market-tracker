@@ -229,6 +229,15 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Estructuras de opciones candidatas (put spreads / call spreads vendidos) con
+      # la cadena recien guardada: primas, riesgo, TAE y valor esperado historico.
+      # Alimenta la seccion "Recomendacion de opciones" de inversos.html y el aviso
+      # de Telegram. Solo observacion; debe ir despues del snapshot 9e4.
+      - name: Run pipeline - Step 9e4b Inverse ETF option recommendations
+        run: python scripts/inverse_etf_recommendations.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Aviso Telegram cuando un ETF inverso (UVXY/SQQQ/GLL/BOIL) entra en punto
       # de venta de prima (screener "Inversos", solo precio). Dedup por transicion.
       - name: Run pipeline - Step 9e5 Inverse ETF alert
