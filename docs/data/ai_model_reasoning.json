@@ -1,6 +1,6 @@
 {
   "date": "2026-10-24",
-  "run_id": "2026-10-24_1244",
+  "run_id": "2026-10-24_2230",
   "candidates": [
     "TNZ.TO",
     "OXY",
@@ -27,155 +27,122 @@
     "LLY",
     "YAL.AX",
     "KIST.L",
+    "VIST",
+    "TLW.L",
+    "BSX",
     "NKE",
-    "CRON",
-    "BUR",
-    "SYK",
-    "MRK",
-    "TDOC",
-    "ROOT",
-    "RYM.NZ",
-    "HIMS",
+    "REG.V",
     "GLNG",
-    "SEDANA.ST",
-    "TRLV",
+    "YPF",
+    "LCX.V",
+    "ADS.DE",
+    "CVS",
+    "WHC.AX",
+    "SLG.V",
+    "SMR.AX",
+    "SLP.L",
+    "IRS",
     "HFG.DE",
     "UNH",
-    "URI",
-    "QXO",
-    "BSX",
-    "REG.V",
-    "VFF",
+    "TRLV",
+    "FOUR",
+    "BUR",
+    "ROOT",
     "SSV.V",
-    "TGS",
-    "VIST",
-    "LCX.V",
-    "CVS",
-    "ADS.DE",
-    "TLW.L",
-    "SLG.V",
-    "JNJ",
-    "SLS",
-    "MOH.HM",
+    "SEDANA.ST",
+    "URI",
+    "TDOC",
     "EOS.AX",
-    "YPF",
+    "MRK",
+    "HIMS",
+    "MOH.HM",
+    "ASPI",
+    "TGS",
+    "SYK",
     "GGAL",
     "AFM.V",
-    "SMR.AX",
     "CMCSA",
-    "FOUR",
-    "SLP.L",
+    "JNJ",
+    "QXO",
+    "RYM.NZ",
+    "VFF",
     "DPM.TO",
-    "ASPI",
-    "IRS",
-    "WHC.AX"
+    "SLS",
+    "CRON"
   ],
   "models": {
-    "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 90,
+    "x-ai/grok-4.3": {
+      "quality_score": 88,
       "decision_summary": {
-        "market_read": "Bull Maduro regime with deteriorating trend (macro delta -17.5 over one month); oil_gas and healthcare remain the dominant themes but both carry high concentration risk in the shadow book requiring selectivity.",
+        "market_read": "Bull Maduro regime with macro score 57.5, deteriorating trend and -17.5 delta over 1m warrants defensive posture amid extreme healthcare and oil_gas concentration.",
+        "risk_posture": "defensive",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [],
+      "rejected": [
+        {
+          "ticker": "MRK",
+          "reason": "PCS 68.5 but macro deteriorating sharply and healthcare_largecap already at 252% weight creates unacceptable concentration risk.",
+          "rejection_category": "macro_conflict"
+        },
+        {
+          "ticker": "SLS",
+          "reason": "PCS 65.2 with rot_score 7 but macro delta -17.5 over 1m and spike_flag=true signal insufficient conviction for entry.",
+          "rejection_category": "macro_conflict"
+        },
+        {
+          "ticker": "CRON",
+          "reason": "PCS 66.2 but macro deteriorating and cannabis theme already 60% open weight with distribution_warning on Koncorde.",
+          "rejection_category": "macro_conflict"
+        }
+      ]
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 89,
+      "decision_summary": {
+        "market_read": "Macro regime is Bull Maduro but deteriorating with delta_1m at -17.5; oil_gas and healthcare themes dominate candidates but every high-PCS new candidate carries distribution_warning or extreme extension flags.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
       "watch": [
         {
-          "ticker": "GTE",
-          "reason": "PCS=78.5 with ret_13w_vs_spy=+71.2% (highest in set), dems=14 and bullish-aligned Koncorde, but oil_gas accounts for 268% open weight already and GTE's 14.16% ret_5d suggests the 13-week edge may be plateauing into a narrower 4-week window of +16.2%. The oil_gas concentration is the binding constraint.",
-          "watch_trigger": "Select if one or more existing oil_gas positions hit PCS floor and exit mechanically, creating room; or if konc_alignment remains bullish_aligned beyond 4 more sessions confirming the 2-week streak is building."
-        },
-        {
           "ticker": "HUM",
-          "reason": "PCS=79.0 with rot_score=9 and 3-week streak delivering +11.9% ret_4w_vs_spy, but konc_3d_state=distribution places it in bullish_pending_3d_confirmation and dems=6 is very weak. 13w outperformance of +7.7% is moderate relative to DHR's +14.4% at similar PCS. Currently [Grok open].",
-          "watch_trigger": "Select if 3D Koncorde transitions from distribution to 'up' confirming the weekly structure, or if dems rises above 10 with spike_flag clearing."
+          "reason": "rot_score 9 and ret_4w_vs_spy +11.9% are strong, but konc_3d_state=distribution, dems=6, and spike_flag=true mean daily flow cannot confirm the weekly signal yet. extension_risk=medium.",
+          "watch_trigger": "Select if konc_3d flips to 'up' on next reading and dems rises above 10 without spike_flag."
         },
         {
-          "ticker": "VNOM",
-          "reason": "PCS=80.2 with rot_score=9 and 13.67% ret_4w_vs_spy on an improving streak, but extension_risk is extreme (6 pts) with dist_sma20_atr_extreme and spike_flag=true. Daily konc_state=distribution adds near-term caution despite 3D/weekly being up. The extreme extension is the binding concern for a new entry.",
-          "watch_trigger": "Select if extension_points drop below 3 via price consolidation, or if the spike_flag clears with a second consecutive day of outperformance confirming multi-session continuation."
+          "ticker": "UCO",
+          "reason": "ret_13w_vs_spy +63% is the second-highest in the set and 8-week streak is durable, but extension_risk=extreme (7 pts) with dist_sma20_atr_extreme and rsi_extreme flags make entry here a pure chase. UCO is a 2x leveraged crude oil ETF amplifying drawdown risk.",
+          "watch_trigger": "Select if price pulls back to within 2 ATR of its 20-day SMA, extension_points drops below 4, and streak_weeks remains above 6."
         },
         {
-          "ticker": "TNZ.TO",
-          "reason": "Highest PCS at 84.5 with rot_score=8 and 8-week streak, but konc_alignment=distribution_warning (D/3D/W all in distribution) and ret_4w_vs_spy is -7.0%, indicating active momentum deterioration despite the high PCS. Already [Grok open].",
-          "watch_trigger": "Select if 3D Koncorde exits distribution state and ret_4w_vs_spy turns positive, confirming weekly flow is reversing its recent deterioration."
-        },
-        {
-          "ticker": "KOS",
-          "reason": "PCS=74.5 with rot_score=7 on 2-week streak, but konc_alignment=distribution_warning and ret_3w_vs_spy at +3.8% is modest. PCS crossed above 70 threshold but below the 78 confirmed leader floor, making this an intermediate signal. Already [Grok open].",
-          "watch_trigger": "Select if PCS sustains above 74 for two consecutive readings and 3D Koncorde exits distribution, or if dems rises above 14 with confirming multi-day outperformance."
+          "ticker": "CVE",
+          "reason": "2-week streak with ret_13w_vs_spy +14.7% improves, but ret_4w_vs_spy is only +6.1% — well below SU's +16.6% and WCP.TO's +13.2% on the same subtheme. bull_pending_3d_confirmation needs a 3D flip to 'up' from current state.",
+          "watch_trigger": "Select if 3D Koncorde confirms 'up' state and ret_4w_vs_spy rises above 12% on a 4+ week streak."
         },
         {
           "ticker": "LLY",
-          "reason": "PCS=70.2 with rot_score=7 and 3-week streak showing +8.7% ret_4w_vs_spy, but konc_alignment=mixed with daily distribution and weekly distribution alongside bullish 3D. Lower PCS than healthcare peers like DHR (79.8) with weaker 13w edge. Already [Grok open].",
-          "watch_trigger": "Select if PCS rises above 74 and konc alignment improves to bullish_aligned, or if DHR exits and LLY can serve as a healthcare dropdown replacement."
+          "reason": "ret_4w_vs_spy +8.7% on a 3-week streak with positive momentum, but konc_alignment=mixed with D=distribution and W=distribution, and ret_13w_vs_spy only +3.4% trails every other healthcare largecap by a wide margin. extension_risk=medium.",
+          "watch_trigger": "Select if konc_alignment shifts from mixed to bullish_aligned and ret_13w_vs_spy rises above 8%."
         },
         {
-          "ticker": "KIST.L",
-          "reason": "PCS=69.5 with 8-week streak and bull-aligned Koncorde, though ret_4w_vs_spy=-7.2% on the near-term is concerning and falls below MIMO_SHADOW's 68.0 min entry floor just barely. Already [Grok open].",
-          "watch_trigger": "Select if PCS sustains above 70 and ret_4w_vs_spy turns positive, confirming the 8-week streak is being supported by renewed near-term flow."
+          "ticker": "VNOM",
+          "reason": "PCS 80.2 and rot_score 9 with 8-point outperform_d10 are attractive, but extension_risk=extreme (6 pts) with dist_sma20_atr_extreme, spike_flag=true, and rsi_high combined with konc_d_state=distribution flags demand a pullback before entry. Already held by Grok.",
+          "watch_trigger": "Select if extension_points falls below 4 and konc_d_state lifts from distribution to up while streak_weeks holds above 1 week."
         },
         {
-          "ticker": "NYCB",
-          "reason": "PCS=69.2 with rot_score=7 and 8-week streak delivering +15.1% 13w outperformance, but ret_4w_vs_spy is negative and falls just below the 68.0 min entry threshold. Already [Grok open].",
-          "watch_trigger": "Select if PCS confirms above 68.5 for two readings with ret_4w_vs_spy turning positive."
+          "ticker": "TNZ.TO",
+          "reason": "PCS 84.5 is the highest in the set with an 8-week streak and +25.1% 13w outperformance, but konc_alignment=distribution_warning across all three timeframes with rot_score declining from 8 to 8 and konc_3d_state=distribution signals active deterioration. Already held by Grok.",
+          "watch_trigger": "Select if konc_3d_state shifts from distribution to up and konc_w_state lifts from distribution simultaneously, confirming the structural bleed has ended."
         }
       ],
       "rejected": [
         {
-          "ticker": "UCO",
-          "reason": "UCO is a 2x leveraged crude oil ETF, a commodity derivative instrument not suitable for direct selection despite eligible=true and high PCS=77.5. The sister stock positions (GTE, SU, OXY) provide the oil exposure with less structural risk.",
-          "rejection_category": "not_tradable"
-        },
-        {
-          "ticker": "FRU.TO",
-          "reason": "PCS=72.5 but konc_alignment=distribution_warning (D and 3D both in distribution), ret_13w_vs_spy at +1.6% is the weakest among PCS 70+ oil names, and oil_gas at 268% open weight already. Better alternatives available in the same theme.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "CRON",
-          "reason": "PCS=66.2 with konc_alignment=distribution_warning across all three timeframes, and cannabis already at 60% open weight. The distribution signal conflicts with entering a new position.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "NKE",
-          "reason": "PCS=48.0 is far below the MIMO_SHADOW 68.0 minimum entry threshold; ret_13w_vs_spy=-13.6% shows active underperformance despite the recent signal upgrade from IGNORAR to EN_RADAR.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "BUR",
-          "reason": "PCS=30.8 is far below the entry threshold; ret_13w_vs_spy=-23.3% shows severe underperformance. Signal remains IGNORAR.",
-          "rejection_category": "weak_relative_strength"
-        },
-        {
-          "ticker": "SEDANA.ST",
-          "reason": "PCS=69.2 exceeds the 62 threshold but falls below the MIMO_SHADOW 68.0 min entry floor at 69.2 — just above. However, healcare_special at 58% open weight with no prior positions in this ticker, and only a 2-week streak with +6.3% 13w outperformance is insufficient vs higher-conviction peers.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "VIT-B.ST",
-          "reason": "PCS=67.2 with rot_score jumped to 9 but europa theme shows high risk and PCS falls below the 68.0 MIMO_SHADOW entry floor. Recent PCS crossed up from 63.5 with signal still VIGILAR, not EN_RADAR.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "VIST",
-          "reason": "PCS=54.5 is far below the MIMO_SHADOW 68.0 minimum entry threshold; just upgraded from IGNORAR to VIGILAR but the quantitative profile is insufficient.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "SLS",
-          "reason": "PCS=65.2 falls below the MIMO_SHADOW 68.0 minimum entry threshold. SLS just crossed up from 52.0 with a signal upgrade, but the PCS level and only 7.0 rot_score with healthcare_special already at 58% open weight does not justify an entry.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "WHC.AX",
-          "reason": "PCS=68.5 clears the threshold but commodities_metals at 10% open weight is acceptable. However, WHC.AX just crossed up from 56.5 with only a 6.0 rot_score, and ret_13w data is not available in the candidates list to assess multi-week leadership. Better allocation elsewhere.",
-          "rejection_category": "insufficient_conviction"
-        },
-        {
-          "ticker": "YAL.AX",
-          "reason": "PCS=70.0 clears the threshold and rot_score=8 with bull-aligned Koncorde. However, the PCS jumped from 56.5 indicating a very fresh crossover in the commodities_metals theme, and the lack of ret_13w data in the candidates list makes multi-week persistence unverifiable. The oil_gas theme already dominates with better-confirmed names.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "KOS",
+          "reason": "konc_alignment=distribution_warning with 3D distribution, ret_4w_vs_spy only +3.8% well below peer oil names like SU at +16.6%, rot_score=7 trails higher-PCS peers, and PCS crossed down from 79 to 74.5 this week indicating declining institutional conviction. dist_52w_high=-14.1% means recent recovery but constituent flow is still net-neutral.",
+          "rejection_category": "weak_flow"
         }
       ]
     }
