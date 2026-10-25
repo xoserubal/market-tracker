@@ -6686,7 +6686,7 @@ el tiempo = replay hasta una seq/fecha; retrospectivo = estado actual.
 `TICKER_TAGS_WRITER_HOST`; el resto navega en solo lectura (403 `not_writer`). Copias de conflicto de Dropbox
 bloquean la edición. Concurrencia optimista (`base_revision`; 409 si se quedó atrás). Publicación: `git commit --only`
 de los dos ficheros y `git push`; los errores de push se devuelven a la UI y no se hace rebase automático arriesgado.
-**Estado de X3:** sin `TICKER_TAGS_WRITER_HOST` definida la edición queda deshabilitada; poner `LAWNMOWER` solo tras
+**Estado de X3:** sin `TICKER_TAGS_WRITER_HOST` definida la edición queda deshabilitada; poner el hostname real de la máquina escritora solo tras
 confirmar que es la máquina habitual del servidor de Market Tracker.
 
 **Código.** `shared/ticker-tags-lib.js` (modelo, replay, validación, agrupación; dual navegador/Node),

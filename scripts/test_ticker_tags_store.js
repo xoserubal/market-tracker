@@ -27,7 +27,7 @@ const now = () => new Date(clock += 1000);
 
 function newStore(extra) {
   const root = mkTmp(); const dataDir = path.join(root, 'docs', 'data'); fs.mkdirSync(dataDir, { recursive: true });
-  const st = createStore(Object.assign({ dataDir, repoRoot: root, hostname: 'LAWNMOWER', writerHost: 'lawnmower', now }, extra || {}));
+  const st = createStore(Object.assign({ dataDir, repoRoot: root, hostname: 'TEST_WRITER_HOST', writerHost: 'test_writer_host', now }, extra || {}));
   return { root, dataDir, st, state: path.join(dataDir, STATE_FILE), events: path.join(dataDir, EVENTS_FILE) };
 }
 const mkOps = [
@@ -81,7 +81,7 @@ async function basics() {
   check('F3 25 escrituras concurrentes se serializan sin corromper (2 válidas, el resto duplicados rechazados)', okN === 2 && many.filter(x => x === 'validation').length === 23 && consistent(s2), many.join());
   // dos instancias del almacén (dos procesos) sobre los mismos ficheros
   const s3 = newStore(); await seed(s3);
-  const other = createStore({ dataDir: s3.dataDir, repoRoot: s3.root, hostname: 'LAWNMOWER', writerHost: 'LAWNMOWER', now });
+  const other = createStore({ dataDir: s3.dataDir, repoRoot: s3.root, hostname: 'TEST_WRITER_HOST', writerHost: 'TEST_WRITER_HOST', now });
   await s3.st.apply('create_issuer', { legal_name: 'A' }); await other.apply('create_issuer', { legal_name: 'B' }); await s3.st.apply('create_issuer', { legal_name: 'C' });
   const ids = Object.keys(readState(s3).issuers);
   check('F3 dos instancias sobre los mismos ficheros no pisan ids ni eventos', ids.join() === 'iss_0001,iss_0002,iss_0003' && consistent(s3), ids.join());
@@ -164,15 +164,15 @@ async function writer() {
   const none = newStore({ writerHost: '' });
   await rejectsWith('F10 sin TICKER_TAGS_WRITER_HOST → 403 not_writer', none.st.apply('create_tag', { tag: 'commodity:gold', label: 'Oro' }), 'not_writer', 403);
   check('F10 …pero la lectura funciona y avisa del motivo', none.st.snapshot().mode === 'read_only' && none.st.snapshot().write_block === 'writer_not_configured');
-  const other = newStore({ writerHost: 'DESPACHOB' });
+  const other = newStore({ writerHost: 'TEST_READONLY_HOST' });
   await rejectsWith('F10 hostname distinto del escritor → 403', other.st.apply('create_tag', { tag: 'commodity:gold', label: 'Oro' }), 'not_writer', 403);
-  check('F10 …motivo other_host con el nombre del escritor', other.st.snapshot().write_block === 'other_host' && other.st.snapshot().writer.writer === 'DESPACHOB');
+  check('F10 …motivo other_host con el nombre del escritor', other.st.snapshot().write_block === 'other_host' && other.st.snapshot().writer.writer === 'TEST_READONLY_HOST');
   check('F10 un rechazo no crea ficheros', !fs.existsSync(other.events) && !fs.existsSync(other.state));
-  const ok = newStore({ hostname: 'LAWNMOWER', writerHost: ' lawnmower ' });
+  const ok = newStore({ hostname: 'TEST_WRITER_HOST', writerHost: ' test_writer_host ' });
   check('F10 coincidencia de hostname sin distinguir mayúsculas ni espacios', (await ok.st.apply('create_tag', { tag: 'commodity:gold', label: 'Oro' })).revision === 1);
   // copias en conflicto de Dropbox
   const cc = newStore(); await seed(cc);
-  const conflict = path.join(cc.dataDir, 'ticker_tags (Copia en conflicto de DESPACHOB 2026-10-26).json');
+  const conflict = path.join(cc.dataDir, 'ticker_tags (Copia en conflicto de TEST_READONLY_HOST 2026-10-26).json');
   fs.writeFileSync(conflict, '{}');
   await rejectsWith('F10 copia en conflicto de Dropbox → escritura bloqueada (423)', cc.st.apply('create_issuer', { legal_name: 'X' }), 'conflict_copies', 423);
   const sn = cc.st.snapshot();

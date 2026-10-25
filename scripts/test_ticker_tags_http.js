@@ -26,7 +26,7 @@ async function run() {
   for (const f of ['ticker_tags.json', 'ticker_tags_events.jsonl']) fs.copyFileSync(path.join(ROOT, 'docs', 'data', f), path.join(data, f));
   const before = Object.fromEntries(GUARDED.map(f => [f, sha(f)]));
 
-  const mk = (writer) => new Promise(res => { const { app } = createApp({ dataDir: data, repoRoot: tmp, writer, hostname: 'LAWNMOWER' }); const srv = app.listen(0, '127.0.0.1', () => res(srv)); });
+  const mk = (writer) => new Promise(res => { const { app } = createApp({ dataDir: data, repoRoot: tmp, writer, hostname: 'TEST_WRITER_HOST' }); const srv = app.listen(0, '127.0.0.1', () => res(srv)); });
   const call = async (srv, method, url, body) => {
     const r = await fetch(`http://127.0.0.1:${srv.address().port}${url}`, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
     let j = null; try { j = await r.json(); } catch (_) { /* cuerpo no JSON */ }
@@ -49,7 +49,7 @@ async function run() {
   ro.close();
 
   // ── con escritor ─────────────────────────────────────────────────────────
-  const rw = await mk('lawnmower');
+  const rw = await mk('test_writer_host');
   r = await call(rw, 'GET', '/api/ticker-tags');
   check('con escritor: modo read_write', r.body.mode === 'read_write' && r.body.write_block === null);
   const st = r.body.state;
@@ -84,12 +84,12 @@ async function run() {
   check('la auditoría registra actor y antes/después', ev[1].op === 'review' && ev[1].actor === 'dashboard' && ev[1].before.review_status === 'confirmed' && ev[1].after.review_status === 'rejected');
 
   // copias en conflicto de Dropbox
-  fs.writeFileSync(path.join(data, 'ticker_tags (Copia en conflicto de DESPACHOB 2026-10-26).json'), '{}');
+  fs.writeFileSync(path.join(data, 'ticker_tags (Copia en conflicto de TEST_READONLY_HOST 2026-10-26).json'), '{}');
   r = await call(rw, 'POST', '/api/ticker-tags/op', { op: 'create_tag', args: { tag: 'theme:otro', label: 'Otro' } });
   check('copia en conflicto → 423 conflict_copies', r.status === 423 && r.body.error === 'conflict_copies');
   r = await call(rw, 'GET', '/api/ticker-tags');
   check('…la lectura sigue funcionando e informa del bloqueo', r.status === 200 && r.body.write_block === 'conflict_copies' && r.body.conflict_copies.length === 1);
-  fs.unlinkSync(path.join(data, 'ticker_tags (Copia en conflicto de DESPACHOB 2026-10-26).json'));
+  fs.unlinkSync(path.join(data, 'ticker_tags (Copia en conflicto de TEST_READONLY_HOST 2026-10-26).json'));
   rw.close();
 
   // ── invariancia: ningún fichero ajeno cambió ───────────────────────────

@@ -39,8 +39,8 @@ async function run() {
   const portHash = sha(path.join(ROOT, 'portfolio.json'));
   const evCount = () => fs.readFileSync(path.join(data, 'ticker_tags_events.jsonl'), 'utf8').split('\n').filter(Boolean).length;
 
-  const rwApp = createApp({ dataDir: data, repoRoot: tmp, writer: 'LAWNMOWER', hostname: 'LAWNMOWER' });
-  const roApp = createApp({ dataDir: data, repoRoot: tmp, writer: '', hostname: 'LAWNMOWER' });
+  const rwApp = createApp({ dataDir: data, repoRoot: tmp, writer: 'TEST_WRITER_HOST', hostname: 'TEST_WRITER_HOST' });
+  const roApp = createApp({ dataDir: data, repoRoot: tmp, writer: '', hostname: 'TEST_WRITER_HOST' });
   const rw = await new Promise(r => { const s = rwApp.app.listen(0, '127.0.0.1', () => r(s)); });
   const ro = await new Promise(r => { const s = roApp.app.listen(0, '127.0.0.1', () => r(s)); });
 
