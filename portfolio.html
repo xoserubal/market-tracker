@@ -18,6 +18,7 @@
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
   <script src="/shared/flow-score.js"></script>
   <script src="/shared/ibkr-map.js"></script>
+  <script src="/shared/ticker-tags-lib.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f0f2f5; }
@@ -258,6 +259,304 @@ const EARLY_STYLE = {
 };
 
 // ── PositionModal ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// Etiquetas del Portfolio (línea A) — taxonomía temática. Solo presentación y navegación:
+// NO alimenta ningún motor de inversión (PCS, Flow, Sol, carteras). Lógica en shared/ticker-tags-lib.js.
+// Las secciones de portfolio.json se conservan tal cual; los grupos por etiqueta son vistas alternativas
+// sobre el mismo universo (una fila de grupo es la MISMA posición, no una copia).
+// ═══════════════════════════════════════════════════════════════════════════
+const TAG_GROUP_OPTIONS = [
+  ['sections', 'Secciones (actual)'], ['theme', 'Temática'], ['commodity', 'Materia prima'], ['industry', 'Industria'],
+  ['geo_exposure', 'Exposición geográfica'], ['listing_market', 'Mercado de cotización'], ['stage', 'Etapa'], ['asset_class', 'Clase de activo'],
+];
+const TAG_FILTER_DIMS = ['theme', 'commodity', 'industry', 'geo_exposure', 'stage'];
+const TAG_DIM_LABEL = { industry: 'Industria', commodity: 'Materia prima', theme: 'Temática', geo_exposure: 'Exposición geográfica', stage: 'Etapa', asset_class: 'Clase de activo', macro_driver: 'Driver macro' };
+const TAG_REL_LABEL = { direct: 'directa', indirect: 'indirecta', narrative: 'narrativa' };
+const TAG_ROLE_LABEL = { fund: 'fondo', leveraged_product: 'apalancado', index: 'índice' };
+const TAG_REVIEW_STYLE = {
+  pending:   { bg: '#fff8e1', fg: '#8a6d00', label: 'pendiente' },
+  confirmed: { bg: '#e8f5e9', fg: '#1b5e20', label: 'confirmada' },
+  rejected:  { bg: '#fdecea', fg: '#b71c1c', label: 'rechazada' },
+};
+const TAG_WRITE_REASON = {
+  writer_not_configured: 'Edición deshabilitada: esta máquina no tiene configurado TICKER_TAGS_WRITER_HOST (.env).',
+  other_host: 'Edición deshabilitada: esta máquina no es la escritora designada.',
+  conflict_copies: 'Edición bloqueada: hay copias en conflicto de Dropbox de los ficheros de etiquetas.',
+  state_ahead_of_events: 'Solo lectura: el estado guardado va por delante del registro de eventos.',
+  diverged: 'Solo lectura: el estado guardado no coincide con el registro de eventos.',
+  invalid_events: 'Solo lectura: el registro de eventos es inválido.',
+  replay_failed: 'Solo lectura: no se pudo reproducir el registro de eventos.',
+};
+const tagWriteMessage = (td) => td && td.write_block ? (TAG_WRITE_REASON[td.write_block] || ('Solo lectura: ' + td.write_block)) : '';
+const tagDay = (iso) => iso ? iso.slice(0, 10) : '—';
+
+// Opciones de etiquetas activas agrupadas por dimensión, para <select> con <optgroup>.
+function tagOptionGroups(state, dims, exclude) {
+  const out = [];
+  for (const d of dims) {
+    const list = Object.entries(state.tags).filter(([t, v]) => TickerTags.dimOf(t) === d && v.status === 'active' && !(exclude && exclude.has(t)));
+    if (!list.length) continue;
+    list.sort((a, b) => TickerTags.tagPath(state, a[0]).join(' › ').localeCompare(TickerTags.tagPath(state, b[0]).join(' › '), 'es'));
+    out.push({ dim: d, tags: list.map(([t]) => ({ tag: t, label: TickerTags.tagPath(state, t).join(' › ') })) });
+  }
+  return out;
+}
+
+function TagsToolbar({ td, ui, setUi, groupBy, setGroupBy, grouped, status, onPublish, publishing, onNewTag }) {
+  const st = td.state;
+  const canWrite = td.mode === 'read_write';
+  const update = (patch) => setUi(u => ({ ...u, ...patch }));
+  const filters = ui.tagFilters || {};
+  const addFilter = (tag) => { if (!tag) return; const d = TickerTags.dimOf(tag); update({ tagFilters: { ...filters, [d]: [...new Set([...(filters[d] || []), tag])] } }); };
+  const rmFilter = (d, tag) => { const next = (filters[d] || []).filter(t => t !== tag); const f = { ...filters }; if (next.length) f[d] = next; else delete f[d]; update({ tagFilters: f }); };
+  const chips = [].concat(...Object.entries(filters).map(([d, tags]) => tags.map(t => ({ d, t }))));
+  const unpublished = status && status.git ? status.git.unpublished_events : null;
+  const lbl = { fontSize: 10, color: '#666', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' };
+  const inp = { fontSize: 11, padding: '3px 6px', border: '1px solid #ccc', borderRadius: 3, background: 'white' };
+  return (
+    <div style={{ border: '1px solid #d6e4d9', background: '#f6faf7', borderRadius: 4, padding: '8px 10px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontWeight: 700, fontSize: 11, color: '#1a6b3c' }}>🏷 Agrupar por</span>
+        <select value={groupBy} onChange={e => setGroupBy(e.target.value)} style={{ ...inp, fontWeight: 600 }}>
+          {TAG_GROUP_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        {groupBy !== 'sections' && <>
+          <input value={ui.search || ''} onChange={e => update({ search: e.target.value })} placeholder="Buscar ticker o empresa…" style={{ ...inp, width: 170 }} />
+          <select value="" onChange={e => addFilter(e.target.value)} style={inp} title="Filtrar por etiqueta (AND entre dimensiones, OR dentro de una)">
+            <option value="">+ Filtrar por etiqueta…</option>
+            {tagOptionGroups(st, TAG_FILTER_DIMS).map(g => <optgroup key={g.dim} label={TAG_DIM_LABEL[g.dim]}>{g.tags.map(o => <option key={o.tag} value={o.tag}>{o.label}</option>)}</optgroup>)}
+          </select>
+          <label style={lbl} title="Solo asignaciones que has confirmado"><input type="checkbox" checked={!!ui.onlyConfirmed} onChange={e => update({ onlyConfirmed: e.target.checked })} />solo confirmadas</label>
+          <label style={lbl} title="Muestra también las relaciones meramente narrativas"><input type="checkbox" checked={!!ui.showNarrative} onChange={e => update({ showNarrative: e.target.checked })} />mostrar narrativas</label>
+          <label style={lbl} title="Coloca cada ticker solo en su etiqueta principal"><input type="checkbox" checked={!!ui.onePerInstrument} onChange={e => update({ onePerInstrument: e.target.checked })} />cada ticker una vez</label>
+          <label style={lbl} title="Agrupa por la etiqueta padre (p. ej. Minería en vez de Minería de oro)"><input type="checkbox" checked={ui.level === 'parent'} onChange={e => update({ level: e.target.checked ? 'parent' : 'leaf' })} />nivel padre</label>
+        </>}
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          {!canWrite && <span title={tagWriteMessage(td)} style={{ fontSize: 10, color: '#8a6d00', background: '#fff8e1', border: '1px solid #f0dc8a', borderRadius: 10, padding: '1px 8px', cursor: 'help' }}>🔒 solo lectura</span>}
+          {canWrite && <button onClick={onNewTag} style={{ fontSize: 10, padding: '2px 8px', border: '1px solid #bbb', borderRadius: 3, background: 'white', cursor: 'pointer' }}>＋ etiqueta</button>}
+          {canWrite && <button onClick={onPublish} disabled={publishing || unpublished === 0}
+            title={unpublished === 0 ? 'No hay cambios sin publicar' : 'Un solo commit con los ficheros de etiquetas (nada más) y push'}
+            style={{ fontSize: 10, padding: '2px 9px', border: 'none', borderRadius: 3, cursor: publishing || unpublished === 0 ? 'default' : 'pointer', background: unpublished === 0 ? '#ccc' : '#1a6b3c', color: 'white', fontWeight: 600 }}>
+            {publishing ? 'Publicando…' : unpublished ? `Publicar ${unpublished} cambio${unpublished === 1 ? '' : 's'}` : 'Publicar'}
+          </button>}
+        </span>
+      </div>
+      {chips.length > 0 && groupBy !== 'sections' && (
+        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+          {chips.map(({ d, t }) => <span key={t} style={{ fontSize: 10, background: '#e3f2fd', color: '#0d47a1', border: '1px solid #bbdefb', borderRadius: 10, padding: '1px 4px 1px 8px' }}>
+            {TAG_DIM_LABEL[d]}: {TickerTags.tagPath(st, t).join(' › ')} <button onClick={() => rmFilter(d, t)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0d47a1', fontSize: 11 }}>×</button></span>)}
+          <button onClick={() => update({ tagFilters: {} })} style={{ fontSize: 10, border: 'none', background: 'none', color: '#888', cursor: 'pointer', textDecoration: 'underline' }}>limpiar filtros</button>
+        </div>
+      )}
+      {groupBy !== 'sections' && grouped && (
+        <div style={{ marginTop: 6, fontSize: 10, color: '#666' }}>
+          {grouped.totals.instruments} instrumentos únicos · {grouped.groups.length} grupos
+          {grouped.unclassified.rows.length > 0 && <> · <b style={{ color: '#8a6d00' }}>{grouped.unclassified.rows.length} sin clasificar en esta vista</b></>}
+          <span style={{ color: '#aaa' }}> — un ticker puede estar en varios grupos (es la misma fila, marcada «↻ también en…») y cuenta una sola vez en los totales.</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Marcas junto al ticker cuando se ve por grupos de etiquetas.
+function TagRowMarks({ item, td }) {
+  if (!item || !td) return null;
+  const a = item._assignment;
+  const chip = (txt, bg, fg, title) => <span title={title} style={{ marginLeft: 4, fontSize: 9, background: bg, color: fg, borderRadius: 8, padding: '0 6px', fontWeight: 600 }}>{txt}</span>;
+  const v = TickerTags.view(td.state, item.ticker);
+  return (
+    <span>
+      {item._role && item._role !== 'operating_company' && chip(TAG_ROLE_LABEL[item._role], '#eceff1', '#455a64', 'Instrumento de referencia: no cuenta como empresa del grupo')}
+      {a && a.relation && a.relation !== 'direct' && chip(TAG_REL_LABEL[a.relation], '#f3e5f5', '#6a1b9a', 'Relación ' + TAG_REL_LABEL[a.relation] + ' con esta etiqueta: no es exposición directa')}
+      {a && a.review_status === 'pending' && chip('?', '#fff8e1', '#8a6d00', 'Asignación pendiente de revisar')}
+      {v && v.issuer.identity_status !== 'verified' && chip('id?', '#f1f1f1', '#9e9e9e', 'Identidad sin verificar (' + v.issuer.identity_status + ')')}
+      {item._alsoIn && item._alsoIn.length > 0 && <span title={'También en: ' + item._alsoIn.join(', ')} style={{ marginLeft: 4, fontSize: 9, color: '#888', cursor: 'help' }}>↻ también en {item._alsoIn.length > 2 ? item._alsoIn.slice(0, 2).join(', ') + ` +${item._alsoIn.length - 2}` : item._alsoIn.join(', ')}</span>}
+    </span>
+  );
+}
+
+function TagsModal({ ticker, td, yahoo, onOp, onClose }) {
+  const st = td.state;
+  const canWrite = td.mode === 'read_write';
+  const v = TickerTags.view(st, ticker);
+  const [err, setErr] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [showHist, setShowHist] = React.useState(false);
+  const [form, setForm] = React.useState({ tag: '', relation: 'direct', intensity: 'high', nav: false, confidence: 'high', note: '' });
+  const [newName, setNewName] = React.useState((yahoo && yahoo.longName) || '');
+  const [newRole, setNewRole] = React.useState('operating_company');
+  const run = async (fn) => { setBusy(true); setErr(''); try { await fn(); } catch (e) { setErr(e.message || String(e)); } finally { setBusy(false); } };
+  const iss = v && v.issuerId;
+  const inp = { fontSize: 11, padding: '3px 5px', border: '1px solid #ccc', borderRadius: 3 };
+  const btn = (bg, fg, border) => ({ fontSize: 10, padding: '1px 6px', border: '1px solid ' + border, borderRadius: 3, background: bg, color: fg, cursor: canWrite && !busy ? 'pointer' : 'not-allowed', opacity: canWrite ? 1 : 0.45 });
+
+  const all = v ? v.issuer.assignments : [];
+  const active = all.filter(a => !a.removed_at);
+  const history = all.filter(a => a.removed_at);
+  const order = Object.keys(TAG_DIM_LABEL);
+  active.sort((a, b) => order.indexOf(TickerTags.dimOf(a.tag)) - order.indexOf(TickerTags.dimOf(b.tag)) || a.tag.localeCompare(b.tag));
+  const takenTags = new Set(active.map(a => a.tag));
+  const groups = tagOptionGroups(st, TAG_FILTER_DIMS.concat(['asset_class']), takenTags);
+  const formDim = form.tag ? TickerTags.dimOf(form.tag) : null;
+  const formExposure = formDim ? !!st.dimensions[formDim].exposure : false;
+
+  const doReview = (a, s) => run(() => onOp('review', { issuer_id: iss, aid: a.aid, review_status: s }));
+  const doRetire = (a) => { if (confirm('¿Retirar «' + TickerTags.tagPath(st, a.tag).join(' › ') + '»? Queda en el historial; no se borra.')) run(() => onOp('retire_assignment', { issuer_id: iss, aid: a.aid })); };
+  const doRelation = (a, rel) => run(() => onOp('update_assignment', { issuer_id: iss, aid: a.aid, changes: rel === 'narrative' ? { relation: rel, intensity: null } : { relation: rel, intensity: a.intensity || 'low' } }));
+  const doIntensity = (a, inten) => run(() => onOp('update_assignment', { issuer_id: iss, aid: a.aid, changes: { intensity: inten } }));
+  const doNav = (a) => run(() => onOp('set_nav_primary', { issuer_id: iss, aid: a.aid, value: !a.nav_primary }));
+  const doAdd = () => run(async () => {
+    if (!form.tag) throw new Error('Elige una etiqueta');
+    await onOp('assign', { issuer_id: iss, tag: form.tag, relation: formExposure ? form.relation : null, intensity: formExposure && form.relation !== 'narrative' ? form.intensity : null,
+      nav_primary: formExposure && form.nav && form.relation !== 'narrative', source: 'manual', confidence: form.confidence, review_status: 'confirmed', note: form.note });
+    setForm(f => ({ ...f, tag: '', nav: false, note: '' }));
+  });
+  const doCreate = () => run(async () => {
+    if (!newName.trim()) throw new Error('Indica el nombre legal de la empresa');
+    const r = await onOp('create_issuer', { legal_name: newName.trim(), identity_status: 'provisional', identity_sources: [{ type: 'manual', ref: 'creado desde el dashboard', checked_at: new Date().toISOString().slice(0, 10) }] });
+    await onOp('create_instrument', { ticker, issuer_id: r.result.id, role: newRole, leveraged: newRole === 'leveraged_product' });
+  });
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" style={{ width: 760, maxWidth: '96vw', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+          <h3 style={{ margin: 0 }}>🏷 Clasificación · {ticker}</h3>
+          <span style={{ fontSize: 10, color: '#888' }}>mercado: {TickerTags.listingMarket(ticker)}</span>
+          <button onClick={onClose} style={{ marginLeft: 'auto', border: 'none', background: 'none', fontSize: 16, cursor: 'pointer' }}>✕</button>
+        </div>
+        {!canWrite && <div style={{ background: '#fff8e1', border: '1px solid #f0dc8a', color: '#6d5600', fontSize: 11, padding: '6px 9px', borderRadius: 3, marginBottom: 8 }}>🔒 {tagWriteMessage(td)} Puedes consultar las etiquetas, no editarlas.</div>}
+        {err && <div style={{ background: '#fdecea', border: '1px solid #f5b5ae', color: '#b71c1c', fontSize: 11, padding: '6px 9px', borderRadius: 3, marginBottom: 8 }}>⚠ {err}</div>}
+
+        {!v && (
+          <div style={{ border: '1px dashed #bbb', borderRadius: 4, padding: 12, fontSize: 12 }}>
+            <b>{ticker}</b> no tiene ficha de etiquetas todavía.
+            {canWrite ? (
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nombre legal de la empresa" style={{ ...inp, width: 280 }} />
+                <select value={newRole} onChange={e => setNewRole(e.target.value)} style={inp}>
+                  <option value="operating_company">empresa</option><option value="fund">fondo / ETF</option><option value="leveraged_product">producto apalancado</option><option value="index">índice</option>
+                </select>
+                <button disabled={busy} onClick={doCreate} style={{ ...btn('#e8f5e9', '#1a6b3c', '#1a6b3c'), padding: '3px 10px' }}>Crear ficha</button>
+                <span style={{ fontSize: 10, color: '#888' }}>La identidad queda «provisional» hasta que la verifiques con fuentes distintas de Yahoo.</span>
+              </div>
+            ) : <div style={{ marginTop: 6, color: '#888', fontSize: 11 }}>Sin permiso de edición en esta máquina.</div>}
+          </div>
+        )}
+
+        {v && <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, marginBottom: 10 }}>
+            <div><div style={{ color: '#888', fontSize: 9 }}>EMPRESA</div><b>{v.issuer.legal_name}</b></div>
+            <div><div style={{ color: '#888', fontSize: 9 }}>ROL</div>{({ operating_company: 'empresa', fund: 'fondo', leveraged_product: 'producto apalancado', index: 'índice' })[v.instrument.role]}</div>
+            <div title={(v.issuer.identity_sources || []).map(s => `${s.type}: ${s.ref}`).join('\n')}>
+              <div style={{ color: '#888', fontSize: 9 }}>IDENTIDAD</div>
+              <span style={{ background: v.issuer.identity_status === 'verified' ? '#e8f5e9' : '#fbe9e7', color: v.issuer.identity_status === 'verified' ? '#1b5e20' : '#bf360c', borderRadius: 8, padding: '0 7px', fontWeight: 600 }}>
+                {v.issuer.identity_status === 'verified' ? 'verificada' : v.issuer.identity_status === 'disputed' ? 'disputada' : 'sin verificar'}</span>
+            </div>
+            {yahoo && yahoo.sector && <div title="Referencia de Yahoo Finance. No prueba la identidad ni describe la exposición económica."><div style={{ color: '#888', fontSize: 9 }}>YAHOO (REFERENCIA)</div>{[yahoo.sector, yahoo.industry].filter(Boolean).join(' / ')}{yahoo.country ? ` · ${yahoo.country}` : ''}</div>}
+          </div>
+          {v.issuer.notes && <div style={{ fontSize: 10, color: '#777', marginBottom: 8 }}>📎 {v.issuer.notes}</div>}
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead><tr style={{ background: '#f3f5f4', color: '#555', fontSize: 10, textAlign: 'left' }}>
+              <th style={{ padding: '4px 6px' }}>Etiqueta</th><th>Relación</th><th>Intensidad</th><th title="Etiqueta principal de navegación en esta dimensión (no es una medida de exposición)">★ principal</th><th>Origen</th><th>Revisión</th><th></th>
+            </tr></thead>
+            <tbody>
+              {active.length === 0 && <tr><td colSpan={7} style={{ padding: 10, color: '#aaa', fontStyle: 'italic' }}>Sin etiquetas activas.</td></tr>}
+              {active.map(a => {
+                const dimName = TickerTags.dimOf(a.tag); const exp = !!st.dimensions[dimName].exposure; const rs = TAG_REVIEW_STYLE[a.review_status];
+                return (
+                  <tr key={a.aid} style={{ borderTop: '1px solid #eee', opacity: a.review_status === 'rejected' ? 0.55 : 1 }}>
+                    <td style={{ padding: '4px 6px' }}><span style={{ color: '#999', fontSize: 9 }}>{TAG_DIM_LABEL[dimName]} › </span>{TickerTags.tagPath(st, a.tag).join(' › ')}
+                      {a.note && <div style={{ fontSize: 9, color: '#999' }}>{a.note}</div>}</td>
+                    <td>{exp ? <select disabled={!canWrite || busy} value={a.relation} onChange={e => doRelation(a, e.target.value)} style={inp}><option value="direct">directa</option><option value="indirect">indirecta</option><option value="narrative">narrativa</option></select> : <span style={{ color: '#bbb' }}>—</span>}</td>
+                    <td>{exp && a.relation !== 'narrative' ? <select disabled={!canWrite || busy} value={a.intensity || 'low'} onChange={e => doIntensity(a, e.target.value)} style={inp}><option value="high">alta</option><option value="low">baja</option></select> : <span style={{ color: '#bbb' }}>—</span>}</td>
+                    <td style={{ textAlign: 'center' }}>{exp && a.relation !== 'narrative' && a.review_status !== 'rejected'
+                      ? <button disabled={!canWrite || busy} onClick={() => doNav(a)} title={a.nav_primary ? 'Quitar como principal' : 'Marcar como principal de esta dimensión'} style={{ border: 'none', background: 'none', cursor: canWrite ? 'pointer' : 'not-allowed', fontSize: 14, color: a.nav_primary ? '#f9a825' : '#ccc' }}>★</button> : ''}</td>
+                    <td style={{ fontSize: 9, color: '#888' }}>{a.source}<div>{a.confidence}</div></td>
+                    <td><span style={{ background: rs.bg, color: rs.fg, borderRadius: 8, padding: '0 7px', fontSize: 10, fontWeight: 600 }}>{rs.label}</span>
+                      {a.reviewed_at && <div style={{ fontSize: 9, color: '#aaa' }}>{tagDay(a.reviewed_at)}</div>}</td>
+                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      {a.review_status !== 'confirmed' && <button disabled={!canWrite || busy} onClick={() => doReview(a, 'confirmed')} title="Confirmar" style={{ ...btn('#e8f5e9', '#1b5e20', '#a5d6a7'), marginRight: 2 }}>✓</button>}
+                      {a.review_status !== 'rejected' && <button disabled={!canWrite || busy} onClick={() => doReview(a, 'rejected')} title="Rechazar (no volverá a proponerse)" style={{ ...btn('#fdecea', '#b71c1c', '#f5b5ae'), marginRight: 2 }}>✗</button>}
+                      {a.review_status !== 'pending' && <button disabled={!canWrite || busy} onClick={() => doReview(a, 'pending')} title="Volver a pendiente" style={{ ...btn('#fff8e1', '#8a6d00', '#f0dc8a'), marginRight: 2 }}>↺</button>}
+                      <button disabled={!canWrite || busy} onClick={() => doRetire(a)} title="Retirar (queda en el historial)" style={btn('#f5f5f5', '#666', '#ddd')}>🗑</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {canWrite && (
+            <div style={{ marginTop: 10, padding: 8, background: '#f8faf8', border: '1px solid #e3ece5', borderRadius: 4, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+              <b style={{ fontSize: 11 }}>＋ Añadir</b>
+              <select value={form.tag} onChange={e => setForm(f => ({ ...f, tag: e.target.value }))} style={{ ...inp, maxWidth: 240 }}>
+                <option value="">etiqueta…</option>
+                {groups.map(g => <optgroup key={g.dim} label={TAG_DIM_LABEL[g.dim]}>{g.tags.map(o => <option key={o.tag} value={o.tag}>{o.label}</option>)}</optgroup>)}
+              </select>
+              {formExposure && <>
+                <select value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} style={inp}><option value="direct">directa</option><option value="indirect">indirecta</option><option value="narrative">narrativa</option></select>
+                {form.relation !== 'narrative' && <select value={form.intensity} onChange={e => setForm(f => ({ ...f, intensity: e.target.value }))} style={inp}><option value="high">intensidad alta</option><option value="low">intensidad baja</option></select>}
+                {form.relation !== 'narrative' && <label style={{ fontSize: 10 }}><input type="checkbox" checked={form.nav} onChange={e => setForm(f => ({ ...f, nav: e.target.checked }))} /> principal</label>}
+              </>}
+              <select value={form.confidence} onChange={e => setForm(f => ({ ...f, confidence: e.target.value }))} style={inp}><option value="high">confianza alta</option><option value="medium">media</option><option value="low">baja</option></select>
+              <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="nota (opcional)" maxLength={300} style={{ ...inp, width: 150 }} />
+              <button disabled={busy || !form.tag} onClick={doAdd} style={{ ...btn('#e8f5e9', '#1a6b3c', '#1a6b3c'), padding: '3px 10px' }}>Añadir (queda confirmada)</button>
+            </div>
+          )}
+          {history.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <button onClick={() => setShowHist(h => !h)} style={{ border: 'none', background: 'none', color: '#777', fontSize: 10, cursor: 'pointer', textDecoration: 'underline' }}>{showHist ? 'Ocultar' : 'Ver'} historial ({history.length} retiradas)</button>
+              {showHist && history.map(a => <div key={a.aid} style={{ fontSize: 10, color: '#888' }}>• {TickerTags.tagPath(st, a.tag).join(' › ')} — registrada {tagDay(a.recorded_at)}, retirada {tagDay(a.removed_at)} ({a.review_status})</div>)}
+            </div>
+          )}
+        </>}
+        <div style={{ marginTop: 10, fontSize: 9, color: '#aaa' }}>Las etiquetas son solo de clasificación y navegación: no alimentan el PCS, Flow, Sol ni las carteras.</div>
+      </div>
+    </div>
+  );
+}
+
+function NewTagModal({ td, onOp, onClose }) {
+  const st = td.state;
+  const dims = Object.entries(st.dimensions).filter(([, d]) => !d.reserved).map(([k]) => k);
+  const [dim, setDim] = React.useState('theme');
+  const [slug, setSlug] = React.useState('');
+  const [label, setLabel] = React.useState('');
+  const [parent, setParent] = React.useState('');
+  const [err, setErr] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const parents = Object.entries(st.tags).filter(([t, v]) => TickerTags.dimOf(t) === dim && v.status === 'active');
+  const hier = !!st.dimensions[dim].hierarchical;
+  const inp = { fontSize: 11, padding: '3px 5px', border: '1px solid #ccc', borderRadius: 3 };
+  const go = async () => {
+    setBusy(true); setErr('');
+    try { await onOp('create_tag', { tag: `${dim}:${slug.trim()}`, label: label.trim(), parent: hier && parent ? parent : undefined }); onClose(); }
+    catch (e) { setErr(e.message); } finally { setBusy(false); }
+  };
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" style={{ width: 460 }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>＋ Nueva etiqueta</h3>
+        <div style={{ fontSize: 10, color: '#888', marginBottom: 8 }}>El id es estable (no cambia nunca); la etiqueta visible sí se puede cambiar después. Solo minúsculas, dígitos y «_».</div>
+        {err && <div style={{ background: '#fdecea', color: '#b71c1c', fontSize: 11, padding: '6px 9px', borderRadius: 3, marginBottom: 8 }}>⚠ {err}</div>}
+        <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 6, alignItems: 'center', fontSize: 11 }}>
+          <label>Dimensión</label><select value={dim} onChange={e => { setDim(e.target.value); setParent(''); }} style={inp}>{dims.map(d => <option key={d} value={d}>{TAG_DIM_LABEL[d] || d}</option>)}</select>
+          <label>Id (slug)</label><input value={slug} onChange={e => setSlug(e.target.value.toLowerCase())} placeholder="p. ej. litio" style={inp} />
+          <label>Etiqueta visible</label><input value={label} onChange={e => setLabel(e.target.value)} placeholder="p. ej. Litio" style={inp} />
+          {hier && <><label>Etiqueta padre</label><select value={parent} onChange={e => setParent(e.target.value)} style={inp}><option value="">(ninguna)</option>{parents.map(([t]) => <option key={t} value={t}>{TickerTags.tagPath(st, t).join(' › ')}</option>)}</select></>}
+        </div>
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ ...inp, cursor: 'pointer' }}>Cancelar</button>
+          <button disabled={busy || !slug || !label} onClick={go} style={{ ...inp, cursor: 'pointer', background: '#e8f5e9', borderColor: '#1a6b3c', color: '#1a6b3c', fontWeight: 600 }}>Crear</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PositionModal({ mode, sectionId, item, sections, onSave, onClose }) {
   const [ticker,  setTicker]  = React.useState(item?.ticker  ?? '');
   const [shares,  setShares]  = React.useState(item?.shares  ?? '');
@@ -1215,6 +1514,81 @@ function Portfolio() {
   const [signalsHistory, setSignalsHistory] = React.useState([]);
   const [situations,  setSituations]  = React.useState([]);
   const [ratioTrends, setRatioTrends] = React.useState({}); // "TICKERA|TICKERB" -> {ratio_now, sma, improving} | null
+
+  // ── Etiquetas del Portfolio (línea A) ─────────────────────────────────────
+  // Solo navegación y clasificación. NO alimenta ningún motor (PCS, Flow, Sol, carteras).
+  const TAG_UI_DEFAULTS = { level: 'leaf', onlyConfirmed: false, showNarrative: false, onePerInstrument: false, search: '', tagFilters: {}, collapsed: {} };
+  const [tagsData,   setTagsData]   = React.useState(null);   // null = API no disponible → la función queda oculta
+  const [tagsStatus, setTagsStatus] = React.useState(null);
+  const [yahooMeta,  setYahooMeta]  = React.useState({});
+  const [publishing, setPublishing] = React.useState(false);
+  const tagsRev = React.useRef(null);
+  const [groupBy, setGroupByRaw] = React.useState(() => { try { return localStorage.getItem('tags_group_by') || 'sections'; } catch { return 'sections'; } });
+  const [tagUi, setTagUi] = React.useState(() => { try { return { ...TAG_UI_DEFAULTS, ...JSON.parse(localStorage.getItem('tags_ui') || '{}') }; } catch { return { ...TAG_UI_DEFAULTS }; } });
+  const setGroupBy = v => { setGroupByRaw(v); try { localStorage.setItem('tags_group_by', v); } catch {} };
+  React.useEffect(() => { try { localStorage.setItem('tags_ui', JSON.stringify(tagUi)); } catch {} }, [tagUi]);
+
+  const reloadTags = React.useCallback(async () => {
+    const [a, b] = await Promise.all([
+      fetch('/api/ticker-tags').then(r => r.json()),
+      fetch('/api/ticker-tags/status').then(r => r.json()).catch(() => null),
+    ]);
+    if (!a || !a.state) throw new Error('sin datos de etiquetas');
+    tagsRev.current = a.revision;
+    setTagsData(a); setTagsStatus(b);
+  }, []);
+  React.useEffect(() => {
+    reloadTags().catch(() => setTagsData(null));
+    fetch('/docs/data/ticker_yahoo_meta.json').then(r => r.json()).then(d => setYahooMeta(d.tickers || {})).catch(() => {});
+  }, []);
+  // Una operación = un POST con la revisión que tiene el cliente (409 si el fichero cambió). Usa un ref para que
+  // dos operaciones seguidas del mismo modal (crear emisor + instrumento) no choquen con su propia revisión anterior.
+  const tagsOp = React.useCallback(async (op, args) => {
+    const r = await fetch('/api/ticker-tags/op', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op, args, base_revision: tagsRev.current }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (r.status === 409) { await reloadTags().catch(() => {}); throw new Error('Los datos cambiaron mientras editabas; se han recargado. Repite la operación.'); }
+      throw new Error(d.message || d.error || ('HTTP ' + r.status));
+    }
+    await reloadTags().catch(() => {});
+    return d;
+  }, [reloadTags]);
+  const publishTags = async () => {
+    setPublishing(true);
+    try {
+      const r = await fetch('/api/ticker-tags/publish', { method: 'POST' });
+      const d = await r.json();
+      if (d.ok && d.nothing) showToast('ℹ No hay cambios sin publicar');
+      else if (d.ok) showToast('✓ Etiquetas publicadas' + (d.rebased ? ' (tras actualizar con origin)' : ''));
+      else showToast('⚠ ' + (d.message || d.error || 'No se pudo publicar') + (d.committed_local ? ' — el commit queda local' : ''));
+      await reloadTags().catch(() => {});
+    } catch (e) { showToast('❌ ' + e.message); }
+    finally { setPublishing(false); }
+  };
+
+  const itemByTicker = React.useMemo(() => {
+    const m = {};
+    portfolio.sections.forEach(sec => sec.items.forEach(i => { if (!m[i.ticker]) m[i.ticker] = { item: i, sectionId: sec.id }; }));
+    return m;
+  }, [portfolio]);
+  const grouped = React.useMemo(() => (tagsData && groupBy !== 'sections')
+    ? TickerTags.groupTickers(tagsData.state, Object.keys(itemByTicker), groupBy, tagUi) : null, [tagsData, groupBy, itemByTicker, tagUi]);
+  // Secciones "virtuales": mismas filas (mismas posiciones, nada duplicado en datos), agrupadas por etiqueta.
+  const displaySections = React.useMemo(() => {
+    if (!grouped) return portfolio.sections;
+    const mk = (g) => ({
+      id: 'g:' + g.key, name: g.label, path: g.path, virtual: true, counts: g.counts,
+      items: g.rows.filter(r => itemByTicker[r.ticker]).map(r => ({ ...itemByTicker[r.ticker].item, _sectionId: itemByTicker[r.ticker].sectionId,
+        _alsoIn: r.alsoIn || [], _role: r.role, _assignment: r.assignment })),
+    });
+    const out = grouped.groups.map(mk);
+    if (grouped.unclassified.rows.length)
+      out.push(mk({ key: 'none', label: 'Sin clasificar (en esta vista)', path: ['Sin clasificar (en esta vista)'], counts: grouped.unclassified.counts, rows: grouped.unclassified.rows }));
+    return out;
+  }, [grouped, portfolio.sections, itemByTicker]);
+  const cleanItem = (it) => { const { _sectionId, _alsoIn, _role, _assignment, ...rest } = it; return rest; };
+  const tagCountOf = (tk) => { if (!tagsData) return ''; const v = TickerTags.view(tagsData.state, tk); return v ? v.assignments.filter(a => a.review_status !== 'rejected').length : '?'; };
   const saveTimer = React.useRef(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3200); };
@@ -1820,6 +2194,12 @@ function Portfolio() {
       {modal?.type==='history-export' && (
         <HistoryExportModal onClose={()=>setModal(null)} showToast={showToast} />
       )}
+      {modal?.type==='tags' && tagsData && (
+        <TagsModal ticker={modal.ticker} td={tagsData} yahoo={yahooMeta[modal.ticker]} onOp={tagsOp} onClose={()=>setModal(null)} />
+      )}
+      {modal?.type==='newtag' && tagsData && (
+        <NewTagModal td={tagsData} onOp={tagsOp} onClose={()=>setModal(null)} />
+      )}
       {modal?.type==='special-situation' && (
         <SpecialSituationModal item={modal.item}
           onSave={saveSituation}
@@ -2128,8 +2508,13 @@ function Portfolio() {
         </div>
       )}
 
+      {tagsData && (
+        <TagsToolbar td={tagsData} ui={tagUi} setUi={setTagUi} groupBy={groupBy} setGroupBy={setGroupBy} grouped={grouped}
+          status={tagsStatus} onPublish={publishTags} publishing={publishing} onNewTag={()=>setModal({type:'newtag'})} />
+      )}
+
       {/* ── Sections ──────────────────────────────────────────────────── */}
-      {portfolio.sections.map(sec => {
+      {displaySections.map(sec => {
         const secCost  = sec.items.reduce((s,i) => s + i.shares*i.avgCost, 0);
         const secValue = sec.items.reduce((s,i) => { const p=prices[i.ticker]; return s+(p?.price!=null?i.shares*p.price:0); }, 0);
         const secPL    = secValue - secCost;
@@ -2140,7 +2525,7 @@ function Portfolio() {
             <div style={{display:'flex',alignItems:'center',gap:8,
               borderBottom:'2px solid #1a6b3c',paddingBottom:5,marginBottom:0}}>
               <span style={{fontWeight:'bold',fontSize:11,letterSpacing:'0.8px',
-                color:'#1a6b3c',textTransform:'uppercase'}}>{sec.name}</span>
+                color:'#1a6b3c',textTransform:'uppercase'}}>{sec.virtual && sec.path && sec.path.length>1 ? <span style={{fontWeight:400,color:'#7fa38c'}}>{sec.path.slice(0,-1).join(' › ')} › </span> : null}{sec.name}</span>
               <span style={{fontSize:10,color:'#aaa'}}>
                 {secValue>0 && fmtVal(secValue)}
                 {secPL!==0 && secValue>0 && (
@@ -2149,6 +2534,13 @@ function Portfolio() {
                   </span>
                 )}
               </span>
+              {sec.virtual ? (
+                <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:10,color:'#666'}}>{TickerTags.countsLabel(sec.counts)}</span>
+                  <button onClick={()=>setTagUi(u=>({...u,collapsed:{...u.collapsed,[sec.id]:!u.collapsed[sec.id]}}))}
+                    style={{fontSize:10,padding:'2px 8px',border:'1px solid #ddd',borderRadius:3,cursor:'pointer',background:'#f5f5f5',color:'#555'}}>{tagUi.collapsed[sec.id] ? '▸ mostrar' : '▾ ocultar'}</button>
+                </div>
+              ) : (
               <div style={{marginLeft:'auto',display:'flex',gap:4}}>
                 <button onClick={()=>setModal({type:'position',mode:'add',sectionId:sec.id})}
                   style={{fontSize:10,padding:'2px 9px',border:'1px solid #1a6b3c',borderRadius:3,
@@ -2158,6 +2550,7 @@ function Portfolio() {
                 <button onClick={()=>deleteSection(sec.id)}
                   style={{fontSize:10,padding:'2px 8px',border:'1px solid #fcc',borderRadius:3,cursor:'pointer',background:'#fff5f5',color:'#e74c3c'}}>✕</button>
               </div>
+              )}
             </div>
 
             {sec.items.length===0 && (
@@ -2166,7 +2559,7 @@ function Portfolio() {
               </div>
             )}
 
-            {sec.items.length>0 && (
+            {sec.items.length>0 && !(sec.virtual && tagUi.collapsed[sec.id]) && (
               <table className="sec-table">
                 <thead>
                   <tr>
@@ -2251,6 +2644,7 @@ function Portfolio() {
                             />
                             <div>
                               <span style={{fontWeight:700,color:'#1a6baa',fontSize:12}}>{item.ticker}</span>
+                              {sec.virtual && tagsData && <TagRowMarks item={item} td={tagsData} />}
                               {p?.konc_mirror_signal === 'mirror_reversal_confirmed' &&
                                 <span title="Espejo CONFIRMADO: giro azul negativo→positivo (verde sigue negativo) en D y 3D, semanal aún negativo — posible inicio de mini-tendencia."
                                   style={{marginLeft:5,fontSize:10,background:'#f3e5f5',color:'#7b1fa2',borderRadius:8,padding:'1px 6px',fontWeight:700}}>
@@ -2345,7 +2739,7 @@ function Portfolio() {
                         {/* Patrón Koncorde confirmado manualmente — D */}
                         <td style={{textAlign:'center'}}>
                           <input type="checkbox" checked={!!item.koncPatternD}
-                            onChange={e=>toggleKoncPattern(sec.id, item.id, 'D', e.target.checked)}
+                            onChange={e=>toggleKoncPattern(item._sectionId ?? sec.id, item.id, 'D', e.target.checked)}
                             title={item.koncPatternDDate
                                 ? `Marcado el ${item.koncPatternDDate} — el patrón Koncorde D predice los giros de esta acción`
                                 : 'Marcar si compruebas que el patrón Koncorde D (azul) predice los giros de esta acción'}
@@ -2445,7 +2839,7 @@ function Portfolio() {
                         })()}
                         {/* Notas preview */}
                         <td style={{maxWidth:180}}>
-                          <button onClick={()=>setModal({type:'notes',secId:sec.id,itemId:item.id,ticker:item.ticker,notes:item.notes??''})}
+                          <button onClick={()=>setModal({type:'notes',secId:(item._sectionId ?? sec.id),itemId:item.id,ticker:item.ticker,notes:item.notes??''})}
                             style={{border:'none',background:'none',cursor:'pointer',textAlign:'left',
                               width:'100%',padding:0,fontSize:10,color:item.notes?'#555':'#ccc',
                               overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:175,display:'block'}}>
@@ -2454,10 +2848,12 @@ function Portfolio() {
                         </td>
                         {/* Acciones */}
                         <td style={{textAlign:'center',whiteSpace:'nowrap'}}>
-                          <button onClick={()=>setModal({type:'position',mode:'edit',sectionId:sec.id,item})}
+                          {tagsData && <button onClick={()=>setModal({type:'tags',ticker:item.ticker})} title="Clasificación (etiquetas del Portfolio)"
+                            style={{fontSize:9,padding:'1px 5px',border:'1px solid #cfd8dc',borderRadius:3,cursor:'pointer',background:'#eceff1',color:'#455a64',marginRight:2}}>🏷{tagCountOf(item.ticker)}</button>}
+                          <button onClick={()=>setModal({type:'position',mode:'edit',sectionId:(item._sectionId ?? sec.id),item:cleanItem(item)})}
                             style={{fontSize:9,padding:'1px 5px',border:'1px solid #ddd',borderRadius:3,
                               cursor:'pointer',background:'#f5f5f5',color:'#555',marginRight:2}}>✎</button>
-                          <button onClick={()=>deletePosition(sec.id,item.id)}
+                          <button onClick={()=>deletePosition(item._sectionId ?? sec.id,item.id)}
                             style={{fontSize:9,padding:'1px 5px',border:'1px solid #fcc',borderRadius:3,
                               cursor:'pointer',background:'#fff5f5',color:'#e74c3c'}}>✕</button>
                         </td>
@@ -2491,7 +2887,7 @@ function Portfolio() {
                         {/* Patrón Koncorde confirmado manualmente — 3D */}
                         <td style={{textAlign:'center',padding:'1px 4px'}}>
                           <input type="checkbox" checked={!!item.koncPattern3D}
-                            onChange={e=>toggleKoncPattern(sec.id, item.id, '3D', e.target.checked)}
+                            onChange={e=>toggleKoncPattern(item._sectionId ?? sec.id, item.id, '3D', e.target.checked)}
                             title={item.koncPattern3DDate
                                 ? `Marcado el ${item.koncPattern3DDate} — el patrón Koncorde 3D predice los giros de esta acción`
                                 : 'Marcar si compruebas que el patrón Koncorde 3D (azul) predice los giros de esta acción'}
@@ -2528,7 +2924,7 @@ function Portfolio() {
                         {/* Patrón Koncorde confirmado manualmente — W */}
                         <td style={{textAlign:'center',padding:'1px 4px'}}>
                           <input type="checkbox" checked={!!item.koncPatternW}
-                            onChange={e=>toggleKoncPattern(sec.id, item.id, 'W', e.target.checked)}
+                            onChange={e=>toggleKoncPattern(item._sectionId ?? sec.id, item.id, 'W', e.target.checked)}
                             title={item.koncPatternWDate
                                 ? `Marcado el ${item.koncPatternWDate} — el patrón Koncorde W predice los giros de esta acción`
                                 : 'Marcar si compruebas que el patrón Koncorde W (azul) predice los giros de esta acción'}
