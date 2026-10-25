@@ -2,7 +2,14 @@
 sync_universe.py — Sincroniza docs/data/universe.json con backtest/config/individual_stocks.yaml.
 
 Reglas:
-  - Tickers en YAML que no están en universe → se añaden con defaults del cluster.
+  - Tickers en YAML que no están en universe → se añaden SIN clasificar (fail-closed,
+    2026-10-25): sin tema, subtema, región ni proxy, y con
+    classification_status="pending". El PCS los calcula pero NO los marca elegibles
+    (ineligible_reason="unclassified") hasta que alguien revise el registro y quite
+    el estado "pending" (o lo ponga en "reviewed"). Los defaults del cluster ya no se
+    aplican: producían clasificaciones erróneas silenciosas (p. ej. Glencore como
+    tecnología/IA, un carbonero como cobre). Se guardan en `suggested_from_cluster`
+    solo como pista para el revisor; ningún motor los lee.
   - Tickers en universe que ya no están en YAML → se eliminan.
   - Tickers ya presentes en universe → se conserva su metadata (theme, proxies, etc.),
     solo se actualiza el campo 'notes' con la nota del YAML si existía vacío.
@@ -223,20 +230,25 @@ def sync(verbose: bool = True) -> dict:
             new_tickers.append(rec)
             kept += 1
         else:
-            defaults = CLUSTER_DEFAULTS.get(cluster, CLUSTER_DEFAULTS["Growth"])
+            hint = CLUSTER_DEFAULTS.get(cluster)
             new_tickers.append({
                 "ticker":      ticker,
                 "name":        "",
-                "asset_type":  defaults["asset_type"],
+                "asset_type":  "stock",
                 "tradable":    True,
-                "theme":       defaults["theme"],
+                "theme":       "",
                 "subtheme":    "",
-                "region":      defaults["region"],
-                "macro_proxy": defaults["macro_proxy"],
-                "theme_proxy": defaults["theme_proxy"],
-                "benchmark":   defaults["benchmark"],
-                "priority":    defaults["priority"],
+                "region":      "",
+                "macro_proxy": "",
+                "theme_proxy": "",
+                "benchmark":   "SPY",
+                "priority":    "medium",
                 "notes":       note,
+                "classification_status": "pending",
+                "suggested_from_cluster": (
+                    {"cluster": cluster, "theme": hint["theme"], "theme_proxy": hint["theme_proxy"]}
+                    if hint else {"cluster": cluster}
+                ),
             })
             added.append(ticker)
 

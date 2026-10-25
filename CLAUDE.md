@@ -6608,6 +6608,52 @@ informes (todos n<30).
 
 ---
 
+## Integridad del universo del motor — línea B (implementado 2026-10-25, rama `fix/universe-integrity-b`)
+
+Auditoría de `docs/data/universe.json` (informe completo: `wiki/AUDITORIA_UNIVERSE_LINEA_B.md`,
+cifras del escenario definitivo: `wiki/CORRECCION_UNIVERSE_B1_DEFINITIVO.md`). Alcance acotado a
+identidad, metadatos y sincronización: **no se tocó ningún peso, fórmula, umbral ni regla de selección**.
+
+**Qué se corrigió**
+- Símbolos: `GOLD` retirado (desde dic-2025 es Gold.com, no Barrick; el YAML quería Barrick) y sustituido por
+  **`B`** como instrumento distinto, sin heredar historial de GOLD. `ASMI` (sin datos, duplicado de ASM.AS) y
+  `YAN.AX` (inexistente; Yancoal es YAL.AX) retirados. `MRR.XA` (Cboe AU) → **`NRL.AX`** (ASX, mismo emisor,
+  instrumento distinto; series no concatenadas, precio ≈ 1.003× en los 1474 días solapados). LLY duplicado.
+- Identidad: VAL es Valaris (perforación offshore), no Vaalco; SLP.L es Sylvania Platinum, no «Silverpeak»;
+  DMX.V es District Metals (tema → `uranium_nuclear`); SSV.V, PNPN.V y DPM.TO con su nombre actual.
+- Tema/subtema/proxy objetivamente incompatibles: GLEN.L, SMR.AX, AFM.V, SLB, TTI, TK, MOS, TECK, ASCU.TO, KTOS, SAIA, GS.
+- Región = país del mercado de cotización en 22 registros (19 con región incoherente con su sufijo, la mayoría `US` por defecto, más los de tickers cuya clasificación se corrigió).
+
+**Regla de proxies:** solo se asigna `theme_proxy` si el ETF contiene a la empresa o su precio responde al
+mismo driver. **TK (petroleros) y TTI quedan sin proxy** (XLE no representa fletes). Ojo: «sin proxy» no
+significa «sin hipótesis»: el PCS (componente B) cae al promedio del tema (`theme_avg_*`). Si se quiere
+neutralidad total hay que dejar también el tema vacío (B = 10 fijo). `macro_proxy` no lo lee ningún motor.
+
+**Fail-closed (`sync_universe.py` + `pcs_calculator.py`):** un ticker nuevo del YAML se registra sin tema,
+subtema, región ni proxy y con `classification_status="pending"`. El PCS lo calcula pero no es elegible
+(`ineligible_reason="unclassified"`, distinto de `not_tradable`) hasta que se revise y se quite `pending`
+(o se ponga `reviewed`). **Validación manual de un `pending`:** editar su registro en `docs/data/universe.json`
+(tema, subtema, región, `theme_proxy` o vacío a sabiendas, nombre legal contrastado) y cambiar
+`classification_status` a `reviewed`; la sincronización no vuelve a tocarlo. `B` y `NRL.AX` se escribieron ya
+revisados, así que no son `pending`: son inelegibles solo hasta que el scanner genera sus datos (`no_signal_data`),
+lo que ocurre en el primer run (comprobado con el scanner real: B PCS 27,0 y NRL.AX 49,2, ambos elegibles). Ya no se heredan los defaults de cluster (`CLUSTER_DEFAULTS`); quedan solo como pista
+en `suggested_from_cluster`. Los registros existentes no se tocan. Límite: solo afecta a la elegibilidad del
+PCS; las carteras que no usan PCS (Mirror, Cruce Rojo, Trullás, Screener) no leen esta clasificación.
+
+**Pruebas:** `py -3 scripts/test_universe_integrity.py` (54 tests, sin red). Fixtures congelados del commit
+`e728e75d` en `tests/fixtures/universe_integrity/`. T1 garantiza que el código de PCS reproduce 149/149 el
+`ai_candidates.json` publicado; T2 fija **exactamente** qué tickers cambian de PCS; T3-T6 cubren invariantes
+del universo real, fail-closed y sincronización idempotente. Si se regenera el golden
+(`--regen-golden`) hay que revisar a mano la lista de cambios antes de commitear.
+
+**Pendiente (fuera de esta corrección, decidido):** decisiones interpretativas (FCX, RIO, carbón térmico,
+NKE, EOS.AX…); incidencia de concentración temática (`compute_theme_concentration` suma las posiciones de
+las 11 carteras, sombra incluidas); incidencia de tickers sin proxy representativo (71 de 147 usan la media del
+tema para el componente B; ver `wiki/INCIDENCIA_PROXY_REPRESENTATIVO.md`); validador `validate_universe.py`; el modal «añadir al universo» sigue
+con región `US` por defecto.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)

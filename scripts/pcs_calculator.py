@@ -515,7 +515,20 @@ def compute_pcs(
     f, ff = score_f(ticker, meta, rot_idx, cand_idx)
 
     pcs      = round(a + b + c + d + e + f, 1)
-    eligible = meta.get("tradable", True) and f > 0
+    # Fail-closed para registros sin clasificar (sync_universe.py, 2026-10-25): un ticker
+    # recién incorporado con classification_status="pending" se calcula pero no es
+    # elegible hasta que alguien revise su metadato. No se reutiliza tradable=False: la
+    # causa de inelegibilidad se registra aparte en `ineligible_reason`.
+    unclassified = meta.get("classification_status") == "pending"
+    eligible = meta.get("tradable", True) and f > 0 and not unclassified
+    if eligible:
+        ineligible_reason = None
+    elif not meta.get("tradable", True):
+        ineligible_reason = "not_tradable"
+    elif unclassified:
+        ineligible_reason = "unclassified"
+    else:
+        ineligible_reason = "no_signal_data"
 
     # Fase 0 (plan Ranking Score 2026-08-06): pcs_raw is pcs under a clearer
     # name for datasets that carry multiple pcs_* variants side by side.
@@ -545,6 +558,7 @@ def compute_pcs(
         "priority":  meta.get("priority", "medium"),
         "pcs":       pcs,
         "eligible":  eligible,
+        "ineligible_reason": ineligible_reason,
         "pcs_components": {
             "A_macro_permission":    round(a, 1),
             "B_theme_flow":          round(b, 1),
