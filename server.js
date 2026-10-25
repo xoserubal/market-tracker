@@ -1188,6 +1188,16 @@ function ibkrAutoSync() {
   ibkr.syncIbkr({ log: m => console.log(m) });
 }
 
+// ── Etiquetas del Portfolio (línea A) ─────────────────────────────────────────
+// Taxonomía temática de los tickers del Portfolio Tracker. AISLADA de los motores de inversión: ningún
+// script de PCS/Flow/Sol/carteras lee estos ficheros (lo comprueba scripts/test_tags_invariance.py).
+// Escritura solo desde la máquina cuyo hostname coincide con TICKER_TAGS_WRITER_HOST (.env); en cualquier
+// otra, o sin configurar, la navegación funciona y la edición queda deshabilitada (403).
+const { createStore: createTagStore } = require("./shared/ticker-tags-store");
+const { mountTagRoutes } = require("./shared/ticker-tags-routes");
+const tagStore = createTagStore({ dataDir: path.join(__dirname, "docs", "data"), repoRoot: __dirname });
+mountTagRoutes(app, express, tagStore);
+
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
 app.listen(3000, () => {

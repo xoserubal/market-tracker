@@ -6654,6 +6654,65 @@ con región `US` por defecto.
 
 ---
 
+## Portfolio Tags — taxonomía visual del Portfolio Tracker, MVP (línea A, implementado 2026-10-25)
+
+Diseño completo y razones en `wiki/DISENO_PORTFOLIO_TAGS_DEFINITIVO.md` (v2). Esto es el resumen operativo.
+
+**Qué es.** Una capa de etiquetas económicas (tema, subtema, factor, geografía… por dimensión) que permite agrupar
+`portfolio.html` por esas etiquetas además de por sección. **No es un motor**: no alimenta PCS, Flow, Sol, carteras
+ni alertas. La tabla y las secciones de gestión (`portfolio.json`) siguen intactas; agrupar es una vista.
+
+**Cuatro capas, una sola dirección de dependencia.** (1) gestión = secciones de `portfolio.json`; (2) metadatos del
+motor = `universe.json`; (3) hechos importados = `docs/data/ticker_yahoo_meta.json` (`scripts/fetch_yahoo_meta.py`,
+solo informativo, nunca verifica identidad por sí solo); (4) taxonomía = `docs/data/ticker_tags.json` +
+`ticker_tags_events.jsonl`. **Los motores no deben leer las capas 3 y 4** (ver «Aislamiento»).
+
+**Modelo.** Identidades opacas: emisor `iss_NNNN`, instrumento `ins_NNNN`, asignación `a_NNNNN`. La etiqueta
+económica cuelga del emisor (así un cambio de ticker, una cotización doble o un ADR no duplican la clasificación);
+el instrumento lleva `ticker`, `ticker_from` y `ticker_history` sin solapes. Cada asignación tiene `relation`
+(direct/indirect/narrative), `intensity` (high/low; null en narrative), `source`, `confidence`, `review_status` y,
+como máximo una por emisor+dimensión, `nav_primary` (solo direct, o indirect si no hay direct; nunca narrative ni
+rechazada). `identity_status` provisional/verified/disputed: verified exige ≥2 tipos de fuente distintos
+(incl. bolsa/compañía/regulador); Yahoo solo no verifica. HelloFresh/Viscofan en Consumer Staples es una decisión
+de taxonomía propia, no un sector estándar verificado de Yahoo; `tradable=false` no sustituye a «sin clasificar».
+
+**Persistencia (event sourcing).** `ticker_tags_events.jsonl` es la fuente de verdad; `ticker_tags.json` es la
+materialización. Invariantes: `replay(events) == state`, `revision == última seq`. Orden de escritura: evento
+(append+fsync) → JSON atómico (tmp→fsync→rename). Recuperación: JSON por detrás → se regenera; cola truncada → se
+descarta; JSON por delante/divergente/evento intermedio inválido → **solo lectura** (no se repara a ciegas). Punto en
+el tiempo = replay hasta una seq/fecha; retrospectivo = estado actual.
+
+**Escritor único.** Solo edita la máquina cuyo `hostname` coincide con la variable de entorno
+`TICKER_TAGS_WRITER_HOST`; el resto navega en solo lectura (403 `not_writer`). Copias de conflicto de Dropbox
+bloquean la edición. Concurrencia optimista (`base_revision`; 409 si se quedó atrás). Publicación: `git commit --only`
+de los dos ficheros y `git push`; los errores de push se devuelven a la UI y no se hace rebase automático arriesgado.
+**Estado de X3:** sin `TICKER_TAGS_WRITER_HOST` definida la edición queda deshabilitada; poner `LAWNMOWER` solo tras
+confirmar que es la máquina habitual del servidor de Market Tracker.
+
+**Código.** `shared/ticker-tags-lib.js` (modelo, replay, validación, agrupación; dual navegador/Node),
+`shared/ticker-tags-store.js` (persistencia/recuperación/publicación), `shared/ticker-tags-routes.js`
+(`/api/ticker-tags*`, montadas en `server.js`), UI en `portfolio.html` (selector «Agrupar por», contadores, modal 🏷
+por fila, alta de etiqueta). Siembra: `scripts/ticker_tags_seed.json` + `scripts/seed_ticker_tags.js`; informe de
+revisión `docs/analysis/ticker_tags_review.md`. **Las etiquetas sembradas son propuestas `pending` de revisión, no
+verdad verificada.**
+
+**Aislamiento (regla dura).** Ningún motor de inversión ni script del pipeline puede referenciar
+`ticker_tags*`/`ticker_yahoo_meta*`. `scripts/test_tags_invariance.py` ejecuta Flow (Py y JS), Sol
+(`build_user_message`), PCS (`run()`), `compact_candidate`/concentración/suelo de PCS con las etiquetas ausentes,
+sembradas y corruptas: salida idéntica, ninguna lectura (detector en Python y Node con control negativo), entradas
+intactas, y escaneo estático con lista blanca. Corre en CI en cada push (`.github/workflows/tags-isolation.yml`,
+independiente de `market-update.yml`).
+
+**Pruebas.** `bash scripts/run_tags_tests.sh` (en Windows local: `PY="py -3.12"`): lib 103, store 64, HTTP 25,
+invariancia 22. `scripts/test_ticker_tags_ui.js` (24) usa Edge + `puppeteer-core`, solo local.
+
+**Límites conocidos.** `git rebase --autostash` al sincronizar no restaura lo ya preparado en el índice; no hay
+edición multiusuario simultánea (escritor único); la taxonomía aún no alimenta ninguna señal ni cartera (a propósito).
+Las incidencias de concentración temática, proxy representativo y validación preventiva de identidad se tratan
+aparte (ver `wiki/INCIDENCIA_*.md`), no en esta línea.
+
+---
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
