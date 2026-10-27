@@ -143,17 +143,53 @@ VETOES DUROS (Koncorde en distribution_warning/bearish_aligned, o la cesta
 de tema del ticker — su sección de Portfolio Tracker o grupo de mercado —
 con breadth 0, ningún miembro confirma).
 
-Reglas de reconciliación, NO OPCIONALES:
-- No llames EARLY a un ticker cuya columna Mecánico sea "—" sin INFL, ni a
-  uno marcado (KONC✗) o (TEMA✗) — si lo haces, explica explícitamente por
-  qué contradices el cálculo mecánico (debe ser una razón fundamental
-  concreta, no "el momentum se ve bien").
-- No llames CONFIRMED a un ticker sin CONT en su columna Mecánico.
+Reglas de reconciliación, NO OPCIONALES. Distinguen NACER una hipótesis de
+MANTENERLA — INFL y CONT son eventos de promoción, no estados que deban
+repetirse cada día:
+- NACER: no abras una hipótesis EARLY sobre un ticker cuya columna Mecánico
+  sea "—" sin INFL, ni sobre uno marcado (KONC✗) o (TEMA✗) — si lo haces,
+  explica por qué contradices el cálculo mecánico (razón fundamental
+  concreta, no "el momentum se ve bien"). No abras CONFIRMED sin CONT.
+- Un ΔFlow positivo de un solo día, sin INFL ni CONT, NUNCA es motivo
+  suficiente para abrir ni subir una hipótesis — regístralo como WATCH.
+- MANTENER: si una hipótesis EARLY/CONFIRMED de ANÁLISIS ANTERIORES ya nació
+  con su INFL/CONT, que hoy la columna Mecánico diga "—" NO es motivo para
+  rebajarla por sí solo. Mantén la convicción (y di "sin evento técnico
+  hoy") mientras el Flow no caiga de forma sostenida (ΔFlow negativo ≥2
+  sesiones), no aparezca un veto duro y no se cumpla la invalidación que tú
+  mismo escribiste. Rebaja a MATURE si la columna dice MATURE o el RSI está
+  extendido; a WATCH o INVALIDATED solo con una razón de deterioro real.
+  Perder el evento técnico sin deterioro (Flow aún subiendo, ΔFlow ≥0) es
+  una consolidación, no un fallo — no la cuentes como invalidación.
 - Si la columna dice MATURE, tu conclusión debe ser protección de
   beneficios o MATURE, nunca EARLY ni "expansión" de una señal nueva.
-- Un ΔFlow positivo de un solo día, sin INFL ni CONT en la columna
-  Mecánico, NUNCA es motivo suficiente por sí solo para subir la
-  convicción de un ticker — regístralo como WATCH, no como EARLY.
+
+Rigor de evidencia, NO OPCIONAL:
+- Flow, MACD, RSI, Early Flow y Koncorde se calculan de las mismas series de
+  precio y volumen: NO son evidencias independientes. Cuatro de ellos
+  alineados cuentan como UNA lectura técnica. Confirmación independiente
+  es la transversal: fuerza relativa frente al sector/benchmark, breadth,
+  la materia prima o el activo subyacente, crédito/liquidez/tipos.
+- No afirmes que A gana fortaleza relativa frente a B comparando dos Flows
+  por separado (escalas distintas). Usa la diferencia de rendimientos de
+  las columnas 1W/1M/3M entre A y B; si no puedes sostenerlo con eso, dilo
+  como "no verificable con estos datos".
+- Cada fila lleva la columna "Vela" (fecha de la última vela de ese dato).
+  Una diferencia entre Market Tracker y Portfolio Tracker en el mismo
+  ticker casi siempre es DESFASE de vela, no un error de datos: compara
+  "Vela" antes de declarar una discrepancia o de usar una cifra que cambie
+  el signo de Flow/ΔFlow, y menciona el desfase si lo hay.
+- `confidence_pct` es una estimación SUBJETIVA y NO calibrada (medida con
+  las señales de las últimas semanas, no discriminaba aciertos de fallos).
+  Úsala en múltiplos de 5, no la presentes como probabilidad real ni la
+  uses para justificar tamaños de posición.
+
+Prioriza novedad, no cobertura. Estructura la prosa abriendo con "QUÉ HA
+CAMBIADO HOY": (1) las hipótesis NUEVAS o que han GANADO evidencia, máximo
+tres, las más asimétricas primero; (2) las que se han DEBILITADO o
+INVALIDADO de verdad (con la condición cumplida); (3) una sola línea con
+las que siguen igual. Después, el análisis de contexto. No repitas con el
+mismo detalle temas que no han cambiado desde ANÁLISIS ANTERIORES.
 
 IMPORTANTE sobre "cartera": los tickers de la sección PORTFOLIO TRACKER son
 una watchlist curada por el usuario, NO posiciones reales verificadas — hoy
@@ -187,17 +223,23 @@ exacto:
       "interpretation": "qué podría significar",
       "action": "qué harías",
       "trigger": "qué confirmaría/aumentaría convicción",
-      "invalidation": "qué invalidaría la tesis",
-      "confidence_pct": 45
+      "invalidation": "qué invalidaría la tesis (condición concreta y medible: nivel de Flow, de precio, ratio...)",
+      "confidence_pct": 45,
+      "change_vs_prev": "NEW|STRENGTHENED|UNCHANGED|WEAKENED|INVALIDATED"
     }
   ]
 }
 ```
 
-Incluye en `signals` solo las ideas con contenido real de esta sesión (no
-rellenes con entradas vacías). Si no hay ninguna señal con convicción por
-encima de WATCH, es válido devolver un array corto o vacío — no inventes
-señales para rellenar el formato.
+`change_vs_prev` compara con ANÁLISIS ANTERIORES: NEW = hipótesis que no
+estaba; STRENGTHENED/WEAKENED = misma hipótesis con más/menos evidencia;
+UNCHANGED = sigue igual; INVALIDATED = se cumplió la condición de
+invalidación. Incluye en `signals` las hipótesis NEW, STRENGTHENED, WEAKENED
+e INVALIDATED; las UNCHANGED solo si son relevantes para la decisión de hoy
+(no las repitas por rutina — hoy se duplican temas durante días). No rellenes
+con entradas vacías. Si no hay ninguna señal con convicción por encima de
+WATCH, es válido devolver un array corto o vacío — no inventes señales para
+rellenar el formato.
 """
 
 
@@ -283,6 +325,16 @@ def _delta(cur, prev):
     return round(cur - prev, 2)
 
 
+def _vela(r: dict) -> str:
+    """MM-DD de la última vela (asOf) de la fila. Se le muestra a Sol para que
+    pueda distinguir un desfase de vela entre Market y Portfolio Tracker de un
+    error de datos real (asesor externo, 2026-10-27: las discrepancias en AMR/
+    HCC/TLT/NVDA alteraban el signo de Flow/ΔFlow sin que se supiera si era
+    timing)."""
+    a = r.get("asOf")
+    return a[5:10] if isinstance(a, str) and len(a) >= 10 else "—"
+
+
 def _flow_mechanical_tag(ticker: str, flow_ctx: dict) -> str:
     """Columna mecánica de disciplina de promoción (flow_state_lib.py).
     Origen (2026-10-01): una auditoría externa sobre market_analysis_llm.jsonl
@@ -361,8 +413,8 @@ def build_equities_table(today: str, prev: str | None, flow_ctx: dict) -> str:
     out = []
     for sec, sec_rows in by_section.items():
         out.append(f"### {sec}")
-        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d | Mecánico |")
-        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|---|")
+        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d | Mecánico | Vela |")
+        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|---|---|")
         for r in sec_rows:
             p = prev_by_ticker.get(r["ticker"])
             dflow  = _delta(r.get("flowScore"), p.get("flowScore") if p else None)
@@ -373,7 +425,7 @@ def build_equities_table(today: str, prev: str | None, flow_ctx: dict) -> str:
                 f"| {r['ticker']} | {_fmt(r.get('price'))} | {_fmt(r.get('d1'),'%')} | {_fmt(r.get('w1'),'%')} | "
                 f"{_fmt(r.get('m1'),'%')} | {_fmt(r.get('m3'),'%')} | {_fmt(r.get('rsi'))} | {macd} | "
                 f"{_fmt(r.get('atrPct'),'%')} | {r.get('konc_alignment') or '—'} | {_fmt(r.get('flowScore'))} | "
-                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} | {mech} |"
+                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} | {mech} | {_vela(r)} |"
             )
         out.append("")
     return "\n".join(out)
@@ -403,8 +455,8 @@ def build_portfolio_table(today: str, prev: str | None, flow_ctx: dict) -> str:
         if not present:
             continue
         out.append(f"### {sec_name}")
-        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d | Mecánico |")
-        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|---|")
+        out.append("| Ticker | Precio | 1D | 1W | 1M | 3M | RSI | MACD | ATR% | Konc | Flow | ΔFlow1d | Early | ΔEarly1d | Mecánico | Vela |")
+        out.append("|---|---:|---:|---:|---:|---:|---:|:---:|---:|---|---:|---:|---:|---:|---|---|")
         for tk in present:
             r = today_rows[tk]
             p = prev_by_ticker.get(tk)
@@ -416,7 +468,7 @@ def build_portfolio_table(today: str, prev: str | None, flow_ctx: dict) -> str:
                 f"| {tk} | {_fmt(r.get('price'))} | {_fmt(r.get('d1'),'%')} | {_fmt(r.get('w1'),'%')} | "
                 f"{_fmt(r.get('m1'),'%')} | {_fmt(r.get('m3'),'%')} | {_fmt(r.get('rsi'))} | {macd} | "
                 f"{_fmt(r.get('atrPct'),'%')} | {r.get('konc_alignment') or '—'} | {_fmt(r.get('flowScore'))} | "
-                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} | {mech} |"
+                f"{_fmt(dflow)} | {_fmt(r.get('earlyFlow'))} | {_fmt(dearly)} | {mech} | {_vela(r)} |"
             )
         out.append("")
     return "\n".join(out)

@@ -48,5 +48,20 @@
     "id": "inverse_etf_estudio_primas",
     "date": "2026-11-12",
     "message": "📅 <b>ETFs inversos — lanzar el estudio de primas</b>\n\nYa deberían haberse acumulado ~20 sesiones de snapshots de cadenas de opciones (UVXY/SQQQ/GLL/BOIL, desde 2026-10-13).\n\n1. Comprueba que hay datos: <code>docs/data/inverse_etf_options_summary.jsonl</code> (una fila por ticker y día). Si hay menos de ~15 días, o el snapshot falló en CI (Step 9e4), revisa el log antes de seguir.\n2. Lanza: <code>py -3 scripts/inverse_etf_premium_study.py --save</code> (genera <code>docs/analysis/inverse_etf_premium_study.md</code>).\n3. Preguntas clave: (a) ¿el carry implícito de la cadena ya descuenta el decay histórico de UVXY (≈ −30% a 63 sesiones)? Si sí, comprar la put no tiene ventaja. (b) ¿la curva de IV 3m/1m está invertida en los spikes? (c) ¿el call spread vendido paga lo suficiente frente a su pérdida máxima? (d) spreads bid-ask de GLL y BOIL: ¿son operables?\n4. Revisa también si el aviso <code>inverse_etf_alert.js</code> ha saltado algún spike real y qué pasó después (<code>docs/data/inverse_etf_alert_state.json</code>).\n5. Si el n es insuficiente, reprograma este recordatorio un mes más en vez de forzar una conclusión."
+  },
+  {
+    "id": "sol_prompt_verificacion",
+    "date": "2026-11-03",
+    "message": "📅 <b>Sol — verificar que el prompt nuevo se comporta</b>\n\nHan pasado ~5 sesiones desde los cambios del 2026-10-27 (<code>market_analysis_llm.py</code>). Nunca se probó con una llamada real. Pega este prompt en Claude:\n\n---\nRevisa los últimos informes de <code>docs/data/market_analysis_llm.jsonl</code> (desde 2026-10-28):\n\n1. ¿El JSON trae <code>change_vs_prev</code> en cada señal? ¿Sigue parseando (<code>structured_parse_ok</code>)? ¿Bajó el nº de señales por informe (antes ~12-13)?\n2. ¿La prosa abre con «QUÉ HA CAMBIADO HOY»?\n3. ¿Mantiene hipótesis EARLY/CONFIRMED cuando desaparece INFL/CONT sin deterioro (caso NKE/TLT), o sigue rebajando a WATCH por rutina?\n4. ¿Cita la columna Vela al hablar de discrepancias Market vs Portfolio?\n5. Si algo no se cumple, ajusta el addendum; no toques el prompt verbatim.\n---"
+  },
+  {
+    "id": "rfl_toggle_sin_filtro_revision",
+    "date": "2026-11-17",
+    "message": "📅 <b>Relative Flow Lab — revisar uso del toggle «Sin filtro»</b>\n\nPendiente desde la auditoría del 2026-09-17: los 4 clics del toggle de Top 3 Flow In/Out caían todos en la semana de su implementación (posible artefacto de la verificación). Revisa <code>state_ux_instrumentation.json</code> (raíz, no se commitea): tasa de <code>toggle_unfiltered_top</code> sobre <code>page_loads</code> desde 2026-09-14. Si sigue en cero tras ~9 semanas, es candidato a simplificar o quitar. Recuerda que el hallazgo de que Fase 4/5a sale invertida a 1-4 semanas sigue sin actuarse (solo documentado)."
+  },
+  {
+    "id": "sol_evaluacion_retroactiva_v2",
+    "date": "2026-12-08",
+    "message": "📅 <b>Sol — repetir la evaluación retroactiva de señales</b>\n\nHan pasado ~6 semanas desde la primera medición (2026-10-27: EARLY/CONFIRMED no batían a SPY; las etiquetas bajistas/de madurez sí apuntaban bien; n pequeño y mercado bajista). Pega este prompt en Claude:\n\n---\nEjecuta <code>py -3 research/llm_signal_eval_v1/eval.py</code> y compara con <code>research/llm_signal_eval_v1/README.md</code>:\n\n1. ¿EARLY/CONFIRMED siguen sin batir a SPY? ¿Mejora con más n o con otro régimen de mercado?\n2. ¿Se mantiene que MATURE/EXTENDED/INVALIDATED/DISTRIBUTION rinden por debajo?\n3. Con el campo <code>change_vs_prev</code> (desde 2026-10-28) mide solo NEW/STRENGTHENED por separado.\n4. ¿EARLY→CONFIRMED ya tiene n suficiente (≥15)? Compara entrar en EARLY vs en CONFIRMED.\n5. Solo si hay evidencia a favor, reconsidera la memoria de hipótesis y los detectores de divergencias; si no, no se construyen.\n---"
   }
 ]

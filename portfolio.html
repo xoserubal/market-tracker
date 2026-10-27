@@ -1527,6 +1527,13 @@ function Portfolio() {
   const [tagUi, setTagUi] = React.useState(() => { try { return { ...TAG_UI_DEFAULTS, ...JSON.parse(localStorage.getItem('tags_ui') || '{}') }; } catch { return { ...TAG_UI_DEFAULTS }; } });
   const setGroupBy = v => { setGroupByRaw(v); try { localStorage.setItem('tags_group_by', v); } catch {} };
   React.useEffect(() => { try { localStorage.setItem('tags_ui', JSON.stringify(tagUi)); } catch {} }, [tagUi]);
+  // Paneles replegables (Ranking de Setups, Insider Activity) — preferencia por visitante
+  const [collapsedPanels, setCollapsedPanels] = React.useState(() => { try { return JSON.parse(localStorage.getItem('collapsed_panels') || '{}'); } catch { return {}; } });
+  const togglePanel = id => setCollapsedPanels(c => {
+    const n = { ...c, [id]: !c[id] };
+    try { localStorage.setItem('collapsed_panels', JSON.stringify(n)); } catch {}
+    return n;
+  });
 
   const reloadTags = React.useCallback(async () => {
     const [a, b] = await Promise.all([
@@ -2291,11 +2298,11 @@ function Portfolio() {
       {/* ── Setup Ranking ─────────────────────────────────────────────── */}
       {setupRanking.length > 0 && (
         <div style={{marginBottom:16,border:'1px solid #e0e0e0',borderRadius:6,overflow:'hidden'}}>
-          <div style={{padding:'5px 12px',background:'#354f73',color:'white',
+          <div onClick={()=>togglePanel('setups')} style={{padding:'5px 12px',background:'#354f73',color:'white',cursor:'pointer',userSelect:'none',
             fontSize:10,fontWeight:700,letterSpacing:'.5px',textTransform:'uppercase'}}>
-            Ranking de Setups — ordenado por Early Flow
+            {collapsedPanels.setups ? '▸' : '▾'} Ranking de Setups — ordenado por Early Flow
           </div>
-          <div style={{overflowX:'auto'}}>
+          {!collapsedPanels.setups && <div style={{overflowX:'auto'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
               <thead className="rank-thead">
                 <tr style={{background:'#f0f4f8'}}>
@@ -2364,7 +2371,7 @@ function Portfolio() {
                 })}
               </tbody>
             </table>
-          </div>
+          </div>}
         </div>
       )}
 
@@ -2437,12 +2444,12 @@ function Portfolio() {
       {/* ── Insider Activity (Form4API) ───────────────────────────────── */}
       {insiderRanking.length > 0 && (
         <div style={{marginBottom:16,border:'1px solid #e0e0e0',borderRadius:6,overflow:'hidden'}}>
-          <div style={{padding:'5px 12px',background:'#354f73',color:'white',
+          <div onClick={()=>togglePanel('insider')} style={{padding:'5px 12px',background:'#354f73',color:'white',cursor:'pointer',userSelect:'none',
             fontSize:10,fontWeight:700,letterSpacing:'.5px',textTransform:'uppercase'}}
             data-tip={"Actividad de insiders (Form4API / SEC Form 4) para tickers que YA tienen una señal técnica\n(acumulación Koncorde D/3D/W, posición abierta o PCS≥75).\n\nEs una capa de CONFIRMACIÓN CONTEXTUAL, no una señal de compra/venta automática.\nSolo cubre tickers listados en EE.UU. — sufijos .TO/.V/.AX/.L/.DE/etc. no tienen cobertura."}>
-            Insider Activity — confirmación contextual (no señal de trading)
+            {collapsedPanels.insider ? '▸' : '▾'} Insider Activity — confirmación contextual (no señal de trading)
           </div>
-          <div style={{overflowX:'auto'}}>
+          {!collapsedPanels.insider && <div style={{overflowX:'auto'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
               <thead className="rank-thead">
                 <tr style={{background:'#f0f4f8'}}>
@@ -2495,7 +2502,7 @@ function Portfolio() {
                 })}
               </tbody>
             </table>
-          </div>
+          </div>}
         </div>
       )}
 

@@ -240,8 +240,20 @@ def build_message(
     return "\n".join(lines)
 
 
+# Un recordatorio vencido y no enviado (pipeline caído ese día, Telegram caído...)
+# se sigue enviando en los siguientes runs, pero solo hasta este margen: pasado
+# ese tiempo ya no tiene sentido y se descarta en silencio.
+REMINDER_CATCHUP_DAYS = 14
+
+
 def check_reminders(token: str, chat_id: str, today: str) -> None:
-    """Sends a reminder message if today matches any scheduled reminder date."""
+    """Envía los recordatorios cuya fecha ya llegó y que no se hayan enviado.
+
+    Antes (hasta 2026-10-28) solo se enviaba si `date == today`, sin registro de
+    envíos: con 2 runs al día cada recordatorio llegaba duplicado, y si el run de
+    ese día fallaba se perdía para siempre. Ahora los ids enviados se guardan en
+    notify_state.json -> "reminders_sent" (solo si el envío salió bien), y un
+    recordatorio vencido hace <= REMINDER_CATCHUP_DAYS días se reintenta."""
     reminders_path = DATA / "reminders.json"
     if not reminders_path.exists():
         return
@@ -250,11 +262,31 @@ def check_reminders(token: str, chat_id: str, today: str) -> None:
     except Exception:
         return
 
+    state = _load_state()
+    sent = set(state.get("reminders_sent", []))
+    today_d = date.fromisoformat(today)
+    changed = False
+
     for reminder in reminders:
-        if reminder.get("date") == today and reminder.get("message"):
-            print(f"Sending reminder: {reminder.get('id', '?')}")
-            ok = send_telegram(token, chat_id, reminder["message"])
-            print("Reminder OK" if ok else "Reminder FAILED")
+        rid, rdate = reminder.get("id"), reminder.get("date")
+        if not rid or not rdate or not reminder.get("message") or rid in sent:
+            continue
+        try:
+            age = (today_d - date.fromisoformat(rdate)).days
+        except ValueError:
+            continue
+        if age < 0 or age > REMINDER_CATCHUP_DAYS:
+            continue
+        print(f"Sending reminder: {rid}" + (f" (vencido hace {age} d)" if age else ""))
+        ok = send_telegram(token, chat_id, reminder["message"])
+        print("Reminder OK" if ok else "Reminder FAILED")
+        if ok:
+            sent.add(rid)
+            changed = True
+
+    if changed:
+        state["reminders_sent"] = sorted(sent)
+        _save_state(state)
 
 
 def run() -> None:

@@ -315,8 +315,19 @@ Gestionados en `docs/data/reminders.json`. El workflow los comprueba cada día y
 | 2026-09-03 | ranking_score_fase1_analisis | Inicio de Fase 1 (análisis exploratorio) del Ranking Score, incluida la evaluación de Koncorde como subsección propia. Sustituye a `koncorde_research_log_revision` (cancelado 2026-08-06, fusionado aquí) |
 | 2026-09-15 | rfl_v2_fase6_instrumentacion_y_calibracion | Revisar `state_ux_instrumentation.json` (uso real de Fase 6) + calibrar contra `relative_flow_history` los umbrales sin calibrar de Fase 4 (coherencia Top 3 In/Out) y Fase 5a (matriz cross-módulos) |
 | 2026-11-12 | inverse_etf_estudio_primas | Lanzar `scripts/inverse_etf_premium_study.py --save` con ~20 sesiones de snapshots de cadenas (UVXY/SQQQ/GLL/BOIL): ¿el decay ya está en el precio?, curva de plazos, call spread vs pérdida máxima, spreads de GLL/BOIL |
+| 2026-11-03 | sol_prompt_verificacion | Verificar en los primeros informes reales que el prompt de Sol del 2026-10-27 funciona (change_vs_prev, «QUÉ HA CAMBIADO HOY», mantener hipótesis sin rebajar por rutina, columna Vela) |
+| 2026-11-17 | rfl_toggle_sin_filtro_revision | Revisar la tasa de uso del toggle «Sin filtro» de Top 3 Flow In/Out de RFL (`state_ux_instrumentation.json`) tras ~9 semanas |
+| 2026-12-08 | sol_evaluacion_retroactiva_v2 | Repetir `research/llm_signal_eval_v1/eval.py` con más semanas y medir NEW/STRENGTHENED por separado |
 
 Para añadir un recordatorio: editar `docs/data/reminders.json` directamente (sin tocar código).
+
+**Mecánica de envío (cambiada 2026-10-28):** `notify_telegram.py → check_reminders()` (Step 11 del
+pipeline, no el bot de comandos) enviaba solo si `date == hoy`, sin registro: con 2 runs al día cada
+recordatorio llegaba duplicado y, si el run de ese día fallaba, se perdía. Ahora los ids enviados se
+guardan en `docs/data/notify_state.json → reminders_sent` (solo si Telegram respondió OK); un
+recordatorio vencido y no enviado se reintenta hasta 14 días después (`REMINDER_CATCHUP_DAYS`) y luego
+se descarta en silencio. Al estrenarlo se sembró `reminders_sent` con todos los anteriores a esa fecha
+para no reenviarlos. Probado con Telegram simulado (hoy/ayer/viejo/futuro/fallo); no probado en CI real.
 
 ---
 
@@ -8047,6 +8058,42 @@ Cada bloque de la sección tiene un botón que pide a **TWS / IB Gateway** (API 
 - **Página:** chip «IBKR EN VIVO / RETRASADO ~15 min / CONGELADO · hh:mm ET», botón «Volver a la cadena guardada», aviso de error con la causa y «se sigue mostrando la cadena guardada»; el export a LLM usa la cadena en vivo si se pidió. El estado en vivo vive en la sesión de la página (no se persiste).
 - **Requisitos del usuario:** TWS abierto con sesión iniciada y **API activada** (Configure → Global Configuration → API → Settings → «Enable ActiveX and Socket Clients», 127.0.0.1 en Trusted IPs; la primera conexión puede pedir «Accept incoming connection»). Tiempo real exige suscripción de opciones US (OPRA); sin ella llegan retrasados 15 min (la página lo avisa). **Reiniciar `node server.js`** tras la actualización (ruta nueva).
 - **Verificado:** 40 tests (`scripts/test_ibkr_option_chain.js`) con un TWS simulado que emite los mismos eventos que la librería (plan de contratos, ensamblado, clasificación de `data_type`, cada código de error, desconexión al fallar) + conexión real rechazada con la librería (→ `NO_TWS`, ~0,8 s); recomendador con `--live-chain` y las 4 variantes de aviso; endpoint real sin API activada (503 `NO_TWS`) y la página en Edge headless: error visible y cadena guardada conservada, y éxito simulado (chip, «Volver»). **NO verificado contra un TWS real**: en el momento de la implementación `tws.exe` estaba abierto pero la API de sockets estaba desactivada (nada escuchando en 7496/7497/4001/4002), así que el protocolo real (campos de ticks, `reqSecDefOptParams`, tiempos de espera) está sin probar de extremo a extremo.
+
+---
+
+## Evaluación retroactiva de las señales de Sol (2026-10-27)
+
+Un asesor externo revisó 14 sesiones del análisis LLM y propuso memoria de hipótesis, detector de
+divergencias relativas y evaluación prospectiva. Antes de construir nada se midió lo que ya existe
+(`research/llm_signal_eval_v1/`, informe en su README): 360 señales (31 informes), `subject` libre
+resuelto a tickers (354/360), alfa vs SPY a 1/3/5/10 sesiones desde el cierre siguiente.
+Resultado: **EARLY/CONFIRMED no baten a SPY** (alfa medio negativo, |t|<1.6); las etiquetas bajistas
+y de madurez (MATURE/EXTENDED/INVALIDATED/DISTRIBUTION) sí rinden por debajo a 3-10 sesiones
+(señal, con n 3-26 y sin corrección por comparaciones múltiples); `confidence_pct` no discrimina;
+EARLY→CONFIRMED con n=6/3, inconcluyente. Solo 6 semanas y un mercado bajista. Consecuencia: la
+memoria de hipótesis y los detectores de divergencia **no se construyen todavía**; sí quedan
+las mejoras baratas, **aplicadas el mismo día** en `scripts/market_analysis_llm.py`
+(`OUTPUT_FORMAT_ADDENDUM` + tablas; el prompt verbatim `wiki/PROMPT_MARKET_ANALYST_SOL.md` no se toca):
+- Columna **Vela** (MM-DD de `asOf`) en las tablas de Market y Portfolio Tracker; las discrepancias
+  entre ambos casi siempre son desfase de vela, no error de datos.
+- **Nacer vs mantener:** INFL/CONT siguen siendo requisito para ABRIR una hipótesis EARLY/CONFIRMED,
+  pero perder el evento técnico hoy ya no basta para rebajarla si el Flow no cae (ΔFlow negativo
+  ≥2 sesiones), no hay veto duro y no se cumple la invalidación que Sol escribió. Rebaja a MATURE si
+  la columna Mecánico lo dice o el RSI está extendido. Origen: NKE (15-oct) y TLT (27-oct) se
+  rebajaban a WATCH al desaparecer el evento aunque el Flow seguía subiendo.
+- **Rigor de evidencia:** Flow/MACD/RSI/Early/Koncorde cuentan como UNA lectura técnica; la fuerza
+  relativa entre A y B se afirma con la diferencia de rendimientos 1W/1M/3M, no comparando dos Flows;
+  `confidence_pct` = estimación subjetiva no calibrada, en múltiplos de 5.
+- **Novedad sobre cobertura:** la prosa abre con «QUÉ HA CAMBIADO HOY» (máx. 3 hipótesis nuevas/con más
+  evidencia, las invalidadas de verdad, una línea con las que siguen igual) y el JSON gana el campo
+  `change_vs_prev` (NEW|STRENGTHENED|UNCHANGED|WEAKENED|INVALIDATED), que permitirá contar hipótesis
+  independientes y no 13 señales repetidas por informe.
+Sin verificar en producción: el efecto sobre el comportamiento de Sol solo se verá en los próximos
+informes (se probó la construcción del payload, no una llamada a la API). Repetir
+`research/llm_signal_eval_v1/eval.py` dentro de 4-6 semanas; con `change_vs_prev` se podrá medir solo
+NEW/STRENGTHENED.
+**Python:** `py -3` (3.13) estaba sin paquetes; se instaló `backtest/requirements.txt` (pandas 3.1.0,
+yfinance 1.7.0 — CI usa 3.11, así que ojo con diferencias de pandas). `py -3.12` sigue funcionando.
 
 ---
 
