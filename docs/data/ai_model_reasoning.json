@@ -1,6 +1,6 @@
 {
   "date": "2026-10-27",
-  "run_id": "2026-10-27_1430",
+  "run_id": "2026-10-27_2349",
   "candidates": [
     "VLE.TO",
     "TNZ.TO",
@@ -27,78 +27,266 @@
     "TSLA",
     "HUM",
     "PLTR",
-    "MOS",
-    "BUR",
-    "MRK",
-    "CVS",
-    "ASPI",
-    "NKE",
-    "PNPN.V",
-    "ROOT",
-    "SLG.V",
-    "RYM.NZ",
-    "BBAR",
-    "YPF",
-    "HFG.DE",
-    "GLNG",
     "HIMS",
-    "DPM.TO",
-    "SEDANA.ST",
-    "IRS",
-    "SLP.L",
-    "SSV.V",
-    "SYK",
-    "TRLV",
-    "SLS",
-    "BSX",
-    "JNJ",
-    "UNH",
-    "CMCSA",
-    "MOH.HM",
-    "FOUR",
-    "BOGO.V",
+    "BUR",
     "TTI",
-    "TLW.L",
-    "LLY",
+    "HFG.DE",
+    "MOH.HM",
+    "SLG.V",
     "EOS.AX",
-    "REG.V",
-    "VFF",
-    "QXO",
-    "HCC",
+    "MOS",
+    "ASPI",
+    "BBAR",
     "RCAT",
-    "TDOC",
+    "SLS",
+    "SYK",
+    "UNH",
+    "FOUR",
     "TGS",
-    "URI",
-    "VRTX",
+    "LLY",
+    "ROOT",
+    "CVS",
     "CRON",
+    "REG.V",
+    "GLNG",
+    "IRS",
+    "CMCSA",
+    "BSX",
+    "VFF",
+    "VRTX",
+    "SSV.V",
+    "SLP.L",
+    "TLW.L",
+    "RYM.NZ",
+    "QXO",
+    "PNPN.V",
+    "URI",
     "VIST",
-    "SMR.AX"
+    "TDOC",
+    "HCC",
+    "DPM.TO",
+    "JNJ",
+    "YPF",
+    "BOGO.V",
+    "TRLV",
+    "SEDANA.ST",
+    "SMR.AX",
+    "MRK",
+    "NKE"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 88,
+      "quality_score": 92,
       "decision_summary": {
-        "market_read": "Macro improving but no candidates meet portfolio thresholds with sufficient weekly leadership or clean Koncorde alignment.",
+        "market_read": "Bull Maduro Improving regime with extreme oil_gas and healthcare_largecap concentration risks above 200% weights.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
-      "watch": [],
-      "rejected": [
+      "watch": [
         {
-          "ticker": "SLG.V",
-          "reason": "PCS 63.0 with rot_score 4, negative 4w outperformance, distribution on daily/3D/weekly, no sustained streak.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "VLE.TO",
+          "reason": "PCS 89.5, 8w streak, rot=8, bullish Koncorde alignment but already open position and high oil concentration.",
+          "watch_trigger": "PCS sustained above 85 with reduced theme weight"
+        },
+        {
+          "ticker": "TNZ.TO",
+          "reason": "PCS 89.5, 8w streak but distribution_warning on 3D/weekly and spike_flag.",
+          "watch_trigger": "Koncorde alignment shifts to bullish_aligned with 4w outperformance >5%"
+        },
+        {
+          "ticker": "OXY",
+          "reason": "PCS 86.0, 5w streak, rot=8, already open with medium extension.",
+          "watch_trigger": "dems >=14 and outperform_d10 >=7 without spike"
+        },
+        {
+          "ticker": "GTE",
+          "reason": "PCS 83.5, highest 13w outperformance +76% but already open.",
+          "watch_trigger": "sustained dems >=14 with no distribution on daily"
+        },
+        {
+          "ticker": "VNOM",
+          "reason": "PCS 83.2, high extension_risk=high with multiple flags and 2w streak only.",
+          "watch_trigger": "extension_points drop to 0 and streak extends to 4w"
+        },
+        {
+          "ticker": "SU",
+          "reason": "PCS 83.0, 8w streak, already open.",
+          "watch_trigger": "ret_4w_vs_spy turns positive above 8%"
+        },
+        {
+          "ticker": "UCO",
+          "reason": "PCS 82.5, extreme extension_risk and leveraged ETF in concentrated theme.",
+          "watch_trigger": "extension_risk falls to low and dems >=14"
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "PCS 82.5, 8w streak but already open and high oil weight.",
+          "watch_trigger": "theme_concentration_risk reduces below high"
+        },
+        {
+          "ticker": "CVE",
+          "reason": "PCS 81.0, 3w streak, pending 3D confirmation.",
+          "watch_trigger": "konc_alignment becomes bullish_aligned"
+        },
+        {
+          "ticker": "DHR",
+          "reason": "PCS 80.8, 7w streak, rot=10, already open.",
+          "watch_trigger": "dems rises above 12 with momentum_accel sustained"
+        },
+        {
+          "ticker": "KOS",
+          "reason": "PCS 80.5, 3w streak, already open.",
+          "watch_trigger": "ret_4w_vs_spy exceeds +8% with streak to 5w"
+        },
+        {
+          "ticker": "ABBV",
+          "reason": "PCS 80.2, 4w streak, rot=9, already open.",
+          "watch_trigger": "streak extends to 6w with no distribution flags"
+        },
+        {
+          "ticker": "KIST.L",
+          "reason": "PCS 78.5, 8w streak but negative 4w outperformance.",
+          "watch_trigger": "ret_4w_vs_spy turns positive above 5%"
+        },
+        {
+          "ticker": "TMO",
+          "reason": "PCS 77.8, 8w streak, already open.",
+          "watch_trigger": "dems >=12 and healthcare weight below 150%"
+        },
+        {
+          "ticker": "FRU.TO",
+          "reason": "PCS 77.5, 4w streak, medium extension.",
+          "watch_trigger": "extension_points to 0 and streak to 6w"
+        },
+        {
+          "ticker": "VAL",
+          "reason": "PCS 77.0, 0w streak, high extension despite strong 13w.",
+          "watch_trigger": "streak_weeks >=3 and extension_risk to low"
+        },
+        {
+          "ticker": "ISRG",
+          "reason": "PCS 76.5, 3w streak, already open.",
+          "watch_trigger": "konc_3d_state confirms up without pending flag"
+        },
+        {
+          "ticker": "TK",
+          "reason": "PCS 76.2, 2w streak, spike_flag.",
+          "watch_trigger": "outperform_d10 >=7 without spike"
+        },
+        {
+          "ticker": "SLB",
+          "reason": "PCS 75.8, 1w streak, daily distribution and high extension.",
+          "watch_trigger": "streak to 4w and dems >=14"
+        },
+        {
+          "ticker": "LCX.V",
+          "reason": "PCS 75.5, 1w streak, distribution_warning.",
+          "watch_trigger": "konc_alignment to bullish_aligned"
+        },
+        {
+          "ticker": "YAL.AX",
+          "reason": "PCS 75.0, 2w streak, mixed Koncorde.",
+          "watch_trigger": "konc_w_state shifts to up"
+        },
+        {
+          "ticker": "PFE",
+          "reason": "PCS 74.8, 8w streak, already open.",
+          "watch_trigger": "ret_4w_vs_spy >6% with healthcare weight reduction"
+        },
+        {
+          "ticker": "TSLA",
+          "reason": "PCS 74.2, 1w streak, distribution_warning on 3D/weekly.",
+          "watch_trigger": "konc_alignment to bullish_aligned and streak to 4w"
+        },
+        {
+          "ticker": "HUM",
+          "reason": "PCS 73.0, 4w streak, already open.",
+          "watch_trigger": "dems >=12 and extension to low"
+        },
+        {
+          "ticker": "PLTR",
+          "reason": "PCS 72.2, 7w streak, mixed Koncorde.",
+          "watch_trigger": "konc_w_state to up and dems >=12"
+        },
+        {
+          "ticker": "SMR.AX",
+          "reason": "PCS 70.2 exceeds EARLY_ROTATION floor but rot_score only 6, ret_4w_vs_spy negative, and Koncorde shows distribution_warning across timeframes.",
+          "watch_trigger": "rot_score reaching 8 with positive ret_4w_vs_spy and Koncorde alignment shifting to bullish_aligned"
         },
         {
           "ticker": "TRLV",
-          "reason": "PCS 66.5 with only 1-week streak, negative 4w vs SPY, mixed Koncorde, dems 9 below early rotation threshold.",
+          "reason": "PCS 66.5 above MACRO_THEMATIC_BENEFICIARIES floor but ret_4w_vs_spy at -10.6 percent, streak only 1 week, and theme already at 60 percent weight.",
+          "watch_trigger": "ret_4w_vs_spy turning positive with streak extending to 3 weeks and dems above 12"
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "PCS 62.8 at CONFIRMED_FLOW_LEADERS floor but ret_13w_vs_spy only +2 percent, streak 0 weeks, and spike_flag true with medium extension risk.",
+          "watch_trigger": "streak reaching 3 weeks with ret_4w_vs_spy above +4 percent and Koncorde 3D confirming up without distribution"
+        }
+      ],
+      "rejected": []
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 90,
+      "decision_summary": {
+        "market_read": "Bull Maduro macro regime with improving trend (+11.67 delta_1w) supports continued risk-on positioning across oil_gas and healthcare themes.",
+        "risk_posture": "normal",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [
+        {
+          "ticker": "CVE",
+          "reason": "PCS 81.0 with 3-week streak and +8.05% ret_4w_vs_spy but dems=4 and ret_5d_vs_spy=-4.63% show recent daily flow weakening; not yet strong enough to add to already 252% oil_gas concentrated portfolio versus SU (8w streak, +17.3% 4w) and OXY (5w streak, +13.5% 4w) already held.",
+          "watch_trigger": "Re-enter if dems rises above 10 with ret_5d turning positive and streak extends to 5+ weeks, or if oil_gas concentration risk is reduced through other position exits."
+        },
+        {
+          "ticker": "HUM",
+          "reason": "PCS 73.0 with rot=8 and 4-week streak but ret_4w_vs_spy=+5.62% and ret_13w_vs_spy=+3.77% are modest compared to held healthcare positions like ISRG (+12.2% 4w) and ABBV (+9.9% 4w); bpmc_confirmation on Koncorde adds uncertainty.",
+          "watch_trigger": "Select if ret_13w_vs_spy climbs above +15% and streak extends to 6+ weeks, demonstrating acceleration comparable to current portfolio healthcare holdings."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "TNZ.TO",
+          "reason": "PCS 89.5 but konc_alignment=distribution_warning across daily, 3D, and weekly timeframes with 3D blue reading -9.11 indicating active smart-money selling, and ret_4w_vs_spy=-3.29% confirms weekly leadership has stalled despite 8-week streak history.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "VNOM",
+          "reason": "PCS 83.2 with extension_risk high at 5 points carrying three flags (dist_sma20_atr_high, spike_flag, rsi_high) and only a 2-week streak; ret_13w_vs_spy=+10.4% is moderate relative to owned positions like VLE.TO (+33.2%) and OXY (+13.5%) which offer cleaner entries.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "UCO",
+          "reason": "PCS 82.5 but extension_risk extreme at 8 points with rsi_extreme and ret_4w_extended flags on a 2x leveraged crude oil ETF; this instruments magnifies downside in any oil pullback, making it categorically riskier than direct oil equity holdings already in portfolio.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "KOS",
+          "reason": "PCS 80.5 with only a 3-week streak, konc_d_state=distribution, 14.7% below 52-week high, and ret_4w_vs_spy=+8.3% which trails held positions like GTE (+20.2% 4w) and SU (+17.3% 4w) while adding to already 252% overweight oil_gas.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "KIST.L",
+          "reason": "PCS 78.5 with 8-week streak but ret_4w_vs_spy=-3.29% shows the streak has effectively stalled; negative 4-week outperformance while peers like WCP.TO (+11.9% 4w) and SU (+17.3% 4w) are still accelerating makes this a laggard in the oil_gas theme.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "FRU.TO",
+          "reason": "PCS 77.5 with ret_13w_vs_spy=+1.92% and rot_score=6; the 13-week leadership is negligible compared to owned oil positions delivering +16% to +33% outperformance, and rs_flag is 'outperform' rather than 'leader' or 'strong_leader'.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "VAL",
+          "reason": "PCS 77.0 but streak_weeks=0 (zero), signal is IGNORAR, and PCS just crossed down from 78.5; despite dems=13 the lack of any sustained weekly streak and the IGNORAR system signal make this uninvestable as a new position.",
           "rejection_category": "insufficient_conviction"
         },
         {
-          "ticker": "SLS",
-          "reason": "PCS 65.0 with 0-week streak, negative 5d/10d outperformance, daily distribution despite 3D up.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "LCX.V",
+          "reason": "PCS 75.5 with konc_alignment=distribution_warning across 3D and weekly, streak of only 1 week, and ret_4w_vs_spy=-0.31%; the distribution state across multiple timeframes with no weekly outperformance to offset it makes entry counterproductive.",
+          "rejection_category": "technical_overextension"
         }
       ]
     }
