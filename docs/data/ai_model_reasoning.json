@@ -1,10 +1,9 @@
 {
-  "date": "2026-10-28",
-  "run_id": "2026-10-28_1510",
+  "date": "2026-10-29",
+  "run_id": "2026-10-29_0004",
   "candidates": [
     "WCP.TO",
     "TNZ.TO",
-    "VLE.TO",
     "OXY",
     "SU",
     "VNOM",
@@ -12,6 +11,7 @@
     "GTE",
     "TSLA",
     "UCO",
+    "VLE.TO",
     "FRU.TO",
     "DHR",
     "VIT-B.ST",
@@ -24,218 +24,118 @@
     "PLTR",
     "SLB",
     "LCX.V",
-    "YAL.AX",
     "PFE",
+    "TOU.TO",
     "AMD",
-    "KIST.L",
-    "TDOC",
-    "VIST",
-    "EOS.AX",
-    "QXO",
-    "SASK.V",
-    "TRLV",
-    "YPF",
-    "CRON",
-    "DMX.V",
-    "HIMS",
-    "CVS",
-    "IRS",
-    "REG.V",
-    "DPM.TO",
-    "ASPI",
-    "ROOT",
-    "RCAT",
-    "LLY",
-    "GLNG",
-    "MOS",
-    "CMCSA",
-    "FOUR",
-    "BBAR",
-    "JNJ",
-    "HFG.DE",
-    "BUR",
+    "III.TO",
     "SSV.V",
-    "SMR.AX",
-    "UNH",
-    "HCC",
-    "SEDANA.ST",
-    "TTI",
-    "MRK",
-    "SYK",
+    "IRS",
+    "MOS",
     "SLG.V",
-    "RYM.NZ",
     "BOGO.V",
-    "VRTX",
-    "TLW.L",
-    "SLP.L",
-    "CVE",
-    "URI",
-    "PNPN.V",
+    "EOS.AX",
+    "BBAR",
+    "SEDANA.ST",
+    "CVS",
+    "SYK",
+    "TRLV",
+    "VIST",
+    "DMX.V",
+    "UNH",
+    "FOUR",
     "VFF",
+    "LLY",
+    "TLW.L",
+    "HCC",
+    "MRK",
+    "RCAT",
+    "KIST.L",
+    "CRON",
+    "SLP.L",
+    "ASPI",
+    "JNJ",
+    "CMCSA",
+    "CVE",
+    "ROOT",
+    "MOH.HM",
+    "URI",
+    "HFG.DE",
+    "HIMS",
+    "RYM.NZ",
+    "REG.V",
+    "GLNG",
+    "PNPN.V",
+    "VRTX",
+    "SMR.AX",
     "NKE",
-    "MOH.HM"
+    "TTI",
+    "QXO",
+    "TDOC",
+    "SASK.V",
+    "BUR",
+    "DPM.TO"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 92,
+      "quality_score": 89,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving with macro score 81.25 and strong 20-point weekly delta, yet extreme healthcare and oil_gas concentration limits new entries.",
+        "market_read": "Bull Maduro Improving with extreme healthcare and oil_gas concentration at 186.5% and 222.5% open weight.",
         "risk_posture": "cautious",
         "should_select_picks": false
       },
       "selected": [],
       "watch": [
         {
+          "ticker": "TSLA",
+          "reason": "dems=14 meets early rotation threshold but konc_alignment=distribution_warning and 3D/weekly distribution states create structural uncertainty.",
+          "watch_trigger": "konc_3d_state turns up with positive blue and green values confirming daily momentum"
+        },
+        {
+          "ticker": "VNOM",
+          "reason": "PCS 85.2 and rot_score=9 strong but oil_gas theme already 222.5% weight and extension_risk=high with spike_flag=true.",
+          "watch_trigger": "oil_gas open weight drops below 150% or extension_flags clear with ret_10d_vs_spy sustained above 8"
+        },
+        {
+          "ticker": "FRU.TO",
+          "reason": "PCS 81.5 with rot_score=8 but oil_gas concentration extreme and ret_13w_vs_spy only 2.73% weakest among peers.",
+          "watch_trigger": "subtheme_concentration_risk falls to low and streak_weeks extends to 6 with ret_4w_vs_spy above 8"
+        },
+        {
           "ticker": "VIT-B.ST",
-          "reason": "PCS 80.2 with rot_score 9, 5-week streak and 21.65% 4w outperformance, clean low extension risk and bullish-aligned Koncorde.",
-          "watch_trigger": "Confirmation of continued 4w outperformance above 15% and rot_score holding at 9+"
+          "reason": "PCS 80.2 rot=9 outperform_d10=8 strong but europa theme new and macro_improving delta must confirm across 3D timeframe.",
+          "watch_trigger": "konc_3d_trend exceeds 110 with theme_exposure under 8% and ret_13w_vs_spy holds above 25"
         },
         {
-          "ticker": "SLB",
-          "reason": "PCS 75.8 with dems 11 and outperform_d10 5, yet high extension risk and spike_flag require multi-day confirmation before entry.",
-          "watch_trigger": "Spike resolution with outperform_d10 reaching 7+ and extension_risk dropping to low"
+          "ticker": "PLTR",
+          "reason": "PCS 76.2 ret_13w_vs_spy 55.8% highest but us_tech_ai theme exposure low yet konc_w_state=distribution and dems=4 weak.",
+          "watch_trigger": "dems rises above 10 with streak_weeks to 3 and no distribution on weekly Koncorde"
         },
         {
-          "ticker": "YAL.AX",
-          "reason": "PCS 75.0 with rot_score 8 and 8.17% 4w outperformance, but distribution_warning on 3D and weekly Koncorde creates structural caution.",
-          "watch_trigger": "Konc_alignment shifting to bullish_aligned with 3D green exceeding 100"
+          "ticker": "HUM",
+          "reason": "PCS 77.0 rot=8 but healthcare already 186.5% weight and ret_5d_vs_spy negative at -3.01% with dems=5.",
+          "watch_trigger": "healthcare open weight falls below 120% and ret_4w_vs_spy turns positive above 6"
         },
         {
-          "ticker": "AMD",
-          "reason": "PCS 72.5 with 24.65% 13w outperformance, yet distribution_warning across daily, 3D and weekly plus negative 4w read signal weak near-term flow.",
-          "watch_trigger": "ret_4w_vs_spy turning positive above 5% and konc_alignment clearing distribution_warning"
-        },
-        {
-          "ticker": "SMR.AX",
-          "reason": "PCS 69.5 with rot_score 6 and distribution_warning on 3D/weekly; commodities_metals already high concentration.",
-          "watch_trigger": "PCS rises above 72 with rot_score >=8 and konc_alignment shifts from distribution_warning"
-        },
-        {
-          "ticker": "UNH",
-          "reason": "PCS 66.2 with rot_score 6 and 8.09% 4w outperformance; healthcare theme already at 186.5% weight.",
-          "watch_trigger": "PCS to 72+ with streak_weeks >=3 and healthcare exposure reduced below 150%"
-        },
-        {
-          "ticker": "VRTX",
-          "reason": "PCS 66.8 with rot_score 7 but spike_flag true and medium extension; healthcare concentration extreme.",
-          "watch_trigger": "PCS to 72+ with spike_flag false and outperform_d10 >=7 confirming multi-day flow"
-        },
-        {
-          "ticker": "CVE",
-          "reason": "PCS 69.5 with rot_score 5, streak 0, and distribution_warning; oil_gas already 227.5% weight.",
-          "watch_trigger": "PCS to 72+ with streak_weeks >=2 and rot_score >=7 while oil_gas weight declines"
-        },
-        {
-          "ticker": "URI",
-          "reason": "PCS 67.2 with rot_score 9 and dems 16 but medium extension and high cyclical theme concentration.",
-          "watch_trigger": "PCS to 72+ with extension_risk low and us_cyclical weight below 10%"
+          "ticker": "SLS",
+          "reason": "PCS 78.2 but healthcare concentration extreme and ret_10d_vs_spy negative at -0.86 with dems=4.",
+          "watch_trigger": "healthcare weight drops below 120% and dems exceeds 10 with positive ret_5d_vs_spy"
         }
       ],
       "rejected": [
         {
-          "ticker": "WCP.TO",
-          "reason": "Already open position in MIMO_SHADOW and CAVA_MACRO; high oil_gas concentration at 227.5% weight precludes additional exposure.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "TNZ.TO",
-          "reason": "Already open in CAVA_MACRO; mixed Koncorde alignment and high oil_gas concentration make further additions suboptimal.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "VLE.TO",
-          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO with 227.5% oil_gas weight.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "OXY",
-          "reason": "Already open across multiple portfolios; high theme concentration risk.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "SU",
-          "reason": "Already open in MIMO_SHADOW; oil_gas overexposure.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "VNOM",
-          "reason": "Already open in SCREENER_SHADOW; high extension risk and oil_gas concentration.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "ISRG",
-          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; healthcare weight at 186.5%.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "GTE",
-          "reason": "Already open in MIMO_SHADOW; extreme oil_gas concentration.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "TSLA",
-          "reason": "distribution_warning on 3D and weekly Koncorde plus spike_flag make entry unreliable despite PCS 83.0.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "UCO",
-          "reason": "Already open in CAVA_MACRO; high extension risk and leveraged product unsuitable for new allocation.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "FRU.TO",
-          "reason": "Already open in SCREENER_SHADOW and MACD_COMBO; high oil_gas concentration.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "DHR",
-          "reason": "Already open across MIMO_SHADOW and CAVA_MACRO; healthcare concentration extreme.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "SLS",
-          "reason": "Already open in SCREENER_SHADOW and MACD_COMBO; negative 5d and 10d outperformance vs SPY.",
+          "ticker": "VAL",
+          "reason": "PCS 77.0 but streak_weeks=0 and rot_score=5 lowest among oil_gas peers with extension_risk=high.",
           "rejection_category": "weak_relative_strength"
         },
         {
-          "ticker": "TMO",
-          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; healthcare weight 186.5%.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "SLB",
+          "reason": "PCS 75.8 but streak_weeks=1 and ret_13w_vs_spy only 5.26% with dems=14 offset by spike_flag=true.",
+          "rejection_category": "weak_flow"
         },
         {
-          "ticker": "VAL",
-          "reason": "Already open in SCREENER_SHADOW and MACD_COMBO; high extension risk.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "HUM",
-          "reason": "Already open in CAVA_MACRO; healthcare concentration.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "ABBV",
-          "reason": "Already open across multiple portfolios; healthcare overexposure.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "KOS",
-          "reason": "Already open in SCREENER_SHADOW and MACD_COMBO; distribution_warning on daily and 3D.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "PLTR",
-          "reason": "Already open in active sets; distribution_warning on weekly Koncorde.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "LCX.V",
-          "reason": "Already open in SCREENER_SHADOW and MACD_COMBO; high oil_gas concentration.",
-          "rejection_category": "better_alternative_available"
-        },
-        {
-          "ticker": "PFE",
-          "reason": "Already open across portfolios; healthcare weight extreme.",
-          "rejection_category": "better_alternative_available"
+          "ticker": "AMD",
+          "reason": "PCS 72.5 ret_4w_vs_spy negative at -8.36% and rot_score=6 with distribution_warning on 3D and weekly.",
+          "rejection_category": "weak_relative_strength"
         }
       ]
     }
