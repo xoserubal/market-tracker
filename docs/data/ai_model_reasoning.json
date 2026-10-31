@@ -1,173 +1,335 @@
 {
-  "date": "2026-10-30",
-  "run_id": "2026-10-30_2344",
+  "date": "2026-10-31",
+  "run_id": "2026-10-31_1434",
   "candidates": [
-    "WCP.TO",
     "TNZ.TO",
-    "ISRG",
+    "TMO",
+    "PFE",
+    "VRTX",
+    "WCP.TO",
     "OXY",
     "VNOM",
     "TDOC",
-    "TMO",
-    "DHR",
     "ABBV",
-    "GTE",
+    "DHR",
+    "COST",
     "SU",
-    "PFE",
+    "VAL",
     "UCO",
     "VLE.TO",
-    "FRU.TO",
-    "VAL",
-    "HUM",
-    "NUE",
-    "LLY",
-    "VIT-B.ST",
-    "SLB",
-    "LCX.V",
-    "VRTX",
     "JNJ",
-    "TSLA",
-    "MRK",
-    "FOUR",
-    "URI",
-    "REG.V",
-    "DPM.TO",
-    "ROOT",
-    "IRS",
-    "TRLV",
-    "SLP.L",
-    "BBAR",
+    "TK",
+    "FRU.TO",
+    "VIT-B.ST",
+    "GTE",
     "KOS",
-    "HIMS",
-    "TTI",
-    "TLW.L",
-    "VFF",
-    "RCAT",
-    "SEDANA.ST",
-    "VIST",
-    "HCC",
-    "CVE",
-    "QXO",
-    "ASPI",
-    "SASK.V",
+    "LLY",
+    "SLB",
+    "TOU.TO",
     "KIST.L",
-    "CRON",
-    "CMCSA",
-    "UNH",
-    "SYK",
-    "MOH.HM",
-    "BUR",
-    "NKE",
-    "DMX.V",
-    "MOS",
-    "BOGO.V",
-    "SE",
-    "SLG.V",
     "SLS",
+    "ROOT",
+    "DPM.TO",
+    "QXO",
+    "REG.V",
+    "AMD",
     "GRSL.V",
-    "CVS",
+    "SLP.L",
+    "TTI",
+    "WHC.AX",
+    "TRLV",
+    "SEDANA.ST",
+    "LCX.V",
+    "VIST",
+    "SLG.V",
+    "MLX.AX",
+    "MOH.HM",
+    "BOGO.V",
+    "URI",
+    "CORZ",
+    "RCAT",
+    "HUM",
+    "CRON",
+    "MU",
+    "TLW.L",
+    "SASK.V",
+    "IRS",
     "EOS.AX",
-    "GLNG"
+    "QQQ",
+    "ISRG",
+    "HCC",
+    "SE",
+    "GHM.AX",
+    "UNH",
+    "VFF",
+    "AMR",
+    "DMX.V",
+    "EOSE",
+    "ASM.AS",
+    "MOS",
+    "FOUR",
+    "BUR",
+    "GLNG",
+    "BBAR",
+    "CVS",
+    "AG",
+    "ASPI",
+    "GDXJ"
   ],
   "models": {
     "x-ai/grok-4.3": {
-      "quality_score": 88,
+      "quality_score": 93,
       "decision_summary": {
-        "market_read": "Bull Maduro Improving regime with macro_score 72.5 and +11.25 delta_1w supports selective entries but no new high-conviction signals today.",
+        "market_read": "Bull Maduro Improving regime with macro_score 67.5 and positive 1w delta supports selective healthcare and oil names.",
         "risk_posture": "normal",
         "should_select_picks": false
       },
       "selected": [],
       "watch": [
         {
-          "ticker": "UNH",
-          "reason": "PCS 74.2 with rot_score 6 and ret_4w_vs_spy +11.06 but already open position; daily momentum weak at dems=5.",
-          "watch_trigger": "dems rise above 10 with outperform_d10 >=6 and extension_risk remains low"
+          "ticker": "COST",
+          "reason": "PCS 80.5 with 5-week streak and low extension risk but dems=5 limits daily conviction for EARLY_ROTATION entry.",
+          "watch_trigger": "dems rises above 10 with outperform_d10 >=6 and no spike_flag"
         },
         {
-          "ticker": "CVS",
-          "reason": "PCS 62.2 with rot_score 6 and VIGILAR signal but already open; theme concentration high and ret_13w_vs_spy -16.13.",
-          "watch_trigger": "rot_score to 8+ and streak_weeks extend to 3 with macro permission stable"
-        }
-      ],
-      "rejected": [
-        {
-          "ticker": "SYK",
-          "reason": "PCS 66.5 but signal IGNORAR, rot_score only 5, ret_13w_vs_spy -7.22, streak_weeks 0 and konc_d_state distribution.",
-          "rejection_category": "insufficient_conviction"
-        }
-      ]
-    },
-    "xiaomi/mimo-v2.5-pro": {
-      "quality_score": 90,
-      "decision_summary": {
-        "market_read": "Bull Maduro regime with improving macro (+11.25 1-week delta) supports risk-on, but both dominant themes—oil/gas at 207.5% and healthcare at 194.5% weight—are at extreme concentration, limiting new entry quality.",
-        "risk_posture": "normal",
-        "should_select_picks": false
-      },
-      "selected": [],
-      "watch": [
-        {
-          "ticker": "VRTX",
-          "reason": "dems=16 with momentum_accel=true shows strong daily flow acceleration, but streak is only 2 weeks and ret_4w_vs_spy=+2.4% is modest among healthcare peers; healthcare theme already at 194.5% open weight.",
-          "watch_trigger": "Streak extending to 4+ weeks with ret_4w_vs_spy rising above +6% would meet conviction threshold for confirmed_flow entry despite healthcare concentration."
-        },
-        {
-          "ticker": "JNJ",
-          "reason": "Lowest extension risk among PCS 78+ candidates with fully bullish-aligned Koncorde and spik_flag=false, but streak is only 1 week and ret_4w_vs_spy=+3.1% is too early to confirm sustained leadership versus healthcare peers ABBV (+11.0%) and ISRG (+9.5%).",
-          "watch_trigger": "Streak building to 3+ weeks with ret_4w_vs_spy above +5% would justify entry as a low-risk healthcare diversifier."
-        },
-        {
-          "ticker": "URI",
-          "reason": "dems=15 with momentum_accel=true and strong +18.9% ret_4w_vs_spy, but Koncorde shows mixed alignment with daily AND weekly distribution states that need to resolve before adding to a us_cyclical theme already carrying positions.",
-          "watch_trigger": "Koncorde alignment resolving from mixed to bullish_aligned or bullish_pending_3d_confirmation would confirm the daily momentum signal structurally."
+          "ticker": "VIT-B.ST",
+          "reason": "PCS 78.8 with 5-week streak and rot_score 9 but pcs below CONFIRMED_FLOW_LEADERS threshold of 78.",
+          "watch_trigger": "PCS rises above 78 with streak extending to 6 weeks"
         }
       ],
       "rejected": [
         {
           "ticker": "TNZ.TO",
-          "reason": "PCS 89.5 is highest among non-held candidates but dual distribution on daily and weekly Koncorde yields mixed alignment with only 1-day streak outside the fundamental setup; already held entries like WCP.TO (PCS 90, ret_13w +20.5%, 8-week streak) offer superior confirmation in oil_gas.",
+          "reason": "Already open in CAVA_MACRO and MIMO_SHADOW; cannot re-select per rules.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "TMO",
+          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "PFE",
+          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "Already open in MIMO_SHADOW and SCREENER_SHADOW; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "WCP.TO",
+          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "OXY",
+          "reason": "Already open in MIMO_SHADOW, CAVA_MACRO, SCREENER_SHADOW and MACD_COMBO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "VNOM",
+          "reason": "Already open in SCREENER_SHADOW; cannot re-select.",
           "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "TDOC",
-          "reason": "Extreme extension risk at 9 points with +49.6% 4-week return, dems=18, spike_flag=true, and 3D Koncorde in distribution state; only 1-week streak confirms the move is parabolic rather than sustained leadership.",
-          "rejection_category": "technical_overextension"
-        },
-        {
-          "ticker": "VNOM",
-          "reason": "High extension risk (4 pts) with spike_flag=true and only 2-week streak; ret_13w_vs_spy=+3.4% is the weakest among PCS 80+ oil/gas peers, lagging WCP.TO (+20.5%) and SU (+12.9%) which are already held.",
+          "reason": "Already open in CAVA_MACRO and SCREENER_SHADOW; cannot re-select.",
           "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "UCO",
-          "reason": "ProShares Ultra Bloomberg Crude Oil is a 2x leveraged crude oil ETF that tracks commodity futures directly; violates the hard rule against selecting futures and commodities as direct positions.",
-          "rejection_category": "not_tradable"
+          "ticker": "ABBV",
+          "reason": "Already open in MIMO_SHADOW; cannot re-select.",
+          "rejection_category": "better_alternative_available"
         },
         {
-          "ticker": "FRU.TO",
-          "reason": "Rotation score 9 and low extension risk are attractive, but component_C=15 (rs_outperform not rs_leader), ret_13w_vs_spy=+3.1% trails all oil_gas holdings (WCP.TO +20.5%, SU +12.9%, OXY +13.0%), and daily Koncorde distribution adds entry timing risk.",
+          "ticker": "DHR",
+          "reason": "Already open in MIMO_SHADOW, CAVA_MACRO and RANKING_SHADOW_EXPERIMENTAL; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "SU",
+          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; cannot re-select.",
           "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "VAL",
-          "reason": "Extreme extension risk at 7 points with 1-week streak and rot_score=6 (only 'rot_good', not 'rot_high'); despite strong +28.7% ret_4w, the short streak and moderate rotation rank signal a momentum burst rather than sustained leadership.",
-          "rejection_category": "technical_overextension"
+          "reason": "Already open in SCREENER_SHADOW and MACD_COMBO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "UCO",
+          "reason": "Already open in CAVA_MACRO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "VLE.TO",
+          "reason": "Already open in MIMO_SHADOW and CAVA_MACRO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "JNJ",
+          "reason": "Already open in SCREENER_SHADOW, MIMO_SHADOW and MACD_COMBO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "TK",
+          "reason": "Already open in SCREENER_SHADOW; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "FRU.TO",
+          "reason": "Already open in SCREENER_SHADOW, MIMO_SHADOW and MACD_COMBO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "GTE",
+          "reason": "Already open in MIMO_SHADOW and SCREENER_SHADOW; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "KOS",
+          "reason": "Already open in MIMO_SHADOW, SCREENER_SHADOW and MACD_COMBO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
         },
         {
           "ticker": "LLY",
-          "reason": "Koncorde alignment is distribution_warning—the most urgent reading—with daily AND weekly distribution states; rot_score=6 is moderate, extension_risk=high (4 pts), and healthcare already at 194.5% portfolio concentration.",
-          "rejection_category": "weak_flow"
+          "reason": "Already open in MIMO_SHADOW, SCREENER_SHADOW and MACD_COMBO; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "SLB",
+          "reason": "Already open in SCREENER_SHADOW; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "TOU.TO",
+          "reason": "Already open in SCREENER_SHADOW; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "KIST.L",
+          "reason": "Already open in SCREENER_SHADOW, MIMO_SHADOW and TRULLAS; cannot re-select.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "WHC.AX",
+          "reason": "Distribution warning on 3D and weekly despite rs_leader and rot_score 6; high theme concentration already.",
+          "rejection_category": "technical_overextension"
         },
         {
           "ticker": "LCX.V",
-          "reason": "Distribution_warning across 3D and weekly Koncorde with only 1-week streak, ret_13w_vs_spy=+8.9% behind oil_gas peers held in portfolio; spike_flag=true and 30% distance from 52-week high indicates untested recovery territory.",
+          "reason": "Spike_flag true with medium extension_risk and distribution_warning on 3D/weekly despite pcs 72.5.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "URI",
+          "reason": "Medium extension_risk and theme_weak with dems 15 but no weekly leadership edge over peers.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "HUM",
+          "reason": "Already open in active_picks_relevant; cannot reselect.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "CRON",
+          "reason": "Distribution_warning on 3D/weekly and high cannabis concentration despite rot_score 8.",
+          "rejection_category": "macro_conflict"
+        },
+        {
+          "ticker": "ISRG",
+          "reason": "Already open position; pcs crossed below HIGH_CONVICTION and CONFIRMED_FLOW_LEADERS thresholds.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "HCC",
+          "reason": "pcs=62.8 but rot_score=5, streak_weeks=0, dems=3, spike_flag=true, konc_alignment=distribution_warning across timeframes.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "UNH",
+          "reason": "pcs=71.2 but rot_score=6, streak_weeks=1, dems=5, ret_13w_vs_spy negative, konc_alignment=distribution_warning.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "AMR",
+          "reason": "pcs=62.0 but rot_score=4, streak_weeks=0, dems=4, konc_alignment=distribution_warning.",
+          "rejection_category": "insufficient_conviction"
+        }
+      ]
+    },
+    "xiaomi/mimo-v2.5-pro": {
+      "quality_score": 89,
+      "decision_summary": {
+        "market_read": "Bull Maduro regime with macro improving on weekly delta (+6.25) after recent consolidation, supporting continued sector rotation favoring healthcare and oil themes.",
+        "risk_posture": "cautious",
+        "should_select_picks": false
+      },
+      "selected": [],
+      "watch": [
+        {
+          "ticker": "TNZ.TO",
+          "reason": "Highest PCS (86.5) of any candidate with 8-week streak, ret_4w +20.8% vs SPY, ret_13w +35.3%, and dems=9 with outperform_d10=8 cleanly resolving the spike flag. However konc_alignment is mixed with daily and weekly both reading distribution, and extension_risk=medium. The distribution states on two timeframes despite the strongest structural metrics warrant confirmation before entry — a green daily reversal with no new distribution flaging would close the gap.",
+          "watch_trigger": "konc_daily_state turns 'up' or 'accumulation_setup' AND konc_weekly_state turns 'up' while PCS stays above 80 and streak_weeks >= 6."
+        },
+        {
+          "ticker": "JNJ",
+          "reason": "PCS 79.5 with dems=10, outperform_d10=7 and extension_risk=low is the cleanest daily momentum profile among oil/healthcare peers with PCS 79+. However risk_posture is cautious and JNJ's 1-week streak with +7.9% 13w outperformance trails FRU.TO's 4-week streak at a similar PCS level. Daily flow is borderline eligible (dems=10 is below the 14 early rotation ideal) and ret_4w=+6.7% is positive but not accelerating.",
+          "watch_trigger": "dems >= 12 AND ret_4w_vs_spy > 8% AND streak_weeks >= 3, confirming daily and weekly flow convergence."
+        },
+        {
+          "ticker": "FRU.TO",
+          "reason": "PCS 79.0 with highest rot_score=9 among oil_gas peers and dems=4, which is too weak to carry conviction independently. The rot_score=9 stands out vs TNZ.TO's 8 and VLE.TO's 7, but four consecutive weeks of outperformance with an eighth early_acceleration component (7.0) — the same score as TNZ.TO — and individual_flow at 19.0 makes the rot_strength real. konc_daily_state reads distribution but 3D and weekly both up. Prefer waiting for dems to recover.",
+          "watch_trigger": "dems >= 10 OR konc_daily turns 'up' while rot_score stays >= 8."
+        },
+        {
+          "ticker": "KIST.L",
+          "reason": "rot_score=7 with 8-week streak and stub_funds_days=3 is a strong accumulation metric, but ret_4w_vs_spy is -1.4% showing near-term deterioration while the streak itself signals institutional persistence. konc_alignment is 'bullish_pending_3d_confirmation' which is a softer caution, and spike_flag=true. PCS 76.0 is adequate but the negative 4w relative return makes entry timing suboptimal in a cautious posture.",
+          "watch_trigger": "ret_4w_vs_spy turns positive AND spike_flag clears on next scan."
+        }
+      ],
+      "rejected": [
+        {
+          "ticker": "KOS",
+          "reason": "Full distribution_warning across all three timeframes with dems=6, zero daily momentum, and ret_4w vs SPY +11.5% which is modest compared to OXY at +11.7% and SU at +16.0% already in portfolio. PCS 77.5 with rot=7 is lower than several peers in the same oil_gas theme.",
+          "rejection_category": "better_alternative_available"
+        },
+        {
+          "ticker": "CRON",
+          "reason": "PCs crossed down from 70.2 to 68.2, now just above the 68.0 entry floor — marginal quality. Cannabis theme at high concentration with weak directional signal and no meaningful acceleration to justify a new entry.",
+          "rejection_category": "insufficient_conviction"
+        },
+        {
+          "ticker": "TSLA",
+          "reason": "PCS collapsed from 78.2 to 64.8, now 51% below the entry threshold for any portfolio. signal=VIGILAR with massive deterioration — not actionable.",
           "rejection_category": "weak_flow"
         },
         {
-          "ticker": "MRK",
-          "reason": "PCS 67.5 falls below the 68.0 minimum entry threshold for MIMO_SHADOW; rotation score only 5 with zero streak, negative ret_4w_vs_spy=-0.2%, weekly Koncorde in distribution, and signal remains IGNORAR.",
-          "rejection_category": "insufficient_conviction"
+          "ticker": "WHC.AX",
+          "reason": "METALS commodity index — skipping as it is a direct commodity/theme index and not an equity",
+          "rejection_category": "not_tradable"
+        },
+        {
+          "ticker": "LLY",
+          "reason": "Distribution_warning with konc_3d=read_distribution, konc_w_state=distribution, extension_risk=high (4 pts with dist_sma20_atr_extreme and rsi_high), and dems=13 below the 14 clean-entry threshold. ret_4w +12.9% is strong but the distribution alignment risk limits appeal on a new entry.",
+          "rejection_category": "technical_overextension"
+        },
+        {
+          "ticker": "SLS",
+          "reason": "PCS 43.0 — massively below the 68.0 entry floor. ret_12w=-13.7% vs SPY indicates severe in-fundamental weakness. Koncorde 3D reads accumulation but the equity is a laggard in a strong theme.",
+          "rejection_category": "weak_relative_strength"
+        },
+        {
+          "ticker": "ROOT",
+          "reason": "PCS 50.0 with ext_risk=low but 1-week streak and -9.3% 13w vs SPY shows extreme thematic drift from fundamental leadership.",
+          "rejection_category": "weak_flow"
+        },
+        {
+          "ticker": "DPM.TO",
+          "reason": "PCS 30.0 with 0-week streak, -21.5% 4w deterioration, and no acceleration. Minimal theme support despite silver_miners at medium risk.",
+          "rejection_category": "weak_relative_strength"
         }
       ]
     }
