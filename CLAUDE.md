@@ -8097,6 +8097,25 @@ yfinance 1.7.0 — CI usa 3.11, así que ojo con diferencias de pandas). `py -3.
 
 ---
 
+## Selección por IA (Grok/Mimo) APAGADA — decisión 2026-11-03
+
+**Qué se apagó:** las llamadas a modelo de `paper_trading.py` (Grok en HIGH_CONVICTION/CONFIRMED_FLOW_LEADERS/EARLY_ROTATION/MACRO_THEMATIC_BENEFICIARIES, Mimo en MIMO_SHADOW). Interruptor `AI_SELECTION_ENABLED` (`Config.ai_selection_enabled`, por defecto `true` en el código, `false` en CI vía `vars.AI_SELECTION_ENABLED || 'false'` en el Step 10 de `market-update.yml`).
+
+**Por qué (datos de `shadow_picks.jsonl` deduplicado, `ret_1m` madurado, 2026-11-03):** ninguna cartera con IA bate a SPY. Grok CFL n=30 → −4,3% (−4,6% vs SPY, 30% ganadores, −13% a 3m); Grok ER n=6 → −12,0%; Grok HC n=9 → −2,6%; Mimo n=84 → −1,7% (−2,5% vs SPY, −3,75% a 3m). Frente a baselines mecánicas: IA −4,9% vs top-PCS −6,0% / top-rot_score −2,4% / top-ret_4w −6,2% (gana el 62% de los runs al top-PCS con n=34, un solo régimen: ruido, no evidencia). Ningún cierre histórico salió por objetivo de beneficio: la gestión real la hace la regla mecánica del suelo de PCS, no el modelo. El PCS no ordena resultados (corr ≈ −0,007) y el Ranking Score Fase 1 solo halló un componente plausible. Sin hipótesis de selección con alfa, la IA filtra sobre una señal sin poder de ranking y no aporta información que no tengamos.
+
+**Qué sigue corriendo (a propósito):**
+- Cierre mecánico por suelo de PCS (histéresis + confirmación) — las 11 posiciones abiertas de MIMO_SHADOW se cerrarán solas por esa regla; no hay Grok abiertas.
+- Payload (`ai_model_payloads/`) y baselines (`baselines.jsonl`): gratis y útiles para comparar una hipótesis futura.
+- Toda la infraestructura de medición sin modelo: P0 (`ai_picks_decision_state`), P1A/P1B/P1C/P2, `update_performance.py`, `compare_vs_baselines.py`.
+- Carteras mecánicas/shadow: CAVA_MACRO, MIRROR_ESPEJO (Grok solo como juez del giro Koncorde, otra hipótesis), CRUCE_ROJO_D(_25), TRULLAS_SHADOW/FLEX, SCREENER_SHADOW, MACD_COMBO_*, RANKING_SHADOW_EXPERIMENTAL.
+- Sol (`market_analysis_llm.py`): narrativa diaria, no selecciona picks; su evaluación retroactiva sigue en marcha.
+
+**Efecto colateral conocido:** `p1_readiness_monitor.py` cuenta SELECTs de P1B sobre todas las carteras vivas; sin Grok/Mimo el contador crecerá mucho más despacio. P1A/P1C (solo cierres en HC/CFL/ER/MTB/Cava) también: sin entradas nuevas en las 4 carteras de Grok, queda básicamente CAVA_MACRO como fuente. Es consecuencia deseada, pero hay que saber que esos umbrales tardarán más.
+
+**Criterio de reapertura:** reactivar la selección por IA solo si aparece una hipótesis de selección preregistrada (qué decide la IA que una regla mecánica no pueda), con su baseline mecánica al lado y evaluada fuera de muestra (≥100-150 eventos, ≥2 regímenes, dev/test), que supere al top-PCS/top-rot_score. Para reactivar: variable de repo `AI_SELECTION_ENABLED=true`. El código de llamada, `HARD_RULES` y validadores no se han tocado.
+
+---
+
 ## Evaluación general del método (opinión experta externa, 2026-05-13)
 
 > "El método es correcto. Ahora lo importante no es hacerlo más inteligente, sino hacerlo más falsable."

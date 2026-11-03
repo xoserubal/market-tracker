@@ -22,6 +22,7 @@ Env vars (add to .env or GitHub Secrets):
   FALLBACK_MODEL            model id          (default: xiaomi/mimo-v2.5-pro)
   ENABLE_SHADOW_MODELS      true|false        (default: true)
   MAX_CANDIDATES_PER_CALL   int               (default: 25)
+  AI_SELECTION_ENABLED      true|false        (default: true; false en CI desde 2026-11-03)
 """
 from __future__ import annotations
 
@@ -154,6 +155,10 @@ class Config:
     fallback_model:       str       = "xiaomi/mimo-v2.5-pro"
     enable_shadow_models: bool      = True
     max_candidates:       int       = 25
+    # Interruptor de selección por IA. False = no se llama a ningún modelo (ni
+    # Grok ni Mimo), pero el cierre mecánico por suelo de PCS, el payload y las
+    # baselines siguen corriendo. Apagado en CI desde 2026-11-03 (ver CLAUDE.md).
+    ai_selection_enabled: bool      = True
 
     @classmethod
     def from_env(cls) -> Config:
@@ -170,6 +175,7 @@ class Config:
             fallback_model=os.getenv("FALLBACK_MODEL", default_model),
             enable_shadow_models=os.getenv("ENABLE_SHADOW_MODELS", "true").lower() == "true",
             max_candidates=int(os.getenv("MAX_CANDIDATES_PER_CALL", "25")),
+            ai_selection_enabled=os.getenv("AI_SELECTION_ENABLED", "true").lower() == "true",
         )
 
 
@@ -1876,6 +1882,11 @@ def run(force: bool = False, apply: bool = False) -> None:
         f"[{run_id}] Payload ready - "
         f"{len(payload['candidates'])} candidates, {len(payload['events'])} events"
     )
+
+    if not config.ai_selection_enabled:
+        print(f"[{run_id}] AI_SELECTION_ENABLED=false - no model calls "
+              f"(mechanical PCS-floor exits, payload and baselines already done)")
+        return
 
     models = list(config.models_to_test) if config.test_mode else [config.active_model]
     if config.active_model not in models:

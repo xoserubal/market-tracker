@@ -377,6 +377,11 @@ jobs:
           FALLBACK_MODEL: ${{ vars.FALLBACK_MODEL || 'xiaomi/mimo-v2.5-pro' }}
           ENABLE_SHADOW_MODELS: ${{ vars.ENABLE_SHADOW_MODELS || 'true' }}
           MAX_CANDIDATES_PER_CALL: ${{ vars.MAX_CANDIDATES_PER_CALL || '25' }}
+          # Selección por IA (Grok/Mimo) APAGADA desde 2026-11-03: ninguna cartera
+          # IA batía a SPY ni a las baselines mecánicas. Con 'false' este step solo
+          # aplica el cierre mecánico por suelo de PCS y escribe payload/baselines.
+          # Para reactivar: poner AI_SELECTION_ENABLED=true (variable de repo).
+          AI_SELECTION_ENABLED: ${{ vars.AI_SELECTION_ENABLED || 'false' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python scripts/paper_trading.py
