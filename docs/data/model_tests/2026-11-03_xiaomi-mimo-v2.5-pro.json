@@ -1,0 +1,206 @@
+{
+  "run_id": "2026-11-03_0218",
+  "model": "xiaomi/mimo-v2.5-pro",
+  "date": "2026-11-03",
+  "summary": {
+    "date": "2026-11-03",
+    "run_id": "2026-11-03_0218",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "provider": "openrouter",
+    "should_call_ai": true,
+    "forced_run": false,
+    "event_count": 22,
+    "candidate_count": 70,
+    "input_tokens": 34991,
+    "output_tokens": 9730,
+    "cost_usd": 0.023686,
+    "latency_ms": 399885.0,
+    "json_valid": true,
+    "schema_valid": true,
+    "hard_rule_violations": 0,
+    "quality_score": 97,
+    "selected_count": 1,
+    "watch_count": 4,
+    "rejected_count": 9,
+    "fallback_used": false,
+    "error": null
+  },
+  "validation": {
+    "violations": [],
+    "soft_warnings": [
+      "KONC_3D_BLUE_DOWNTREND_WARNING: VRTX selected with konc_3d_blue_down_2_bars=true"
+    ]
+  },
+  "quality_score": 97,
+  "response": {
+    "date": "2026-11-03",
+    "model": "xiaomi/mimo-v2.5-pro",
+    "run_id": "2026-11-03_0218",
+    "decision_summary": {
+      "market_read": "Macro trend shifted to Deteriorating with score 60.7 down 6.8 points weekly and 11.8 monthly, but regime remains Bull Maduro so weekly leaders can still be held and selected.",
+      "risk_posture": "normal",
+      "should_select_picks": true
+    },
+    "selected": [
+      {
+        "ticker": "VRTX",
+        "portfolio": "MIMO_SHADOW",
+        "signal_type": "early_rotation",
+        "confidence": "high",
+        "reason_short": "dems 17 with momentum_accel true and 8/10 sessions beating SPY — strongest clean daily signal in set",
+        "reason_full": "VRTX posts dems=17 (highest in set alongside TDOC), momentum_accel=true, and outperform_d10=8 confirming eight of ten sessions beat SPY with zero spike concentration, the cleanest multi-day acceleration available. PCS 82.0 with ret_4w_vs_spy +11.4% and ret_13w_vs_spy +18.7% on a 2-week streak. Extension_risk is medium (2 pts from dist_sma20_atr_high) and acknowledged, but konc_alignment is bullish_aligned with 3D and weekly both up despite daily distribution tactical noise. Healthcare theme concentration at 154.5% weight is noted.",
+        "comparative_edge": "Selected over TDOC (PCS=80.2, dems=18) because TDOC's extension_risk=extreme (9 pts) with spike_flag=true and 34.8% 5d return confirms unsustainable one-day surge, while VRTX has extension_risk=medium (2 pts), no spike_flag, and dems=17 with clean multi-day outperform_d10=8. Also preferred over VAL (PCS=77.5, dems=14) which has extension_risk=extreme (7 pts) despite meeting the daily threshold.",
+        "key_supporting_factors": [
+          "dems=17 with momentum_accel=true and spike_flag=false is the strongest clean daily flow signal in the entire candidate set.",
+          "outperform_d10=8 confirms eight of the last ten sessions beat SPY, ruling out single-session concentration.",
+          "Koncorde 3D and weekly both read 'up' with green at 102.21 on 3D despite daily distribution noise.",
+          "ret_13w_vs_spy=+18.75% demonstrates entrenched institutional accumulation extending beyond the recent daily acceleration."
+        ],
+        "key_risks_or_contradictions": [
+          "Healthcare_largecap already holds 154.5% open portfolio weight across 28 positions, making this the most concentrated theme.",
+          "Streak is only 2 weeks versus TMO's 8 weeks and PFE's 8 weeks, so weekly persistence is less proven.",
+          "Koncorde daily state reads 'distribution' though 3D green at 102 confirms structural support underneath.",
+          "Macro trend deteriorated to Deteriorating with 1-month delta of -11.79, tightening the window for new entries."
+        ]
+      }
+    ],
+    "watch": [
+      {
+        "ticker": "VAL",
+        "reason": "dems=14 meets early rotation threshold with spike_flag=false and outperform_d10=8, but extension_risk=extreme (7 pts from dist_sma20_atr_extreme, ret_4w_extended, rsi_extreme) signals unsustainable parabolic extension. ret_4w_vs_spy=+33.4% is exceptional but needs consolidation before entry.",
+        "watch_trigger": "Extension risk drops to high or below (≤5 pts) with dems staying ≥12 and ret_5d_vs_spy holding positive on 2+ consecutive readings."
+      },
+      {
+        "ticker": "JNJ",
+        "reason": "PCS 77.5 with low extension risk and bullish_pending_3d_confirmation, but streak_weeks=1 and ret_13w_vs_spy=+7.9% is modest compared to TMO's +21.5% on 8-week streak. dems=10 is below the 14 early rotation threshold.",
+        "watch_trigger": "Streak extends to 3+ weeks with ret_4w_vs_spy holding above +8% and dems rising above 12."
+      },
+      {
+        "ticker": "LLY",
+        "reason": "dems=13 approaches the 14 early rotation threshold and ret_4w_vs_spy=+24.4% is the strongest near-term acceleration among healthcare names. However, extension_risk=high (4 pts) with dist_sma20_atr_extreme and rsi_high, combined with konc_alignment=distribution_warning across all timeframes, warrants consolidation before entry.",
+        "watch_trigger": "dems rises to ≥14 with spike_flag=false AND extension_risk drops to medium or below, or konc_3d_state shifts from distribution_warning to bullish_aligned."
+      },
+      {
+        "ticker": "KIST.L",
+        "reason": "8-week streak with ret_13w_vs_spy=+16.6% shows sustained flow, but ret_4w_vs_spy=-1.4% means recent momentum has stalled, and spike_flag=true with dems=9 indicates the last move may be concentrated in one session rather than building broadly.",
+        "watch_trigger": "ret_4w_vs_spy turns positive with spike_flag clearing and dems rising above 12."
+      }
+    ],
+    "rejected": [
+      {
+        "ticker": "TDOC",
+        "reason": "extension_risk=extreme (9 pts) with spike_flag=true, 34.8% ret_5d_vs_spy confirms unsustainable single-session surge; dems=18 is exceptional but the parabolic move needs extended consolidation before entry is safe.",
+        "rejection_category": "technical_overextension"
+      },
+      {
+        "ticker": "UCO",
+        "reason": "ProShares Ultra Bloomberg Crude Oil is a leveraged commodity derivative tracking crude oil futures, not a direct equity exposure eligible under the portfolio mandate.",
+        "rejection_category": "not_tradable"
+      },
+      {
+        "ticker": "TNZ.TO",
+        "reason": "konc_alignment=distribution_warning with daily and weekly both in distribution state; ret_4w_vs_spy=+8.6% on 8-week streak masks deteriorating short-term flow with dems=10 and spike_flag=true. PCS fell from 88.5 to 77.5 signaling systematic de-rating.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "KOS",
+        "reason": "konc_d_state and konc_3d_state both read 'distribution' with dems=6 and no weekly momentum acceleration; ret_13w_vs_spy=+12.7% is mid-pack with only 3-week streak, insufficient to overcome dual-timeframe distribution signal.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "UNH",
+        "reason": "PCS 69.2 barely above the 68.0 entry floor with konc_alignment=distribution_warning and dems=5; ret_13w_vs_spy=-1.4% means the stock has underperformed SPY over the lookback window despite strong 4-week recent snapback.",
+        "rejection_category": "insufficient_conviction"
+      },
+      {
+        "ticker": "FOUR",
+        "reason": "PCS 44.0 is 24 points below the 68.0 MIMO_SHADOW entry floor; ret_13w_vs_spy=-26.2% with laggard RS label and distribution_warning across all timeframes.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "AMD",
+        "reason": "PCS 34.5 with IGNORAR signal, theme_flow=3 indicating near-zero institutional interest, 4-week underperformance of -16.9% vs SPY, and distribution_warning across all three Koncorde timeframes.",
+        "rejection_category": "weak_flow"
+      },
+      {
+        "ticker": "EOS.AX",
+        "reason": "PCS 26.0 with rot_score=2, ret_4w_vs_spy=-28.3%, laggard RS across all horizons, and distribution_warning on all timeframes; no institutional flow or relative-strength signal to justify entry.",
+        "rejection_category": "weak_relative_strength"
+      },
+      {
+        "ticker": "SSV.V",
+        "reason": "PCS 23.0 with zero rotation score, -31.4% ret_13w_vs_spy, silver mining theme showing no accumulation, and distribution_warning alignment across all timeframes.",
+        "rejection_category": "weak_flow"
+      }
+    ],
+    "open_picks_review": [
+      {
+        "ticker": "TMO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 83.8 with rot=10, 8-week streak, +21.5% 13w outperformance, and fully bullish-aligned Koncorde make this the strongest active position."
+      },
+      {
+        "ticker": "VLE.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "8-week streak with +28.1% 13w outperformance remains the portfolio's deepest institutional hold despite declining PCS and weakening 3D blue at 0.45."
+      },
+      {
+        "ticker": "DHR",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved from 72.0 to 79.8 with rot rising to 10 and streak at 7 weeks; fully bullish-aligned Koncorde confirms the momentum is broadening."
+      },
+      {
+        "ticker": "WCP.TO",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "8-week streak with +12.0% 13w outperformance and weekly Koncorde still up, but PCS declining from 81.0 to 71.5 and 5-day underperformance of -3.1% signal caution."
+      },
+      {
+        "ticker": "SU",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "8-week streak with +21.2% 13w and strongest 4-week outperformance (+16.0%) in the oil_gas group; 3D blue at 4.61 is low but weekly confirmation holds."
+      },
+      {
+        "ticker": "ABBV",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS improved to 80.2 with ret_4w_vs_spy accelerating to +15.2% on 4-week streak and rot=8; weekly leadership is actively building."
+      },
+      {
+        "ticker": "PFE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 82.5 with 8-week streak and +21.9% 13w outperformance confirms entrenched leadership; daily distribution and spike_flag noted but 3D/weekly structure remains up."
+      },
+      {
+        "ticker": "ISRG",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 72.0 is still above 68 floor and weekly metrics (+8.8% 4w, +15.1% 13w, streak 3w) remain positive, but konc_3d distribution_warning is the weakest position signal and warrants close monitoring."
+      },
+      {
+        "ticker": "OXY",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 81.0 with rot=8, 5-week streak, +11.7% 4w outperformance, and fully bullish-aligned Koncorde across 3D and weekly; daily distribution acknowledged as tactical noise."
+      },
+      {
+        "ticker": "GTE",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "ret_13w_vs_spy=+62.6% is the highest in the entire universe; PCS improved from 70.5 to 76.0 and streak extended to 5 weeks, though daily and weekly distribution warnings require vigilance."
+      },
+      {
+        "ticker": "HUM",
+        "portfolio": "MIMO_SHADOW",
+        "action": "HOLD",
+        "reason": "PCS 70.8 is near the 70 threshold floor with rot declining to 6, but 4-week streak with +10.5% 4w outperformance and weekly Koncorde still up justifies holding pending floor-system evaluation."
+      }
+    ]
+  },
+  "raw_response_head": "```json\n{\n  \"date\": \"2026-11-03\",\n  \"model\": \"xiaomi/mimo-v2.5-pro\",\n  \"run_id\": \"2026-11-03_0218\",\n  \"decision_summary\": {\n    \"market_read\": \"Macro trend shifted to Deteriorating with score 60.7 down 6.8 points weekly and 11.8 monthly, but regime remains Bull Maduro so weekly leaders can still be held and selected.\",\n    \"risk_posture\": \"normal\",\n    \"should_select_picks\": true\n  },\n  \"selected\": [\n    {\n      \"ticker\": \"VRTX\",\n      \"portfolio\": \"MIMO_SHADOW\",\n      \"signal_type\": \"early_rotation\",\n      \"confidence\": \"high\",\n      \"reason_short\": \"dems 17 with momentum_accel true and 8/10 sessions beating SPY — strongest clean daily signal in set\",\n      \"reason_full\": \"VRTX posts dems=17 (highest in set alongside TDOC), momentum_accel=true, and outperform_d10=8 confirming eight of ten sessions beat SPY with zero spike concentration, the cleanest multi-day acceleration available. PCS 82.0 with ret_4w_vs_spy +11.4% and ret_13w_vs_spy +18.7% on a 2-week streak. Extension_risk is medium (2 pts from dist_sma20_atr_high) and acknowledged, but konc_alignment is bullish_aligned with 3D and weekly both up despite daily distribution tactical noise. Healthcare theme concentration at 154.5% weight is noted.\",\n      \"comparative_edge\": \"Selected over TDOC (PCS=80.2, dems=18) because TDOC's extension_risk=extreme (9 pts) with spike_flag=true and 34.8% 5d return confirms unsustainable one-day surge, while VRTX has extension_risk=medium (2 pts), no spike_flag, and dems=17 with clean multi-day outperform_d10=8. Also preferred over VAL (PCS=77.5, dems=14) which has extension_risk=extreme (7 pts) despite meeting the daily threshold.\",\n      \"key_supporting_factors\": [\n        \"dems=17 with momentum_accel=true and spike_flag=false is the strongest clean daily flow signal in the entire candidate set.\",\n        \"outperform_d10=8 confirms eight of the last ten sessions beat SPY, ruling out single-session concentration.\",\n        \"Koncorde 3D and weekly both read 'up' with green at 10"
+}
