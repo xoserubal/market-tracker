@@ -66,7 +66,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Emojis/acentos rompen print() en consola Windows (cp1252) — mismo
@@ -116,6 +116,32 @@ KNOWN_BAD_TICKERS = {"FXPO.L"}
 # se le pasan a Sol como memoria explícita antes del snapshot de hoy.
 RECENT_ANALYSIS_DAYS = 3
 
+# Hipótesis más antiguas que esa ventana que siguen abiertas (fix 2026-11-06).
+# El addendum le pide a Sol que NO repita en el JSON las hipótesis UNCHANGED,
+# pero la memoria solo leía el JSON de los últimos 3 días: una hipótesis que
+# pasaba a la línea "sin cambio" de la prosa desaparecía de su memoria en <=3
+# días. Casos reales: oro DISTRIBUTION (JSON del 10-30, prosa del 11-03) ->
+# EARLY "NEW" el 11-05 sin reconocer que daba la vuelta a su propia lectura;
+# GOOGL/XLC DISTRIBUTION (10-29) -> desaparece sin cerrarse.
+LIVE_HYPOTHESIS_LOOKBACK_DAYS = 14
+
+# Normalización de `subject` (texto libre de Sol) para saber si una hipótesis
+# antigua ya está cubierta por una mención reciente. Solo nombres que Sol usa
+# en lugar del ticker; el resto se compara como token en mayúsculas.
+_SUBJECT_ALIASES = {
+    "gold": "GC=F", "oro": "GC=F", "silver": "SI=F", "plata": "SI=F",
+    "wti": "CL=F", "brent": "BZ=F", "nasdaq": "^IXIC", "spx": "^GSPC",
+    "cac": "^FCHI", "dax": "^GDAXI", "ftsemib": "FTSEMIB.MI",
+    "bitcoin": "BTC-USD", "btc": "BTC-USD",
+    "uranium": "URANIO", "uranio": "URANIO",
+    "carbón": "CARBON", "carbon": "CARBON", "coal": "CARBON",
+}
+_SUBJECT_STOPWORDS = {
+    "y", "e", "o", "a", "de", "del", "la", "el", "los", "las", "en", "vs",
+    "frente", "dentro", "con", "sin", "contra", "complex", "complejo",
+    "acciones", "sector", "sectores",
+}
+
 OUTPUT_FORMAT_ADDENDUM = """
 
 ---
@@ -125,11 +151,15 @@ OUTPUT_FORMAT_ADDENDUM = """
 Esta llamada es automatizada (sin memoria de conversación) — el mensaje del
 usuario incluye el snapshot de HOY, una tabla de deltas contra el día
 anterior, y una sección "ANÁLISIS ANTERIORES" con tus propias señales
-estructuradas de los últimos días. Revisa siempre esa sección antes de
-escribir: para cada señal previa que siga siendo relevante, di
-explícitamente si se ha fortalecido, debilitado, confirmado o invalidado.
-No la sustituyas en silencio por una oportunidad nueva sin comentar qué
-pasó con la anterior.
+estructuradas de los últimos días (más, si las hay, las "HIPÓTESIS VIVAS
+QUE NO HAS REPETIDO": señales más antiguas que nunca cerraste). Revisa
+siempre esas secciones antes de escribir: para cada señal previa que siga
+siendo relevante, di explícitamente si se ha fortalecido, debilitado,
+confirmado o invalidado. No la sustituyas en silencio por una oportunidad
+nueva sin comentar qué pasó con la anterior. Si das la vuelta a una
+hipótesis previa sobre el mismo activo (p. ej. de DISTRIBUTION a EARLY),
+incluye la previa en el JSON como INVALIDATED y la nueva como NEW, y dilo
+en la prosa: un giro no es una hipótesis "nueva" sin historia.
 
 IMPORTANTE sobre la columna "Mecánico" de las tablas: es un cálculo
 determinista de disciplina de promoción (flow_state_lib.py), NO tu propia
@@ -236,7 +266,9 @@ estaba; STRENGTHENED/WEAKENED = misma hipótesis con más/menos evidencia;
 UNCHANGED = sigue igual; INVALIDATED = se cumplió la condición de
 invalidación. Incluye en `signals` las hipótesis NEW, STRENGTHENED, WEAKENED
 e INVALIDATED; las UNCHANGED solo si son relevantes para la decisión de hoy
-(no las repitas por rutina — hoy se duplican temas durante días). No rellenes
+o si figuran en "HIPÓTESIS VIVAS QUE NO HAS REPETIDO" y siguen vigentes
+(así no se pierden de tu memoria; no repitas por rutina las que ya aparecen
+en los análisis de los últimos días). No rellenes
 con entradas vacías. Si no hay ninguna señal con convicción por encima de
 WATCH, es válido devolver un array corto o vacío — no inventes señales para
 rellenar el formato.
@@ -494,6 +526,7 @@ def build_recent_analysis_digest(today: str, n: int = RECENT_ANALYSIS_DAYS) -> s
         return ""
     rows.sort(key=lambda r: r["date"])
     recent = rows[-n:]
+    older = rows[:-n]
 
     out = ["## ANÁLISIS ANTERIORES — revisa esto ANTES de escribir el de hoy\n",
            "Estas son tus propias señales de los últimos días. Para cada una que "
@@ -522,7 +555,78 @@ def build_recent_analysis_digest(today: str, n: int = RECENT_ANALYSIS_DAYS) -> s
                 f"{(s.get('invalidation') or '—')[:120]} |"
             )
         out.append("")
+
+    live = _live_unrepeated_hypotheses(older, recent, today)
+    if live:
+        out.append("## HIPÓTESIS VIVAS QUE NO HAS REPETIDO EN LOS ÚLTIMOS DÍAS\n")
+        out.append(
+            f"Señales tuyas de los últimos {LIVE_HYPOTHESIS_LOOKBACK_DAYS} días que no "
+            "aparecen en los análisis de arriba y que nunca marcaste como INVALIDATED: "
+            "siguen ABIERTAS. Para cada una decide hoy si sigue vigente (inclúyela en el "
+            "JSON, UNCHANGED o con su cambio), si se ha invalidado o si la das la vuelta "
+            "(en ambos casos inclúyela en el JSON como INVALIDATED con el motivo). No "
+            "abras una hipótesis de sentido contrario sobre el mismo activo sin cerrar "
+            "antes la que figura aquí.\n")
+        out.append("| Fecha | Subject | Convicción | Signal | Invalidation |")
+        out.append("|---|---|---|---|---|")
+        for h in live:
+            out.append(
+                f"| {h['date']} | {h['subject']} | {h['conviction']} | "
+                f"{(h['signal'] or '—')[:120]} | {(h['invalidation'] or '—')[:120]} |"
+            )
+        out.append("")
     return "\n".join(out)
+
+
+def _subject_keys(subject: str) -> set[str]:
+    """Claves comparables de un `subject` libre ("GC=F / oro" -> {GC=F};
+    "Gold/Silver/GDXJ/AG/EXK" -> {GC=F, SI=F, GDXJ, AG, EXK})."""
+    keys = set()
+    for tok in re.split(r"[\s/,()+;:]+", subject or ""):
+        t = tok.strip().strip(".").strip("—-")
+        if len(t) < 2:
+            continue
+        low = t.lower()
+        if low in _SUBJECT_STOPWORDS:
+            continue
+        keys.add(_SUBJECT_ALIASES.get(low, t.upper()))
+    return keys
+
+
+def _live_unrepeated_hypotheses(older: list[dict], recent: list[dict], today: str,
+                                lookback_days: int = LIVE_HYPOTHESIS_LOOKBACK_DAYS) -> list[dict]:
+    """Hipótesis de análisis anteriores a la ventana reciente (hasta
+    `lookback_days` naturales atrás) que no se mencionan en el JSON de los
+    días recientes y cuyo último estado no es INVALIDATED. Se recorre de la
+    más nueva a la más antigua para quedarse con el último estado de cada
+    activo: una mención posterior (incluida una INVALIDATED) tapa a las
+    anteriores sobre los mismos activos."""
+    try:
+        cutoff = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    except ValueError:
+        return []
+    covered: set[str] = set()
+    for r in recent:
+        for s in (r.get("structured") or {}).get("signals") or []:
+            covered |= _subject_keys(s.get("subject", ""))
+
+    live = []
+    for r in sorted(older, key=lambda r: r["date"], reverse=True):
+        if r["date"] < cutoff:
+            break
+        for s in (r.get("structured") or {}).get("signals") or []:
+            keys = _subject_keys(s.get("subject", ""))
+            if not keys or keys & covered:
+                continue
+            covered |= keys
+            if (s.get("conviction") or "").upper() == "INVALIDATED":
+                continue
+            live.append({
+                "date": r["date"], "subject": s.get("subject", "—"),
+                "conviction": s.get("conviction", "—"),
+                "signal": s.get("signal"), "invalidation": s.get("invalidation"),
+            })
+    return live
 
 
 def build_user_message(today: str) -> tuple[str, str | None]:

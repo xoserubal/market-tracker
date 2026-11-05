@@ -772,7 +772,10 @@ function DurationPage() {
         <Stat label="10Y-2Y Spread" value={fmtBps(spread102 != null ? spread102 * 100 : null)} style={C.neutral} />
         <Stat label="10Y Real (DFII10)" value={fmt(dfii10?.current) + '%'} sub={dfii10?.date} style={C.neutral} staleDays={staleDfii10.stale ? staleDfii10.days : null} />
         <Stat label="Breakeven 5Y" value={fmt(t5yie?.current) + '%'} sub={t5yie?.date} style={C.neutral} staleDays={staleT5yie.stale ? staleT5yie.days : null} />
-        <Stat label="HY Spread" value={hyBps != null ? Math.round(hyBps) + 'bps' : '—'} sub={hy?.date} style={styleHy(hyBps)} staleDays={staleHy.stale ? staleHy.days : null} />
+        {/* Umbral 300 = disparador de la tesis Duration (rompe la calma desde una
+            base comprimida), no la lectura general del crédito: en la escala única del
+            proyecto (shared/market-macro.js) 300-375 pb sigue siendo «Normal». */}
+        <Stat label="HY Spread" value={hyBps != null ? Math.round(hyBps) + 'bps' : '—'} sub={`${hy?.date || ''} · rojo >${LEVELS.confirmHyBps} = disparador de la tesis (escala general: 300-375 normal)`} style={styleHy(hyBps)} staleDays={staleHy.stale ? staleHy.days : null} />
         <Stat label="VIX" value={fmt(vix?.price, 1)} sub={vix?.asOf?.slice(0, 10)} style={styleVix(vix?.price)} staleDays={staleVix.stale ? staleVix.days : null} />
         <Stat label="MOVE" value={move?.price != null ? fmt(move.price, 1) : 'no disponible'} sub={move?.asOf?.slice(0, 10)} style={styleMove(move?.price)} staleDays={staleMove.stale ? staleMove.days : null} />
         {moveIsProxy && (

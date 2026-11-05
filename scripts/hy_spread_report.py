@@ -72,7 +72,34 @@ def classify_zone(hy_bps: float) -> str:
     return LADDER[-1][1]
 
 
-def fetch_hy_history(limit: int = 12) -> list[tuple[str, float]]:
+# Escala GENERAL del proyecto (2026-11-06) — copia de HY_LEVEL_BPS/HY_MOVE_BPS
+# de shared/market-macro.js (la que ven Market Tracker y Sol). Duplicada a
+# propósito porque Python no puede importar ese JS (mismo precedente que
+# calcCMF / LEVELS de duration): mantener sincronizadas si cambian. La
+# escalera LADDER de arriba es la tesis personal del usuario, no esta escala.
+HY_LEVEL_BPS = [(300.0, "Comprimido"), (375.0, "Normal"), (475.0, "Elevado"),
+                (600.0, "Alto"), (float("inf"), "Crisis de crédito")]
+HY_MOVE_SIGNIFICANT_BPS = 20.0
+HY_MOVE_BREAKING_BPS = 75.0
+
+
+def general_reading(hy_bps: float, delta_1m_bps: float | None) -> str:
+    level = next(label for threshold, label in HY_LEVEL_BPS if hy_bps < threshold)
+    if delta_1m_bps is None:
+        return level
+    if delta_1m_bps >= HY_MOVE_BREAKING_BPS:
+        direction = "ruptura"
+    elif delta_1m_bps >= HY_MOVE_SIGNIFICANT_BPS:
+        direction = "ampliándose"
+    elif delta_1m_bps <= -HY_MOVE_SIGNIFICANT_BPS:
+        direction = "estrechándose"
+    else:
+        return level
+    sign = "+" if delta_1m_bps > 0 else ""
+    return f"{level} · {direction} ({sign}{delta_1m_bps:.0f} pb 1M)"
+
+
+def fetch_hy_history(limit: int = 30) -> list[tuple[str, float]]:
     """Últimas `limit` observaciones de BAMLH0A0HYM2, en bps, orden ascendente por fecha."""
     key = os.environ.get("FRED_API_KEY", "").strip()
     if not key:
@@ -125,9 +152,13 @@ def build_report(history: list[tuple[str, float]], wti: float | None, y10: float
     for d, bps in history[-6:]:
         lines.append(f"  {format_date_es(d)}: {bps:.0f}")
 
+    month_ago = find_closest_at_or_before(history[:-1], datetime.strptime(current_date, "%Y-%m-%d").date() - timedelta(days=30))
+    delta_1m = current_bps - month_ago[1] if month_ago is not None else None
+
     lines.append("")
-    lines.append(f"Zona actual: {classify_zone(current_bps)}")
-    lines.append("Escalera de vigilancia: 270 → 285 → 300 → 325")
+    lines.append(f"Zona de tu tesis: {classify_zone(current_bps)}")
+    lines.append("Escalera de la tesis (desde base ~265-270): 270 → 285 → 300 → 325")
+    lines.append(f"Escala general del Market Tracker: {general_reading(current_bps, delta_1m)}")
 
     context_bits = []
     if wti is not None:

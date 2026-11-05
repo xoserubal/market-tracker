@@ -8089,7 +8089,25 @@ las mejoras baratas, **aplicadas el mismo día** en `scripts/market_analysis_llm
   `change_vs_prev` (NEW|STRENGTHENED|UNCHANGED|WEAKENED|INVALIDATED), que permitirá contar hipótesis
   independientes y no 13 señales repetidas por informe.
 Sin verificar en producción: el efecto sobre el comportamiento de Sol solo se verá en los próximos
-informes (se probó la construcción del payload, no una llamada a la API). Repetir
+informes (se probó la construcción del payload, no una llamada a la API).
+
+**Verificación 2026-11-06 (7 informes, 28-oct→5-nov) + fix de memoria.** Los cambios funcionan: JSON
+siempre parsea con `change_vs_prev`, 5-11 señales/informe (antes 10-15), «QUÉ HA CAMBIADO HOY» con ≤3
+puntos, `confidence_pct` en múltiplos de 5, cifras del 5-nov 100% coincidentes con los datos. Contrastado
+con la columna Mecánico reconstruida a fecha: todas las EARLY nacieron con INFL y todas las CONFIRMED con
+CONT; el caso NKE/TLT ocurrió (RSP/IWM 30-oct, sin CONT, Flow positivo) y Sol mantuvo CONFIRMED; las
+rebajas a MATURE coinciden con el MATURE mecánico. **Fallo encontrado (introducido por el propio addendum):**
+el addendum pide no repetir UNCHANGED en el JSON, pero la memoria solo leía el JSON de 3 días, así que una
+hipótesis «sin cambio» desaparecía de la memoria en ≤3 días (oro DISTRIBUTION 30-oct → EARLY «NEW» el 5-nov
+sin reconocer el giro; GOOGL/XLC abandonada sin cerrar). Fix en `market_analysis_llm.py`:
+`_live_unrepeated_hypotheses()` añade al resumen la sección «HIPÓTESIS VIVAS QUE NO HAS REPETIDO» (señales de
+los últimos `LIVE_HYPOTHESIS_LOOKBACK_DAYS=14` días no mencionadas en los 3 recientes y cuyo último estado no
+es INVALIDATED; cobertura por solapamiento de tickers con `_subject_keys()` y un mapa de alias oro→GC=F…), y
+el addendum pide re-emitirlas en el JSON si siguen vigentes y, si se da la vuelta a una hipótesis, marcar la
+previa INVALIDATED y la nueva NEW. Los primeros informes tendrán que resolver ~5-10 hipótesis abandonadas
+desde octubre (REG.V, XLF, SLS.TO…). Nota para el 8-dic: `change_vs_prev` mezcla direcciones (uranio
+INVALIDATED+STRENGTHENED; carbón de tesis alcista invalidada a DISTRIBUTION STRENGTHENED): separar también
+por dirección de la etiqueta al medir. Repetir
 `research/llm_signal_eval_v1/eval.py` dentro de 4-6 semanas; con `change_vs_prev` se podrá medir solo
 NEW/STRENGTHENED.
 **Python:** `py -3` (3.13) estaba sin paquetes; se instaló `backtest/requirements.txt` (pandas 3.1.0,
@@ -8284,3 +8302,26 @@ El usuario vio la tabla de «señales recientes» más corta que el día anterio
 - `.slice(0, 24)` fijo en `SignalTrackRecord` (`relative.html`): con el filtro «contra el mercado» había 53 señales de entrada y solo se veían 24.
 
 Fix: `RECENT_DAYS = 60` (~42 sesiones); `flow_path` solo se calcula para señales de entrada (las de salida no pintan sparkline). Informe: ~790 KB → ~1,4 MB. La tabla muestra las 15 más recientes con botón «Ver las N anteriores» y un checkbox «solo las que ya tienen 21 sesiones» (con el filtro actual, 142 de 230 señales de entrada ya tienen el horizonte de 21 sesiones). Sin cambios en eventos, medición ni tabla de agregados.
+
+---
+
+## HY — concordancia entre módulos y escala única (implementado 2026-11-06)
+
+El usuario notó que la pestaña principal mostraba el HY «Normal» desde el inicio mientras el bot de Telegram avisaba con otros umbrales. Auditoría: había **7 criterios distintos** para el mismo dato (BAMLH0A0HYM2). Con el HY en 340 pb (sube desde ~270 a mediados de septiembre; >300 desde el 29-sep, >325 desde el 14-oct):
+
+| Módulo | Cortes (pb) | Lectura de 340 |
+|---|---|---|
+| Market Tracker + snapshot macro → Sol (`shared/market-macro.js`) | antes: <300 · **300-400 normal** · 400-600 · >600 | «Normal» seis semanas seguidas |
+| MacroScore (`rotacion.html`, `backtest/src/macro/components.py`) | <300 · **300-375 normal** · 375-475 elevado · 475-600 alto · >600 crisis | Normal, 18,75/25 |
+| Duration (`duration.html`, `duration_monitor.py`) | **>300 rojo = confirmación** de la tesis | rojo, cuenta para la fase C |
+| Telegram (`hy_spread_report.py`) | 270/285/300/**≥325 «la película cambia»** (tesis personal) | 🚨 cuarto escalón |
+| Cava (`cava_mapping.py`) | crítico ≥400; dirección ±20 pb/4s, +75 = ruptura | ampliándose |
+| Rotación, filtros sueltos | IWM <375 · compra <475 · complacencia <275 ×8s | — |
+
+Con los 3 años que FRED sirve de esta serie (licencia ICE), mediana 302 pb y 340 = percentil 86: no es «normal» con nuestros datos; las escalas de 300-400 parecen pensadas para el histórico largo, no verificable aquí.
+
+**Cambios:**
+- `shared/market-macro.js → hyReading()`: el NIVEL usa los cortes del MacroScore (300/375/475/600, `HY_LEVEL_BPS`) — el MacroScore y el backtest no se tocan — y se añade la DIRECCIÓN con los umbrales de Cava sobre la variación a 1 mes (`HY_MOVE_BPS`: ±20 pb, +75 = ruptura). Etiqueta tipo «Normal · ampliándose (+28 pb 1M)»; ampliarse sube un escalón el color (ruptura, dos). Lo heredan la pestaña principal, `market_macro_daily_snapshot.jsonl` y lo que recibe Sol. Etiquetas renombradas («Spreads comprimidos» → «Comprimido»…); ningún código dependía de los textos.
+- `duration.html`: la tarjeta HY explica en pantalla que el rojo >300 es el disparador de la tesis, no la lectura general.
+- `hy_spread_report.py`: el mensaje muestra la zona de la tesis y, aparte, la «escala general del Market Tracker» (copia Python de `HY_LEVEL_BPS`/`HY_MOVE_BPS` — mantener sincronizadas); historia de 30 observaciones para el Δ 1M.
+- No se tocan: MacroScore/backtest, `duration_monitor.py` (300 sigue siendo su disparador), Cava, filtros de `rotacion.html`. La IG (`ig_spread`) sigue sin dirección; no se revisó.
