@@ -297,3 +297,31 @@ estricta — decisión de juicio explícita, no una aprobación automática).
   suscripción de ZeroGEX (antes de ~2026-10-19) y borrar el secret `ZEROGEX_API_KEY`.
 - Sin forward-validation continua contra una fuente externa: el DIY depende de
   yfinance; se revisa a mano si aparece `sanity != ok` repetido.
+
+---
+
+## Enmienda 2026-11-05 — la IV deja de salir de yfinance
+
+**Motivo (fallo en producción detectado por el usuario, "pico hacia arriba" el 2026-11-04).** El snapshot DIY se
+recoge siempre tras el cierre, y a esa hora la IV por contrato de yfinance es basura: IV ATM del SPX 0,016 a las
+18:30 ET del 2026-11-05 con el VIX en 28. Consecuencias medidas en `gex_diy_history.jsonl`:
+- mismo día y mismo OI, flip −3,86% del spot a las 17:11 ET y −1,35% a las 18:30 ET;
+- flip == spot exacto en 4 de los 12 días SPX del 20-oct al 3-nov (régimen «transition» falso);
+- cadenas casi vacías (18-65 contratos) en 8 días; una (2026-11-04, 65 contratos) pasó la guarda y dio
+  «positive_gamma» +2,3% → el pico del dashboard;
+- la guarda de ±5% descartó un QQQ legítimo el 2026-11-05 (flip >5% por encima según la referencia externa).
+
+**Cambio de método (`scripts/gex_diy_snapshot.py`, `gex_pilot.py` intacto):** OI de yfinance + Black-Scholes con IV
+plana por vencimiento interpolada en varianza total de ^VIX9D/^VIX/^VIX3M (QQQ: misma curva × ^VXN/^VIX); se excluyen
+vencimientos ya expirados; `MIN_CONTRACTS` SPX 2000 / QQQ 1000 (`thin_chain`); guarda de distancia 5% → 10%.
+`source = diy_yfinance_oi_vix_iv`, campo nuevo `iv_30d`.
+
+**Validación (un solo día, no es una calibración):** 2026-11-05, SPX flip 7675,6 frente a 7674,8 del nivel «zero
+gamma» de SPY publicado por The Philosopher Investor (765 × SPX/SPY). QQQ 708,1 frente a 682 (+3,8%): la cadena de QQQ
+en yfinance trae incompletos los vencimientos diarios. Dos ejecuciones separadas varios minutos dan el mismo valor.
+Esa web prohíbe la extracción automatizada (términos, §9): solo puede consultarse a mano; no se importa.
+
+**Histórico:** las 5 filas SPX claramente erróneas (2026-10-20, 10-23, 10-30, 11-03 flip == spot; 11-04 cadena de
+65 contratos) quedan con `sanity = invalid_retro` y `invalid_reason` (no se borran; fuera de la serie del dashboard).
+El resto de filas del método antiguo se conserva; las de SPX recogidas tarde pueden tener el mismo sesgo de IV sin que
+sea detectable, así que el histórico anterior al 2026-11-05 debe leerse como menos fiable.

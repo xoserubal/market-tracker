@@ -626,7 +626,7 @@ function DurationPage() {
     });
     if (gexDiy) {
       lines.push('');
-      lines.push('## Dealer Gamma — gamma flip DIY (yfinance + Black-Scholes, 1 lectura/día al cierre; NO es señal, NO se usa el signo del Net GEX)');
+      lines.push('## Dealer Gamma — gamma flip DIY (OI de Yahoo + Black-Scholes con IV de la curva VIX desde 2026-11-05, 1 lectura/día al cierre; NO es señal, NO se usa el signo del Net GEX; QQQ menos fiable)');
       lines.push('| Símbolo | Fecha | Spot | Gamma flip | Distancia al flip | Régimen (banda ±0.5%) |');
       lines.push('|---|---|---:|---:|---:|---|');
       ['SPX', 'QQQ'].forEach(s => {
@@ -896,8 +896,9 @@ function DurationPage() {
         <React.Fragment>
           <div className="section-title">4. Dealer Gamma — gamma flip (DIY)</div>
           <div className="section-sub">
-            Nivel de spot donde el gamma neto de los dealers cambia de signo, estimado en casa con la cadena de opciones de Yahoo (OI + IV, Black-Scholes) una vez al día tras el cierre.
-            Calibrado contra ZeroGEX (diferencia mediana ≈0.3% del spot en SPX, ≈0.2% en QQQ). Spot por encima del flip → gamma positivo (dealers amortiguan movimientos); por debajo → negativo (los amplifican);
+            Nivel de spot donde el gamma neto de los dealers cambia de signo, estimado en casa con el open interest de Yahoo y Black-Scholes, una vez al día tras el cierre.
+            Desde el 2026-11-05 la volatilidad sale de la curva VIX9D/VIX/VIX3M (QQQ escalada por VXN), no de la IV de Yahoo, que tras el cierre es basura; los días anteriores claramente erróneos están excluidos.
+            Verificado ese día contra una fuente externa independiente: SPX 7675,6 frente a 7674,8. En QQQ la cadena de Yahoo está incompleta y el dato es menos fiable (+3,8% sobre la referencia). Spot por encima del flip → gamma positivo (dealers amortiguan movimientos); por debajo → negativo (los amplifican);
             a menos de ±0.5% → transición, régimen inestable. Solo se usa la posición del flip: el signo del Net GEX no es fiable con datos gratuitos. Observacional — no es señal de compra/venta.
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, fontSize: 12 }}>

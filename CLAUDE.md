@@ -8192,6 +8192,16 @@ porque no se guarda la cadena.
   del Net GEX (no fiable con datos gratuitos). Observacional, no es señal.
 - `gex-zerogex-fase2.yml`: cron desactivado.
 
+**Cambio de método 2026-11-05 (enmienda en el preregistro).** El usuario vio un «pico hacia arriba» en el gamma
+del SPX. Causa: la IV por contrato de yfinance tras el cierre es basura (IV ATM del SPX 0,016 con el VIX en 28),
+así que el flip dependía de la hora de recogida (−3,86% a las 17:11, −1,35% a las 18:30 el mismo día), salía
+igual al spot en 4 de 12 días de finales de octubre y una cadena de 65 contratos (11-04) pasó la guarda y produjo
+el pico. Ahora `gex_diy_snapshot.py` usa IV plana por vencimiento de la curva ^VIX9D/^VIX/^VIX3M (QQQ × ^VXN/^VIX),
+excluye vencimientos expirados, exige `MIN_CONTRACTS` (SPX 2000, QQQ 1000) y amplía la guarda a ±10%. Validado
+el 11-05 contra The Philosopher Investor (consultada a mano: su web prohíbe extraer datos con scripts, no se
+importa): SPX 7675,6 vs 7674,8; QQQ +3,8% (cadena de QQQ incompleta en yfinance). Las 5 filas SPX erróneas
+quedan `sanity=invalid_retro`.
+
 **Pendiente del usuario:** cancelar la suscripción de ZeroGEX (trial/tope ~2026-10-19) y
 borrar el secret `ZEROGEX_API_KEY`. Sin validación externa continua: si aparece
 `sanity != ok` de forma repetida, revisar a mano (el DIY depende de yfinance).
