@@ -1,5 +1,10 @@
 # Trullás — divergencia con ventana extendida (6 meses), v1
 
+> **SUPERADO (2026-11-06): los resultados de este estudio están inflados por un sesgo de entrada.** La orden
+> se buscaba desde el día siguiente al mínimo, cuando el mínimo solo se sabe confirmado 5 sesiones después.
+> Corregido en `research/trullas_extended_divergence_v2/`: FULL pasa de n=101, +2,42%, 76% aciertos a n=76,
+> −0,12%, 53%. Sin ventaja.
+
 Origen: revisando QXO a mano (2026-09-22/23) se encontró una divergencia
 alcista real de marzo a agosto 2026 que el método estándar de
 `evaluate_pivot_pair` (solo compara los DOS ÚLTIMOS pivotes consecutivos)

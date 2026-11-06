@@ -6020,6 +6020,13 @@ por cartera) — solo la disciplina temporal de cuándo se dispara.
 
 ## Sistema Trullás — divergencia con ventana extendida (6 meses): sí aporta, con dos bugs de diseño corregidos en el camino (2026-09-23)
 
+> **Corrección 2026-11-06: NO aporta.** Este estudio buscaba la entrada desde b+1 (sesgo de mirar al futuro,
+> el mismo que infló la regla estricta). Repetido sin el sesgo y con ventana de 6 y 12 meses en
+> `research/trullas_extended_divergence_v2/`: FULL pasa de n=101, +2,42%, 76% a n=76, −0,12%, 53%; ampliada
+> 6 meses (FULL+STALL) n=117, +0,29% (−0,71% con 1 pp de coste); 12 meses n=110, +0,03%; estricta n=39,
+> +0,67%. Todas ≈ 0 antes de costes, negativas sin sus 5 mejores operaciones, y comprar al confirmarse y
+> aguantar 20 sesiones no bate a comprar cualquier día. Lo de abajo se conserva como historia.
+
 Origen: revisando QXO a mano a petición del usuario se encontró una
 divergencia alcista real de marzo a agosto 2026 que el método estándar
 (`evaluate_pivot_pair`, solo compara los dos últimos pivotes consecutivos)
@@ -8225,6 +8232,21 @@ Aprobado por el usuario tras la sonda anterior. Cambios:
 - **No tocado:** el backtest de `research/trullas_early_detector_v1/backtest.py` sigue escaneando desde `b+1` (números históricos de CLAUDE.md sin corregir); la lectura relevante es la sonda `flex_entry_probe.py`. TRULLAS_FLEX no tiene evidencia de ventaja: se lanza solo para acumular muestra real comparable.
 
 **Fix de etiquetas de estado (2026-10-09):** `waiting_pullback_below_zone` se mostraba como "Esperando retroceso" aunque significa lo contrario (la apertura ya cayó POR DEBAJO de la zona, sobre el stop: espera un rebote, no un retroceso). Además, el día que se confirma el pivote (b+5) la primera apertura operable es la de mañana, así que una apertura de hoy DENTRO de la zona caía en "below_zone" por comparar solo contra el techo (caso GGAL). Ahora `_entry_state` distingue tres casos: `waiting_pullback_ran_ahead` (sobre el techo; label "Esperando retroceso"), `waiting_pullback_below_zone` (bajo el suelo; "Bajo la zona (espera rebote)") y `waiting_in_zone` (nuevo, dentro de la zona; "En zona · orden activa", entra en `ACTIVE_STATES`). La fila de `trullas_signals_history.jsonl` del 2026-10-09 de GGAL conserva la etiqueta antigua (dedup por ticker+fecha).
+
+**Sin esperar al retroceso (2026-11-06, `research/trullas_no_pullback_v1/`):** comprar a la apertura tras
+confirmarse el mínimo (b+6) en vez de esperar a la zona 23-25%. No ayuda: en el 81% de las señales el precio ya
+supera el objetivo 38,2% al confirmarse (los niveles se miden entre los dos mínimos: zona ~1,8% y objetivo ~2,8%
+sobre el mínimo en mediana); las 113 restantes dan mediana +0,42% y dependen de 5 operaciones; y comprar al
+confirmarse y aguantar 20 sesiones (608 señales) rinde igual o peor que un día cualquiera del universo (mediana
+0,00% vs +0,33%). La divergencia sola no anticipa subidas. La estricta corregida: n=39, −0,33% tras 1 pp de coste.
+Pregunta abierta: confirmar si el método original mide el Fibonacci desde el máximo intermedio, no entre mínimos.
+
+**Dejar correr la subida (2026-11-06, `research/trullas_let_run_v1/`):** misma entrada sin sesgo, 6 salidas fijadas
+de antemano (objetivo 38,2/100/161,8%, cruce MACD, stop dinámico 2×ATR, aguantar 60 sesiones). Sube la media
+(+2,4% a +4,7% en estricta+ampliada, ~153 operaciones) pero la mediana cae a −2/−4,5% y los aciertos al 18-35%;
+la media sale de 3 operaciones (ASTS abr-2024 +380%, ASPI jun-2023 +214%, BBAR oct-2025) y sin las 5 mejores
+todo queda ≈0 o negativo. Comprar cualquier día y aguantar 60 sesiones rinde más (media +7,6%, mediana +1,4%).
+Con la estricta sola (39) dejar correr empeora todo: el stop a ~1,8% salta en 28-35 de 39. No rescata a Trullás.
 
 **Tickers clicables en `trullas.html` (2026-10-09):** igual que en `screeners.html`, el ticker de la tabla principal y de las posiciones abiertas es un enlace (`tk-link`) que abre `TickerSummaryModal` (copia del de screeners, que copia la capa visual de portfolio.html: retornos/volumen/RSI, Koncorde D/3D/W con mini-gráfico, MACD, ATLAS, ATR%, Flow/Early Flow con flechas vs sesión anterior, insider, notas). Diferencia: aquí se carga bajo demanda — `/api/quote/:ticker` solo del ticker pulsado, y `/api/portfolio` + el histórico de `portfolio_daily_snapshot.jsonl` una sola vez, la primera vez que se abre. Carga además `/shared/flow-score.js`. Cualquier cambio de criterio visual debe mantenerse sincronizado en las tres páginas (copias, sin módulo compartido).
 
