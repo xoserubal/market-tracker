@@ -8260,6 +8260,22 @@ Con la estricta sola (39) dejar correr empeora todo: el stop a ~1,8% salta en 28
 
 **Carteras `MACD_COMBO_CD` / `MACD_COMBO_SD` (implementadas 2026-10-22, preregistro en `wiki/PREREGISTRO_MACD_COMBO_V0.md`):** entran cuando un valor es candidato a la vez de `hist_cross_confirmed` y `line_near_zero_up`; salen al primer cierre con `macdHist <= 0` (ejecución al cierre siguiente; sin stops ni límite de días). CD = con cooldown de 10 días, SD = sin cooldown. `scripts/macd_combo_portfolio.py` (Step 9g1d, `continue-on-error`, sin Telegram) escribe las carteras en `ai_picks.json`, el seguimiento por barra en `docs/data/macd_combo_tracking.jsonl` (todos los escalares del snapshot + PCS) y alimenta `docs/data/pcs_daily_log.jsonl` desde `ai_candidates.json` (`--backfill-pcs` reconstruye desde git, solo en local). Eventos anteriores a 2026-10-23 = `backfill_exploratory`. El informe del Screener (`screener_signal_report.js`) sigue la combinación como filtro virtual `hist_cross_confirmed+line_near_zero_up` (`COMBOS`).
 
+**Combo MACD sobre S&P 500 + Nasdaq 100 — sin ventaja (2026-11-10, `research/macd_combo_sp500_ndx_v1/`).** Preregistrado
+en el README antes de ejecutar. 518 componentes actuales (sesgo de supervivencia), 2015→2026-11-09, mismas reglas que el
+Screener (réplica coincide en 829/834 filas con el snapshot real). Combo con cooldown, ~11 750 eventos (~1 000/año): exceso
+frente a la media del universo −0,04/−0,02/−0,07 pp a 5/10/21 sesiones, acierto 48-49 %, igual que comprar cualquier día;
+ninguna mitad ni régimen de SPY significativo. Regla de cartera (salida al girar el histograma): exceso −0,36 pp tras 0,2 % de
+coste (t −3,6). Los filtros por separado, tampoco. El +3 pp del informe del Screener (26 eventos) era ruido. Criterio
+preregistrado no cumplido: no se vigila el S&P 500 / Nasdaq 100; `MACD_COMBO_CD/SD` siguen sin cambios.
+
+**Combo MACD + filtros — sin ventaja (2026-11-10, `research/macd_combo_filters_v1/`).** Preregistrado: 7 filtros solos y
+sumados al combo MACD (A Koncorde 3D/W no en distribución, B Early Flow ≥ 4 con `shared/flow-score.js`, C sector GICS
+Leader/Improving con `shared/relative-lib.js`, D no extendido < 1,5 ATR, E fuerza relativa 63 ses. > 0, F SPY > SMA200,
+ABC), 5/10/15/20 sesiones, selección en 2016-2020 y confirmación en 2021-2026. Reconstrucción validada (Koncorde 42/42 con
+`koncorde_data.json`; Early Flow 93 % del mismo lado del umbral). Ninguna de las 56 combinaciones pasa la selección:
+exceso bruto ≈ 0, aciertos 44-49 %; MACD+ABC +0,28 en desarrollo (n 542, t 0,8) y negativo en prueba. Único efecto
+robusto, en contra: fuerza relativa 3m positiva rinde −0,4/−0,6 pp a 1-4 semanas (reversión de corto plazo).
+
 ---
 
 ## Screener "RSI mensual > 70 + nuevo máximo" — provisional vs definitivo (implementado 2026-10-10)
