@@ -1,16 +1,11 @@
 name: Market Data Update
 
 on:
-  schedule:
-    # 08:00 y 20:00 UTC nominal (cada 12h) — minuto 7, no 0, siguiendo la
-    # recomendación de GitHub de evitar disparar justo en punto (el minuto
-    # de más carga de su scheduler). Cambiado 2026-09-23 tras confirmar
-    # contra el historial real de Actions un retraso medio de ~4h (slot de
-    # 08:00) y ~1.5-2.5h (slot de 20:00) — el propio precedente de
-    # gex-zerogex-fase2.yml (programado a :55, no en punto) sugiere que
-    # esto no resuelve el retraso por sí solo, pero el cambio es reversible
-    # y de coste nulo. Ver CLAUDE.md.
-    - cron: '7 8,20 * * *'
+  # Sin cron desde 2026-11-10: el scheduler de GitHub llegaba con 7-10h de
+  # retraso y el run de la mañana caía con Wall Street abierto. Ahora lo
+  # dispara una vez al día el bot de Telegram (Railway) a las 23:10 hora de
+  # Madrid vía workflow_dispatch, que arranca en el acto. Ver CLAUDE.md y
+  # telegram_portfolio_bot.py → maybe_dispatch_daily_pipeline().
   workflow_dispatch:           # permite lanzar manualmente desde GitHub
 
 permissions:
@@ -261,12 +256,9 @@ jobs:
           # Espejo/Insider Activity se saltaran ese día — mismo patrón de
           # fallo silencioso ya visto con TELEGRAM_BOT_TOKEN/
           # CAVA_ENGINE_TOKEN vacíos. Ver CLAUDE.md.
-          HOUR=$(date -u +%H)
-          if [ "$HOUR" -lt 16 ]; then
-            echo "is_morning=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_morning=false" >> "$GITHUB_OUTPUT"
-          fi
+          # Desde 2026-11-10 hay un solo run al día (disparado por el bot a
+          # las 23:10 Madrid), así que los pasos "una vez al día" corren siempre.
+          echo "is_morning=true" >> "$GITHUB_OUTPUT"
 
       - name: Run pipeline - Step 9d Mirror Espejo portfolio (Grok) — solo por la mañana
         if: steps.time_check.outputs.is_morning == 'true'

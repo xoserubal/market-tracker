@@ -8357,3 +8357,30 @@ Con los 3 años que FRED sirve de esta serie (licencia ICE), mediana 302 pb y 34
 - `duration.html`: la tarjeta HY explica en pantalla que el rojo >300 es el disparador de la tesis, no la lectura general.
 - `hy_spread_report.py`: el mensaje muestra la zona de la tesis y, aparte, la «escala general del Market Tracker» (copia Python de `HY_LEVEL_BPS`/`HY_MOVE_BPS` — mantener sincronizadas); historia de 30 observaciones para el Δ 1M.
 - No se tocan: MacroScore/backtest, `duration_monitor.py` (300 sigue siendo su disparador), Cava, filtros de `rotacion.html`. La IG (`ig_spread`) sigue sin dirección; no se revisó.
+
+---
+
+## Pipeline diario lanzado por el bot de Telegram, sin cron de GitHub (implementado 2026-11-10)
+
+El scheduler de GitHub llegaba ya con 7-10h de retraso (08:07 UTC → 18:41 UTC; 20:07 UTC → 02:40 UTC).
+El 2026-11-09 el run de la mañana cayó con Wall Street abierto: Sol analizó precios intradía y, por el
+dedup por fecha, el cierre del día no lo leyó nadie. Decisión del usuario: un solo run al día, a las
+**23:10 hora de Madrid**, lanzado por el bot.
+
+- `market-update.yml`: sin `schedule`, solo `workflow_dispatch` (arranca en el acto). `is_morning` queda
+  siempre a `true` (Mirror Espejo e Insider Activity corren en el único run del día).
+- `telegram_portfolio_bot.py → maybe_dispatch_daily_pipeline()`: en el bucle continuo (Railway), cada
+  ~2,5 min comprueba la hora en `Europe/Madrid` (cambia sola con el horario de verano). A partir de las
+  23:10 lanza `market-update.yml` (POST `.../actions/workflows/market-update.yml/dispatches`, ref master)
+  una vez por fecha de Madrid; si el bot estaba caído, recupera hasta las 06:00 del día siguiente. Dedup
+  en `docs/data/pipeline_dispatch_state.json` (vía GitHub API, sobrevive a reinicios). Solo activo con
+  `RAILWAY_ENVIRONMENT` o `PIPELINE_DISPATCH=1` (un bot local no duplica el run). Token:
+  `GITHUB_ACTIONS_PAT` (permiso Actions: write) o, si no existe, `GITHUB_TOKEN`. Si GitHub rechaza la
+  petición, avisa por Telegram una vez y no reintenta ese día. `requirements.txt` gana `tzdata`.
+- `market_analysis_llm.py → _us_session_closed()`: Sol no se llama si la sesión de EE.UU. sigue abierta
+  (antes de las 16:00 ET en día laborable), salvo `--force`. A las 23:10 Madrid son las 17:10 ET todo el
+  año.
+- `koncorde-retry.yml` (10:00/22:00 UTC, su propio cron) no se ha tocado: el pase de las 10:00 recoge los
+  fallos del run de la noche anterior.
+- Riesgo nuevo: si el bot de Railway está caído entre las 23:10 y las 06:00, ese día no hay pipeline (se
+  lanza a mano desde Actions). `notify_workflow_failure.py` sigue avisando de fallos del run, no de su ausencia.

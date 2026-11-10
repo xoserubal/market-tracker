@@ -1412,6 +1412,102 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
     return False
 
 
+# ── Disparo diario del pipeline (2026-11-10) ─────────────────────────────
+# GitHub retrasaba el cron de market-update.yml 7-10h, así que se quitó el
+# schedule y el pipeline lo lanza este bot una vez al día vía workflow_dispatch
+# (arranca en el acto). Hora fija en Madrid (cambia sola con el horario de
+# verano). Si el bot está caído a esa hora, se recupera hasta las 06:00 del día
+# siguiente. Dedup por fecha de Madrid en docs/data/pipeline_dispatch_state.json
+# (vía GitHub API en Railway, sobrevive a reinicios). Solo en Railway o con
+# PIPELINE_DISPATCH=1, para que un bot local en paralelo no duplique el run.
+
+PIPELINE_WORKFLOW        = "market-update.yml"
+PIPELINE_DISPATCH_HHMM   = (23, 10)   # hora de Madrid
+PIPELINE_CATCHUP_UNTIL_H = 6          # hasta las 06:00 del día siguiente
+_DISPATCH_STATE_PATH     = "docs/data/pipeline_dispatch_state.json"
+DISPATCH_STATE_FILE      = ROOT / _DISPATCH_STATE_PATH
+PIPELINE_DISPATCH_ENABLED = bool(os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("PIPELINE_DISPATCH"))
+_last_dispatch_cache: str | None = None
+
+
+def _pipeline_target_date(now_madrid) -> str | None:
+    """Fecha (Madrid) del run que toca ahora, o None si estamos fuera de ventana."""
+    from datetime import timedelta
+    hhmm = (now_madrid.hour, now_madrid.minute)
+    if hhmm >= PIPELINE_DISPATCH_HHMM:
+        return now_madrid.date().isoformat()
+    if now_madrid.hour < PIPELINE_CATCHUP_UNTIL_H:
+        return (now_madrid.date() - timedelta(days=1)).isoformat()
+    return None
+
+
+def _load_dispatch_state() -> dict:
+    if USE_GITHUB_API:
+        try:
+            data, sha = _gh_read(_DISPATCH_STATE_PATH)
+            _sha_cache[_DISPATCH_STATE_PATH] = sha
+            return data
+        except Exception as exc:
+            print(f"GitHub dispatch-state read failed: {exc}")
+            return {}
+    try:
+        return json.loads(DISPATCH_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_dispatch_state(state: dict) -> None:
+    if USE_GITHUB_API:
+        try:
+            _gh_write(_DISPATCH_STATE_PATH, state, "bot: pipeline dispatched")
+        except Exception as exc:
+            print(f"GitHub dispatch-state write failed: {exc}")
+        return
+    DISPATCH_STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
+def maybe_dispatch_daily_pipeline(token: str, chat_id: str) -> None:
+    global _last_dispatch_cache
+    if not PIPELINE_DISPATCH_ENABLED:
+        return
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    target = _pipeline_target_date(datetime.now(ZoneInfo("Europe/Madrid")))
+    if target is None or _last_dispatch_cache == target:
+        return
+    state = _load_dispatch_state()
+    if state.get("last_dispatch_date") == target:
+        _last_dispatch_cache = target
+        return
+
+    gh_token = os.environ.get("GITHUB_ACTIONS_PAT") or GITHUB_TOKEN
+    repo     = GITHUB_REPO or "xoserubal/market-tracker"
+    try:
+        r = requests.post(
+            f"https://api.github.com/repos/{repo}/actions/workflows/{PIPELINE_WORKFLOW}/dispatches",
+            json={"ref": "master"},
+            headers={"Authorization": f"token {gh_token}", "Accept": "application/vnd.github+json"},
+            timeout=15,
+        )
+        ok, detail = r.status_code == 204, f"HTTP {r.status_code} {r.text[:200]}"
+    except Exception as exc:
+        ok, detail = False, str(exc)
+
+    # Se marca como hecho también si falla: un reintento cada 2,5 min no
+    # arreglaría un token sin permisos y llenaría el chat de avisos.
+    _last_dispatch_cache = target
+    _save_dispatch_state({"last_dispatch_date": target, "ok": ok, "detail": detail,
+                          "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+    if ok:
+        print(f"[pipeline] market-update.yml lanzado ({target})")
+    else:
+        print(f"[pipeline] fallo al lanzar market-update.yml: {detail}")
+        _send(token, chat_id, html.escape(
+            f"⚠️ No he podido lanzar el pipeline diario ({target}): {detail}\n"
+            "Lánzalo a mano en GitHub → Actions → Market Data Update → Run workflow, "
+            "y revisa GITHUB_ACTIONS_PAT en Railway (necesita permiso Actions: write)."))
+
+
 # ── Run modes ─────────────────────────────────────────────────────────────
 
 def run_once(token: str, chat_id: str) -> None:
@@ -1497,6 +1593,10 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
                     check_alerts(token, chat_id)
                 except Exception as exc:
                     print(f"Alert check error: {exc}")
+                try:
+                    maybe_dispatch_daily_pipeline(token, chat_id)
+                except Exception as exc:
+                    print(f"Pipeline dispatch error: {exc}")
 
         except KeyboardInterrupt:
             print("Bot stopped.")

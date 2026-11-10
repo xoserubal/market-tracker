@@ -300,6 +300,23 @@ def _prev_date(dates: set[str], today: str) -> str | None:
 MARKET_OPEN_BENCHMARK = "^GSPC"
 
 
+US_CLOSE_HOUR_ET = 16  # 16:00 America/New_York
+
+
+def _us_session_closed() -> tuple[bool, str]:
+    """¿Ha cerrado ya la sesión de EE.UU. de hoy? (2026-11-10) — el 2026-11-09
+    el run de las 08:07 UTC llegó a las 18:41 UTC con Wall Street abierto, Sol
+    analizó precios intradía y el dedup por fecha impidió repetir con el cierre.
+    En fin de semana se devuelve True y ya lo filtra _is_market_open_day."""
+    from zoneinfo import ZoneInfo
+    now_et = datetime.now(ZoneInfo("America/New_York"))
+    if now_et.weekday() >= 5:
+        return True, "fin de semana"
+    if now_et.hour < US_CLOSE_HOUR_ET:
+        return False, f"son las {now_et:%H:%M} ET, cierre a las {US_CLOSE_HOUR_ET}:00 ET"
+    return True, f"{now_et:%H:%M} ET, sesión cerrada"
+
+
 def _is_market_open_day(today: str, existing: list[dict]) -> tuple[bool, str]:
     """Comprueba si hoy hubo mercado abierto, SIN calendario de festivos
     hardcodeado (evita mantenimiento y el sesgo de solo cubrir festivos de
@@ -663,6 +680,12 @@ def run(dry_run: bool, force: bool = False) -> int:
     existing = _load_jsonl(OUT_PATH)
     if any(r["date"] == today for r in existing):
         print(f"Ya hay un análisis registrado para hoy ({today}) — nada que hacer (dedup).")
+        return 0
+
+    closed, close_reason = _us_session_closed()
+    if not closed and not force:
+        print(f"Sesión de EE.UU. todavía abierta — {close_reason}. No se llama al LLM "
+              f"(un análisis con precios intradía bloquearía el día por el dedup; usa --force para saltarte esto).")
         return 0
 
     market_open, reason = _is_market_open_day(today, existing)
