@@ -7494,6 +7494,8 @@ nueva más allá del propio `sw.js`, que sí se comprobó por sintaxis).
 Chrome/Safari ofrecen "Añadir a pantalla de inicio"/"Instalar app" y que
 el icono se ve bien — no verificado en este cambio.
 
+**Fix 2026-11-10:** `/shared/*.js` pasa a red-primero (caché solo sin red) y `CACHE_NAME` sube a `v2`. Con stale-while-revalidate, la primera carga tras cambiar un módulo compartido servía la versión vieja (otro equipo veía el HY como «Normal» sin la dirección).
+
 ### Pendiente (siguiente paso, explícito, no incluido en este cambio)
 
 **Tailscale** para acceso remoto (fuera de la LAN) — instalación y login
