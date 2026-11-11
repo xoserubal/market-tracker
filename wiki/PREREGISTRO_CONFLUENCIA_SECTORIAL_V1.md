@@ -1,6 +1,6 @@
 # Preregistro — confluencia sectorial: régimen + Flujos & Rotación + flow change de RFL (v1, borrador)
 
-**BORRADOR SIN FIRMAR (2026-11-11).** No se ha calculado ninguna rentabilidad futura. El diagnóstico de §2 solo cuenta
+**FIRMADO el 2026-11-11 por el usuario («dale» a las cuatro condiciones de §8). Congelado desde ese momento.** No se ha calculado ninguna rentabilidad futura. El diagnóstico de §2 solo cuenta
 condiciones con datos hasta cada fecha de decisión. Alcance: investigación en `research/sector_confluence_v1/`. No se
 toca el Market Tracker, el pipeline ni ninguna cartera.
 
@@ -153,3 +153,7 @@ No se probarán otros umbrales del flow change, otras definiciones de las patas 
 3. Aceptar la limitación de §5 (sin datos nuevos de verdad; solo se detectan efectos ≥ 1 punto).
 4. Firmar. Desde ese momento quedan congelados definiciones, horizontes, umbrales y criterios, y la huella SHA-256 de
    este documento se guarda en `research/sector_confluence_v1/PREREGISTRO.sha256` antes de calcular nada.
+
+## 9. Firma
+- Firmado el 2026-11-11. La huella SHA-256 del documento, calculada sin esta sección 9, está en
+  `research/sector_confluence_v1/PREREGISTRO.sha256`. Se guardó antes de calcular ninguna variable del estudio.
