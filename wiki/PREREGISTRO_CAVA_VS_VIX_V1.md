@@ -1,6 +1,6 @@
 # Preregistro — ¿Cava `risk_off` anticipa caídas mejor que el VIX solo? (v1, borrador)
 
-**BORRADOR SIN FIRMAR (2026-11-11).** No se ha calculado ningún resultado futuro con estas definiciones. Alcance:
+**FIRMADO el 2026-11-11 por el usuario («dale»: descarga autorizada y firma). Congelado desde ese momento.** No se ha calculado ningún resultado futuro con estas definiciones. Alcance:
 investigación en `research/cava_vs_vix_v1/`. No se toca la cartera CAVA_MACRO ni el pipeline.
 
 ## 0. Pregunta
@@ -87,3 +87,6 @@ No se probarán otros percentiles, ventanas ni medidas de riesgo.
 ## 6. Pendiente antes de firmar
 1. Autorizar la descarga de SPY y VIX con yfinance (dos símbolos), si `cava_state_history` no los tiene en caché.
 2. Firmar. La huella SHA-256 se guarda en `research/cava_vs_vix_v1/PREREGISTRO.sha256` antes de calcular nada.
+
+## 7. Firma
+- Firmado el 2026-11-11. La huella SHA-256 del documento, calculada sin esta sección 7, está en `research/cava_vs_vix_v1/PREREGISTRO.sha256`. Se guardó antes de calcular nada.

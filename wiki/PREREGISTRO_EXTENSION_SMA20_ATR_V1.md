@@ -1,6 +1,6 @@
 # Preregistro — ¿rinden peor las acciones extendidas sobre su SMA20? (v1, borrador)
 
-**BORRADOR SIN FIRMAR (2026-11-11).** No se ha calculado ninguna rentabilidad. Alcance: investigación en
+**FIRMADO el 2026-11-11 por el usuario («dale»: descarga autorizada y firma). Congelado desde ese momento.** No se ha calculado ninguna rentabilidad. Alcance: investigación en
 `research/extension_sma20_atr_v1/`. No se toca el Market Tracker, el pipeline, el PCS ni ninguna cartera.
 
 ## 0. Pregunta
@@ -98,3 +98,6 @@ en vivo), con un preregistro propio. No se cambia el PCS ni ninguna regla de ent
 ## 7. Pendiente antes de firmar
 1. Autorizar la descarga de precios (unos 520 símbolos de Yahoo, de 2015 a 2026).
 2. Firmar. La huella SHA-256 se guarda en `research/extension_sma20_atr_v1/PREREGISTRO.sha256` antes de calcular nada.
+
+## 8. Firma
+- Firmado el 2026-11-11. La huella SHA-256 del documento, calculada sin esta sección 8, está en `research/extension_sma20_atr_v1/PREREGISTRO.sha256`. Se guardó antes de calcular nada.
