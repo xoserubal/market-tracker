@@ -545,7 +545,10 @@ jobs:
             fi
             echo "git push rechazado (intento $i/5) — otro proceso publicó mientras tanto, reintentando con rebase"
             git fetch origin master
-            if ! git rebase origin/master; then
+            # --autostash: el Step 12 regenera la sección del bot en CLAUDE.md
+            # (fuera del git add), y rebase se niega a correr con cambios sin
+            # guardar. Run #399 (2026-11-10) falló justo por eso.
+            if ! git rebase --autostash origin/master; then
               echo "::error::conflicto real al hacer rebase tras un push rechazado — requiere revisión manual"
               git rebase --abort
               exit 1

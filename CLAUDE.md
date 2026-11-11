@@ -8402,3 +8402,9 @@ dedup por fecha, el cierre del día no lo leyó nadie. Decisión del usuario: un
   fallos del run de la noche anterior.
 - Riesgo nuevo: si el bot de Railway está caído entre las 23:10 y las 06:00, ese día no hay pipeline (se
   lanza a mano desde Actions). `notify_workflow_failure.py` sigue avisando de fallos del run, no de su ausencia.
+- **Fallo del primer run (#399, 2026-11-10):** el bot publica `bot: pipeline dispatched` justo después de lanzar
+  el run, así que el primer `git push` del step «Commit updated data» se rechaza todos los días y siempre entra
+  el reintento con rebase. Ese rebase fallaba porque el Step 12 regenera la sección del bot en `CLAUDE.md`
+  (fuera del `git add`) y `git rebase` no corre con cambios sin guardar. Fix: `git rebase --autostash`
+  (probado en un repo de prueba con el mismo caso). Se perdieron el análisis de Sol del 10-nov y las 2 entradas
+  de Mirror Espejo de ese run; no se pueden recuperar (la última vela ya es la del 11).
