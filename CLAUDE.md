@@ -8505,3 +8505,12 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
 - **Hallazgo colateral: `macro_history`/`rotation_history` miran al futuro.** El recálculo sin desfase los reproduce al
   100 %, pero al aplicar el desfase de publicación (CFNAI, NetLiq) el régimen cambia en el 24,9 % de las semanas.
   Cualquier backtest que use ese régimen guardado hereda el problema.
+
+**Filtros de riesgo: dos borradores de preregistro (2026-11-11, sin firmar).**
+- `wiki/PREREGISTRO_EXTENSION_SMA20_ATR_V1.md`: ¿el decil más extendido sobre la SMA20 (en ATR) del S&P 500 +
+  Nasdaq 100 rinde ≤ −0,5 puntos a 20 sesiones, y aporta algo más que la fuerza relativa a 3 meses? Desarrollo
+  2016-2020, prueba 2021-2026.
+- `wiki/PREREGISTRO_CAVA_VS_VIX_V1.md`: ¿Cava `risk_off` anticipa la caída del mes siguiente del SPY más allá de una
+  regla de VIX activa con la misma frecuencia? Con régimen corregido por desfase de publicación.
+- El motor de Cava (v1.1.0) se clonó en esta sesión en `/home/user/cava-decision-engine`.
+- Nota: `cava_test_1c.py` incluía el propio día t en la volatilidad del mes siguiente; el nuevo preregistro lo corrige.
