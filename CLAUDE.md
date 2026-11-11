@@ -8520,6 +8520,14 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
   - en esos días el retorno a 3 meses es el normal (+2,7 frente a +2,8), así que reducir riesgo cuesta poco;
   - el VIX alto en solitario sí precede a rebotes (+5,9);
   - frente al VIX cuando discrepan: −0,41, con un IC muy ancho;
-  - pendiente: compararlo con una regla de tendencia del SPY.
+  - **comparación con la tendencia del SPY: INCONCLUYENTE** (`research/cava_vs_trend_v1/`, preregistro
+    `wiki/PREREGISTRO_CAVA_VS_TENDENCIA_V1.md`):
+    - el 98,8 % de los días `risk_off` coincide con VIX alto o con el SPY por debajo de su SMA200; solo 10 días y
+      3 episodios quedan sin cubrir;
+    - con reglas de tendencia más estrictas (distancia a la SMA200 en el 15,7 % más bajo, o caída ≥ 10 % desde el
+      máximo), Cava añade −1,5/−1,6 puntos, pero solo como sensibilidad;
+    - descriptivo: dentro de «VIX o tendencia», los días con `risk_off` caen −5,0 y rinden +2,4 a 3 meses; los días
+      sin él caen −3,5 y rinden +4,9;
+    - Cava sirve para afinar dentro de esos días, no como alarma independiente.
 - El motor de Cava se clonó en `/home/user/cava-decision-engine`. `cava_test_1c.py` incluía el día t en la volatilidad
   posterior; el nuevo script mide desde t+1.
