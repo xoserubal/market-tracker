@@ -49,13 +49,18 @@ const BATCH_GAP_MS = 300;  // pausa entre lotes — buen ciudadano con Yahoo
 const args = process.argv.slice(2);
 const DRY_RUN     = args.includes("--dry-run");
 const REPORT_ONLY = args.includes("--report");
+// Recuperación de un día perdido (2026-11-11), mismas flags que market_daily_snapshot.js.
+const DATE_ARG     = (args.find(a => a.startsWith("--date=")) || "").slice("--date=".length) || null;
+const REPLACE_DATE = args.includes("--replace-date");
+if (DATE_ARG && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(DATE_ARG)) { console.error(`--date inválida: ${DATE_ARG}`); process.exit(1); }
+if (REPLACE_DATE && !DATE_ARG) { console.error("--replace-date exige --date=AAAA-MM-DD"); process.exit(1); }
 const tickersArg  = args.find(a => a.startsWith("--tickers="));
 const TICKERS_OVERRIDE = tickersArg
   ? tickersArg.slice("--tickers=".length).split(",").map(t => t.trim().toUpperCase()).filter(Boolean)
   : null;
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return DATE_ARG || new Date().toISOString().slice(0, 10);
 }
 
 function readJsonlRows(file) {
@@ -110,7 +115,13 @@ async function main() {
   const tickers = TICKERS_OVERRIDE ?? loadPortfolioTickers();
   console.log(`portfolio_daily_snapshot: ${tickers.length} tickers, fecha=${today}, dry_run=${DRY_RUN}`);
 
-  const existingRows = readJsonlRows(SNAPSHOT_FILE);
+  let existingRows = readJsonlRows(SNAPSHOT_FILE);
+  if (REPLACE_DATE) {
+    const before = existingRows.length;
+    existingRows = existingRows.filter(r => r.date !== today);
+    console.log(`  --replace-date: ${before - existingRows.length} filas de ${today} se rehacen`);
+    if (!DRY_RUN) fs.writeFileSync(SNAPSHOT_FILE, existingRows.map(r => JSON.stringify(r)).join("\n") + (existingRows.length ? "\n" : ""));
+  }
   const existingKeys = new Set(existingRows.map(r => `${r.date}|${r.ticker}`));
   const prevByTicker = buildPrevRowMap(existingRows, today);
 
@@ -123,7 +134,7 @@ async function main() {
 
   for (let i = 0; i < pending.length; i += BATCH_SIZE) {
     const batch = pending.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(batch.map(t => buildQuoteData(t)));
+    const results = await Promise.allSettled(batch.map(t => buildQuoteData(t, { cutoffDate: DATE_ARG })));
     results.forEach((res, idx) => {
       const ticker = batch[idx];
       if (res.status === "rejected") {

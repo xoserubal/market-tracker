@@ -675,8 +675,10 @@ def extract_json_block(text: str) -> dict | None:
         return None
 
 
-def run(dry_run: bool, force: bool = False) -> int:
-    today = _today()
+def run(dry_run: bool, force: bool = False, date_override: str | None = None) -> int:
+    # date_override: recuperación de un día perdido (2026-11-11). Solo con --force,
+    # con el mercado cerrado y las capturas de esa fecha ya rehechas.
+    today = date_override or _today()
     existing = _load_jsonl(OUT_PATH)
     if any(r["date"] == today for r in existing):
         print(f"Ya hay un análisis registrado para hoy ({today}) — nada que hacer (dedup).")
@@ -723,6 +725,8 @@ def run(dry_run: bool, force: bool = False) -> int:
         "latency_ms": round(latency_ms), "prose": prose, "structured": structured,
         "structured_parse_ok": structured is not None,
     }
+    if date_override:
+        row["recovered_at_utc"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with OUT_PATH.open("a", encoding="utf-8") as f:
@@ -754,4 +758,9 @@ if __name__ == "__main__":
     if "--report" in sys.argv:
         print_report()
     else:
-        sys.exit(run(dry_run="--apply" not in sys.argv, force="--force" in sys.argv))
+        date_arg = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--date=")), None)
+        if date_arg and not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date_arg):
+            sys.exit(f"--date inválida: {date_arg}")
+        if date_arg and "--force" not in sys.argv:
+            sys.exit("--date exige --force (es un modo de recuperación manual)")
+        sys.exit(run(dry_run="--apply" not in sys.argv, force="--force" in sys.argv, date_override=date_arg))

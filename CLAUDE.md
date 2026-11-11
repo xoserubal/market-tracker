@@ -8406,5 +8406,13 @@ dedup por fecha, el cierre del día no lo leyó nadie. Decisión del usuario: un
   el run, así que el primer `git push` del step «Commit updated data» se rechaza todos los días y siempre entra
   el reintento con rebase. Ese rebase fallaba porque el Step 12 regenera la sección del bot en `CLAUDE.md`
   (fuera del `git add`) y `git rebase` no corre con cambios sin guardar. Fix: `git rebase --autostash`
-  (probado en un repo de prueba con el mismo caso). Se perdieron el análisis de Sol del 10-nov y las 2 entradas
-  de Mirror Espejo de ese run; no se pueden recuperar (la última vela ya es la del 11).
+  (probado en un repo de prueba con el mismo caso). Además el bot guarda ahora su estado ANTES de lanzar el run
+  (y solo lo reescribe si el lanzamiento falla), así que el run ya parte con ese commit y el reintento queda
+  como red de seguridad para otros commits que caigan durante el run (dashboard, comandos del bot).
+- **Recuperar un día perdido** (usado para el 10-nov, rehecho el 11-nov a las ~10 UTC, antes de la apertura de
+  EE.UU.): `koncorde_calculator.py` (luego revertir `koncorde_signals_history.jsonl` y `ai_candidates.json`, que
+  quedan fechados hoy) → `node scripts/market_daily_snapshot.js --date=AAAA-MM-DD --replace-date` y lo mismo con
+  `portfolio_daily_snapshot.js` (`buildQuoteData(t, {cutoffDate})` descarta velas posteriores, para que Europa,
+  Australia, futuros y cripto no metan precios del día siguiente) → publicar → workflow manual
+  `sol-recover.yml` (input `date`; usa la clave de OpenRouter de GitHub y llama a Sol con `--force --date`). La
+  fila de Sol lleva `recovered_at_utc`. Mirror Espejo y el resto de carteras de ese run no se recuperan.

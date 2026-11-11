@@ -60,6 +60,13 @@ const FRED_GAP_MS   = 300;
 const args = process.argv.slice(2);
 const DRY_RUN     = args.includes("--dry-run");
 const REPORT_ONLY = args.includes("--report");
+// Recuperación de un día perdido (2026-11-11): --date=AAAA-MM-DD fecha las filas
+// con ese día en vez de hoy; --replace-date borra antes las filas existentes de
+// esa fecha (equities y macro). Solo para uso manual con el mercado cerrado.
+const DATE_ARG     = (args.find(a => a.startsWith("--date=")) || "").slice("--date=".length) || null;
+const REPLACE_DATE = args.includes("--replace-date");
+if (DATE_ARG && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(DATE_ARG)) { console.error(`--date inválida: ${DATE_ARG}`); process.exit(1); }
+if (REPLACE_DATE && !DATE_ARG) { console.error("--replace-date exige --date=AAAA-MM-DD"); process.exit(1); }
 
 // ── Datos — copiados literalmente de MACRO_ITEMS/SECTIONS en index.html.
 // Mismo riesgo de drift que cualquier duplicación en este proyecto (ver
@@ -215,7 +222,7 @@ function appendJsonl(file, rows) {
   fs.appendFileSync(file, rows.map(r => JSON.stringify(r)).join("\n") + "\n");
 }
 
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+function todayISO() { return DATE_ARG || new Date().toISOString().slice(0, 10); }
 
 // Última fila registrada estrictamente antes de hoy, por ticker — mismo
 // criterio que portfolio_daily_snapshot.js, para earlyFlow.
@@ -266,7 +273,7 @@ async function main() {
   const quoteFailures = [];
   for (let i = 0; i < allTickers.length; i += BATCH_SIZE) {
     const batch = allTickers.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(batch.map(t => buildQuoteData(t)));
+    const results = await Promise.allSettled(batch.map(t => buildQuoteData(t, { cutoffDate: DATE_ARG })));
     results.forEach((res, idx) => {
       const ticker = batch[idx];
       if (res.status === "rejected") quoteFailures.push({ ticker, error: res.reason?.message ?? String(res.reason) });
@@ -279,6 +286,12 @@ async function main() {
 
   // ── Equity rows ──────────────────────────────────────────────────────
   let existingEquityRows = readJsonlRows(EQUITY_FILE);
+  if (REPLACE_DATE) {
+    const before = existingEquityRows.length;
+    existingEquityRows = existingEquityRows.filter(r => r.date !== today);
+    console.log(`  --replace-date: ${before - existingEquityRows.length} filas equity de ${today} se rehacen`);
+    if (!DRY_RUN) fs.writeFileSync(EQUITY_FILE, existingEquityRows.map(r => JSON.stringify(r)).join(String.fromCharCode(10)) + (existingEquityRows.length ? String.fromCharCode(10) : ""));
+  }
   // Upsert de filas obsoletas de hoy (2026-10-08): si la primera pasada del dia
   // corrio antes de la apertura de EE.UU., sus filas llevan asOf del dia
   // anterior y el dedup por (date,ticker) impedia que la pasada posterior las
@@ -312,7 +325,13 @@ async function main() {
   console.log(`  equity rows nuevas: ${newEquityRows.length}`);
 
   // ── Macro rows ───────────────────────────────────────────────────────
-  const existingMacroRows = readJsonlRows(MACRO_FILE);
+  let existingMacroRows = readJsonlRows(MACRO_FILE);
+  if (REPLACE_DATE) {
+    const before = existingMacroRows.length;
+    existingMacroRows = existingMacroRows.filter(r => r.date !== today);
+    console.log(`  --replace-date: ${before - existingMacroRows.length} filas macro de ${today} se rehacen`);
+    if (!DRY_RUN) fs.writeFileSync(MACRO_FILE, existingMacroRows.map(r => JSON.stringify(r)).join(String.fromCharCode(10)) + (existingMacroRows.length ? String.fromCharCode(10) : ""));
+  }
   const existingMacroKeys = new Set(existingMacroRows.map(r => `${r.date}|${r.id}`));
 
   const newMacroRows = [];

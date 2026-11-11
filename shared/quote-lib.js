@@ -401,13 +401,21 @@ async function fetchYahooChartFresh(symbol, range, interval) {
 // `.httpStatus` en los casos que antes mapeaban a un status HTTP concreto;
 // el llamador decide qué hacer con eso (responder HTTP, o solo loguear y
 // seguir con el siguiente ticker en el script standalone).
-async function buildQuoteData(symbol) {
+// opts.cutoffDate ('AAAA-MM-DD', opcional): descarta las velas posteriores a esa
+// fecha (fecha local de la bolsa). Solo para rehacer un día perdido con el
+// mercado ya en la sesión siguiente (2026-11-11); sin él, nada cambia.
+async function buildQuoteData(symbol, opts = {}) {
   const { ok, status, result } = await fetchYahooChartFresh(symbol, "3y", "1d");
   if (!ok) { const e = new Error(`Yahoo ${status}`); e.httpStatus = status; throw e; }
   if (!result) { const e = new Error("No data"); e.httpStatus = 404; throw e; }
 
   const closes     = result.indicators?.quote?.[0]?.close ?? [];
   const timestamps = result.timestamp ?? [];
+  if (opts.cutoffDate) {
+    const off = result.meta?.gmtoffset ?? 0;
+    const barDate = ts => new Date((ts + off) * 1000).toISOString().slice(0, 10);
+    while (timestamps.length && barDate(timestamps[timestamps.length - 1]) > opts.cutoffDate) { closes.pop(); timestamps.pop(); }
+  }
   while (closes.length && closes[closes.length - 1] == null) { closes.pop(); timestamps.pop(); }
   if (!closes.length) { const e = new Error("No closes"); e.httpStatus = 404; throw e; }
 

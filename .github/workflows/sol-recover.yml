@@ -1,0 +1,53 @@
+# Recupera el análisis de Sol de un día perdido (2026-11-11, run #399).
+# Requisito previo, en local y con el mercado cerrado: rehacer las capturas
+# de esa fecha y publicarlas
+#   node scripts/market_daily_snapshot.js    --date=AAAA-MM-DD --replace-date
+#   node scripts/portfolio_daily_snapshot.js --date=AAAA-MM-DD --replace-date
+# Este workflow solo llama a Sol (usa la clave de OpenRouter de GitHub) y
+# publica el resultado. No se ejecuta solo: únicamente a mano.
+name: Sol - recuperar analisis de un dia
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Fecha AAAA-MM-DD (sus capturas ya rehechas y publicadas)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  sol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r backtest/requirements.txt
+
+      - name: Sol con fecha forzada
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TARGET_DATE: ${{ inputs.date }}
+        run: python scripts/market_analysis_llm.py --apply --force --date="$TARGET_DATE"
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/market_analysis_llm.jsonl
+          git diff --staged --quiet && { echo "::error::Sol no escribió nada"; exit 1; }
+          git commit -m "chore: análisis de Sol recuperado (${{ inputs.date }})"
+          for i in 1 2 3 4 5; do
+            git push && exit 0
+            git fetch origin master
+            git rebase --autostash origin/master || { git rebase --abort; exit 1; }
+          done
+          exit 1

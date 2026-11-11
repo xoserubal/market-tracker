@@ -1482,6 +1482,14 @@ def maybe_dispatch_daily_pipeline(token: str, chat_id: str) -> None:
 
     gh_token = os.environ.get("GITHUB_ACTIONS_PAT") or GITHUB_TOKEN
     repo     = GITHUB_REPO or "xoserubal/market-tracker"
+    # El estado se guarda ANTES de lanzar el run: así el checkout del run ya
+    # incluye este commit y su push final no choca con él (run #399 falló por
+    # el commit del bot hecho después del lanzamiento). Se marca como hecho
+    # también si luego falla: un reintento cada 2,5 min no arreglaría un token
+    # sin permisos y llenaría el chat de avisos.
+    _last_dispatch_cache = target
+    _save_dispatch_state({"last_dispatch_date": target, "ok": None, "detail": "dispatching",
+                          "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     try:
         r = requests.post(
             f"https://api.github.com/repos/{repo}/actions/workflows/{PIPELINE_WORKFLOW}/dispatches",
@@ -1493,14 +1501,12 @@ def maybe_dispatch_daily_pipeline(token: str, chat_id: str) -> None:
     except Exception as exc:
         ok, detail = False, str(exc)
 
-    # Se marca como hecho también si falla: un reintento cada 2,5 min no
-    # arreglaría un token sin permisos y llenaría el chat de avisos.
-    _last_dispatch_cache = target
-    _save_dispatch_state({"last_dispatch_date": target, "ok": ok, "detail": detail,
-                          "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if ok:
         print(f"[pipeline] market-update.yml lanzado ({target})")
     else:
+        # Solo si falla se reescribe el estado (no hay run con el que chocar).
+        _save_dispatch_state({"last_dispatch_date": target, "ok": False, "detail": detail,
+                              "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
         print(f"[pipeline] fallo al lanzar market-update.yml: {detail}")
         _send(token, chat_id, html.escape(
             f"⚠️ No he podido lanzar el pipeline diario ({target}): {detail}\n"
