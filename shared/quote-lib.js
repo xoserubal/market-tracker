@@ -481,9 +481,22 @@ async function buildQuoteData(symbol, opts = {}) {
   };
 }
 
+// Versión reducida del bloque insider para las capturas diarias (2026-11-11):
+// el bloque completo (ventanas, últimas transacciones…) era el 75% de cada fila
+// de portfolio_daily_snapshot.jsonl y ya vive en insider_activity_snapshot.json /
+// insider_activity_transactions.jsonl. /api/quote sigue devolviéndolo entero.
+const INSIDER_SNAPSHOT_KEYS = ["insider_activity_score", "koncorde_insider_context",
+  "insider_activity_status", "coverage_status", "flags", "as_of"];
+function slimInsiderForSnapshot(ins) {
+  if (!ins || typeof ins !== "object") return ins ?? null;
+  const out = {};
+  for (const k of INSIDER_SNAPSHOT_KEYS) if (ins[k] !== undefined) out[k] = ins[k];
+  return out;
+}
+
 module.exports = {
   calcRSI, calcMACD, calcAtlasMini, calcMonthlyRsi, calcATR, calcSMA, calcCMF, calcOBV,
-  getKoncordeData, getInsiderActivityData,
+  getKoncordeData, getInsiderActivityData, slimInsiderForSnapshot, INSIDER_SNAPSHOT_KEYS,
   fetchYahooChartRaw, fetchYahooChartFresh,
   buildQuoteData,
 };

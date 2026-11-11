@@ -8416,3 +8416,11 @@ dedup por fecha, el cierre del día no lo leyó nadie. Decisión del usuario: un
   Australia, futuros y cripto no metan precios del día siguiente) → publicar → workflow manual
   `sol-recover.yml` (input `date`; usa la clave de OpenRouter de GitHub y llama a Sol con `--force --date`). La
   fila de Sol lleva `recovered_at_utc`. Mirror Espejo y el resto de carteras de ese run no se recuperan.
+- **Tamaño de `portfolio_daily_snapshot.jsonl` (2026-11-11):** llegó a 59 MB (GitHub avisa a partir de 50 y rechaza
+  a partir de 100). El 75% de cada fila reciente era el bloque `insider` completo, ya guardado en sus propios
+  ficheros y que ningún lector usaba desde la captura. Las capturas guardan ahora solo
+  `slimInsiderForSnapshot()` (`shared/quote-lib.js`: puntuación, contexto Koncorde, estado, cobertura, flags,
+  fecha) y se reescribieron las filas existentes (59,4 → 36,9 MB; resto de cada fila idéntico, payload de Sol
+  idéntico). Sigue creciendo ~0,5 MB/día repartidos entre ~120 campos (redondear decimales ahorra un 2%):
+  ~180 MB/año, así que **hacia marzo de 2027 hay que partirlo** — partir por año no basta. `/api/quote` sigue
+  devolviendo el bloque insider entero.

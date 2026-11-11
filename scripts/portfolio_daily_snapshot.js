@@ -36,7 +36,7 @@
 
 const fs   = require("fs");
 const path = require("path");
-const { buildQuoteData } = require("../shared/quote-lib.js");
+const { buildQuoteData, slimInsiderForSnapshot } = require("../shared/quote-lib.js");
 const { computeFlowScore, computeEarlyFlowScore } = require("../shared/flow-score.js");
 
 const REPO_ROOT     = path.join(__dirname, "..");
@@ -145,7 +145,7 @@ async function main() {
       const prev = prevByTicker[ticker] ?? null;
       const flowScore = computeFlowScore(data);
       const earlyFlow = computeEarlyFlowScore(data, prev);
-      newRows.push({ date: today, ticker, ...data, flowScore, earlyFlow });
+      newRows.push({ date: today, ticker, ...data, insider: slimInsiderForSnapshot(data.insider), flowScore, earlyFlow });
     });
     if (i + BATCH_SIZE < pending.length) await new Promise(r => setTimeout(r, BATCH_GAP_MS));
   }

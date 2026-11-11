@@ -44,7 +44,7 @@ const fs    = require("fs");
 const path  = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const fetch = require("node-fetch");
-const { buildQuoteData } = require("../shared/quote-lib.js");
+const { buildQuoteData, slimInsiderForSnapshot } = require("../shared/quote-lib.js");
 const { computeFlowScore, computeEarlyFlowScore } = require("../shared/flow-score.js");
 const { STATUS, computeUraniumScore } = require("../shared/market-macro.js");
 
@@ -320,7 +320,7 @@ async function main() {
     const prev = prevByTicker[ticker] ?? null;
     const flowScore = computeFlowScore(data);
     const earlyFlow = computeEarlyFlowScore(data, prev);
-    newEquityRows.push({ date: today, ticker, name: meta.name, sections: meta.sections, ...data, flowScore, earlyFlow });
+    newEquityRows.push({ date: today, ticker, name: meta.name, sections: meta.sections, ...data, insider: slimInsiderForSnapshot(data.insider), flowScore, earlyFlow });
   }
   console.log(`  equity rows nuevas: ${newEquityRows.length}`);
 
