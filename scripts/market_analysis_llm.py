@@ -69,6 +69,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import snapshot_store  # archivo mensual + fichero vivo de los snapshots diarios
+
 # Emojis/acentos rompen print() en consola Windows (cp1252) — mismo
 # incidente ya documentado y arreglado en duration_monitor.py/
 # check_koncorde_alerts.py. GitHub Actions ya es UTF-8, esto solo importa
@@ -276,9 +278,8 @@ rellenar el formato.
 
 
 def _load_jsonl(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
-    return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    # Archivo mensual + fichero vivo (snapshot_store.py); sin archivo, igual que leer el fichero.
+    return snapshot_store.read_rows(path)
 
 
 def _today() -> str:

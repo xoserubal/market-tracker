@@ -42,6 +42,7 @@
 
 const fs    = require("fs");
 const path  = require("path");
+const snapStore = require("../shared/snapshot-store.js");  // archivo mensual + fichero vivo
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const fetch = require("node-fetch");
 const { buildQuoteData, slimInsiderForSnapshot } = require("../shared/quote-lib.js");
@@ -67,6 +68,11 @@ const DATE_ARG     = (args.find(a => a.startsWith("--date=")) || "").slice("--da
 const REPLACE_DATE = args.includes("--replace-date");
 if (DATE_ARG && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(DATE_ARG)) { console.error(`--date inválida: ${DATE_ARG}`); process.exit(1); }
 if (REPLACE_DATE && !DATE_ARG) { console.error("--replace-date exige --date=AAAA-MM-DD"); process.exit(1); }
+// El fichero vivo solo guarda los últimos 75 días (scripts/rotate_daily_snapshots.py); una fecha más antigua puede
+// estar ya en docs/data/archive/ y rehacerla aquí dejaría filas duplicadas. Margen de 5 días.
+if (REPLACE_DATE && (Date.now() - Date.parse(DATE_ARG + "T00:00:00Z")) / 86400000 > 70) {
+  console.error(`--replace-date ${DATE_ARG}: fecha de más de 70 días, puede estar ya archivada; no se rehace.`); process.exit(1);
+}
 
 // ── Datos — copiados literalmente de MACRO_ITEMS/SECTIONS en index.html.
 // Mismo riesgo de drift que cualquier duplicación en este proyecto (ver
@@ -237,7 +243,7 @@ function buildPrevRowMap(rows, today) {
 }
 
 function printReport() {
-  const eq = readJsonlRows(EQUITY_FILE);
+  const eq = snapStore.readRows(EQUITY_FILE);  // toda la historia
   const macro = readJsonlRows(MACRO_FILE);
   if (!eq.length && !macro.length) { console.log("Sin datos todavía."); return; }
   if (eq.length) {

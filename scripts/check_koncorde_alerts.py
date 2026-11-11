@@ -46,6 +46,8 @@ import os
 import sys
 from pathlib import Path
 
+import snapshot_store  # archivo mensual + fichero vivo de los snapshots diarios
+
 import requests
 from dotenv import load_dotenv
 
@@ -130,21 +132,20 @@ def _load_snapshot_rows_by_ticker() -> dict[str, list[dict]]:
     if not SNAPSHOT_PATH.exists():
         return {}
     by_ticker: dict[str, list[dict]] = {}
-    with SNAPSHOT_PATH.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            t = row.get("ticker")
-            if not t:
-                continue
-            entry = {"date": row.get("date")}
-            entry.update({field: row.get(field) for field in _SNAPSHOT_FIELDS})
-            by_ticker.setdefault(t, []).append(entry)
+    for line in snapshot_store.iter_lines(SNAPSHOT_PATH):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        t = row.get("ticker")
+        if not t:
+            continue
+        entry = {"date": row.get("date")}
+        entry.update({field: row.get(field) for field in _SNAPSHOT_FIELDS})
+        by_ticker.setdefault(t, []).append(entry)
     for t, rows in by_ticker.items():
         rows.sort(key=lambda r: r["date"] or "")
         by_ticker[t] = rows[-2:]

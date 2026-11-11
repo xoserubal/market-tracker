@@ -33,6 +33,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const snapStore = require('../shared/snapshot-store.js');  // archivo mensual + fichero vivo
 const { SCREENERS, runScreenerFilters } = require('../shared/screener-lib.js');
 const fsl = require('../shared/flow-state-lib.js');
 const { fetchYahooChartRaw } = require('../shared/quote-lib.js');
@@ -77,7 +78,7 @@ async function benchmarkM1ByDate() {
 }
 
 async function main() {
-  const rows = readJsonl(SNAPSHOT);
+  const rows = snapStore.readRows(SNAPSHOT);
   if (!rows.length) { console.error('Snapshot vacío'); process.exit(1); }
   const portfolio = JSON.parse(fs.readFileSync(PORTFOLIO, 'utf8'));
   const membership = fsl.fslBuildBasketMembership(portfolio.sections || []);

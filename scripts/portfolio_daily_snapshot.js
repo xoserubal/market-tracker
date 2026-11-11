@@ -36,6 +36,7 @@
 
 const fs   = require("fs");
 const path = require("path");
+const snapStore = require("../shared/snapshot-store.js");  // archivo mensual + fichero vivo
 const { buildQuoteData, slimInsiderForSnapshot } = require("../shared/quote-lib.js");
 const { computeFlowScore, computeEarlyFlowScore } = require("../shared/flow-score.js");
 
@@ -54,6 +55,11 @@ const DATE_ARG     = (args.find(a => a.startsWith("--date=")) || "").slice("--da
 const REPLACE_DATE = args.includes("--replace-date");
 if (DATE_ARG && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(DATE_ARG)) { console.error(`--date inválida: ${DATE_ARG}`); process.exit(1); }
 if (REPLACE_DATE && !DATE_ARG) { console.error("--replace-date exige --date=AAAA-MM-DD"); process.exit(1); }
+// El fichero vivo solo guarda los últimos 75 días (scripts/rotate_daily_snapshots.py); una fecha más antigua puede
+// estar ya en docs/data/archive/ y rehacerla aquí dejaría filas duplicadas. Margen de 5 días.
+if (REPLACE_DATE && (Date.now() - Date.parse(DATE_ARG + "T00:00:00Z")) / 86400000 > 70) {
+  console.error(`--replace-date ${DATE_ARG}: fecha de más de 70 días, puede estar ya archivada; no se rehace.`); process.exit(1);
+}
 const tickersArg  = args.find(a => a.startsWith("--tickers="));
 const TICKERS_OVERRIDE = tickersArg
   ? tickersArg.slice("--tickers=".length).split(",").map(t => t.trim().toUpperCase()).filter(Boolean)
@@ -97,7 +103,7 @@ function buildPrevRowMap(rows, today) {
 }
 
 function printReport() {
-  const rows = readJsonlRows(SNAPSHOT_FILE);
+  const rows = snapStore.readRows(SNAPSHOT_FILE);  // toda la historia
   if (!rows.length) { console.log("Sin datos todavía en", SNAPSHOT_FILE); return; }
   const dates = [...new Set(rows.map(r => r.date))].sort();
   const tickers = new Set(rows.map(r => r.ticker));

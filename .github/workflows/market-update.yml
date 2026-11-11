@@ -346,6 +346,15 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Reparto de los snapshots diarios grandes (2026-11-11): el fichero vivo guarda los
+      # ultimos 75 dias y lo anterior pasa a docs/data/archive/<nombre>/AAAA-MM.jsonl
+      # (scripts/snapshot_store.py). Los scripts que necesitan toda la historia leen
+      # archivo + vivo; las paginas del navegador, solo el vivo. Idempotente.
+      - name: Run pipeline - Step 9g2b Rotate daily snapshots into monthly archive
+        run: python scripts/rotate_daily_snapshots.py
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Fase 2 de la automatizacion del analisis de mercado (2026-09-14,
       # wiki/PROMPT_MARKET_ANALYST_SOL.md) -- llama a openai/gpt-5.6-sol
       # (reasoning_effort=high) con el snapshot de hoy + deltas vs ayer,

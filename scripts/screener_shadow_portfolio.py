@@ -37,6 +37,8 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
+import snapshot_store  # archivo mensual + fichero vivo de los snapshots diarios
+
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
 SNAPSHOT = DATA / "portfolio_daily_snapshot.jsonl"
@@ -71,20 +73,19 @@ def load_snapshot() -> tuple[dict, dict]:
     tardía); bar_of[(ticker, fecha_captura)] = fecha de barra de esa fila."""
     raw: dict[str, dict[str, tuple]] = defaultdict(dict)
     bar_of: dict[tuple[str, str], str] = {}
-    with SNAPSHOT.open(encoding="utf-8") as f:
-        for line in f:
-            try:
-                r = json.loads(line)
-            except Exception:
-                continue
-            tk, cap, asof, price = r.get("ticker"), r.get("date"), r.get("asOf"), r.get("price")
-            if not (tk and cap and asof) or not isinstance(price, (int, float)) or price <= 0:
-                continue
-            bar = str(asof)[:10]
-            bar_of[(tk, cap)] = bar
-            prev = raw[tk].get(bar)
-            if prev is None or cap >= prev[0]:
-                raw[tk][bar] = (cap, float(price), r.get("atrPct"))
+    for line in snapshot_store.iter_lines(SNAPSHOT):  # archivo mensual + vivo
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        tk, cap, asof, price = r.get("ticker"), r.get("date"), r.get("asOf"), r.get("price")
+        if not (tk and cap and asof) or not isinstance(price, (int, float)) or price <= 0:
+            continue
+        bar = str(asof)[:10]
+        bar_of[(tk, cap)] = bar
+        prev = raw[tk].get(bar)
+        if prev is None or cap >= prev[0]:
+            raw[tk][bar] = (cap, float(price), r.get("atrPct"))
     bars = {tk: sorted(((b, v[1], v[2]) for b, v in d.items()), key=lambda x: x[0]) for tk, d in raw.items()}
     return bars, bar_of
 

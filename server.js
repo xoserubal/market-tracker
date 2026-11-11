@@ -605,9 +605,9 @@ app.post("/api/signals", express.json({ limit: '5mb' }), (req, res) => {
 // decenas de MB con el tiempo.
 const PORTFOLIO_SNAPSHOT_FILE = path.join(__dirname, "docs", "data", "portfolio_daily_snapshot.jsonl");
 
+// Historia completa: archivo mensual (docs/data/archive/...) + fichero vivo de 75 días (shared/snapshot-store.js).
 function readPortfolioSnapshotLines() {
-  if (!fs.existsSync(PORTFOLIO_SNAPSHOT_FILE)) return [];
-  return fs.readFileSync(PORTFOLIO_SNAPSHOT_FILE, "utf8").split("\n").filter(l => l.trim());
+  return require("./shared/snapshot-store.js").readLines(PORTFOLIO_SNAPSHOT_FILE);
 }
 
 app.get("/api/portfolio-history/meta", (_req, res) => {

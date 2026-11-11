@@ -8422,5 +8422,69 @@ dedup por fecha, el cierre del día no lo leyó nadie. Decisión del usuario: un
   `slimInsiderForSnapshot()` (`shared/quote-lib.js`: puntuación, contexto Koncorde, estado, cobertura, flags,
   fecha) y se reescribieron las filas existentes (59,4 → 36,9 MB; resto de cada fila idéntico, payload de Sol
   idéntico). Sigue creciendo ~0,5 MB/día repartidos entre ~120 campos (redondear decimales ahorra un 2%):
-  ~180 MB/año, así que **hacia marzo de 2027 hay que partirlo** — partir por año no basta. `/api/quote` sigue
-  devolviendo el bloque insider entero.
+  ~180 MB/año, así que hacia marzo de 2027 había que partirlo. `/api/quote` sigue devolviendo el bloque insider entero.
+- **Reparto en fichero vivo + archivo mensual (implementado 2026-11-11):**
+  - `portfolio_daily_snapshot.jsonl` y `market_equities_daily_snapshot.jsonl` guardan solo los últimos **75 días**
+    de captura. Lo anterior pasa a `docs/data/archive/<nombre>/AAAA-MM.jsonl`.
+  - **Reparto:** `scripts/rotate_daily_snapshots.py`, Step 9g2b del pipeline, idempotente.
+  - **Lectores de la historia completa:** usan `scripts/snapshot_store.py` (`read_rows`/`iter_lines`) o su espejo
+    `shared/snapshot-store.js` (`readRows`/`readLines`), que concatenan archivo y vivo. Son `flow_state_lib`,
+    `market_analysis_llm`, `check_koncorde_alerts`, `macd_combo_portfolio`, `screener_shadow_portfolio`,
+    `screener_signal_log/report`, `ibkr_decision_journal`, `/api/portfolio-history` y los `--report`.
+  - **Navegador:** `screeners.html` y `trullas.html` leen solo el vivo; les basta, porque el filtro más largo mira
+    60 filas.
+  - **Escritores:** siguen escribiendo en el vivo. `--replace-date` se niega con fechas de más de 70 días.
+  - **Garantías:**
+    - Las filas de una misma clave caen siempre en el mismo fichero y en su orden.
+    - Si un reparto se interrumpe, la lectura descarta las líneas idénticas repetidas.
+    - Se escribe en LF.
+  - **Verificado:** con un reparto forzado a 30 días, las huellas de todos los lectores salen idénticas, la
+    concatenación devuelve las mismas líneas en el mismo orden, y los tests `test_flow_state_lib` (26) y
+    `test_tags_invariance` (22) pasan.
+
+---
+
+## Auditoría de detección de rotaciones + validación de Early Flow ≥ 7 (2026-11-11)
+
+Auditoría de solo lectura: `wiki/AUDITORIA_DETECCION_ROTACIONES_V1.md`. Conclusión: el sistema describe qué sube en
+términos relativos pero no hay evidencia de anticipación. Flow Score = momentum (R² 0,985 con w1/m1); RFL y rot_score
+(ETFs, 20 años) sin poder de ranking; ninguna fuente independiente de flujos; universo propio (130 tickers) no
+representativo; captura completa solo desde 2026-08-20.
+
+Punto H1 autorizado: **Early Flow ≥ 7 descartado como detector temprano** (`wiki/PREREGISTRO_EARLY_FLOW_7_V1.md`,
+`research/early_flow7_validation_v1/`). 514 valores S&P 500/NDX, 2016-2026, benchmarks emparejados por fecha y número:
+exceso neto a 20 sesiones −0,41 pp (t −3,2) en prueba y −0,39 en desarrollo, peor que momentum 5/20, RS vs mercado y
+vs sector, RS+volumen y casi igual que el azar; negativo 10 de 11 años, peor con SPY < SMA200. Se activa antes (0 % de
+subida previa) pero cubre menos inicios de tendencia que el azar. Reproducibilidad: la señal capturada y la reconstruida
+difieren en casi la mitad de los cruces del 7 (20 % de capturas intradía, "sesión anterior" del pipeline ≠ sesión real
+en el 14 %, semanas Koncorde incompletas antes del 30-ago). No se prueban otros umbrales. Producción sin cambios.
+Siguiente prioridad acordada: amplitud sectorial sobre componentes, con preregistro propio.
+Borrador: `wiki/PREREGISTRO_SECTOR_BREADTH_V1.md` (sin firmar, sin ejecutar). Condición central: la amplitud debe aportar
+información sobre la tendencia del propio ETF sectorial fuera de muestra (residuo de ΔP frente a RS21/RS63/ΔRS21 y
+modelo anidado congelado en 2016-2020, probado en 2021-2026). Requiere descargar la columna *Date added* del S&P 500
+(Wikipedia) para no meter en el pasado valores que entraron al índice después de subir.
+Revisión 2 (sin firmar): composición 2016-2026 reconstruida con instantáneas anuales de Wikipedia (coincidencia
+96,5-99,4 %), pero sin precios de ~130 empresas absorbidas/deslistadas (cobertura 80 % en 2016 → 99 % en 2026; Energía
+la peor). Muestras desplazadas a 2019-2022 / 2023-2026, H1 con coeficientes congelados en desarrollo, criterios de
+fiabilidad por cobertura. Potencia: solo detecta IC ≥ ~0,13. Diagnóstico: `research/sector_breadth_v1/coverage_diag.json`.
+**Ejecutado (firmado 2026-11-11): NO SOPORTADO** (`research/sector_breadth_v1/README.md`). En 2023-2026, a 20 sesiones,
+la amplitud descontada la tendencia del ETF tiene IC −0,025 (IC 95 % −0,086 a +0,036, por debajo del mínimo útil 0,05);
+el modelo con amplitud no mejora al del ETF solo; falla en 10 de 11 exclusiones de sector y en desarrollo. El cambio de
+amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya dice el ETF. Descartada en este diseño.
+
+**Flow Continuación / Flow Reversión con las reglas de `SCREENER_SHADOW` — sin ventaja (2026-11-11,
+`research/flow_cont_rev_v1/`).** Preregistro firmado y congelado: `wiki/PREREGISTRO_FLOW_CONT_REV_V1.md` (v3).
+- **Método.** Decide la versión B: sesiones, entrada a la apertura siguiente y stops evaluados al cierre pero vendidos
+  a la apertura siguiente. La versión A (réplica literal de producción) solo se informa. Mínimo de interés: +0,5 pp
+  netos por operación; Bonferroni para los dos filtros.
+- **Resultado en U1, prueba 2021-2026** (exceso frente al universo en las mismas velas y con las mismas reglas):
+  - Continuación −0,16 pp, IC 97,5 % −0,48 a +0,16: **NO SOPORTADO**.
+  - Reversión +0,16 pp, IC −0,21 a +0,52: **INCONCLUYENTE**, pero desarrollo −0,02, acierto por debajo del
+    universo, −0,38 sin el 1 % mejor y U2 −0,16.
+  - A y A con una sesión de retraso tampoco superan +0,26.
+- **Reproducibilidad, comprobada antes del contraste.** La regla de producción reproduce el registro: 187 de 187 y
+  352 de 352. Koncorde coincide 300 de 300. Las diferencias venían del retraso del dato en vivo antes del 10-nov.
+- **Hallazgo sin corregir:** 17 de las 255 posiciones de `SCREENER_SHADOW` entran con un cierre anterior a la
+  captura de la señal (precio ya pasado) y 46 el mismo día. Su historial previo al 10-nov no es un registro operativo
+  fiable.
+- `research/*/_work/` pasa a `.gitignore`: los intermedios de U1 pesan hasta 178 MB.

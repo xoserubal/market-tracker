@@ -29,6 +29,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const snapStore = require('../shared/snapshot-store.js');  // archivo mensual + fichero vivo
 
 const ROOT = path.join(__dirname, '..');
 const SNAPSHOT = path.join(ROOT, 'docs', 'data', 'portfolio_daily_snapshot.jsonl');
@@ -139,7 +140,7 @@ function makeExecTools(snap) {
 }
 
 function buildReport() {
-  const snap = readJsonl(SNAPSHOT);
+  const snap = snapStore.readRows(SNAPSHOT);
   const log = readJsonl(LOG);
   let state = {};
   try { state = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch (e) { /* sin estado */ }

@@ -27,6 +27,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const snapStore = require('../shared/snapshot-store.js');  // archivo mensual + fichero vivo
 const { ibkrTrackerTicker, ibkrUnderlying } = require('../shared/ibkr-map.js');
 const { makeTools, readJsonl, HORIZONS, addDays, daysBetween, median, mean, r2 } = require('./screener_signal_report.js');
 
@@ -114,7 +115,7 @@ function getDecisionGroups(days = 60) {
 function buildJournal() {
   const trades = readJsonl(TRADES);
   if (!trades.length) throw new Error('Sin operaciones: sincroniza primero (node scripts/ibkr_flex_sync.js)');
-  const snap = readJsonl(SNAPSHOT);
+  const snap = snapStore.readRows(SNAPSHOT);
   const screener = readJsonl(SCREENER_LOG);
   const portfolio = JSON.parse(fs.readFileSync(PORTFOLIO, 'utf8'));
   const trackerTickers = new Set((portfolio.sections || []).flatMap(s => (s.items || []).map(i => i.ticker)));

@@ -62,6 +62,8 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+import snapshot_store  # archivo mensual + fichero vivo de los snapshots diarios
+
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "docs" / "data"
 PORTFOLIO_JSON = ROOT / "portfolio.json"
@@ -107,9 +109,8 @@ CONTINUACION_MIN_ABOVE_ZERO_DAYS = 5
 
 
 def _load_jsonl(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
-    return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    # Archivo mensual + fichero vivo (snapshot_store.py); sin archivo, igual que leer el fichero.
+    return snapshot_store.read_rows(path)
 
 
 # ── Cestas de tema ──────────────────────────────────────────────────────
