@@ -8488,3 +8488,12 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
   captura de la señal (precio ya pasado) y 46 el mismo día. Su historial previo al 10-nov no es un registro operativo
   fiable.
 - `research/*/_work/` pasa a `.gitignore`: los intermedios de U1 pesan hasta 178 MB.
+
+**Confluencia sectorial: régimen + Flujos & Rotación + flow change (borrador, 2026-11-11).**
+- Preregistro sin firmar en `wiki/PREREGISTRO_CONFLUENCIA_SECTORIAL_V1.md`.
+- Compara dos versiones sobre los 11 ETFs SPDR: A = régimen y ciclo favorables + señal de Flujos & Rotación +
+  flow change positivo; B = lo mismo con flow change negativo (comprar el retroceso).
+- Usa `rotation_history.parquet`, pero hay que recalcular el régimen con desfase de publicación (CFNAI, WALCL).
+- Diagnóstico sin rentabilidades: unos 340 pares sector-semana por versión en la prueba (2016-2026). El flow change
+  apenas correlaciona con las patas lentas (0,01-0,02); el alfa a 3 meses y rot_score sí (0,66).
+- Pendiente de firmar.
