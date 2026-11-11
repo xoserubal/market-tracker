@@ -8489,11 +8489,19 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
   fiable.
 - `research/*/_work/` pasa a `.gitignore`: los intermedios de U1 pesan hasta 178 MB.
 
-**Confluencia sectorial: régimen + Flujos & Rotación + flow change (borrador, 2026-11-11).**
-- Preregistro sin firmar en `wiki/PREREGISTRO_CONFLUENCIA_SECTORIAL_V1.md`.
-- Compara dos versiones sobre los 11 ETFs SPDR: A = régimen y ciclo favorables + señal de Flujos & Rotación +
-  flow change positivo; B = lo mismo con flow change negativo (comprar el retroceso).
-- Usa `rotation_history.parquet`, pero hay que recalcular el régimen con desfase de publicación (CFNAI, WALCL).
-- Diagnóstico sin rentabilidades: unos 340 pares sector-semana por versión en la prueba (2016-2026). El flow change
-  apenas correlaciona con las patas lentas (0,01-0,02); el alfa a 3 meses y rot_score sí (0,66).
-- Pendiente de firmar.
+**Confluencia sectorial: régimen + Flujos & Rotación + flow change — NO SOPORTADO (2026-11-11,
+`research/sector_confluence_v1/`).**
+- Preregistro firmado: `wiki/PREREGISTRO_CONFLUENCIA_SECTORIAL_V1.md`. Universo: los 11 ETFs SPDR, con decisión semanal.
+- Versiones:
+  - A = el sector es líder del régimen, su alfa de ciclo es positivo, Flujos & Rotación da ACUMULAR o COMPRA y el flow
+    change de RFL es positivo;
+  - B = lo mismo con el flow change negativo.
+- **Resultado en la prueba** (2016-2026, exceso neto a 20 sesiones frente a la media de los sectores): A −0,27
+  (IC −1,00 a +0,46) y B −0,27 (IC −0,83 a +0,29).
+  - El flow change no añade nada a las dos primeras patas (±0,01).
+  - Pierden frente al top por fuerza relativa a 63 sesiones y quedan en el percentil 19-22 del azar.
+  - B − A ≈ 0.
+  - Todas las sensibilidades salen negativas.
+- **Hallazgo colateral: `macro_history`/`rotation_history` miran al futuro.** El recálculo sin desfase los reproduce al
+  100 %, pero al aplicar el desfase de publicación (CFNAI, NetLiq) el régimen cambia en el 24,9 % de las semanas.
+  Cualquier backtest que use ese régimen guardado hereda el problema.
