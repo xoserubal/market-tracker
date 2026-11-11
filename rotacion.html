@@ -206,6 +206,37 @@ function getNewEarlyRotMeta(ticker, qualifyMap, spyAboveSma200, netLiqDeltaB) {
   };
 }
 
+// ── Postura de Cava junto a las condiciones de VIX y SMA200 (2026-11-11) ──────────
+// Lectura descriptiva de research/cava_vs_trend_v1 (SPY 2005-2026, no confirmada):
+// el 98,8 % de los días risk_off coinciden con VIX alto o SPY<SMA200; dentro de esos
+// días, con risk_off el mes siguiente cae más (−5,0 %) y sin él suele rebotar (+4,9 % a 3m).
+// Etiqueta informativa: no bloquea ninguna señal.
+async function fetchCavaPosture() {
+  try {
+    const txt = await fetch('/docs/data/cava_portfolio_log.jsonl', { cache: 'no-store' }).then(r => r.ok ? r.text() : '');
+    const lines = txt.trim().split('\n').filter(Boolean);
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try { const o = JSON.parse(lines[i]); if (o && o.posture) return { posture: o.posture, date: o.date }; } catch (_) {}
+    }
+  } catch (_) {}
+  return null;
+}
+
+function cavaReading(cava, vixOk, smaOk) {
+  if (!cava) return { tone: 'grey', text: 'Sin dato de la postura de Cava' };
+  const riskSig = !vixOk || !smaOk;
+  const off = cava.posture === 'risk_off';
+  if (riskSig && off)  return { tone: 'red',   text: 'No añadir riesgo: VIX/tendencia en rojo y Cava en risk_off (tramos que suelen seguir cayendo)' };
+  if (riskSig && !off) return { tone: 'amber', text: 'Riesgo alto pero sin risk_off: suele rebotar — no vender; si entras, con menos tamaño' };
+  if (!riskSig && off) return { tone: 'amber', text: 'Cava avisa sin VIX ni tendencia en rojo: caso raro (≈1 % de sus avisos), sin evidencia propia — prudencia' };
+  return { tone: 'green', text: 'Sin aviso de riesgo de mercado' };
+}
+
+function cavaAgeDays(cava) {
+  if (!cava?.date) return null;
+  return Math.floor((Date.now() - new Date(cava.date + 'T00:00:00Z').getTime()) / 86400000);
+}
+
 const DEFAULT_STATE = {
   current_regime:null, regime_entered_date:null, previous_regime:null,
   pending_regime:null, pending_since_count:0,
@@ -1559,6 +1590,7 @@ function App() {
   const [sortDir,        setSortDir]        = useState(-1);
   const [toast,          setToast]          = useState(null);
   const [stockCandidates,setStockCandidates]= useState(null);
+  const [cava,           setCava]           = useState(null);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3000); };
 
@@ -1573,6 +1605,7 @@ function App() {
       fetch('/api/stock-candidates').then(r=>r.json()).catch(()=>null),
     ]);
     setStockCandidates(stockData);
+    fetchCavaPosture().then(setCava);
 
     setMacro(macroData);
     const q = { SPY: spyData, 'DX-Y.NYB': dxyData };
@@ -1863,6 +1896,10 @@ function App() {
     { label:'SPY > SMA200',      ok: spyAboveSma200 === true,                              val: spyAboveSma200===true?'✓':spyAboveSma200===false?'✗':'—' },
   ];
 
+  const vixCheckOk = (macro.vol?.vixVal??99) < 23;
+  const cavaRead = cavaReading(cava, vixCheckOk, spyAboveSma200 === true);
+  const cavaAge = cavaAgeDays(cava);
+
   // ── Markdown builders ──────────────────────────────────────────────────
   const buildMD = useCallback(() => {
     const date = new Date().toLocaleString('es-ES',{dateStyle:'full',timeStyle:'short'});
@@ -1892,6 +1929,7 @@ function App() {
 
     md += `## CONDICIONES PROTOCOLO\n`;
     checks.forEach(c => { md += `- ${c.ok?'✅':'❌'} ${c.label}: ${c.val}\n`; });
+    md += `- **Postura de Cava:** ${cava?.posture ?? '—'}${cava?.date ? ` (${cava.date}${cavaAge > 4 ? `, ⚠ ${cavaAge} días` : ''})` : ''} → ${cavaRead.text} _(lectura descriptiva, SPY 2005-2026, no confirmada; no bloquea señales)_\n`;
     md += '\n';
 
     if (regimeCoherence) {
@@ -1955,7 +1993,7 @@ function App() {
       md += `\n_Métricas históricas (Δ1W, Semanas, watchlist) disponibles a partir de la segunda semana desde ${rotHistoryBootstrap.startDate ?? '—'}._\n`;
     }
     return md;
-  }, [macro, macroScore, macroMaxPossible, effectiveRegime, effectiveLeaders, activeFlags, appState, opps, sorted, checks, promotionWatch, demotionWatch, rotHistoryBootstrap, spyAboveSma200, regimeCoherence, coherenceTrend, leaderRows, divergenceResults, regimeContext]);
+  }, [macro, macroScore, macroMaxPossible, effectiveRegime, effectiveLeaders, activeFlags, appState, opps, sorted, checks, promotionWatch, demotionWatch, rotHistoryBootstrap, spyAboveSma200, regimeCoherence, coherenceTrend, leaderRows, divergenceResults, regimeContext, cava, cavaRead, cavaAge]);
 
   useEffect(() => {
     if (!loading) {
@@ -2141,6 +2179,25 @@ function App() {
             </div>
           ))}
         </div>
+        {(() => {
+          const TONES = { red:['#ffebee','#b71c1c'], amber:['#fff8e1','#e65100'], green:['#e8f5e9','#1b5e20'], grey:['#f0f0f0','#666'] };
+          const [bg, fg] = TONES[cavaRead.tone];
+          return (
+            <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', fontSize:11 }}>
+              <span style={{ color:'#555' }}>Postura de Cava:</span>
+              <span style={{ fontWeight:700 }}>{cava?.posture ?? '—'}</span>
+              {cava?.date && (
+                <span style={{ color: cavaAge > 4 ? '#e65100' : '#999' }}>
+                  ({cava.date}{cavaAge > 4 ? ` · ⚠ ${cavaAge} días` : ''})
+                </span>
+              )}
+              <span title={'Lectura descriptiva de research/cava_vs_trend_v1 (SPY 2005-2026, no confirmada). Con VIX alto o SPY<SMA200: si Cava está en risk_off, el mes siguiente cayó de media −5,0 % y rindió +2,4 % a 3 meses; sin risk_off, −3,5 % y +4,9 %. Mide el riesgo del mercado (cuánta exposición), no qué sector comprar. En el estudio el VIX alto era su percentil 86 de 5 años; aquí se usa la condición VIX < 23 del panel. Informativo: no bloquea ninguna señal.'}
+                style={{ background:bg, color:fg, borderRadius:4, padding:'2px 8px', fontWeight:700, cursor:'help' }}>
+                {cavaRead.text}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Coherencia régimen-rotación + Líderes efectivos (Fase 3) */}

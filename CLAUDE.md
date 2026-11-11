@@ -8529,5 +8529,14 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     - descriptivo: dentro de «VIX o tendencia», los días con `risk_off` caen −5,0 y rinden +2,4 a 3 meses; los días
       sin él caen −3,5 y rinden +4,9;
     - Cava sirve para afinar dentro de esos días, no como alarma independiente.
+  - **Mostrado en `rotacion.html` (2026-11-11):** bajo «Condiciones Macro para Compra» aparece la última postura de Cava,
+    leída de `docs/data/cava_portfolio_log.jsonl` (si tiene más de 4 días, se avisa).
+    - La etiqueta combina la postura con las condiciones del panel «VIX < 23» y «SPY > SMA200»:
+      - rojo «no añadir riesgo»: VIX o tendencia en rojo, con `risk_off`;
+      - ámbar «suele rebotar: no vender, menos tamaño»: VIX o tendencia en rojo, sin `risk_off`;
+      - ámbar «caso raro»: `risk_off` sin VIX ni tendencia en rojo;
+      - verde: ninguna de las anteriores.
+    - Es informativa: no bloquea ninguna señal. También aparece en el export a LLM.
+    - Ojo: en el estudio el VIX alto era su percentil 86 de 5 años, no el umbral fijo de 23.
 - El motor de Cava se clonó en `/home/user/cava-decision-engine`. `cava_test_1c.py` incluía el día t en la volatilidad
   posterior; el nuevo script mide desde t+1.
