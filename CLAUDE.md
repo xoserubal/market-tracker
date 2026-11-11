@@ -8506,11 +8506,20 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
   100 %, pero al aplicar el desfase de publicación (CFNAI, NetLiq) el régimen cambia en el 24,9 % de las semanas.
   Cualquier backtest que use ese régimen guardado hereda el problema.
 
-**Filtros de riesgo: dos borradores de preregistro (2026-11-11, sin firmar).**
-- `wiki/PREREGISTRO_EXTENSION_SMA20_ATR_V1.md`: ¿el decil más extendido sobre la SMA20 (en ATR) del S&P 500 +
-  Nasdaq 100 rinde ≤ −0,5 puntos a 20 sesiones, y aporta algo más que la fuerza relativa a 3 meses? Desarrollo
-  2016-2020, prueba 2021-2026.
-- `wiki/PREREGISTRO_CAVA_VS_VIX_V1.md`: ¿Cava `risk_off` anticipa la caída del mes siguiente del SPY más allá de una
-  regla de VIX activa con la misma frecuencia? Con régimen corregido por desfase de publicación.
-- El motor de Cava (v1.1.0) se clonó en esta sesión en `/home/user/cava-decision-engine`.
-- Nota: `cava_test_1c.py` incluía el propio día t en la volatilidad del mes siguiente; el nuevo preregistro lo corrige.
+**Filtros de riesgo: resultados (2026-11-11).**
+- **Extensión sobre la SMA20 en ATR — INCONCLUYENTE** (`research/extension_sma20_atr_v1/`). S&P 500 + Nasdaq 100,
+  decil más extendido a 20 sesiones:
+  - desarrollo −0,30 y prueba 2021-2026 −0,11 (IC −0,61 a +0,38);
+  - no aporta nada sobre la fuerza relativa a 3 meses (residuo 0,00);
+  - descriptivo: X > 3 da −0,61 (t −1,5);
+  - no se cambia el PCS ni `extension_risk`.
+- **Cava `risk_off` frente al VIX — CAVA APORTA** (`research/cava_vs_vix_v1/`). Motor v1.1.0, régimen con desfase,
+  SPY 2005-2026:
+  - cuando el VIX (percentil 86 de 5 años, misma frecuencia) no avisa, `risk_off` añade −1,73 puntos de caída en las
+    21 sesiones siguientes (IC −2,95 a −0,58), en los tres subperiodos;
+  - en esos días el retorno a 3 meses es el normal (+2,7 frente a +2,8), así que reducir riesgo cuesta poco;
+  - el VIX alto en solitario sí precede a rebotes (+5,9);
+  - frente al VIX cuando discrepan: −0,41, con un IC muy ancho;
+  - pendiente: compararlo con una regla de tendencia del SPY.
+- El motor de Cava se clonó en `/home/user/cava-decision-engine`. `cava_test_1c.py` incluía el día t en la volatilidad
+  posterior; el nuevo script mide desde t+1.
