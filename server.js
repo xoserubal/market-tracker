@@ -58,6 +58,91 @@ function fredFetchWithCache(cacheKey, fetchFn) {
   FRED_PENDING.set(cacheKey, promise);
   return promise;
 }
+// ── Modo nube (CLOUD_MODE=1) ──────────────────────────────────────────────
+// Para servir el Market Tracker siempre disponible desde un servidor (Railway), sin el PC encendido.
+// En este modo:
+//   - todo exige contraseña (APP_PASSWORD), salvo /login, /healthz y lo necesario para instalar la PWA;
+//   - no se escribe nada que deba persistir ni se publica nada en git (los datos llegan del repo, que el
+//     pipeline actualiza; cada push a master vuelve a desplegar el servicio);
+//   - IBKR y la cadena de opciones en vivo (necesitan tu PC y TWS) quedan desactivados.
+// Si falta APP_PASSWORD, el servidor no arranca: no se expone nunca sin contraseña.
+const CLOUD = process.env.CLOUD_MODE === "1";
+// Estado local de las pestañas (históricos de Flujos & Rotación / RFL, señales, uso). En la nube conviene
+// apuntarlo a un volumen persistente (STATE_DIR=/data) para que no se pierda en cada despliegue.
+const LOCAL_STATE_DIR = process.env.STATE_DIR || __dirname;
+try { fs.mkdirSync(LOCAL_STATE_DIR, { recursive: true }); } catch (_) {}
+const crypto = require("crypto");
+if (CLOUD && !process.env.APP_PASSWORD) {
+  console.error("CLOUD_MODE=1 exige APP_PASSWORD. No se arranca sin contraseña.");
+  process.exit(1);
+}
+const AUTH_COOKIE = "mt_auth";
+const AUTH_DAYS = 90;
+function authToken() {
+  return crypto.createHmac("sha256", process.env.APP_PASSWORD || "").update("market-tracker-v1").digest("hex");
+}
+function readCookie(req, name) {
+  const raw = req.headers.cookie || "";
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a)), bb = Buffer.from(String(b));
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+}
+const AUTH_OPEN_PATHS = new Set(["/login", "/healthz", "/manifest.json", "/sw.js"]);
+const LOGIN_PAGE = (error) => `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Market Tracker</title>
+<link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#0b3d63">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<style>body{font-family:Arial,sans-serif;background:#0b3d63;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}
+form{background:#fff;padding:28px 24px;border-radius:10px;width:min(320px,88vw);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+h1{font-size:18px;margin:0 0 16px;color:#0b3d63}input{width:100%;box-sizing:border-box;font-size:16px;padding:10px;margin:0 0 12px;border:1px solid #ccc;border-radius:6px}
+button{width:100%;font-size:16px;padding:10px;background:#0b3d63;color:#fff;border:0;border-radius:6px}.e{color:#b71c1c;font-size:13px;margin:0 0 10px}</style>
+</head><body><form method="post" action="/login"><h1>Market Tracker</h1>${error ? '<p class="e">Contraseña incorrecta</p>' : ""}
+<input type="password" name="password" placeholder="Contraseña" autofocus autocomplete="current-password">
+<button type="submit">Entrar</button></form></body></html>`;
+
+app.get("/healthz", (_req, res) => res.json({ ok: true, cloud: CLOUD }));
+if (CLOUD) {
+  app.set("trust proxy", 1);
+  app.get("/login", (_req, res) => res.send(LOGIN_PAGE(false)));
+  app.post("/login", express.urlencoded({ extended: false, limit: "4kb" }), (req, res) => {
+    if (!safeEqual(req.body?.password || "", process.env.APP_PASSWORD)) {
+      return setTimeout(() => res.status(401).send(LOGIN_PAGE(true)), 800);   // frena los intentos a ciegas
+    }
+    res.setHeader("Set-Cookie", [
+      `${AUTH_COOKIE}=${authToken()}; Path=/; Max-Age=${AUTH_DAYS * 86400}; HttpOnly; Secure; SameSite=Lax`,
+      `mt_cloud=1; Path=/; Max-Age=${AUTH_DAYS * 86400}; Secure; SameSite=Lax`,   // la lee shared/cloud-mode.js
+    ]);
+    res.redirect(302, "/");
+  });
+  app.use((req, res, next) => {
+    if (AUTH_OPEN_PATHS.has(req.path) || req.path.startsWith("/icons/")) return next();
+    const tok = readCookie(req, AUTH_COOKIE);
+    if (tok && safeEqual(tok, authToken())) {
+      if (readCookie(req, "mt_cloud") !== "1") res.append("Set-Cookie", `mt_cloud=1; Path=/; Max-Age=${AUTH_DAYS * 86400}; Secure; SameSite=Lax`);
+      return next();
+    }
+    if (req.path.startsWith("/api/")) return res.status(401).json({ error: "auth_required" });
+    return res.redirect(302, "/login");
+  });
+  // Sin escrituras persistentes ni publicación en git; sin IBKR ni TWS (viven en tu PC).
+  const CLOUD_ALLOWED_POSTS = new Set(["/api/state", "/api/signals", "/api/ux-instrumentation"]);
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api/ibkr") || req.path.startsWith("/api/sync")) {
+      return res.status(404).json({ error: "not_available_in_cloud" });
+    }
+    if (req.method !== "GET" && req.method !== "HEAD" && !CLOUD_ALLOWED_POSTS.has(req.path)) {
+      return res.status(403).json({ error: "read_only_cloud", message: "Solo lectura en la versión en la nube. Edita desde tu PC." });
+    }
+    next();
+  });
+}
+
 app.use(cors());
 // private/ (datos reales de la cuenta IBKR, en .gitignore) NUNCA se sirve como
 // estático — express.static expone toda la raíz del repo, y los XML crudos de
@@ -228,7 +313,7 @@ app.get("/api/fred3", async (req, res) => {
 // Free tier: 1.000 req/mes · https://oilpriceapi.com
 // Códigos probados: JKM_LNG_USD | COKING_COAL_USD
 // WCS: si falla (no disponible en free tier) se indica en el campo
-const ENERGY_CACHE = path.join(__dirname, "energy_cache.json");
+const ENERGY_CACHE = path.join(LOCAL_STATE_DIR, "energy_cache.json");
 
 function readCache() {
   try { return JSON.parse(fs.readFileSync(ENERGY_CACHE, "utf8")); } catch { return {}; }
@@ -567,7 +652,7 @@ app.get("/api/trullas-signals", (_req, res) => {
 });
 
 // ── Signals History ───────────────────────────────────────────────────────
-const SIGNALS_FILE = path.join(__dirname, "signals_history.json");
+const SIGNALS_FILE = path.join(LOCAL_STATE_DIR, "signals_history.json");
 
 function readSignals() {
   try { return JSON.parse(fs.readFileSync(SIGNALS_FILE, "utf8")); } catch { return []; }
@@ -685,7 +770,7 @@ app.post("/api/portfolio", express.json({ limit: '5mb' }), (req, res) => {
 });
 
 // ── State persistence (histéresis + flags) ────────────────────────────────
-const STATE_FILE = path.join(__dirname, "state.json");
+const STATE_FILE = path.join(LOCAL_STATE_DIR, "state.json");
 const DEFAULT_STATE = {
   current_regime: null, regime_entered_date: null, previous_regime: null,
   pending_regime: null, pending_since_count: 0,
@@ -786,7 +871,7 @@ app.get("/api/state", (_req, res) => {
 // escritura que tendría hacerlo en el cliente (patrón distinto a relative_flow_history/
 // rotation_history, que sí son GET-modificar-POST porque los escribe una sola pestaña
 // a la vez con datos ya computados, no un contador compartido).
-const UX_INSTRUMENTATION_FILE = path.join(__dirname, "state_ux_instrumentation.json");
+const UX_INSTRUMENTATION_FILE = path.join(LOCAL_STATE_DIR, "state_ux_instrumentation.json");
 const UX_VALID_BUTTONS = new Set(["copy_for_llm", "export_all_to_llm", "toggle_unfiltered_top"]);
 const UX_VALID_WIDGETS = new Set(["cross_module_matrix_hover"]);
 const UX_RETENTION_WEEKS = 12; // ~3 meses, mismo espíritu que el cap de 70 entradas (~10 semanas) de rotation_history
@@ -1200,8 +1285,11 @@ mountTagRoutes(app, express, tagStore);
 
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
-app.listen(3000, () => {
-  console.log("✅ Market Tracker → http://localhost:3000");
+const PORT = Number(process.env.PORT) || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Market Tracker → http://localhost:${PORT}${CLOUD ? "  (modo nube: solo lectura, con contraseña)" : ""}`);
+  // En la nube no hay repo git ni TWS: los datos llegan con cada despliegue.
+  if (CLOUD) return;
   // Pull automático al arrancar para tener los datos más recientes de GitHub
   gitPull((err, msg) => {
     if (err) console.log("⚠ git pull al iniciar:", msg);

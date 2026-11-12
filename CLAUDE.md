@@ -8540,3 +8540,79 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     - Ojo: en el estudio el VIX alto era su percentil 86 de 5 años, no el umbral fijo de 23.
 - El motor de Cava se clonó en `/home/user/cava-decision-engine`. `cava_test_1c.py` incluía el día t en la volatilidad
   posterior; el nuevo script mide desde t+1.
+
+---
+
+## Market Tracker en la nube + adaptación a móvil (implementado 2026-11-12)
+
+El usuario quiere la app del móvil siempre disponible (sin el PC encendido) y usa todas las pestañas.
+
+**Modo nube de `server.js` (`CLOUD_MODE=1`), pensado para un segundo servicio de Railway:**
+- **Contraseña obligatoria** (`APP_PASSWORD`). Sin ella el servidor no arranca.
+  - Página `/login` propia, no autenticación básica del navegador, que falla en las PWA de iOS.
+  - La sesión es una cookie HttpOnly firmada con HMAC de la contraseña, válida 90 días; cambiar la contraseña cierra
+    todas las sesiones.
+  - Quedan abiertos sin contraseña `/login`, `/healthz`, `/manifest.json`, `/sw.js` e `/icons/*` (lo justo para
+    instalar la PWA).
+- **Solo lectura.**
+  - Toda escritura devuelve 403, salvo `/api/state`, `/api/signals` y `/api/ux-instrumentation` (el estado local de
+    las pestañas).
+  - No se hace `git pull`, ni push, ni sincronización de IBKR.
+  - `/api/ibkr/*` y `/api/sync/*` devuelven 404.
+  - La cadena de opciones en vivo de TWS queda bloqueada. La cartera real de IBKR no sale nunca del PC (`private/` no
+    entra en la imagen).
+- **Datos:** llegan con cada despliegue. Railway vuelve a desplegar en cada push a master que toque los ficheros de
+  `watchPatterns`; el pipeline diario y los commits del bot ya los empujan.
+- **`STATE_DIR`:** es la carpeta de `state.json`, `signals_history.json`, `state_ux_instrumentation.json` y
+  `energy_cache.json` (antes siempre la raíz del repo). En la nube debe apuntar a un volumen (`/data`) para que los
+  históricos de Flujos & Rotación y RFL no se pierdan en cada despliegue. Es un histórico propio de la nube, separado
+  del de tu PC.
+- **`PORT`:** ahora se lee de la variable de entorno; por defecto 3000.
+- **Ficheros nuevos:**
+  - `Dockerfile.web`: Node 20; define `CLOUD_MODE=1`.
+  - `.dockerignore`: excluye `.env`, `private/`, el estado local, `research/`, `wiki/` y `backtest/src`.
+  - `railway.web.json`: config-as-code del servicio, con el Dockerfile, la comprobación `/healthz` y `watchPatterns`.
+- **El bot de Telegram no cambia:** sigue con el `Procfile` en su servicio.
+
+**`shared/cloud-mode.js`** (en las 12 páginas, antes de los demás scripts):
+- Solo actúa si existe la cookie `mt_cloud=1`, que el servidor pone al iniciar sesión.
+- Muestra el aviso fijo «Versión en la nube · solo lectura».
+- Responde con un «ok» falso el guardado automático de Portfolio (`POST /api/portfolio`), para no mostrar un error en
+  cada carga.
+- El resto de escrituras hechas a propósito sí muestran el error del servidor.
+
+**`shared/mobile.css`** (en las 12 páginas, al final del `<head>`):
+- Solo actúa por debajo de 760 px; en escritorio no cambia nada.
+- Quita el `min-width` de `.wrap`/`.page`, de modo que la página ya no se mueve de lado.
+- Cada tabla se desliza de lado por su cuenta.
+- Reduce las rejillas en línea de 3 o más columnas a 2, y las de 2 a 1.
+- Rejillas por clase de cada página: `.cards`, `.panel-grid`, `.summary`, `.cluster-grid`, `.fg-stats`, `.kv`,
+  `.qtop-row` y `.macro-body`.
+- Las filas flex bajan de línea; `.topbar` y `.title-row` se apilan.
+- La barra de pestañas del AI Picks Lab se desliza de lado.
+- Modales al 94 % del ancho.
+- Los `!important` hacen falta por los estilos en línea de React.
+
+**Verificado:**
+- Playwright con tamaño de iPhone 13 contra el servidor en modo nube:
+  - las 12 páginas sin desplazamiento horizontal de la página (ancho 390 = 390);
+  - sin errores de página;
+  - sin elementos fuera de pantalla, salvo las pestañas desplazables del AI Picks Lab.
+- Escritorio (1400 px) sin cambios.
+- Pruebas HTTP del modo nube: sin contraseña no arranca; 302 → `/login`; contraseña incorrecta 401; cookie falsa 401;
+  POST de portfolio, situaciones, universo y stock-config 403; `/api/state` 200; IBKR, sync y `private` 404.
+- En local, `cloud:false` e IBKR sigue funcionando.
+- Tests de etiquetas 22/22.
+
+**Sin verificar:**
+- El despliegue real en Railway: lo crea el usuario.
+- El rendimiento en un móvil real: Babel transpila cada página en el navegador, lo que puede tardar 1-3 s en un
+  teléfono medio. Si molesta, la mejora sería precompilar el JSX.
+
+**Configuración en Railway** (lo hace el usuario):
+1. En el proyecto del bot: «New service» → «GitHub repo» → `market-tracker`, rama `master`.
+2. En Settings → «Config-as-code», poner `/railway.web.json`.
+3. Variables: `APP_PASSWORD` (larga), `FRED_API_KEY`, `OILPRICE_API_KEY` (opcional) y `STATE_DIR=/data`.
+4. Añadir un Volume montado en `/data`.
+5. En Networking → «Generate Domain», abrir la URL en el móvil, entrar con la contraseña e «Instalar app» o «Añadir a
+   pantalla de inicio».

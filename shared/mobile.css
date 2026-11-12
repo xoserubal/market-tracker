@@ -1,0 +1,75 @@
+/* Ajustes para pantalla de móvil, comunes a todas las pestañas (2026-11-12).
+ *
+ * Las páginas se diseñaron para escritorio: el contenedor .wrap fuerza 960-1100 px de ancho y obliga a mover
+ * toda la página de lado. Aquí, solo por debajo de 760 px:
+ *   - el contenedor se ajusta al ancho de la pantalla;
+ *   - cada tabla se desplaza de lado por separado (la página ya no);
+ *   - las rejillas de 3 o más columnas pasan a 2 y las filas flexibles bajan de línea;
+ *   - modales y tooltips caben en la pantalla.
+ * Sin cambios en escritorio. Los !important hacen falta porque muchos estilos van en línea (React).
+ */
+@media (max-width: 760px) {
+  html, body { overflow-x: hidden; }
+  body { -webkit-text-size-adjust: 100%; }
+
+  .wrap, .page {
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    padding: 10px 8px !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Tablas: desplazamiento horizontal propio, con inercia en iOS. */
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table > thead, table > tbody, table > tfoot { width: max-content; min-width: 100%; }
+
+  /* Rejillas en línea de 3+ columnas → 2; las de 2 columnas fijas → 1. */
+  [style*="repeat(3"], [style*="repeat(4"], [style*="repeat(5"], [style*="repeat(6"],
+  [style*="1fr 1fr 1fr"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  [style*="grid-template-columns: repeat(2"], [style*="grid-template-columns: 1fr 1fr;"],
+  [style*="grid-template-columns:repeat(2"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* Rejillas definidas por clase en cada página (anchos mínimos pensados para escritorio). */
+  .cards, .panel-grid, .evidence-grid, .sub-grid, .trend-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .summary, .cluster-grid, .fg-stats, .kv, .stat-grid, .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .qtop-row { grid-template-columns: 18px minmax(0, 1fr) 64px !important; }
+  .qtop-row > :nth-child(4) { grid-column: 1 / -1; }
+  .macro-body { flex-direction: column; }
+  .macro-body > * { width: 100% !important; min-width: 0 !important; }
+
+  /* Filas flexibles: que bajen de línea en vez de salirse de la pantalla. */
+  [style*="display: flex"], [style*="display:flex"] { flex-wrap: wrap; }
+
+  /* Bloques con anchos mínimos grandes en línea. */
+  [style*="min-width: 2"], [style*="min-width:2"],
+  [style*="min-width: 3"], [style*="min-width:3"] { min-width: 0 !important; }
+
+  /* Cabeceras: título y pestañas de navegación ocupan todo el ancho; los botones bajan debajo. */
+  .topbar { flex-wrap: wrap !important; align-items: stretch !important; }
+  .topbar > * { min-width: 0; max-width: 100%; }
+  .topbar > div:first-child { flex: 1 1 100%; }
+  .title-row { flex-wrap: wrap !important; row-gap: 6px; }
+  .title-row h1 { flex: 1 1 100%; font-size: 20px; }
+
+  /* Barra de pestañas del AI Picks Lab (docs/index.html): una fila que se desliza de lado. */
+  body > nav { overflow-x: auto; flex-wrap: nowrap !important; padding: 0 6px !important; -webkit-overflow-scrolling: touch; }
+  body > nav button { flex: 0 0 auto; white-space: nowrap; }
+
+  /* Modales y tooltips. */
+  .modal { width: 94vw !important; max-width: 94vw !important; padding: 14px !important; max-height: 88vh; overflow-y: auto; }
+  .eq-thead th[data-tip]:hover::after { max-width: 80vw; }
+
+  /* Botones y pestañas de navegación: más fáciles de pulsar. */
+  button, select, input { font-size: 14px; }
+  a, button { touch-action: manipulation; }
+}
