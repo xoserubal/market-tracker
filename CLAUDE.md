@@ -270,6 +270,9 @@ También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_po
 | `/kalert` | `/kalert TICKER TIMEFRAME CONDICION  |  /kalert <texto libre>` | Crea una alerta sobre una condición de Koncorde (blue/green/estado, en D/3D/W). Acepta sintaxis exacta o una petición en lenguaje natural (se interpreta con IA). También se puede crear mandando una nota de voz al bot. |
 | `/kalerts` | `/kalerts` | Lista tus alertas de Koncorde activas. |
 | `/delkalert` | `/delkalert TICKER` | Elimina la(s) alerta(s) de Koncorde de un ticker. |
+| `/nota` | `/nota TEXTO (o texto / voz sin comando)` | Guarda una idea en el cuaderno de notas (una por línea). Cualquier texto o nota de voz que no sea un comando se guarda como nota; las notas de voz que empiezan por 'avisa…'/'alerta…' siguen creando una alerta Koncorde. |
+| `/notas` | `/notas [N]` | Muestra las últimas N notas (10 por defecto) con su número. |
+| `/delnota` | `/delnota NUMERO` | Borra la nota con ese número (el que muestra /notas). |
 | `/help` | `/help` | Muestra este mensaje de ayuda. |
 
 ### Flujo de datos (write commands)
@@ -6730,6 +6733,29 @@ Las incidencias de concentración temática, proxy representativo y validación 
 aparte (ver `wiki/INCIDENCIA_*.md`), no en esta línea.
 
 ---
+
+## Cuaderno de ideas por Telegram (implementado 2026-11-13)
+
+**Origen.** El usuario quiere dictar ideas de seguimiento mientras mira gráficos. Ejemplos:
+- LVMH en mínimos de 52 semanas: vigilar el rebote con las señales tempranas.
+- NBIS: ¿el nuevo pico supera el máximo de hace 2 meses? ¿Con qué volumen? Avisar de cómo terminó.
+
+**Decisión (2026-11-13).** De momento solo se recopilan, sin interpretar. Cuando haya varias se analizarán juntas para
+decidir qué sistema de seguimiento montar: plantillas de vigilancia, avisos y desenlace.
+
+**Bot (`telegram_portfolio_bot.py`):**
+- Todo texto que no sea un comando se guarda como nota. La excepción es el «ok»/ticker que confirma un `/kalert`
+  pendiente, que se trata como antes.
+- Las notas de voz también se guardan, transcritas con Groq. Las que empiezan por «avisa…»/«alerta…» siguen creando
+  una alerta Koncorde, como antes del cambio, cuando toda nota de voz era una alerta.
+- Comandos: `/nota TEXTO`, `/notas [N]` y `/delnota N`.
+
+**Almacén:** `docs/data/idea_notes.jsonl`, una nota por línea: `{ts, source: text|voice, text}`.
+- En Railway se escribe vía la API de GitHub; si falla, el bot devuelve el texto para no perderlo.
+- **Va al repo público**, igual que `portfolio.json` y las alertas.
+- El texto es la transcripción literal: Whisper puede deformar tickers (p. ej. «en bis» por NBIS).
+
+**Pendiente:** analizar las notas acumuladas y diseñar el sistema.
 
 ## Roadmap de mejoras pendientes
 

@@ -192,6 +192,21 @@ COMMANDS = [
         "desc":  "Elimina la(s) alerta(s) de Koncorde de un ticker.",
     },
     {
+        "cmd":   "/nota",
+        "usage": "/nota TEXTO (o texto / voz sin comando)",
+        "desc":  "Guarda una idea en el cuaderno de notas (una por línea). Cualquier texto o nota de voz que no sea un comando se guarda como nota; las notas de voz que empiezan por 'avisa…'/'alerta…' siguen creando una alerta Koncorde.",
+    },
+    {
+        "cmd":   "/notas",
+        "usage": "/notas [N]",
+        "desc":  "Muestra las últimas N notas (10 por defecto) con su número.",
+    },
+    {
+        "cmd":   "/delnota",
+        "usage": "/delnota NUMERO",
+        "desc":  "Borra la nota con ese número (el que muestra /notas).",
+    },
+    {
         "cmd":   "/help",
         "usage": "/help",
         "desc":  "Muestra este mensaje de ayuda.",
@@ -1282,8 +1297,8 @@ def _transcribe_voice_groq(audio_bytes: bytes) -> str | None:
 
 
 def handle_voice_message(token: str, chat_id: str, file_id: str) -> None:
-    """Voice notes are interpreted as Koncorde alert requests — the only
-    voice-driven feature in v1. Text commands remain unaffected."""
+    """Voice notes starting with 'avisa…'/'alerta…' are Koncorde alert requests;
+    everything else is saved as an idea note (2026-11-13)."""
     if not os.environ.get("GROQ_API_KEY", ""):
         _send(token, chat_id,
               "No puedo transcribir notas de voz todavía (falta configurar el servicio "
@@ -1298,7 +1313,133 @@ def handle_voice_message(token: str, chat_id: str, file_id: str) -> None:
         _send(token, chat_id, "No pude transcribir la nota de voz.")
         return
     _send(token, chat_id, f"🎙️ Entendido: <i>{html.escape(text)}</i>")
-    cmd_kalert(token, chat_id, text)
+    first_word = text.strip().lower().lstrip("¡¿\"'").split(maxsplit=1)[0] if text.strip() else ""
+    if first_word.startswith(_VOICE_ALERT_PREFIXES):
+        cmd_kalert(token, chat_id, text)
+    else:
+        cmd_note_add(token, chat_id, text, source="voice")
+
+
+# ── Cuaderno de notas / ideas (2026-11-13) ────────────────────────────────
+# Ideas sueltas que el usuario dicta o escribe mientras mira gráficos. Se
+# guardan tal cual (sin interpretar) para analizarlas más adelante y decidir
+# qué sistema de seguimiento montar. Una nota por línea (JSONL), append-only;
+# el número de nota = número de línea (1-based), estable salvo /delnota.
+
+_NOTES_PATH = "docs/data/idea_notes.jsonl"
+NOTES_FILE  = ROOT / _NOTES_PATH
+
+# Una nota de voz que empieza por una de estas raíces se interpreta como
+# alerta Koncorde (comportamiento anterior); todo lo demás es una nota.
+_VOICE_ALERT_PREFIXES = ("avisa", "avísa", "alerta")
+
+
+def _notes_read_text() -> tuple[str, str]:
+    """Returns (content, sha). sha='' if the file doesn't exist yet."""
+    if USE_GITHUB_API:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{_NOTES_PATH}"
+        r = requests.get(url, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=10)
+        if r.status_code == 404:
+            return "", ""
+        r.raise_for_status()
+        blob = r.json()
+        return base64.b64decode(blob["content"]).decode("utf-8"), blob["sha"]
+    return (NOTES_FILE.read_text(encoding="utf-8") if NOTES_FILE.exists() else ""), ""
+
+
+def _notes_write_text(content: str, sha: str, message: str) -> None:
+    if USE_GITHUB_API:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{_NOTES_PATH}"
+        payload: dict = {"message": message,
+                         "content": base64.b64encode(content.encode("utf-8")).decode()}
+        if sha:
+            payload["sha"] = sha
+        r = requests.put(url, json=payload,
+                         headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=15)
+        r.raise_for_status()
+        return
+    NOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    NOTES_FILE.write_text(content, encoding="utf-8")
+
+
+def _notes_lines(content: str) -> list[str]:
+    return [ln for ln in content.splitlines() if ln.strip()]
+
+
+def cmd_note_add(token: str, chat_id: str, text: str, source: str = "text") -> bool:
+    text = " ".join(text.split())   # una nota = una línea
+    if not text:
+        _send(token, chat_id, "Uso: /nota TEXTO  (o manda el texto o una nota de voz sin comando)")
+        return False
+    from datetime import datetime, timezone
+    entry = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+             "source": source, "text": text}
+    for attempt in range(2):   # 1 reintento si el sha quedó viejo (409)
+        try:
+            content, sha = _notes_read_text()
+            lines = _notes_lines(content)
+            lines.append(json.dumps(entry, ensure_ascii=False))
+            _notes_write_text("\n".join(lines) + "\n", sha, "bot: add idea note")
+            _send(token, chat_id, f"📝 Nota #{len(lines)} guardada.")
+            return True
+        except Exception as exc:
+            print(f"Note save failed (attempt {attempt + 1}): {exc}")
+    _send(token, chat_id,
+          "⚠️ No he podido guardar la nota. Cópiala por si acaso:\n"
+          f"<i>{html.escape(text)}</i>")
+    return False
+
+
+def cmd_notes_list(token: str, chat_id: str, n: int = 10) -> None:
+    try:
+        content, _ = _notes_read_text()
+    except Exception as exc:
+        _send(token, chat_id, f"No he podido leer las notas: <code>{html.escape(str(exc))}</code>")
+        return
+    lines = _notes_lines(content)
+    if not lines:
+        _send(token, chat_id, "No hay notas todavía.")
+        return
+    n = max(1, min(n, 30))
+    out = [f"<b>Últimas {min(n, len(lines))} de {len(lines)} notas:</b>", ""]
+    for idx in range(max(0, len(lines) - n), len(lines)):
+        try:
+            e = json.loads(lines[idx])
+            mark = "🎙️" if e.get("source") == "voice" else "✍️"
+            out.append(f"<b>#{idx + 1}</b> {mark} <i>{e.get('ts', '')[:10]}</i>\n{html.escape(e.get('text', ''))}")
+        except Exception:
+            out.append(f"<b>#{idx + 1}</b> (línea ilegible)")
+        out.append("")
+    # Telegram limita a 4096 caracteres
+    msg = "\n".join(out).rstrip()
+    if len(msg) > 4000:
+        msg = msg[:3990] + "\n…"
+    _send(token, chat_id, msg)
+
+
+def cmd_note_delete(token: str, chat_id: str, num_text: str) -> None:
+    try:
+        num = int(num_text.lstrip("#"))
+    except ValueError:
+        _send(token, chat_id, "Uso: /delnota NUMERO  (el número que muestra /notas)")
+        return
+    try:
+        content, sha = _notes_read_text()
+        lines = _notes_lines(content)
+        if not 1 <= num <= len(lines):
+            _send(token, chat_id, f"No existe la nota #{num} (hay {len(lines)}).")
+            return
+        removed = lines.pop(num - 1)
+        _notes_write_text(("\n".join(lines) + "\n") if lines else "", sha, "bot: delete idea note")
+    except Exception as exc:
+        _send(token, chat_id, f"No he podido borrar la nota: <code>{html.escape(str(exc))}</code>")
+        return
+    try:
+        text = json.loads(removed).get("text", "")
+    except Exception:
+        text = removed
+    _send(token, chat_id, f"🗑️ Nota #{num} borrada: <i>{html.escape(text[:200])}</i>\n"
+                          "(las notas posteriores bajan un número)")
 
 
 def check_alerts(token: str, chat_id: str) -> None:
@@ -1409,7 +1550,27 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
             cmd_kalert_delete(token, chat_id, args[0])
         else:
             _send(token, chat_id, "Uso: /delkalert TICKER")
+    elif cmd == "nota":
+        rest = text.strip().split(maxsplit=1)
+        cmd_note_add(token, chat_id, rest[1] if len(rest) > 1 else "", source="text")
+    elif cmd == "notas":
+        try:
+            n = int(args[0]) if args else 10
+        except ValueError:
+            n = 10
+        cmd_notes_list(token, chat_id, n)
+    elif cmd == "delnota":
+        if args:
+            cmd_note_delete(token, chat_id, args[0])
+        else:
+            _send(token, chat_id, "Uso: /delnota NUMERO")
     return False
+
+
+def handle_free_text(token: str, chat_id: str, text: str) -> None:
+    """Non-command text: first a pending ticker confirmation (/kalert), else a note."""
+    if not handle_plain_text(token, chat_id, text):
+        cmd_note_add(token, chat_id, text, source="text")
 
 
 # ── Disparo diario del pipeline (2026-11-10) ─────────────────────────────
@@ -1545,9 +1706,9 @@ def run_once(token: str, chat_id: str) -> None:
             handle_voice_message(token, chat_id, voice["file_id"])
             processed += 1
         elif from_chat == chat_id and text.strip():
-            if handle_plain_text(token, chat_id, text):
-                print(f"  Processing: {text.strip()} [ticker confirmation reply]")
-                processed += 1
+            print(f"  Processing: {text.strip()[:60]} [free text]")
+            handle_free_text(token, chat_id, text)
+            processed += 1
 
         if uid is not None:
             state["offset"] = uid + 1
@@ -1583,8 +1744,8 @@ def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
                     print(f"[{date.today()}] [voice note]")
                     handle_voice_message(token, chat_id, voice["file_id"])
                 elif from_chat == chat_id and text.strip():
-                    if handle_plain_text(token, chat_id, text):
-                        print(f"[{date.today()}] {text.strip()} [ticker confirmation reply]")
+                    print(f"[{date.today()}] {text.strip()[:60]} [free text]")
+                    handle_free_text(token, chat_id, text)
 
                 if uid is not None:
                     state["offset"] = uid + 1
