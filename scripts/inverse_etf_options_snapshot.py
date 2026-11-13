@@ -17,8 +17,16 @@ Salidas (docs/data):
       con bid/ask/IV/OI/volumen) para reconstruir estructuras a posteriori.
 Dedup por ticker+fecha ET (se conserva la primera fila válida del día).
 
+Horario (revisado 2026-11-13): se toma en el pipeline nocturno (~17:10 ET), con el
+mercado de opciones ya cerrado. Se comprobó contra las cotizaciones retrasadas de
+CBOE con el mercado abierto: el bid/ask de yfinance coincide con el NBBO, y el de
+cierre se mantiene hasta la apertura siguiente, así que la foto de la noche vale.
+Los spreads anchos (25-35%) son reales y se concentran en los vencimientos
+semanales; los mensuales (tercer viernes) rondan el 11-14%. Cada fila guarda
+`session` (regular / after_close) y se descarta si hoy no hubo sesión (festivo).
+
 Uso:
-  py -3 scripts/inverse_etf_options_snapshot.py            # solo en ventana de mercado
+  py -3 scripts/inverse_etf_options_snapshot.py            # solo en ventana (15:30-21:00 ET)
   py -3 scripts/inverse_etf_options_snapshot.py --force
   py -3 scripts/inverse_etf_options_snapshot.py --dry-run --force
 """
@@ -108,6 +116,10 @@ def snapshot_ticker(tk: str, today: str, now_et: datetime):
         raise RuntimeError("sin histórico de precio")
     closes = [float(x) for x in hist["Close"].dropna()]
     spot = closes[-1]
+    last_bar = hist["Close"].dropna().index[-1].date()
+    if last_bar != now_et.date():
+        # Festivo o sesión sin abrir: la cadena sería la del último día hábil.
+        raise RuntimeError(f"sin sesión hoy (última vela {last_bar}) — no se guarda")
 
     expiries_summary, expiries_chain = [], []
     for exp in t.options:
@@ -144,7 +156,8 @@ def snapshot_ticker(tk: str, today: str, now_et: datetime):
     # no se guarda, para no bloquear con el dedup la fila buena del día.
     if all(e["rel_spread_near_atm"] is None for e in expiries_summary):
         raise RuntimeError("sin cotizaciones bid/ask (mercado cerrado) — no se guarda")
-    base = {"date": today, "ticker": tk, "spot": round(spot, 4), "collected_at": now_et.isoformat()}
+    base = {"date": today, "ticker": tk, "spot": round(spot, 4), "collected_at": now_et.isoformat(),
+            "session": "regular" if (9, 30) <= (now_et.hour, now_et.minute) <= (16, 15) else "after_close"}
     summary = {**base, "rv20": _realized_vol(closes, 20), "rv60": _realized_vol(closes, 60),
                "expiries": expiries_summary}
     chain = {**base, "expiries": expiries_chain}

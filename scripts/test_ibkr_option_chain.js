@@ -27,10 +27,19 @@ eq(m.strikesAround([10, 11, 12, 13, 14], 12.4, 1), [11, 12, 13], 'strikesAround 
 eq(m.strikesAround([10, 11, 12], 9, 1), [10, 11], 'strikesAround extremo');
 eq(m.strikesAround([], 9, 1), [], 'strikesAround vacío');
 
+// Vencimientos mensuales y banda de strikes (2026-11-13).
+const wk = ['20261204', '20261211', '20261218'];
+eq(m.pickExpiry(wk, '2026-11-13', { dte: 28, tol: 20 }, true), { expiry: '20261218', dte: 35 }, 'pickExpiry prefiere el mensual');
+eq(m.pickExpiry(wk, '2026-11-13', { dte: 28, tol: 20 }), { expiry: '20261211', dte: 28 }, 'pickExpiry sin preferencia: el más cercano');
+eq(m.pickExpiry(['20261211'], '2026-11-13', { dte: 28, tol: 20 }, true), { expiry: '20261211', dte: 28 }, 'pickExpiry sin mensual: cae al semanal');
+ok(m.isMonthly('20270318', ['20270318']) && !m.isMonthly('20270318', ['20270318', '20270319']), 'isMonthly: jueves solo si el viernes no cotiza');
+eq(m.strikesInBand(Array.from({ length: 50 }, (_, i) => i + 10), 34), [32, 33, 34, 35, 36], 'strikesInBand: 5 más cercanos dentro de ±12%');
+eq(m.strikesInBand([10, 50], 40), [50], 'strikesInBand: banda vacía → el más cercano');
+
 const strikes = Array.from({ length: 40 }, (_, i) => i + 5);          // 5..44
 const plan = m.planContracts(18.41, strikes, exps, '2026-10-22');
 ok(plan.putExpiry.expiry === '20270115' && plan.callExpiry.expiry === '20261120', 'plan: vencimientos');
-ok(plan.contracts.length > 20 && plan.contracts.length <= 70, `plan: nº de contratos razonable (${plan.contracts.length}, límite de líneas de IBKR ~100)`);
+ok(plan.contracts.length > 20 && plan.contracts.length <= 90, `plan: nº de contratos razonable (${plan.contracts.length}, límite de líneas de IBKR ~100)`);
 ok(plan.contracts.filter(c => c.right === 'C' && c.expiry === '20270115').length === 1, 'plan: una sola call ATM en el vencimiento largo');
 ok(plan.contracts.filter(c => c.right === 'P' && c.expiry === '20261120').length === 0, 'plan: sin puts en el vencimiento corto');
 ok(plan.contracts.some(c => c.right === 'P' && c.strike === 16) && plan.contracts.some(c => c.right === 'P' && c.strike === 11), 'plan: strikes de put 85%/60%');

@@ -318,6 +318,7 @@ Gestionados en `docs/data/reminders.json`. El workflow los comprueba cada día y
 | 2026-09-03 | ranking_score_fase1_analisis | Inicio de Fase 1 (análisis exploratorio) del Ranking Score, incluida la evaluación de Koncorde como subsección propia. Sustituye a `koncorde_research_log_revision` (cancelado 2026-08-06, fusionado aquí) |
 | 2026-09-15 | rfl_v2_fase6_instrumentacion_y_calibracion | Revisar `state_ux_instrumentation.json` (uso real de Fase 6) + calibrar contra `relative_flow_history` los umbrales sin calibrar de Fase 4 (coherencia Top 3 In/Out) y Fase 5a (matriz cross-módulos) |
 | 2026-11-12 | inverse_etf_estudio_primas | Lanzar `scripts/inverse_etf_premium_study.py --save` con ~20 sesiones de snapshots de cadenas (UVXY/SQQQ/GLL/BOIL): ¿el decay ya está en el precio?, curva de plazos, call spread vs pérdida máxima, spreads de GLL/BOIL |
+| 2026-12-11 | inverse_etf_estudio_primas_v2 | Segunda lectura del estudio de primas con ~40 sesiones (sustituye a la de 2026-11-12, que se lanzó el 13-nov; ver «Primera lectura del estudio de primas» en la sección de ETFs inversos) |
 | 2026-11-03 | sol_prompt_verificacion | Verificar en los primeros informes reales que el prompt de Sol del 2026-10-27 funciona (change_vs_prev, «QUÉ HA CAMBIADO HOY», mantener hipótesis sin rebajar por rutina, columna Vela) |
 | 2026-11-17 | rfl_toggle_sin_filtro_revision | Revisar la tasa de uso del toggle «Sin filtro» de Top 3 Flow In/Out de RFL (`state_ux_instrumentation.json`) tras ~9 semanas |
 | 2026-12-08 | sol_evaluacion_retroactiva_v2 | Repetir `research/llm_signal_eval_v1/eval.py` con más semanas y medir NEW/STRENGTHENED por separado |
@@ -8093,6 +8094,56 @@ Cada bloque de la sección tiene un botón que pide a **TWS / IB Gateway** (API 
 - **Página:** chip «IBKR EN VIVO / RETRASADO ~15 min / CONGELADO · hh:mm ET», botón «Volver a la cadena guardada», aviso de error con la causa y «se sigue mostrando la cadena guardada»; el export a LLM usa la cadena en vivo si se pidió. El estado en vivo vive en la sesión de la página (no se persiste).
 - **Requisitos del usuario:** TWS abierto con sesión iniciada y **API activada** (Configure → Global Configuration → API → Settings → «Enable ActiveX and Socket Clients», 127.0.0.1 en Trusted IPs; la primera conexión puede pedir «Accept incoming connection»). Tiempo real exige suscripción de opciones US (OPRA); sin ella llegan retrasados 15 min (la página lo avisa). **Reiniciar `node server.js`** tras la actualización (ruta nueva).
 - **Verificado:** 40 tests (`scripts/test_ibkr_option_chain.js`) con un TWS simulado que emite los mismos eventos que la librería (plan de contratos, ensamblado, clasificación de `data_type`, cada código de error, desconexión al fallar) + conexión real rechazada con la librería (→ `NO_TWS`, ~0,8 s); recomendador con `--live-chain` y las 4 variantes de aviso; endpoint real sin API activada (503 `NO_TWS`) y la página en Edge headless: error visible y cadena guardada conservada, y éxito simulado (chip, «Volver»). **NO verificado contra un TWS real**: en el momento de la implementación `tws.exe` estaba abierto pero la API de sockets estaba desactivada (nada escuchando en 7496/7497/4001/4002), así que el protocolo real (campos de ticks, `reqSecDefOptParams`, tiempos de espera) está sin probar de extremo a extremo.
+
+### Primera lectura del estudio de primas + vencimientos mensuales y strikes líquidos (2026-11-13)
+
+Lanzado con 20 sesiones por ETF (12-oct → 12-nov). Informe: `docs/analysis/inverse_etf_premium_study.md`.
+
+**Lectura:**
+- **Carry de UVXY, SQQQ y BOIL:** el carry implícito por paridad a ~64 días es ≈ 0%, frente a una caída mediana
+  histórica de −13% a −22%. Ese hueco es probablemente el coste de ponerse corto en estos ETFs, no una ventaja libre.
+- **Put spread de UVXY:** sin señal sale a precio justo (paga 0,87-0,94× lo invertido). Con VIX ≥ 25 + giro paga
+  1,4-1,5×, pero son 88 observaciones, unos 12 episodios.
+- **Curva 3m/1m de UVXY:** se invirtió en los 4 días de pico (16-oct, 30-oct, 5-nov y 6-nov) y estuvo en su forma
+  normal en los días tranquilos.
+- **Único aviso real:** UVXY dio ventana de venta de prima el 6-nov (23,08) y estaba en 17,35 el 12-nov.
+- **Ruido del aviso:** el estado de UVXY cambió tres veces el mismo 6-nov, en varias pasadas.
+
+**Diagnóstico corregido.** Primero se atribuyeron los spreads anchos a que la cadena se guarda tras el cierre. Falso:
+contrastado el 13-nov con el mercado abierto, yfinance coincide con las cotizaciones retrasadas de CBOE
+(`cdn.cboe.com/api/global/delayed_quotes/options/<T>.json`), y el bid/ask de cierre vale hasta la apertura siguiente.
+La foto nocturna (Step 9e4) se mantiene; no se montó un snapshot intradía. Los problemas reales eran dos:
+1. **Vencimientos semanales.** El estudio elegía el vencimiento más cercano a 30/90 días, y a menudo caía en uno
+   semanal: spread mediano cerca del ATM del 25-35%, frente al 11-14% de los mensuales en UVXY, SQQQ y BOIL.
+2. **Strikes de relleno.** Los strikes intermedios tienen precios de relleno (UVXY dic-26: call 34 a 0,30/0,97; put 11
+   a 0,01/2,07). Los «redondos» concentran el interés abierto y cotizan ajustado (call 35 a 0,69/0,85). Elegir el strike
+   más cercano al objetivo caía en ellos; con eso, el call spread vendido de UVXY salía con crédito negativo.
+
+**Cambios:**
+- `inverse_etf_premium_study.py`:
+  - `is_monthly`/`pick_expiry(prefer_monthly)`: tercer viernes, o el jueves si el viernes no cotiza. Si hay un mensual
+    dentro de la tolerancia, se elige ese.
+  - `liquid_strike`: dentro de ±12% del objetivo, entre los strikes con bid y ask, los de spread ≤ 1,5× el mejor de la
+    banda, y de ellos el más cercano. Es una regla fija, no optimizada.
+  - Lo usan las estructuras, el carry y la IV a 30/90 días.
+- `inverse_etf_recommendations.py`:
+  - `snap` usa `liquid_strike`.
+  - Una pata con spread > 100% (precio de relleno) se valora al precio ejecutable.
+  - La calidad ya no mira el spread de la peor pata (tumbaba casi todos los put spreads por la pata vendida, que vale
+    céntimos). Ahora mira `structure_spread_cost`: Σ medio spread de las patas con cotización real / prima neta a precio
+    medio. Ok ≤ 15%, evitar > 40%, sin calibrar.
+  - `ev_reliable` = coste ≤ 40%. El interés abierto < 10 ya no tumba la estructura (deja de ser «ok»).
+- `ibkr_option_chain.js`: misma preferencia por mensuales, y pide hasta 5 strikes dentro de ±12% de cada objetivo
+  (45 contratos en una cadena típica de UVXY, por debajo del límite de ~100).
+- `inverse_etf_options_snapshot.py`: descarta el día si la última vela no es de hoy (festivo) y guarda `session`
+  (regular / after_close).
+
+**Efecto en la cadena del 12-nov:**
+- Los call spreads vendidos pasan a cobrar crédito: UVXY 24/32 → 0,20; SQQQ 55/80 → 0,61; BOIL 25/37 → 0,81.
+- El put spread acordado de UVXY queda en 1,875 de débito, casi igual que la put sola: vender la put 11 no aporta nada.
+
+**Pruebas:** `scripts/test_inverse_etf_pricing.py` (22) y `scripts/test_ibkr_option_chain.js` (46, con 6 nuevos).
+Recordatorio `inverse_etf_estudio_primas_v2` para el 2026-12-11.
 
 ---
 

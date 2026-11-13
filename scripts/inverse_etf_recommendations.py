@@ -100,13 +100,19 @@ def leg_price(c: dict, side: str) -> dict | None:
         else:
             mid = est = bid
     rel = ((ask - bid) / mid) if (bid > 0 and ask > 0 and mid > 0) else None
+    if rel is not None and rel > STUB_SPREAD:
+        # Precio de relleno (p. ej. UVXY put 11: bid 0,01 / ask 2,07): el precio medio
+        # no significa nada. Se valora al precio ejecutable de este lado.
+        est = mid = worst
+        flags.append("spread >100%: valorada al precio ejecutable")
     return {"est": est, "mid": mid, "worst": worst, "rel_spread": rel, "flags": flags, "ok": True}
 
 
 def snap(contracts: list[dict], cp: str, target: float, side: str, exclude: float | None = None):
-    pool = [c for c in contracts if c["cp"] == cp and c["strike"] != exclude and leg_price(c, side) is not None
-            and abs(c["strike"] / target - 1) <= SNAP_TOL]
-    return min(pool, key=lambda c: abs(c["strike"] - target)) if pool else None
+    # Misma regla que el estudio (ps.liquid_strike): dentro de ±SNAP_TOL, el strike
+    # cotizado más líquido cercano al objetivo, no simplemente el más cercano.
+    return ps.liquid_strike(contracts, cp, target, tol=SNAP_TOL, exclude=exclude,
+                            accept=lambda c: leg_price(c, side) is not None)
 
 
 def leg_view(c: dict, side: str, px: dict) -> dict:
@@ -150,21 +156,47 @@ def count_episodes(mask: list[bool], horizon: int) -> int:
 
 
 # ── Calificación (primera pasada, sin calibrar) ───────────────────────────────
-def grade(kind: str, ev: dict | None, legs: list[dict], max_loss_pnl: float) -> tuple[str, str]:
-    rels = [l["rel_spread"] if l["rel_spread"] is not None else 1.0 for l in legs]
-    worst_rel = max(rels)
+def structure_spread_cost(legs: list[dict], premium_mid: float) -> float | None:
+    """Coste de cruzar el spread de toda la estructura, en tanto por uno de su prima
+    neta a precio medio: Σ (ask − bid)/2 de cada pata / |prima media|.
+
+    Sustituye (2026-11-13) al spread relativo de la peor pata, que tumbaba casi todos
+    los put spreads: la pata vendida muy fuera del dinero vale céntimos pero su precio
+    de relleno daba un spread enorme. Esas patas se valoran al precio ejecutable en
+    leg_price y aquí no se cuentan. None si ninguna pata tiene cotización real."""
+    if not premium_mid or abs(premium_mid) < 1e-9:
+        return None
+    half, counted = 0.0, 0
+    for l in legs:
+        b, a = l.get("bid") or 0.0, l.get("ask") or 0.0
+        if a > 0 and b > 0 and (l.get("rel_spread") or 0) <= STUB_SPREAD:
+            half += (a - b) / 2
+            counted += 1
+        # Las patas de relleno o a una cara ya van valoradas al precio ejecutable
+        # (leg_price), así que su spread no se vuelve a contar como coste.
+    return half / abs(premium_mid) if counted else None
+
+
+SPREAD_COST_OK, SPREAD_COST_AVOID = 0.15, 0.40   # primera pasada, sin calibrar
+STUB_SPREAD = 1.0   # una pata con spread relativo > 100% se considera precio de relleno
+
+
+def grade(kind: str, ev: dict | None, legs: list[dict], max_loss_pnl: float,
+          spread_cost: float | None = None) -> tuple[str, str]:
     min_oi = min((l["oi"] or 0) for l in legs)
     reasons = []
     if ev is None:
         return "avoid", "sin distribución histórica para valorarla"
-    if worst_rel > 0.75:
-        reasons.append(f"spread bid-ask de {int(worst_rel * 100)}% en alguna pata")
-    elif worst_rel > 0.35:
-        reasons.append(f"spread bid-ask de {int(worst_rel * 100)}% (el precio real puede diferir mucho)")
+    if spread_cost is None:
+        reasons.append("sin cotización a doble cara para medir el coste de entrada")
+    elif spread_cost > SPREAD_COST_AVOID:
+        reasons.append(f"cruzar el spread cuesta el {int(spread_cost * 100)}% de la prima")
+    elif spread_cost > SPREAD_COST_OK:
+        reasons.append(f"cruzar el spread cuesta el {int(spread_cost * 100)}% de la prima (el precio real puede diferir)")
     if min_oi < 10:
-        reasons.append(f"open interest muy bajo ({min_oi})")
+        reasons.append(f"open interest muy bajo en alguna pata ({min_oi})")
     elif min_oi < 50:
-        reasons.append(f"open interest bajo ({min_oi})")
+        reasons.append(f"open interest bajo en alguna pata ({min_oi})")
     if kind == "call_spread":
         good = ev["ev_pnl"] > 0 and ev["p_max_loss"] <= 5
         bad = ev["ev_pnl"] <= 0
@@ -177,9 +209,9 @@ def grade(kind: str, ev: dict | None, legs: list[dict], max_loss_pnl: float) -> 
         bad = ev["ev_ret_pct"] < -10
         if ev["ev_ret_pct"] < 5:
             reasons.append(f"valor esperado {ev['ev_ret_pct']:+.0f}% sobre el capital (prima ya cara respecto al historial)")
-    if worst_rel > 0.75 or min_oi < 10:
+    if spread_cost is None or spread_cost > SPREAD_COST_AVOID:
         bad = True
-    if worst_rel > 0.35 or min_oi < 50:
+    if spread_cost is None or spread_cost > SPREAD_COST_OK or min_oi < 50:
         good = False
     g = "ok" if good else ("avoid" if bad else "marginal")
     return g, "; ".join(reasons) if reasons else "valor esperado positivo y cadena razonablemente líquida"
@@ -189,8 +221,9 @@ def grade(kind: str, ev: dict | None, legs: list[dict], max_loss_pnl: float) -> 
 def build_structures(chain_row: dict, dists: dict) -> dict:
     s0 = chain_row["spot"]
     out = {"put": [], "call": []}
-    ep = ps.pick_expiry(chain_row["expiries"], PUT_DTE, PUT_TOL, need_iv=False)
-    ec = ps.pick_expiry(chain_row["expiries"], CALL_DTE, CALL_TOL, need_iv=False)
+    # Vencimientos mensuales si los hay en la tolerancia: los semanales tienen el doble de spread.
+    ep = ps.pick_expiry(chain_row["expiries"], PUT_DTE, PUT_TOL, need_iv=False, prefer_monthly=True)
+    ec = ps.pick_expiry(chain_row["expiries"], CALL_DTE, CALL_TOL, need_iv=False, prefer_monthly=True)
 
     def finish(base: dict, capital: float, max_loss_pnl: float, pnl_fn, dte: int):
         base["capital_at_risk"] = round(capital, 3)
@@ -318,10 +351,12 @@ def recommend(tk: str, chain_row: dict, summary_row: dict | None, no_fetch: bool
         for s in st[side]:
             ev = s["ev_by_basis"].get(primary) or s["ev_by_basis"].get("uncond")
             s["primary_basis"] = primary if s["ev_by_basis"].get(primary) else ("uncond" if ev else None)
-            s["grade"], s["grade_reason"] = grade(s["kind"], ev, s["legs"], -s["max_loss"])
-            rels = [l["rel_spread"] if l["rel_spread"] is not None else 1.0 for l in s["legs"]]
-            # Con spreads >75% o OI <10 la prima estimada es ruido: el EV/TAE no se presenta como cifra.
-            s["ev_reliable"] = max(rels) <= 0.75 and min((l["oi"] or 0) for l in s["legs"]) >= 10
+            cost = structure_spread_cost(s["legs"], s["premium"]["mid"])
+            s["spread_cost_pct"] = None if cost is None else round(cost * 100, 0)
+            s["grade"], s["grade_reason"] = grade(s["kind"], ev, s["legs"], -s["max_loss"], cost)
+            # Si cruzar el spread se come >40% de la prima, la prima estimada es ruido:
+            # el EV/TAE no se presenta como cifra.
+            s["ev_reliable"] = cost is not None and cost <= SPREAD_COST_AVOID
     agreed_put = next((s for s in st["put"] if s["id"] == "ps_agreed"), None)
     agreed_call = next((s for s in st["call"] if s["id"] == "cs_agreed"), None)
     notes = []
@@ -395,7 +430,7 @@ def main() -> int:
               "method": {"price_est": f"media ± {int(SPREAD_HAIRCUT * 100)}% del spread bid-ask",
                          "ev": "valor esperado al vencimiento contra retornos históricos del ETF (sin gestión intermedia; NO es backtest de opciones)",
                          "tae": "TAE simple = rentabilidad × 365 / DTE (ilustrativa, no compuesta)",
-                         "grades": "ok / marginal / avoid: umbrales de primera pasada, sin calibrar"}}
+                         "grades": "ok / marginal / avoid según valor esperado, coste de cruzar el spread de toda la estructura (ok ≤ 15% de la prima, evitar > 40%) e interés abierto; umbrales de primera pasada, sin calibrar"}}
     for tk in ([args.only] if args.only else TICKERS):
         crow = next((c for c in reversed(chains) if c["ticker"] == tk), None)
         if not crow:

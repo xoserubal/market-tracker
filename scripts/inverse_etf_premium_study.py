@@ -73,8 +73,34 @@ def pctile(series: list[float], v: float) -> float | None:
     return round(100 * sum(1 for x in s if x <= v) / len(s))
 
 
-def pick_expiry(expiries: list[dict], target: int, tol: int, need_iv=True):
+def is_monthly(expiry: str) -> bool:
+    """Vencimiento mensual estándar: tercer viernes (o el jueves de esa semana si el
+    viernes es festivo, p. ej. Viernes Santo). Los semanales son mucho menos líquidos:
+    contrastado con CBOE el 2026-11-13, spread mediano cerca del ATM del 11-14% en los
+    mensuales de UVXY/SQQQ/BOIL frente al 25-35% de los semanales."""
+    from datetime import date as _d
+    d = _d.fromisoformat(expiry)
+    return (d.weekday() == 4 and 15 <= d.day <= 21) or (d.weekday() == 3 and 14 <= d.day <= 20)
+
+
+def pick_expiry(expiries: list[dict], target: int, tol: int, need_iv=True, prefer_monthly=False):
+    """Vencimiento más cercano a `target` DTE dentro de ±tol. Con prefer_monthly, si hay
+    algún mensual dentro de la tolerancia se elige entre ellos; si no, el más cercano."""
+    from datetime import date as _d, timedelta as _td
     c = [e for e in expiries if abs(e["dte"] - target) <= tol and (not need_iv or e.get("atm_iv") is not None)]
+    if prefer_monthly:
+        listed = {e["expiry"] for e in expiries}
+
+        def monthly(exp: str) -> bool:
+            if not is_monthly(exp):
+                return False
+            d = _d.fromisoformat(exp)
+            # Un jueves solo es el mensual si ese viernes no hay vencimiento (festivo).
+            return d.weekday() == 4 or (d + _td(days=1)).isoformat() not in listed
+
+        m = [e for e in c if monthly(e["expiry"])]
+        if m:
+            c = m
     return min(c, key=lambda e: abs(e["dte"] - target)) if c else None
 
 
@@ -83,17 +109,41 @@ def mid(c: dict):
     return (a + b) / 2 if a > 0 and b > 0 else None
 
 
-def nearest_strike(contracts: list[dict], cp: str, target: float, need_quote="mid"):
-    pool = [c for c in contracts if c["cp"] == cp and (mid(c) is not None if need_quote == "mid" else True)]
-    return min(pool, key=lambda c: abs(c["strike"] - target)) if pool else None
+LIQUID_TOL = 0.12        # banda alrededor del strike objetivo (±12%)
+LIQUID_SPREAD_SLACK = 1.5  # se aceptan strikes con spread relativo ≤ 1,5 × el mejor de la banda
+
+
+def liquid_strike(contracts: list[dict], cp: str, target: float, tol: float = LIQUID_TOL,
+                  accept=lambda c: True, exclude: float | None = None):
+    """Strike con cotización usable cerca de `target`, prefiriendo los líquidos.
+
+    En estos ETFs los strikes 'redondos' (25, 30, 40, 50…) concentran el interés
+    abierto y cotizan ajustado, mientras que los intermedios solo tienen precios de
+    relleno (p. ej. UVXY dic-26: call 35 a 0,69/0,85 frente a la 34 a 0,30/0,97;
+    CBOE 2026-11-13). Elegir el más cercano al objetivo caía a menudo en estos.
+    Regla fija (no optimizada): dentro de ±tol, entre los que tienen bid y ask, se
+    quedan los de spread relativo ≤ 1,5 × el mejor y de ellos el más cercano al
+    objetivo. Sin cotización a doble cara en la banda, el más cercano que acepte
+    `accept` (comportamiento anterior)."""
+    band = [c for c in contracts if c["cp"] == cp and c["strike"] != exclude
+            and abs(c["strike"] / target - 1) <= tol and accept(c)]
+    if not band:
+        return None
+    two = [c for c in band if (c.get("bid") or 0) > 0 and (c.get("ask") or 0) > 0]
+    if two:
+        rel = {id(c): (c["ask"] - c["bid"]) / ((c["ask"] + c["bid"]) / 2) for c in two}
+        best = min(rel.values())
+        two = [c for c in two if rel[id(c)] <= best * LIQUID_SPREAD_SLACK + 1e-9]
+        return min(two, key=lambda c: abs(c["strike"] - target))
+    return min(band, key=lambda c: abs(c["strike"] - target))
 
 
 # ── 1-2: nivel y estructura de plazos (desde el resumen) ───────────────────────
 def level_and_term(rows: list[dict]) -> dict:
     hist = []
     for r in rows:
-        e30 = pick_expiry(r["expiries"], 30, 20)
-        e90 = pick_expiry(r["expiries"], 90, 35)
+        e30 = pick_expiry(r["expiries"], 30, 20, prefer_monthly=True)
+        e90 = pick_expiry(r["expiries"], 90, 35, prefer_monthly=True)
         iv30 = e30["atm_iv"] if e30 else None
         iv90 = e90["atm_iv"] if e90 else None
         hist.append({
@@ -117,10 +167,9 @@ def level_and_term(rows: list[dict]) -> dict:
 # ── 3a: carry implícito (put-call parity) ─────────────────────────────────────
 def implied_carry(chain_row: dict, target_dte=PUT_DTE, tol=35):
     spot = chain_row["spot"]
-    ex = [e for e in chain_row["expiries"] if abs(e["dte"] - target_dte) <= tol]
-    if not ex:
+    e = pick_expiry(chain_row["expiries"], target_dte, tol, need_iv=False, prefer_monthly=True)
+    if not e:
         return None
-    e = min(ex, key=lambda x: abs(x["dte"] - target_dte))
     k = min({c["strike"] for c in e["contracts"]}, key=lambda s: abs(s - spot))
     call = next((c for c in e["contracts"] if c["cp"] == "C" and c["strike"] == k and mid(c) is not None), None)
     put = next((c for c in e["contracts"] if c["cp"] == "P" and c["strike"] == k and mid(c) is not None), None)
@@ -172,12 +221,12 @@ def call_spread_loss(ret: float, k_short: float, k_long: float, s0: float) -> fl
 
 def structure(chain_row: dict):
     s0 = chain_row["spot"]
-    ep = pick_expiry(chain_row["expiries"], PUT_DTE, 35, need_iv=False)
-    ec = pick_expiry(chain_row["expiries"], CALL_DTE, 20, need_iv=False)
+    ep = pick_expiry(chain_row["expiries"], PUT_DTE, 35, need_iv=False, prefer_monthly=True)
+    ec = pick_expiry(chain_row["expiries"], CALL_DTE, 20, need_iv=False, prefer_monthly=True)
     out = {"spot": s0, "put": None, "call": None}
     if ep:
-        lo = nearest_strike(ep["contracts"], "P", s0 * PUT_LONG_M, need_quote="any")
-        sh = nearest_strike(ep["contracts"], "P", s0 * PUT_SHORT_M, need_quote="any")
+        lo = liquid_strike(ep["contracts"], "P", s0 * PUT_LONG_M, accept=lambda c: (c.get("ask") or 0) > 0)
+        sh = liquid_strike(ep["contracts"], "P", s0 * PUT_SHORT_M, exclude=lo["strike"] if lo else None)
         if lo and sh and lo["strike"] > sh["strike"] and (lo.get("ask") or 0) > 0:
             debit = lo["ask"] - (sh.get("bid") or 0)
             out["put"] = {"expiry": ep["expiry"], "dte": ep["dte"], "long": lo["strike"], "short": sh["strike"],
@@ -185,8 +234,9 @@ def structure(chain_row: dict):
                           "long_ask": lo["ask"], "short_bid": sh.get("bid") or 0,
                           "rel_spread_long": round((lo["ask"] - (lo.get("bid") or 0)) / lo["ask"], 2)}
     if ec:
-        sh = nearest_strike(ec["contracts"], "C", s0 * CALL_SHORT_M, need_quote="any")
-        lo = nearest_strike(ec["contracts"], "C", s0 * CALL_LONG_M, need_quote="any")
+        sh = liquid_strike(ec["contracts"], "C", s0 * CALL_SHORT_M, accept=lambda c: (c.get("bid") or 0) > 0)
+        lo = liquid_strike(ec["contracts"], "C", s0 * CALL_LONG_M, accept=lambda c: (c.get("ask") or 0) > 0,
+                           exclude=sh["strike"] if sh else None)
         if sh and lo and lo["strike"] > sh["strike"] and (sh.get("bid") or 0) > 0:
             credit = sh["bid"] - (lo.get("ask") or 0)
             out["call"] = {"expiry": ec["expiry"], "dte": ec["dte"], "short": sh["strike"], "long": lo["strike"],

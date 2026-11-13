@@ -27,6 +27,11 @@ const CALL_EXPIRY = { dte: 30, tol: 20 };
 const PUT_MONEYNESS = [0.60, 0.65, 0.70, 0.85, 0.90, 1.00];
 const CALL_MONEYNESS = [1.20, 1.30, 1.50, 1.80, 2.00, 2.50];
 const NEIGHBORS = 1;                       // ±1 strike alrededor del más cercano a cada objetivo
+// Banda por objetivo (= SNAP_TOL del recomendador) y máximo de strikes a pedir en ella:
+// el recomendador elige el strike más líquido de la banda (los "redondos" concentran
+// el interés abierto), así que hay que pedirle varios candidatos, no solo el vecino.
+const BAND_TOL = 0.12;
+const BAND_MAX = 5;
 const DEFAULT_PORTS = [7496, 7497, 4001, 4002];   // TWS live, TWS paper, Gateway live, Gateway paper
 const INFO_CODES = new Set([2100, 2101, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2119, 2137, 2158]);
 const SUBSCRIPTION_CODES = new Set([354, 10089, 10090, 10091, 10167, 10168, 10197]);
@@ -58,15 +63,45 @@ function dteBetween(todayIso, yyyymmdd) {
   return Math.round((Date.parse(isoDate(yyyymmdd) + 'T00:00:00Z') - Date.parse(todayIso + 'T00:00:00Z')) / 86400000);
 }
 
+// Vencimiento mensual estándar (tercer viernes, o el jueves de esa semana si el viernes
+// no cotiza). Misma regla que is_monthly/pick_expiry de inverse_etf_premium_study.py:
+// los semanales tienen el doble de spread (CBOE, 2026-11-13).
+function isMonthly(yyyymmdd, listed) {
+  const d = new Date(Date.parse(isoDate(yyyymmdd) + 'T00:00:00Z'));
+  const day = d.getUTCDate(), wd = d.getUTCDay();
+  if (wd === 5) return day >= 15 && day <= 21;
+  if (wd === 4 && day >= 14 && day <= 20) {
+    const fri = new Date(d.getTime() + 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+    return !listed.includes(fri);
+  }
+  return false;
+}
+
 // Vencimiento más cercano al objetivo dentro de la tolerancia (expirations: 'YYYYMMDD').
-function pickExpiry(expirations, todayIso, target) {
-  let best = null;
+// Con preferMonthly, si hay algún mensual en la tolerancia se elige entre ellos.
+function pickExpiry(expirations, todayIso, target, preferMonthly = false) {
+  const inTol = [];
   for (const e of expirations) {
     const dte = dteBetween(todayIso, e);
     if (dte <= 0 || Math.abs(dte - target.dte) > target.tol) continue;
-    if (!best || Math.abs(dte - target.dte) < Math.abs(best.dte - target.dte)) best = { expiry: e, dte };
+    inTol.push({ expiry: e, dte });
   }
+  let pool = inTol;
+  if (preferMonthly) {
+    const m = inTol.filter(x => isMonthly(x.expiry, expirations));
+    if (m.length) pool = m;
+  }
+  let best = null;
+  for (const x of pool) if (!best || Math.abs(x.dte - target.dte) < Math.abs(best.dte - target.dte)) best = x;
   return best;
+}
+
+// Hasta `max` strikes dentro de ±tol del objetivo, los más cercanos primero; si la
+// banda está vacía, el más cercano.
+function strikesInBand(sorted, price, tol = BAND_TOL, max = BAND_MAX) {
+  const band = sorted.filter(k => Math.abs(k / price - 1) <= tol)
+    .sort((a, b) => Math.abs(a - price) - Math.abs(b - price)).slice(0, max);
+  return band.length ? band.sort((a, b) => a - b) : strikesAround(sorted, price, 0);
 }
 
 // Strike más cercano a `price` y n vecinos a cada lado (strikes ordenados).
@@ -81,15 +116,15 @@ function strikesAround(sorted, price, n = NEIGHBORS) {
 // implícito) en el vencimiento de ~90d y calls de los perfiles en el de ~30d.
 function planContracts(spot, strikes, expirations, todayIso) {
   const sorted = [...new Set(strikes)].sort((a, b) => a - b);
-  const pe = pickExpiry(expirations, todayIso, PUT_EXPIRY);
-  const ce = pickExpiry(expirations, todayIso, CALL_EXPIRY);
+  const pe = pickExpiry(expirations, todayIso, PUT_EXPIRY, true);
+  const ce = pickExpiry(expirations, todayIso, CALL_EXPIRY, true);
   const out = new Map();
   const add = (right, e, k) => out.set(`${e.expiry}|${right}|${k}`, { right, expiry: e.expiry, dte: e.dte, strike: k });
   if (pe) {
-    PUT_MONEYNESS.forEach(m => strikesAround(sorted, spot * m).forEach(k => add('P', pe, k)));
+    PUT_MONEYNESS.forEach(m => strikesInBand(sorted, spot * m).forEach(k => add('P', pe, k)));
     strikesAround(sorted, spot, 0).forEach(k => { add('P', pe, k); add('C', pe, k); });
   }
-  if (ce) CALL_MONEYNESS.forEach(m => strikesAround(sorted, spot * m).forEach(k => add('C', ce, k)));
+  if (ce) CALL_MONEYNESS.forEach(m => strikesInBand(sorted, spot * m).forEach(k => add('C', ce, k)));
   return { contracts: [...out.values()], putExpiry: pe, callExpiry: ce };
 }
 
@@ -269,4 +304,4 @@ async function fetchLiveChain(ticker, opts = {}) {
   }
 }
 
-module.exports = { fetchLiveChain, etNow, pickExpiry, strikesAround, planContracts, assembleChainRow, PUT_MONEYNESS, CALL_MONEYNESS };
+module.exports = { fetchLiveChain, etNow, pickExpiry, isMonthly, strikesAround, strikesInBand, planContracts, assembleChainRow, PUT_MONEYNESS, CALL_MONEYNESS };
