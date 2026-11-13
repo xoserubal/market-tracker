@@ -8605,14 +8605,24 @@ El usuario quiere la app del móvil siempre disponible (sin el PC encendido) y u
 - Tests de etiquetas 22/22.
 
 **Sin verificar:**
-- El despliegue real en Railway: lo crea el usuario.
 - El rendimiento en un móvil real: Babel transpila cada página en el navegador, lo que puede tardar 1-3 s en un
   teléfono medio. Si molesta, la mejora sería precompilar el JSX.
 
-**Configuración en Railway** (lo hace el usuario):
-1. En el proyecto del bot: «New service» → «GitHub repo» → `market-tracker`, rama `master`.
-2. En Settings → «Config-as-code», poner `/railway.web.json`.
-3. Variables: `APP_PASSWORD` (larga), `FRED_API_KEY`, `OILPRICE_API_KEY` (opcional) y `STATE_DIR=/data`.
-4. Añadir un Volume montado en `/data`.
-5. En Networking → «Generate Domain», abrir la URL en el móvil, entrar con la contraseña e «Instalar app» o «Añadir a
-   pantalla de inicio».
+**Despliegue real en Railway (hecho 2026-11-13 con la CLI de Railway):**
+- Proyecto «market tracker»: el servicio que ya existía, llamado «market tracker», es el **bot de Telegram** (Procfile,
+  sin dominio). No se tocó.
+- Servicio nuevo **`market-tracker-web`**, repo `xoserubal/market-tracker` rama `master`. Dirección:
+  `https://market-tracker-web-production.up.railway.app`.
+- **`railway.web.json` NO se usa:** Railway ya rechaza «Config as Code» (railway.json) y pide migrar a
+  `.railway/railway.ts`. Los mismos ajustes se pusieron directamente en el servicio: constructor Docker con
+  `Dockerfile.web`, comprobación `/healthz`, reinicio ON_FAILURE ×5 y los mismos `watchPatterns`. Si se cambian, hay que
+  cambiarlos en Railway (el fichero queda solo como referencia).
+- Variables: `APP_PASSWORD`, `FRED_API_KEY`, `OILPRICE_API_KEY` (de `.env`) y `STATE_DIR=/data`. Volumen
+  `market-tracker-web-volume` montado en `/data`.
+- Ojo con Git Bash en Windows: convierte `/data` en `C:/Program Files/Git/data` en los argumentos (pasó con
+  `STATE_DIR`); usar `MSYS_NO_PATHCONV=1`.
+- Verificado tras el primer despliegue: `/healthz` ok con `cloud:true`; sin sesión 302 → `/login`; contraseña mala 401;
+  con sesión 200 en index, portfolio, rotación, AI Picks Lab, `/api/quote/SPY`, `/api/fred/DGS10`; POST de portfolio
+  403; `/api/ibkr/*` 404.
+- Se redespliega con cada push que toque `watchPatterns` (incluye `docs/data/**`): varias veces al día, unos segundos
+  sin servicio cada vez.
