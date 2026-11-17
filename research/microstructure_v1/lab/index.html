@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio de microestructura</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>Laboratorio de microestructura <span class="sub">footprint de operaciones ejecutadas · uso local</span></h1>
+  <div id="banner"></div>
+</header>
+
+<section class="controls">
+  <label>Ticker <input id="symbol" value="NVDA" size="7"></label>
+  <label>Fecha <input id="day" type="date" value="2026-11-12"></label>
+  <label>Desde <input id="start" value="09:30" size="6" title="hora de Nueva York"></label>
+  <label>Hasta <input id="end" value="16:00" size="6"></label>
+  <label>Vela <select id="tf"><option>1</option><option>5</option><option>15</option><option selected>60</option></select> min</label>
+  <label>Sesión <select id="session"><option value="regular">regular</option><option value="extended">extendida</option></select></label>
+  <label>Método <select id="method">
+    <option value="lr" selected>Lee-Ready</option><option value="bidask">bid/ask estricto</option>
+    <option value="emo">EMO</option><option value="tick">regla del tick</option></select></label>
+  <label>Paso <input id="step" value="auto" size="5" title="tamaño del nivel de precio ($) o auto"></label>
+  <label><input type="checkbox" id="exclude_trf"> sin TRF</label>
+  <label><input type="checkbox" id="exclude_odd"> sin odd lots</label>
+  <label title="Quita los trades que según las reglas oficiales no actualizan máximo/mínimo (odd lots, comunicaciones tardías, precios no estándar)"><input type="checkbox" id="exclude_nonbar"> solo trades que actualizan barras</label>
+  <details class="sens"><summary>Sensibilidad del agresor</summary>
+    <label title="Desfase aplicado a la quote de referencia (prueba de sensibilidad, no una hipótesis)">Retraso de la quote <input id="quote_lag_ms" value="0" size="5"> ms</label>
+    <label><input type="checkbox" id="strict" checked> quote estrictamente anterior</label>
+    <label><input type="checkbox" id="ref_exclude_trf"> TRF fuera de la secuencia del tick</label>
+    <label><input type="checkbox" id="ref_exclude_nonbar"> secuencia del tick solo con trades que actualizan barras</label>
+  </details>
+  <button id="load" class="primary">Cargar</button>
+  <span class="sep"></span>
+  <label title="El servidor solo envía operaciones anteriores al cursor"><input type="checkbox" id="blind"> modo ciego</label>
+  <label>Cursor <input id="cursor" value="" size="8" placeholder="HH:MM:SS"></label>
+  <button id="back" title="retroceder una vela">◀</button>
+  <button id="fwd" title="avanzar una vela">▶</button>
+</section>
+
+<section id="fetchbox" class="hidden">
+  <p>No hay operaciones descargadas para este valor y día.</p>
+  <label>Tramos con quotes (NY) <input id="qranges" value="09:30-10:30" size="30" title="separados por comas"></label>
+  <button id="estimate">Estimar coste</button>
+  <button id="fetch">Descargar</button>
+  <pre id="fetchinfo"></pre>
+</section>
+
+<section class="quality" id="quality"></section>
+
+<main>
+  <div class="charts">
+    <canvas id="fp" height="560"></canvas>
+    <canvas id="delta" height="170"></canvas>
+    <div class="hint">Rueda: zoom vertical · Mayús+rueda: zoom horizontal · arrastrar: desplazar · clic en una vela: detalle</div>
+  </div>
+  <aside>
+    <div class="panel"><h3>Vela seleccionada</h3><div id="detail">—</div>
+      <button id="pinA">Fijar como A</button> <button id="pinB">Fijar como B</button></div>
+    <div class="panel"><h3>Comparación A / B</h3><div id="compare">—</div></div>
+  </aside>
+</main>
+
+<section class="grid2">
+  <div class="panel"><h3>Clasificación de agresores en la ventana</h3><div id="methods">—</div></div>
+  <div class="panel"><h3>Limitaciones</h3><ul id="limits"></ul></div>
+</section>
+
+<section>
+  <div class="panel"><h3>Comparación de métodos por vela</h3>
+    <p class="small">Delta (compra − venta agresiva) con cada método y volumen indeterminado. Las filas marcadas
+    tienen signos opuestos según el método: ahí el delta no es evidencia de nada. Un delta menor que el 5 % del
+    volumen clasificado cuenta como ≈0.</p>
+    <div id="mcompare">—</div></div>
+</section>
+
+<section class="grid2">
+  <div class="panel">
+    <h3>Guardar episodio</h3>
+    <div class="form">
+      <label>Desde <input id="ep_start" size="8"></label> <label>Hasta <input id="ep_end" size="8"></label>
+      <label>Precio de <input id="ep_lo" size="7"></label> <label>a <input id="ep_hi" size="7"></label>
+      <label>Patrón propuesto <select id="ep_label"></select></label>
+      <label class="wide">Cómo se eligió <input id="ep_note" size="50"></label>
+      <label><input type="checkbox" id="ep_known"> ya conozco lo que pasó después</label>
+      <button id="ep_save">Guardar episodio</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Anotar</h3>
+    <div class="form">
+      <label>Episodio <select id="an_ep"></select></label>
+      <label>Etiqueta <select id="an_label"></select></label>
+      <label>Confianza <input id="an_conf" type="number" min="0" max="1" step="0.1" value="0.5"></label>
+      <label><input type="checkbox" id="an_amb"> ambiguo</label>
+      <label class="wide">Justificación <input id="an_just" size="50"></label>
+      <button id="an_save">Guardar anotación</button>
+      <p class="small">Si el modo ciego está activo, la anotación guarda el cursor. Si el visor ya te mostró datos
+        posteriores, se marca automáticamente como <b>retrospectiva</b> (no sirve como evidencia confirmatoria).</p>
+    </div>
+  </div>
+</section>
+<section class="panel"><h3>Biblioteca: episodios de este valor y día</h3><div id="library">—</div></section>
+
+<script src="/app.js"></script>
+</body>
+</html>

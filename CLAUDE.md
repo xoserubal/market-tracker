@@ -6758,6 +6758,55 @@ decidir qué sistema de seguimiento montar: plantillas de vigilancia, avisos y d
 
 **Pendiente:** analizar las notas acumuladas y diseñar el sistema.
 
+## Investigación de microestructura con Alpaca — G0, G1 y G1.5 hechos (2026-11-15)
+
+Encargo V3 + autorización G1 (en el chat, no commiteados). Estudio aislado en `research/microstructure_v1/`
+(informe G1 en `README.md`, G0 en `G0_INFORME.md`, propuesta en `G2_PROPUESTA.md`). No toca producción.
+- **Datos:** fuera del repo y de Dropbox, en `MICRO_DATA_DIR=D:/backup market tracker/microstructure` (en `.env`, junto
+  con `ALPACA_API_KEY/SECRET`). La licencia de Alpaca no permite redistribuir: nada de registros de mercado en el repo.
+- **Paquete `micro/`:** adaptador Alpaca (SIP gratuito desde 2016, 200 peticiones/min, nada de los últimos 15 min),
+  descarga idempotente con manifiesto SQLite y checksums, límite compartido entre procesos, calendario, reglas
+  oficiales de agregación, calidad, identidad y muestreo. 44 pruebas (`py -3 -m pytest research/microstructure_v1/tests`).
+- **Identidad (lo no obvio):** pedir con `asof` = **última** fecha observada del ticker. Con un asof antiguo, Alpaca
+  corta la serie en eventos corporativos (CB, WMB, LMT, JCI en 2016). Un ticker reutilizado mezcla empresas con
+  barras de relleno de volumen 0 (ADT): hay que cortar por épocas.
+- **Descargas (`g2_downloads.py run --stages quotes,A,B1`, reanudable):** quotes (394 ok) y trades B1q (413 ok)
+  terminados; nivel A (barras 1 min, 76 340 unidades, ~24 h) en marcha. Progreso en
+  `MICRO_DATA_DIR/results/g2_download_progress.json`; `py -3 g2_downloads.py status`. El 2026-11-15 a las ~11:10 UTC
+  el equipo se quedó sin memoria, murieron los hilos y el proceso quedó colgado sin error: ahora sale con código 3 si
+  ninguna unidad termina en 15 min (`MICRO_STALL_TIMEOUT_S`) y se relanza en bucle. No ejecutar análisis pesados en
+  paralelo con la descarga.
+- **G1.5 (laboratorio visual, `lab/server.py`, solo 127.0.0.1):** footprint/agresor sobre trades, modo ciego; estudio
+  de NVDA 2026-11-12 y GOOGL 2026-10-29 y comparación de clasificadores. Informe: `G15_INFORME.md`. Lo clave: el
+  signo del delta comprador/vendedor no es robusto (cambia según método, desfase de la quote y si los TRF entran
+  en la secuencia del tick); TRF y odd lots crecen mucho con los años (desarrollo ≠ prueba). Corregido: precios de
+  episodios con todos los trades (entraban odd lots TRF fuera de rango). Defecto del plan B1 congelado: PCLN y
+  FISV vacíos por cambio de nombre, CTXS/MON parciales (261 de 20 000 sesiones).
+- **G1.5 aprobado con correcciones (2026-11-15), detalle en `G2_CAMBIOS.md`:**
+  - Planes **v2** (`g2_plan_corrections.py`). Regla: símbolo/asof de cada bloque = el que el nivel A asigna a la
+    entidad en esa fecha. Cambian dev-036 PCLN→BKNG (27-feb-2018) y test-024 FISV→FI (7-jun-2023). v1 sigue intacto.
+  - El nivel A no necesitaba corrección.
+  - CTXS y MON siguen en la muestra: fusiones en efectivo de 104 $ y 128 $, verificadas con el 8-K en EDGAR.
+    Tratamiento en `plan_exits_v2`.
+  - Registro de exposición del periodo de prueba (`test_exposure_registry.csv`, `micro/exposure.py`). La exclusión
+    es proporcionada (por valor y ventana [d−H, d+L], nunca fechas enteras): hoy 628 valor-sesiones únicas.
+  - Laboratorio: comparación de métodos por vela, variantes de sensibilidad y control de memoria.
+  - Descarga: espera si quedan menos de 1,5 GB libres. Relanzada a las 22:40 UTC con v2.
+- **G2A (exploración en desarrollo, 2026-11-16): ninguna combinación pasa las puertas.** Resultado completo en
+  `G2A_RESULTADOS_DESARROLLO.md`. Protocolo: `G2A_PROTOCOLO.md`, más las enmiendas 1-8.
+  - **Familia A (H-A1, 6 variantes):** IC dentro de ±0,012, sin estabilidad.
+  - **Familia C (H-C1, 12 variantes):** la única por encima del contraste de selección (L120 k20 θ0,90, +0,77 pp,
+    p = 0,005) es un pico aislado: sus 4 vecinas son negativas. Las de L = 40 tienen el signo contrario al previsto.
+  - **Consecuencia:** H-C1, H-C2 y H-A1 no van a la prueba, que sigue cerrada.
+  - **Pendiente del usuario:** cerrar G2 como negativo, dejar solo la parte exploratoria (ticks, agresor) o
+    rediseñar con un protocolo nuevo.
+  - **Lo que sale para el resto del proyecto:**
+    - Alpaca no registra escisiones ni fusiones antes de 2020.
+    - Codifica escisiones como splits de la matriz y aplica splits por símbolo a otra empresa.
+    - Las prolongaciones de tramos pueden servir precios de otro emisor (Arconic, Aptiv).
+    - Ver enmienda 7; los splits se validan contra el precio antes de aplicarlos.
+  - **Captura en sombra:** desactivada (`shadow_config.json`).
+
 ## Roadmap de mejoras pendientes
 
 ### Semana 3 (≈2026-05-28)
@@ -8070,6 +8119,15 @@ Matices acordados: el decay no es igual — UVXY/BOIL decaen por contango + apal
 **Estudio de primas** (`scripts/inverse_etf_premium_study.py`, manual; `--save` escribe `docs/analysis/inverse_etf_premium_study.md`; usar `py -3`, el `python` de Bash no tiene yfinance). Con los snapshots acumulados responde: (1) nivel de la prima (IV ATM, RV20, IV/RV20, percentil propio con >= 20 días); (2) estructura de plazos (ratio 3m/1m, % de días con curva invertida); (3) si el decay ya está en el precio — carry implícito por put-call parity en el ATM de ~90 DTE (F = K + C − P) frente a la deriva histórica mediana del ETF a ese plazo; (4) la estructura candidata con precios reales de la cadena (put spread 85%/60% del spot a ~90 DTE comprado al ask/vendido al bid; call spread 130%/200% a ~30 DTE) y su valor esperado sobre la distribución empírica de retornos (incondicional y, para UVXY, condicionada a VIX>=25 + giro). NO es un backtest de opciones (sin IV histórica no se reproduce el P&L diario) y las muestras son días solapados, así que el n efectivo es mucho menor. Strikes de primera pasada, sin calibrar. Verificado solo con cadena sintética (la lógica y los cruces funcionan; los números del ejemplo son inventados) más el histórico real de UVXY; falta correrlo con snapshots reales en horario de mercado, y con < 20 días los percentiles no son fiables.
 
 **Pendiente:** verificado solo estructura del snapshot (dry-run fuera de horario) y la clasificación/aviso con datos reales y sintéticos; la página no se pudo renderizar en Edge headless en esta sesión (solo transpilación JSX y datos de /api/quote). Falta una corrida real del snapshot en horario de mercado para validar IV/skew/spreads, ver la página en el navegador, y después la sonda histórica del subyacente para calibrar umbrales y una calculadora de estructuras con ≥ unas semanas de datos. No toca carteras ni señales.
+
+**Backtest del giro de SQQQ (2026-11-17, `research/sqqq_spike_fade_v1/`).** SQQQ/QQQ 2010-2026. La regla actual
+(extendido + día rojo con histograma MACD encogiendo + QQQ ≥ +2,5% semanal) solo disparó 3 veces en 16 años (2 rebotes
+falsos de 2022). Sin el filtro de QQQ: n = 38, r21 mediana −12% (vs −9/−10% solo extendido), r63 −23/−24% (igual).
+Giros más estrictos (2 sesiones, histograma < 0, mínimo de 3 sesiones) no mejoran. El decay manda (SQQQ baja a 63
+sesiones el 81-83% de días cualesquiera) y la cola sigue: 24-25% de +30% en 21 sesiones tras un spike en test.
+Regla sin cambios (decisión del usuario: mira el spike y decide). Solo cambia el aviso de `inversos.html` en Spike: el
+«ESPERAR al giro» queda solo para UVXY (`rule: 'vix_level'`); en SQQQ/GLL/BOIL dice que el giro no está validado y que
+decide el usuario (también en el export a LLM). Las estructuras y sus etiquetas no cambian.
 
 ### Recomendación de operación con opciones en `inversos.html` (implementado 2026-10-23)
 

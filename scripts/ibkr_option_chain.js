@@ -293,7 +293,15 @@ async function fetchLiveChain(ticker, opts = {}) {
 
     const row = assembleChainRow({ ticker, spot, now, planned, quotes, dataTypes });
     const nQuoted = row.expiries.reduce((s, e) => s + e.contracts.length, 0);
-    if (!nQuoted) throw ibError('NO_DATA', `IBKR no devolvió cotizaciones de opciones de ${ticker}${notices.size ? ': ' + [...notices][0] : ''}. Revisa la suscripción de datos de opciones (o abre el mercado).`);
+    if (!nQuoted) {
+      // TWS devuelve bid/ask = -1 (sin cotización) fuera de la sesión de opciones, pero sí cierre y OI:
+      // si llega eso y no hay avisos de suscripción, es el horario, no la suscripción.
+      const onlyClose = planned.some(c => { const o = quotes.get(c.key); return o && o.close != null; });
+      if (onlyClose && !notices.size) {
+        throw ibError('NO_DATA', `Las opciones de ${ticker} no tienen bid/ask ahora (la sesión de opciones de EE.UU. es 09:30-16:00 ET, 15:30-22:00 hora de Madrid). TWS responde bien; vuelve a pedirla con el mercado abierto.`);
+      }
+      throw ibError('NO_DATA', `IBKR no devolvió cotizaciones de opciones de ${ticker}${notices.size ? ': ' + [...notices][0] : ''}. Revisa la suscripción de datos de opciones (o abre el mercado).`);
+    }
     return {
       row,
       info: { port, clientId, requested: planned.length, quoted: nQuoted, elapsed_ms: Date.now() - t0,

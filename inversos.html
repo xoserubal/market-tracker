@@ -298,7 +298,9 @@ function RecoBlock({ etf, state, r: rSaved, budget, live, onRefresh, onClearLive
     if (!ap && !ac) banner = { bg: '#fff3cd', fg: '#8a5200', txt: 'Ventana de venta de prima activa, pero la cadena guardada no ofrece las estructuras acordadas.' };
     else if (!goods.length) banner = { bg: '#ffcdd2', fg: '#b71c1c', txt: 'Ventana de venta de prima ACTIVA, pero con las cotizaciones guardadas ninguna de las estructuras acordadas es fiable: contrasta la cadena en vivo en tu broker antes de operar. No hay base para recomendar entrada con estas primas.' };
     else banner = { bg: '#c8e6c9', fg: '#1b5e20', txt: 'Ventana de venta de prima ACTIVA: estas son las estructuras evaluadas con la cadena guardada. Confírmalas con cotizaciones en vivo (spreads reales) antes de enviar la orden.' };
-  } else if (state === 'spike') banner = { bg: '#ffe0b2', fg: '#bf360c', txt: 'Spike en curso, pero el ETF aún no gira: ESPERAR. Vender prima ahora es ir contra el movimiento. Estructuras mostradas como preparación, no como orden.' };
+  } else if (state === 'spike') banner = etf.rule === 'vix_level'
+    ? { bg: '#ffe0b2', fg: '#bf360c', txt: 'Spike en curso, pero el ETF aún no gira: ESPERAR. Vender prima ahora es ir contra el movimiento. Estructuras mostradas como preparación, no como orden.' }
+    : { bg: '#ffe0b2', fg: '#bf360c', txt: 'Spike en curso. Para este ETF el giro no está validado (backtest de SQQQ 2010-2026: esperar al giro no mejora el resultado): decides tú. Ojo con la cola: tras un spike, ~25% de probabilidad de otro +30% en el mes siguiente.' };
   else banner = { bg: '#f0f0f0', fg: '#555', txt: 'Sin spike: no hay setup. Estructuras mostradas solo como referencia (la prima suele estar barata y el riesgo de spike no está pagado).' };
 
   const pkgLoss = ap && ac ? ap.max_loss + ac.max_loss : null;
@@ -367,7 +369,7 @@ function recoMarkdown(rows, recs, budget, live = {}) {
   if (!active.length) md += 'Ningún ETF en spike ni ventana de venta de prima: sin recomendación.' + NL;
   active.forEach(({ etf, c }) => {
     const r = (live[etf.ticker] && live[etf.ticker].reco) || (recs.tickers && recs.tickers[etf.ticker]);
-    md += NL + `**${etf.ticker}** — ${INV_STATE_META[c.state].label}${c.state === 'spike' ? ' (esperar giro, no entrar aún)' : ''}`;
+    md += NL + `**${etf.ticker}** — ${INV_STATE_META[c.state].label}${c.state === 'spike' ? (etf.rule === 'vix_level' ? ' (esperar giro, no entrar aún)' : ' (giro no validado para este ETF: decisión discrecional)') : ''}`;
     if (!r || r.error) { md += ': sin estructuras generadas.' + NL; return; }
     md += ` · ${r.live ? `cadena IBKR ${r.data_type} ${(r.collected_at || '').slice(11, 16)} ET` : `cadena guardada ${r.chain_date}`}, spot ${r.spot}, EV medido sobre ${r.primary_basis === 'signal' ? 'días con señal' : 'historial completo (señal sin calibrar)'}` + NL;
     (r.notes || []).forEach(n => { md += `- ⚠ ${n}` + NL; });
