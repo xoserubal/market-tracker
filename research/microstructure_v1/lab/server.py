@@ -26,6 +26,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 from micro import aggressor, calendar, config, episode, footprint, runtime  # noqa: E402
+from micro import drilldown, event_catalog, event_store, intraday_features, sessions, test_guard  # noqa: E402
 from micro.library import LABELS, Library, in_test_period, ts_iso  # noqa: E402
 
 LIMITATIONS = [
@@ -63,13 +64,15 @@ def _avail_mb() -> float:
         return float("inf")
 
 
-def estimate_peak_mb(symbol: str, day: str) -> float:
-    s = episode.sizes(symbol, day)
-    return (s["trades"]["rows"] * 260 + s["quotes"]["rows"] * 120) / 1e6
+def estimate_peak_mb(symbol: str, day: str, window=None) -> float:
+    """Pico estimado: solo las unidades que tocan la ventana (si se da)."""
+    rows = {k: episode._overlapping(episode.units_for(symbol, day, k), day, window) for k in ("trades", "quotes")}
+    n = {k: sum(int(r["rows"] or 0) for r in v) for k, v in rows.items()}
+    return (n["trades"] * 260 + n["quotes"] * 120) / 1e6
 
 
-def ensure_memory(symbol: str, day: str):
-    need = estimate_peak_mb(symbol, day)
+def ensure_memory(symbol: str, day: str, window=None):
+    need = estimate_peak_mb(symbol, day, window) if window is not None else estimate_peak_mb(symbol, day)
     if _avail_mb() - need >= RESERVE_MB:
         return need
     with _cache_lock:
@@ -84,8 +87,8 @@ def ensure_memory(symbol: str, day: str):
     return need
 
 
-def classified(symbol: str, day: str, opts: dict):
-    key = (symbol, day, tuple(sorted(opts.items())))
+def classified(symbol: str, day: str, opts: dict, window=None):
+    key = (symbol, day, tuple(sorted(opts.items())), tuple(str(x) for x in window) if window else None)
     with _cache_lock:
         if key in _cache:
             _cache.move_to_end(key)
@@ -94,15 +97,17 @@ def classified(symbol: str, day: str, opts: dict):
         with _cache_lock:
             if key in _cache:
                 return _cache[key]
-        ensure_memory(symbol, day)
-        return _load_classified(symbol, day, opts, key)
+        ensure_memory(symbol, day, window)
+        return _load_classified(symbol, day, opts, key, window)
 
 
-def _load_classified(symbol, day, opts, key):
-    tr, tcov = episode.load_trades(symbol, day)
+def _load_classified(symbol, day, opts, key, window=None):
+    # con ventana: solo las unidades que la tocan (más un margen para la secuencia del tick y la quote anterior)
+    w = (window[0] - pd.Timedelta(minutes=5), window[1]) if window else None
+    tr, tcov = episode.load_trades(symbol, day, window=w)
     if tr.empty:
         return None
-    q, qcov = episode.load_quotes(symbol, day)
+    q, qcov = episode.load_quotes(symbol, day, window=w)
     c = aggressor.classify(tr, q if len(q) else None, qcov, **opts)
     val = {"tr": c, "trade_cov": tcov, "quote_cov": qcov, "n_quotes": int(len(q))}
     with _cache_lock:
@@ -127,10 +132,34 @@ def _opts(q):
             "ref_exclude_nonbar": q.get("ref_exclude_nonbar") == "1"}
 
 
+class TestLockError(RuntimeError):
+    pass
+
+
+def guard(q, symbol="*", endpoint=""):
+    """Bloqueo por defecto del periodo reservado de G2A. Con allow_test=1 se permite y queda anotado."""
+    day = q.get("day", "")
+    if day and test_guard.reserved(day):
+        if q.get("allow_test") != "1":
+            raise TestLockError(f"{day} está dentro del periodo reservado de G2A ({test_guard.RESERVED_START} a "
+                                f"{test_guard.RESERVED_END}). Bloqueado por defecto; añade allow_test=1 si de verdad "
+                                f"hace falta (queda anotado en el registro de exposiciones).")
+        test_guard.check([day], symbol=symbol, purpose=f"laboratorio: {endpoint}", script="lab/server.py", allow=True)
+
+
+def _blind_cursor(q):
+    day = q["day"]
+    return parse_ny(day, q.get("cursor")) if (q.get("blind") == "1" and q.get("cursor")) else None
+
+
 def api_footprint(q):
     sym, day = q["symbol"].upper(), q["day"]
+    guard(q, sym, "footprint")
+    win = None
+    if q.get("start") and q.get("end"):
+        win = (parse_ny(day, q["start"]), parse_ny(day, q["end"]))
     try:
-        val = classified(sym, day, _opts(q))
+        val = classified(sym, day, _opts(q), win)
     except MemoryGuardError as e:
         return {"error": str(e), "memory_guard": True}
     if val is None:
@@ -207,6 +236,7 @@ def api_estimate(q):
 
 def api_fetch(body):
     sym, day = body["symbol"].upper(), body["day"]
+    guard({"day": day, "allow_test": "1" if body.get("allow_test") else "0"}, sym, "fetch")
     if not calendar.is_trading_day(day):
         return {"error": "no es sesión de mercado"}
     ranges = body.get("quote_ranges", [])
@@ -222,6 +252,7 @@ def api_fetch(body):
 
 def api_episode_create(body):
     sym, day = body["symbol"].upper(), body["day"]
+    guard({"day": day, "allow_test": "1" if body.get("allow_test") else "0"}, sym, "episode")
     q = {**body.get("view", {}), "symbol": sym, "day": day}
     try:
         val = classified(sym, day, _opts(q))
@@ -260,12 +291,125 @@ def api_episode_create(body):
     return {"episode_id": eid}
 
 
+# ── eventos intradía (E1) ──
+def _rows(df):
+    if df is None or not len(df):
+        return []
+    df = df.copy()
+    for c in df.columns:
+        if df[c].dtype == object or pd.api.types.is_string_dtype(df[c]):     # pandas 3: texto de parquet = str
+            df[c] = event_store.load_json(df[c])
+    return df.to_dict("records")
+
+
+def api_event_days(q):
+    out = []
+    for d in event_store.days("measures"):
+        if test_guard.reserved(d):
+            continue
+        eps = event_store.read("episodes", d)
+        sds = event_store.read("symbol_days", d)
+        out.append({"day": d, "symbols": int(sds["symbol"].nunique()) if len(sds) else 0,
+                    "episodes": int(len(eps)), "passes": sorted(set(sds["pass"])) if len(sds) else []})
+    return {"days": out}
+
+
+def api_events(q):
+    """Episodios y alertas de un día (opcionalmente de un valor). En modo ciego solo lo detectable antes del cursor."""
+    day = q["day"]
+    guard(q, q.get("symbol", "*"), "events")
+    eps, al = event_store.read("episodes", day), event_store.read("alerts", day)
+    if q.get("symbol"):
+        sym = q["symbol"].upper()
+        eps = eps[eps["symbol"] == sym] if len(eps) else eps
+        al = al[al["symbol"] == sym] if len(al) else al
+    cur = _blind_cursor(q)
+    if cur is not None and len(al):
+        al = al[pd.to_datetime(al["t_detectable_utc"]) <= cur]
+        eps = eps[eps["episode_id"].isin(set(al["episode_id"]))] if len(eps) else eps
+    sds = event_store.read("symbol_days", day)
+    return {"day": day, "episodes": _rows(eps), "alerts": _rows(al),
+            "symbol_days": _rows(sds[sds["symbol"] == q["symbol"].upper()]) if q.get("symbol") and len(sds) else [],
+            "statuses": event_catalog.STATUSES, "thresholds": event_catalog.THRESHOLDS,
+            "catalog": [{"code": e.code, "family": e.family, "name": e.name, "source": e.source}
+                        for e in event_catalog.CATALOG], "planned": event_catalog.PLANNED,
+            "catalog_version": event_catalog.CATALOG_VERSION, "detector_version": event_catalog.DETECTOR_VERSION,
+            "blind_cursor": ts_iso(cur) if cur is not None else None}
+
+
+def api_bars(q):
+    """Barras de 1 minuto del día (todos los tramos) + marcas de anomalías. Modo ciego: nada posterior al cursor."""
+    sym, day = q["symbol"].upper(), q["day"]
+    guard(q, sym, "bars")
+    bars = intraday_features.load_bars(sym, [day])
+    if not len(bars):
+        return {"error": "sin barras de 1 minuto para ese valor y día", "bars": []}
+    b = sessions.bounds(day)
+    cur = _blind_cursor(q)
+    if cur is not None:
+        bars = bars[bars["t"] + pd.Timedelta(minutes=1) <= cur]
+    slots = sessions.slots_of(bars["t"], b)
+    seg = [sessions.bar_segment(int(x), b) for x in slots]
+    al = event_store.read("alerts", day)
+    al = al[al["symbol"] == sym] if len(al) else al
+    if cur is not None and len(al):
+        al = al[pd.to_datetime(al["t_detectable_utc"]) <= cur]
+    marks = [{"t_start": a["t_start_utc"], "t_detectable": a["t_detectable_utc"], "t_end": a["t_end_utc"],
+              "code": a["code"], "family": a["family"], "measure": a["measure"], "status": a["status"],
+              "direction": a["direction"], "episode_id": a.get("episode_id")} for a in _rows(al)]
+    Library.log_access({"symbol": sym, "day": day, "cursor": ts_iso(cur) if cur is not None else None,
+                        "blind": cur is not None, "max_t_returned": ts_iso(bars["t"].max()) if len(bars) else None,
+                        "endpoint": "bars", "viewer": "lab-v2"})
+    return {"symbol": sym, "day": day, "blind": cur is not None, "cursor": ts_iso(cur) if cur is not None else None,
+            "open": ts_iso(b["open"]), "close": ts_iso(b["close"]), "early_close": b["early_close"],
+            "bars": [{"t": int(t.value // 1_000_000), "o": o, "h": h, "l": lo, "c": c, "v": v, "seg": sg}
+                     for t, o, h, lo, c, v, sg in zip(bars["t"], bars["o"], bars["h"], bars["l"], bars["c"],
+                                                      bars["v"], seg)],
+            "marks": marks, "units": sorted(set(bars["_unit"]))}
+
+
+def api_profile(q):
+    """Perfil de volumen de una ventana con trades (bajo demanda). Modo ciego respetado."""
+    sym, day = q["symbol"].upper(), q["day"]
+    guard(q, sym, "profile")
+    a, z = parse_ny(day, q.get("start") or "09:30"), parse_ny(day, q.get("end") or "16:00")
+    cur = _blind_cursor(q)
+    if cur is not None:
+        z = min(z, cur)
+    tr, _ = episode.load_trades(sym, day, window=(a, z), dedupe_ids=True)
+    if tr.empty:
+        return {"error": "sin trades descargados en esa ventana (usa la descarga o ev_drilldown.py)", "need_fetch": True}
+    tr["_seg"] = sessions.classify_trades(tr, day).astype(str).to_numpy()
+    pr = drilldown.profile(tr, float(q["step"]) if q.get("step") not in (None, "", "auto") else None)
+    levels = pr.pop("profile", [])
+    return {"symbol": sym, "day": day, "window": [ts_iso(a), ts_iso(z)], "profile_levels": levels, **pr}
+
+
+def api_provenance(q):
+    """Datos y versiones de cálculo de un valor y día (y del desglose del episodio, si existe)."""
+    sym, day = q["symbol"].upper(), q["day"]
+    guard(q, sym, "provenance")
+    sds = event_store.read("symbol_days", day)
+    sd = _rows(sds[sds["symbol"] == sym]) if len(sds) else []
+    dd = None
+    if q.get("episode"):
+        p = event_store.root() / "drilldowns" / f"{q['episode']}.json"
+        if p.exists():
+            d = json.loads(p.read_text(encoding="utf-8"))
+            dd = {k: d.get(k) for k in ("window_ny", "fetch", "rechecks", "statuses", "data_units", "code_version",
+                                        "catalog_version", "detector_version", "trades_loaded", "quotes_loaded",
+                                        "day_shares", "aggressor", "profile", "late_reports")}
+    return {"symbol_day": sd, "drilldown": dd, "code_version_now": config.code_version()}
+
+
 ROUTES_GET = {"/api/footprint": api_footprint, "/api/available": api_available, "/api/estimate": api_estimate,
               "/api/labels": lambda q: {"labels": LABELS},
               "/api/jobs": lambda q: {"jobs": _jobs},
               "/api/library/episodes": lambda q: {"episodes": LIB.episodes(q.get("symbol"), q.get("day"))},
               "/api/library/annotations": lambda q: {"annotations": LIB.annotations(q.get("episode_id"))},
-              "/api/library/contamination": lambda q: {"test_period_accessed": LIB.contaminated_test_dates()}}
+              "/api/library/contamination": lambda q: {"test_period_accessed": LIB.contaminated_test_dates()},
+              "/api/events/days": api_event_days, "/api/events": api_events, "/api/bars": api_bars,
+              "/api/profile": api_profile, "/api/provenance": api_provenance}
 ROUTES_POST = {"/api/fetch": api_fetch, "/api/library/episode": api_episode_create,
                "/api/library/annotate": lambda b: {"annotation_id": LIB.annotate(b)}}
 STATIC = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css"}
@@ -288,6 +432,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
+        if u.path == "/favicon.ico":
+            return self._send(200, b"", "image/x-icon")
         if u.path in STATIC:
             f = HERE / STATIC[u.path]
             return self._send(200, f.read_bytes(), CTYPE[f.suffix])
@@ -297,6 +443,8 @@ class Handler(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             return self._send(200, _clean(fn(q)))
+        except TestLockError as e:
+            return self._send(200, {"error": str(e), "test_period_locked": True})
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()
             return self._send(400, {"error": f"{type(e).__name__}: {e}"})
@@ -309,6 +457,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
             return self._send(200, _clean(fn(body)))
+        except TestLockError as e:
+            return self._send(200, {"error": str(e), "test_period_locked": True})
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()
             return self._send(400, {"error": f"{type(e).__name__}: {e}"})

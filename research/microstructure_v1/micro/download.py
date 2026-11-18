@@ -54,7 +54,14 @@ def unit_key(provider: str, kind: str, symbol: str, asof, period: str, cfg: dict
 
 def _window(kind: str, period: str, cfg: dict):
     if kind == "bars" and cfg.get("window") == "session_full":
-        return calendar.session_bounds(period, "full")
+        s, e = calendar.session_bounds(period, "full")
+        if cfg.get("cap"):
+            e = min(e, pd.Timestamp(cfg["cap"]))
+        latest = pd.Timestamp(datetime.now(timezone.utc) - timedelta(minutes=16))
+        if e > latest:
+            # una unidad sin tope que aún no ha terminado quedaría registrada como completa: se exige el tope
+            raise ValueError(f"sesión {period} sin cerrar (fin {e}); pasa un 'cap' explícito")
+        return s, e
     if kind == "bars":
         start = pd.Timestamp(period + "-01", tz="UTC")
         end = start + pd.offsets.MonthBegin(1)
@@ -82,9 +89,9 @@ def download_unit(provider, kind: str, symbol: str, period: str, *, asof=None, c
     storage.disk_guard((expected_rows or 0) * EST_BYTES_PER_ROW[kind] * 2)
     meta = {"provider": provider.name, "kind": kind, "symbol": symbol, "asof": asof or "-", "period": period,
             "config_hash": config_hash(cfg), "config": cfg, "code_version": config.code_version()}
+    start, end = _window(kind, period, cfg)        # antes de abrir la unidad: un error aquí no deja nada "en curso"
     manifest.start(key, meta)
     stats = FetchStats()
-    start, end = _window(kind, period, cfg)
     try:
         frames = []
         for page in provider.fetch_pages(kind, symbol, calendar.iso(start), calendar.iso(end), asof=asof,

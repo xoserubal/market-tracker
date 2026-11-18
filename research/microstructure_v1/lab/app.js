@@ -68,8 +68,157 @@ if (typeof document !== 'undefined') (function () {
       const plotW = $('fp').width - view.left - 130;
       view.barW = Math.max(14, Math.min(160, plotW / Math.max(1, d.bars.length)));
       renderMeta(); draw(); renderMethods(); renderCompare(); loadLibrary();
-    } finally { $('load').disabled = false; }
+    } finally { $('load').disabled = false; afterLoad(); }
   }
+
+  // ── eventos intradía (E1) ──
+  let EV = { episode: null, bars: null, events: null };
+  const FAM_COLOR = { D: '#1f5fa8', V: '#7b4fbf', I: '#c26b00', N: '#2e7d6b', C: '#b0306a', PM: '#5a6b85', P: '#2f8f3a' };
+  const STATUS = { candidate_bars: 'candidata (barras)', characterized_trades: 'caracterizada (trades)',
+    enriched_quotes: 'enriquecida (quotes)', indeterminate: 'indeterminada', artifact: 'artefacto' };
+  const nyHM = (iso) => iso ? Layout.nyTime(Date.parse(iso)).slice(0, 5) : '—';
+  const nyHMS = (iso) => iso ? Layout.nyTime(Date.parse(iso)) : '';
+  const fmtN = (x, d = 2) => (x == null || Number.isNaN(x)) ? '—' : Number(x).toFixed(d);
+  function lockBanner(d) {
+    if (d && d.test_period_locked) $('banner').innerHTML = `<div class="warn">${d.error}</div>`;
+    return d && d.test_period_locked;
+  }
+  function syncUrl() {
+    const p = params(); const q = { symbol: p.symbol, day: p.day, start: p.start, end: p.end, tf: p.tf, session: p.session,
+      method: p.method, blind: p.blind === '1' ? '1' : '', cursor: p.blind === '1' ? p.cursor : '', episode: EV.episode || '' };
+    history.replaceState(null, '', '?' + qs(q));
+  }
+  async function afterLoad() { syncUrl(); await Promise.all([loadBars(), loadEvents(), loadProv()]); }
+
+  async function loadBars() {
+    const p = params();
+    const d = await get('/api/bars', { symbol: p.symbol, day: p.day, blind: p.blind, cursor: p.cursor });
+    if (lockBanner(d)) { EV.bars = null; drawPV(); return; }
+    EV.bars = d.error ? null : d; drawPV();
+  }
+  function drawPV() {
+    const cv = $('pv'), ctx = cv.getContext('2d'); cv.width = cv.clientWidth; ctx.clearRect(0, 0, cv.width, cv.height);
+    const d = EV.bars; ctx.font = '11px system-ui'; ctx.fillStyle = '#6b7385';
+    if (!d || !d.bars.length) { ctx.fillText('Sin barras de 1 minuto para este valor y día (escanéalo con ev_scan.py).', 12, 20); return; }
+    const L = 48, R = cv.width - 8, T = 18, H = cv.height, PH = Math.round(H * 0.66), VB = H - 16;
+    const t0 = d.bars[0].t, t1 = d.bars[d.bars.length - 1].t + 60000;
+    const x = (t) => L + (R - L) * (t - t0) / Math.max(1, t1 - t0);
+    let lo = Infinity, hi = -Infinity, vmax = 1;
+    for (const b of d.bars) { lo = Math.min(lo, b.l); hi = Math.max(hi, b.h); if (b.seg === 'continuous') vmax = Math.max(vmax, b.v); }
+    if (vmax <= 1) for (const b of d.bars) vmax = Math.max(vmax, b.v);   // sin negociación continua visible (modo ciego)
+    const y = (p) => T + (PH - T) * (hi - p) / Math.max(1e-9, hi - lo);
+    // tramos
+    for (const b of d.bars) {
+      if (b.seg === 'pre' || b.seg === 'post') { ctx.fillStyle = 'rgba(120,130,150,0.08)'; ctx.fillRect(x(b.t), T, Math.max(1, x(b.t + 60000) - x(b.t)), VB - T); }
+    }
+    // ventana elegida
+    const p = params(); const ws = Date.parse(`${p.day}T00:00:00Z`);
+    // volumen (las barras mixtas pueden ser enormes: se recortan y se marcan)
+    for (const b of d.bars) {
+      const h = Math.min(1, b.v / vmax) * (VB - PH - 8);
+      ctx.fillStyle = (b.seg === 'open_mixed' || b.seg === 'close_mixed') ? '#7b4fbf' : (b.seg === 'continuous' ? '#9aa9c2' : '#c3c9d4');
+      ctx.fillRect(x(b.t), VB - h, Math.max(1, x(b.t + 60000) - x(b.t) - 0.5), h);
+      if (b.v > vmax) { ctx.fillStyle = '#7b4fbf'; ctx.fillText(Layout.fmtVol(b.v), x(b.t) + 2, VB - h - 2); }
+    }
+    // precio
+    ctx.strokeStyle = '#1d2330'; ctx.lineWidth = 1; ctx.beginPath();
+    d.bars.forEach((b, i) => { const xx = x(b.t + 30000); if (i === 0) ctx.moveTo(xx, y(b.c)); else ctx.lineTo(xx, y(b.c)); }); ctx.stroke();
+    ctx.fillStyle = '#6b7385'; ctx.textAlign = 'right'; ctx.fillText(fmtN(hi), L - 4, T + 4); ctx.fillText(fmtN(lo), L - 4, PH);
+    ctx.textAlign = 'left';
+    for (const tt of [d.open, d.close]) { const xx = x(Date.parse(tt)); ctx.strokeStyle = '#c3c9d4'; ctx.beginPath(); ctx.moveTo(xx, T); ctx.lineTo(xx, VB); ctx.stroke(); }
+    // anomalías
+    let row = 0;
+    for (const m of d.marks) {
+      const c = FAM_COLOR[m.family] || '#333'; const xs = x(Date.parse(m.t_start)), xe = x(Date.parse(m.t_end)), xd = x(Date.parse(m.t_detectable));
+      const yy = T + 4 + (row++ % 6) * 7;
+      ctx.strokeStyle = c; ctx.globalAlpha = m.status === 'artifact' ? 0.35 : 1; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(xs, yy); ctx.lineTo(Math.max(xe, xs + 2), yy); ctx.stroke();
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(xd, yy + 2); ctx.lineTo(xd - 4, yy + 9); ctx.lineTo(xd + 4, yy + 9); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    const codes = [...new Set(d.marks.map((m) => m.code))];
+    ctx.fillStyle = '#1d2330'; ctx.fillText(codes.length ? 'Códigos: ' + codes.join(' · ') : 'Sin anomalías registradas', L, H - 3);
+    if (d.blind && d.cursor) { const xc = x(Date.parse(d.cursor)); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xc, T); ctx.lineTo(xc, VB); ctx.stroke(); }
+    // eje temporal
+    ctx.fillStyle = '#6b7385'; ctx.textAlign = 'center';
+    for (let t = Math.ceil(t0 / 3600000) * 3600000; t < t1; t += 3600000) ctx.fillText(Layout.nyTime(t).slice(0, 5), x(t), H - 3 - 12);
+    ctx.textAlign = 'left';
+  }
+
+  async function loadDays() {
+    const d = await get('/api/events/days');
+    const cur = $('day').value;
+    $('evday').innerHTML = (d.days || []).slice().reverse().map((x) => `<option value="${x.day}"${x.day === cur ? ' selected' : ''}>${x.day} · ${x.symbols} valores · ${x.episodes} episodios</option>`).join('');
+  }
+  async function loadEvents() {
+    const p = params(); const day = $('evall').checked ? ($('evday').value || p.day) : p.day;
+    const q = { day, blind: p.blind, cursor: p.blind === '1' && day === p.day ? p.cursor : '' };
+    if (!$('evall').checked) q.symbol = p.symbol;
+    const d = await get('/api/events', q);
+    if (lockBanner(d)) { $('events').textContent = '—'; return; }
+    EV.events = d;
+    $('evmeta').textContent = `${d.catalog_version} · ${d.detector_version} · umbrales: percentil ≥ ${d.thresholds.pct_hi} o z ≥ ${d.thresholds.z_hi} (${d.thresholds.status})` + (d.blind_cursor ? ` · modo ciego hasta ${nyHMS(d.blind_cursor)} NY` : '');
+    const eps = (d.episodes || []).slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    if (!eps.length) { $('events').innerHTML = '<p class="muted">Sin episodios registrados.</p>'; $('alerts').innerHTML = ''; return; }
+    let h = '<table><tr><th>Valor</th><th>Ventana NY</th><th>Detectable</th><th>Códigos</th><th>Alertas</th><th>Estado</th><th></th></tr>';
+    for (const e of eps) {
+      h += `<tr${e.episode_id === EV.episode ? ' class="cur"' : ''}><td><b>${e.symbol}</b></td><td>${nyHM(e.t_start_utc)}–${nyHM(e.t_end_utc)}</td><td>${nyHM(e.t_detectable_utc)}</td>` +
+        `<td>${(e.codes || []).join(' ')}</td><td>${e.n_alerts}</td><td><span class="st ${e.status}">${STATUS[e.status] || e.status}</span></td>` +
+        `<td><button data-ep="${e.episode_id}" data-day="${e.day}">abrir</button></td></tr>`;
+    }
+    $('events').innerHTML = h + '</table>';
+    $('events').querySelectorAll('button[data-ep]').forEach((btn) => { btn.onclick = () => openEpisode(btn.dataset.day, btn.dataset.ep); });
+    renderAlerts();
+  }
+  function renderAlerts() {
+    const d = EV.events; if (!d) return; const p = params();
+    const al = (d.alerts || []).filter((a) => (EV.episode ? a.episode_id === EV.episode : a.symbol === p.symbol)).sort((a, b) => Date.parse(a.t_detectable_utc) - Date.parse(b.t_detectable_utc));
+    if (!al.length) { $('alerts').innerHTML = ''; return; }
+    let h = `<h4>Alertas ${EV.episode ? 'del episodio' : 'de ' + p.symbol}</h4><table><tr><th>Código</th><th>Medida</th><th>Tramo</th><th>Inicio</th><th>Detectable</th><th>Fin</th><th>Valor</th><th>Pctl.</th><th>z</th><th>n</th><th>Estado</th></tr>`;
+    for (const a of al) {
+      h += `<tr><td>${a.code}</td><td>${a.measure}${a.direction === -1 ? ' (−)' : ''}${a.estimated ? ' <span class="tag">estimada</span>' : ''}</td><td>${a.segment}</td><td>${nyHM(a.t_start_utc)}</td><td>${nyHM(a.t_detectable_utc)}</td><td>${nyHM(a.t_end_utc)}</td>` +
+        `<td>${fmtN(a.peak_value, 3)}</td><td>${fmtN(a.pct, 1)}</td><td>${fmtN(a.z, 1)}</td><td>${a.n}</td><td><span class="st ${a.status}" title="${a.status_note || ''}">${STATUS[a.status] || a.status}</span></td></tr>`;
+    }
+    $('alerts').innerHTML = h + '</table>';
+  }
+  async function openEpisode(day, eid) {
+    const d = await get('/api/events', { day });
+    const ep = (d.episodes || []).find((e) => e.episode_id === eid); if (!ep) return;
+    EV.episode = eid;
+    const u = new URL(ep.lab_url);
+    for (const k of ['symbol', 'day', 'start', 'end', 'tf', 'session']) if (u.searchParams.get(k)) $(k).value = u.searchParams.get(k);
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    if (day < today) { $('blind').checked = true; $('cursor').value = nyHMS(ep.t_detectable_utc); }  // histórico: ciego por defecto
+    load();
+  }
+  async function loadProv() {
+    const p = params(); const d = await get('/api/provenance', { symbol: p.symbol, day: p.day, episode: EV.episode || '' });
+    if (lockBanner(d)) { $('prov').textContent = '—'; return; }
+    const sd = (d.symbol_day || [])[0]; let h = '';
+    if (sd) {
+      const bd = sd.baseline_days || [];
+      h += `<p>Línea base: <b>${sd.baseline_n}</b> sesiones${sd.baseline_short ? ' <span class="st indeterminate">corta</span>' : ''} (${bd[0] || '—'} a ${bd[bd.length - 1] || '—'}). ${sd.baseline_rule || ''}</p>` +
+        `<p>Pasada: ${sd.pass} · after hours calculado: ${sd.post_computed ? 'sí' : 'no'} · cierre anticipado: ${sd.early_close ? 'sí' : 'no'} · sector: ${sd.sector || '—'} (${sd.sector_etf || '—'}) · operaciones/min (mediana): ${fmtN(sd.median_trades_per_minute, 0)}</p>` +
+        `<p>Versiones: catálogo ${sd.catalog_version} · detector ${sd.detector_version} · código ${sd.code_version} (ahora ${d.code_version_now}) · unidades de barras de la línea base: ${(sd.baseline_units || []).length}</p>`;
+    } else h += '<p class="muted">Este valor y día no está escaneado.</p>';
+    const dd = d.drilldown;
+    if (dd) {
+      h += `<p><b>Desglose</b> (${dd.window_ny} NY): ${dd.trades_loaded.toLocaleString('es-ES')} trades, ${dd.quotes_loaded.toLocaleString('es-ES')} quotes, ${(dd.data_units || []).length} unidades, ${dd.fetch && dd.fetch.requests || 0} peticiones.</p>`;
+      if (dd.day_shares && dd.day_shares.computed) { const c = dd.day_shares.close_auction; h += `<p>Subasta de cierre: ${(c.vs_continuous * 100).toFixed(1)} % del volumen continuo · ${(c.vs_regular_with_auctions * 100).toFixed(1)} % de la sesión regular con subastas.</p>`; }
+      h += '<ul>' + (dd.rechecks || []).filter((r) => r.checked).map((r) => `<li>${r.measure}: ${r.trade_return_pct}% con trades → ${STATUS[r.new_status] || r.new_status}${r.why ? ' — ' + r.why : ''}</li>`).join('') + '</ul>';
+    }
+    $('prov').innerHTML = h;
+  }
+  $('profbtn').onclick = async () => {
+    const p = params(); const d = await get('/api/profile', { symbol: p.symbol, day: p.day, start: p.start, end: p.end, blind: p.blind, cursor: p.cursor, step: p.step });
+    if (lockBanner(d)) return;
+    if (d.error) { $('profile').textContent = d.error; return; }
+    const va = d.value_area || {}; const pr = (d.profile_levels || []);
+    $('profile').innerHTML = `<p>POC ${fmtN(va.poc)} · área de valor 70 % ${fmtN(va.val)}–${fmtN(va.vah)} · ${d.levels} niveles de ${d.step} $ · nivel más negociado ${(d.top_level_share * 100).toFixed(1)} % (±1 nivel ${(d.poc_pm1_share * 100).toFixed(1)} %)</p>` +
+      (pr.length ? '<table>' + pr.slice().sort((a, b) => b.level - a.level).map((r) => { const w = Math.round(220 * r.vol / Math.max(...pr.map((x) => x.vol))); const cls = Math.abs(r.level - va.poc) < 1e-9 ? 'poc' : (r.level >= va.val - 1e-9 && r.level <= va.vah + 1e-9 ? 'va' : ''); return `<tr><td>${fmtN(r.level)}</td><td style="text-align:left"><span class="profbar ${cls}" style="width:${w}px"></span> ${Layout.fmtVol(r.vol)}</td></tr>`; }).join('') + '</table>' : '');
+  };
+  $('evday').onchange = loadEvents; $('evall').onchange = loadEvents;
+  window.addEventListener('resize', drawPV);
 
   function renderMeta() {
     const q = DATA.quality, b = [];
@@ -333,5 +482,12 @@ if (typeof document !== 'undefined') (function () {
     const opts = Object.entries(LABELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
     $('ep_label').innerHTML = '<option value="">(sin propuesta)</option>' + opts; $('an_label').innerHTML = opts;
     draw();
+    // enlace directo: ?symbol=&day=&start=&end=&tf=&session=&method=&blind=&cursor=&episode=
+    const u = new URLSearchParams(location.search);
+    for (const k of ['symbol', 'day', 'start', 'end', 'tf', 'session', 'method', 'cursor']) if (u.get(k)) $(k).value = u.get(k);
+    if (u.get('blind') === '1') $('blind').checked = true;
+    await loadDays();
+    if (u.get('episode') && u.get('day')) { await openEpisode(u.get('day'), u.get('episode')); return; }
+    if (u.get('symbol') && u.get('day')) load(); else loadEvents();
   })();
 })();

@@ -6805,7 +6805,21 @@ Encargo V3 + autorización G1 (en el chat, no commiteados). Estudio aislado en `
     - Codifica escisiones como splits de la matriz y aplica splits por símbolo a otra empresa.
     - Las prolongaciones de tramos pueden servir precios de otro emisor (Arconic, Aptiv).
     - Ver enmienda 7; los splits se validan contra el precio antes de aplicarlos.
-  - **Captura en sombra:** desactivada (`shadow_config.json`).
+  - **Captura en sombra:** desactivada (`shadow_config.json`). Tiene un fallo latente (pide la sesión completa 20 min
+    tras el cierre regular): no activarla sin corregirlo; la línea de eventos la sustituye.
+- **Reorientación (2026-11-17): registro observacional de eventos intradía.** Propuesta `EVENTOS_PROPUESTA.md`, caso
+  PLTR 17-nov (`EVENTOS_FICHA_PLTR_2026-11-17.md`: el cierre regular fue normal; lo extremo fue el after hours; la
+  «vela» era la barra de volumen de la subasta de cierre).
+- **E1 implementado (2026-11-18), informe `E1_INFORME.md`:**
+  - Piezas: tramos (`micro/sessions.py`), medidas frente a la propia historia (`micro/intraday_features.py`),
+    catálogo `cat-v0` (`micro/event_catalog.py`), registro (`micro/event_store.py`), escaneo manual (`ev_scan.py`),
+    desglose con trades/quotes y fichas (`ev_drilldown.py`, `fichas/`), laboratorio con enlaces, panel de eventos,
+    gráfico con anomalías y modo ciego por defecto.
+  - Periodo reservado de G2A bloqueado por defecto (`micro/test_guard.py`), también en el laboratorio.
+  - Nada programado ni activado. Pendiente de aprobación: E2 (recuento retrospectivo 2016 a 2021-10, calibración de
+    umbrales; las referencias iniciales marcan el 14,5 % de las medidas).
+  - Hallazgos de datos: subastas duplicadas con el mismo identificador (`dedupe_ids` en `episode.load_trades`, solo
+    en eventos); las cuotas de subasta exigen trades (la barra de las 16:00 mezcla subasta y after hours).
 
 ## Roadmap de mejoras pendientes
 

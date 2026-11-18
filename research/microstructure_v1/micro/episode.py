@@ -73,13 +73,40 @@ def _dedupe_overlap(df: pd.DataFrame, keys: list) -> pd.DataFrame:
     return df.drop_duplicates(keys, keep="first")
 
 
-def load_trades(symbol: str, day: str, manifest: Manifest = None):
-    rows = units_for(symbol, day, "trades", manifest)
+def _overlapping(rows: list, day: str, window):
+    """Solo las unidades cuya ventana se solapa con `window` (UTC). Sin ventana, todas."""
+    if window is None:
+        return rows
+    from .download import _window
+    a, z = window
+    return [r for r in rows if _window(r["kind"], day, r["config"])[0] < z and _window(r["kind"], day, r["config"])[1] > a]
+
+
+def _clip(df: pd.DataFrame, window):
+    if window is None or df.empty:
+        return df
+    return df[(df["t"] >= window[0]) & (df["t"] < window[1])]
+
+
+def load_trades(symbol: str, day: str, manifest: Manifest = None, window=None, dedupe_ids: bool = False):
+    """window=(inicio, fin) UTC: lee solo las unidades que la tocan y recorta (memoria acotada en días grandes).
+
+    dedupe_ids=True (línea de eventos, E1): quita además las repeticiones de una misma operación — mismo mercado,
+    identificador, precio, tamaño y condiciones — difundidas con milisegundos de diferencia (NVDA 2020-11-27: la
+    subasta de cierre aparece dos veces). Por defecto False para no cambiar la reproducibilidad de G1.5/G2A."""
+    rows = _overlapping(units_for(symbol, day, "trades", manifest), day, window)
     if not rows:
         return pd.DataFrame(), []
-    raw = _read([r["path"] for r in rows], TRADE_COLS)
+    cols = TRADE_COLS + (["i"] if dedupe_ids else [])
+    raw = _clip(_read([r["path"] for r in rows], cols), window)
     raw = _dedupe_overlap(raw, ["t", "x", "p", "s", "c", "z"]).sort_values("t", kind="stable").reset_index(drop=True)
+    removed = 0
+    if dedupe_ids:
+        dup = raw["i"].notna() & raw.duplicated(["x", "i", "p", "s", "c"], keep="first")
+        removed = int(dup.sum())
+        raw = raw[~dup].drop(columns=["i"]).reset_index(drop=True)
     tr = label_trades(raw, day)
+    tr.attrs["duplicate_ids_removed"] = removed
     return tr, coverage_windows(rows, day)
 
 
@@ -111,11 +138,11 @@ def label_trades(raw: pd.DataFrame, day: str) -> pd.DataFrame:
     return tr
 
 
-def load_quotes(symbol: str, day: str, manifest: Manifest = None):
-    rows = units_for(symbol, day, "quotes", manifest)
+def load_quotes(symbol: str, day: str, manifest: Manifest = None, window=None):
+    rows = _overlapping(units_for(symbol, day, "quotes", manifest), day, window)
     if not rows:
         return pd.DataFrame(), []
-    raw = _read([r["path"] for r in rows], QUOTE_COLS)
+    raw = _clip(_read([r["path"] for r in rows], QUOTE_COLS), window)
     raw = _dedupe_overlap(raw, ["t", "bp", "ap", "bs", "as", "bx", "ax"]).sort_values("t", kind="stable")
     q = pd.DataFrame({"t": raw["t"].to_numpy(), "bid": raw["bp"].astype("float64").to_numpy(),
                       "ask": raw["ap"].astype("float64").to_numpy(), "bid_size": raw["bs"].to_numpy(),
