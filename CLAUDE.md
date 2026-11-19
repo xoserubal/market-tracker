@@ -320,7 +320,7 @@ Gestionados en `docs/data/reminders.json`. El workflow los comprueba cada día y
 | 2026-11-12 | inverse_etf_estudio_primas | Lanzar `scripts/inverse_etf_premium_study.py --save` con ~20 sesiones de snapshots de cadenas (UVXY/SQQQ/GLL/BOIL): ¿el decay ya está en el precio?, curva de plazos, call spread vs pérdida máxima, spreads de GLL/BOIL |
 | 2026-12-11 | inverse_etf_estudio_primas_v2 | Segunda lectura del estudio de primas con ~40 sesiones (sustituye a la de 2026-11-12, que se lanzó el 13-nov; ver «Primera lectura del estudio de primas» en la sección de ETFs inversos) |
 | 2026-11-03 | sol_prompt_verificacion | Verificar en los primeros informes reales que el prompt de Sol del 2026-10-27 funciona (change_vs_prev, «QUÉ HA CAMBIADO HOY», mantener hipótesis sin rebajar por rutina, columna Vela) |
-| 2026-11-17 | rfl_toggle_sin_filtro_revision | Revisar la tasa de uso del toggle «Sin filtro» de Top 3 Flow In/Out de RFL (`state_ux_instrumentation.json`) tras ~9 semanas |
+| 2026-11-17 | rfl_toggle_sin_filtro_revision | Revisar la tasa de uso del toggle «Sin filtro» de Top 3 Flow In/Out de RFL (`state_ux_instrumentation.json`) tras ~9 semanas — ✅ revisado 2026-11-18: 0 clics en 10 semanas, se mantiene por decisión del usuario |
 | 2026-12-08 | sol_evaluacion_retroactiva_v2 | Repetir `research/llm_signal_eval_v1/eval.py` con más semanas y medir NEW/STRENGTHENED por separado |
 
 Para añadir un recordatorio: editar `docs/data/reminders.json` directamente (sin tocar código).
@@ -7479,8 +7479,11 @@ exactamente igual que antes de este análisis.
 
 ### Pendiente (explícito, sin fecha)
 
-Revisar el toggle "Sin filtro" cuando haya más semanas de datos limpios
-(sin la contaminación de la semana de implementación). Si en el futuro se
+~~Revisar el toggle "Sin filtro"~~ — **revisado 2026-11-18: se mantiene.**
+0 clics en 39 cargas de la página (10 semanas, 14-sep → 17-nov, solo el
+servidor local; la nube no se miró). Se propuso quitarlo de la UI y dejar el
+ranking crudo solo en el export a LLM; el usuario decidió dejarlo como está
+(no estorba). Tema cerrado. Si en el futuro se
 quisiera investigar más a fondo la inversión de Fase 4/5a con intención de
 actuar sobre ella, necesitaría su propio preregistro (dev/test, criterio de
 promoción) — no basta con este análisis descriptivo.
@@ -8689,6 +8692,56 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     - Ojo: en el estudio el VIX alto era su percentil 86 de 5 años, no el umbral fijo de 23.
 - El motor de Cava se clonó en `/home/user/cava-decision-engine`. `cava_test_1c.py` incluía el día t en la volatilidad
   posterior; el nuevo script mide desde t+1.
+
+**Flow Score negativo — diagnóstico y preregistro en borrador (2026-11-18, nada ejecutado).**
+- Diagnóstico: `wiki/DIAGNOSTICO_FLOW_NEGATIVO_V1.md`. Borrador sin firmar, en dos etapas (caracterización en
+  desarrollo + valor incremental frente a los retornos de 5/21 sesiones): `wiki/PREREGISTRO_FLOW_NEGATIVO_V1.md`.
+- Hallazgo de datos reutilizable: **Alpaca sirve precios de empresas desaparecidas** (40 de 40 salidas del S&P 600
+  en la muestra, frente a 23 de 40 en Yahoo).
+- Se puede reconstruir la composición en cada fecha del S&P 400 (cambios en Wikipedia desde 2012) y del S&P 600
+  (desde dic-2019). Con eso, el tamaño en cada fecha es el índice al que pertenece el valor.
+- Capitalización histórica: acciones en circulación de la SEC por fecha de presentación (las desaparecidas, vía
+  búsqueda por nombre en EDGAR).
+- **Etapa 0 hecha (2026-11-18), etapas 1-2 sin autorizar.**
+  - Código en `research/flow_negative_v1/` (`s0_*.py`). Informes: `ETAPA0_INFORME.md` y `EMPRESAS_DESAPARECIDAS.md`.
+    Preregistro v2 sin firmar: `wiki/PREREGISTRO_FLOW_NEGATIVO_V2.md`.
+  - Datos de Alpaca en `C:\Users\Usuario\market_data\flow_negative_v1` (`FLOWNEG_DATA_DIR`), porque D: no está
+    montada en DESPACHOB.
+- **Lo reutilizable para otros estudios:**
+  - Alpaca SIP empieza el 4-ene-2016, así que un Flow con Koncorde semanal completo solo existe desde el 29-dic-2017.
+  - Una petición de Alpaca puede traer varias empresas con el mismo ticker: usar todas las épocas de identidad, no
+    solo la última. Si no, se pierden los años previos a una quiebra (Chesapeake, Gulfport…).
+  - Alpaca solo da términos de fusión desde 2020. En los casos de 2020+, el último cierre se separa del precio pagado
+    un 0,05 % en efectivo y un 1-5 % en acciones.
+  - Las listas de Wikipedia fallan: S&P 400 2016-2020 (coherencia 87-94 %) y S&P 600 2019-2021 (listas de ~1 000
+    valores).
+  - Las acciones en circulación de la SEC traen errores de escala (miles por unidades): hay que filtrarlas.
+- Pendiente de tu decisión: periodos (A), S&P 400 (B) y S&P 600 2020 (C).
+- **Etapa 0 v3 (muestra por empresa, 2026-11-18):** informe en `research/flow_negative_v1/ETAPA0_V3_INFORME.md`.
+  - Unidad = empresa desde su primera pertenencia a un índice, hasta que deja de cotizar.
+  - Tamaño por capitalización en la fecha. 2 088 empresas, 3,47 M días.
+  - **Fallo grave:** el S&P 600 no tiene cambios en Wikipedia antes del 17-dic-2019, así que su composición de
+    2015-2019 es la de esa fecha copiada hacia atrás (602 fijos). Mete 542 supervivientes en 2018-2019: el 25 % de
+    los días con Flow negativo del desarrollo.
+  - Pendiente DECIDIR-D: contar el S&P 600 solo desde dic-2019, o reconstruirlo (y el S&P 400) con las carteras
+    trimestrales de los ETF en la SEC.
+  - Además, el filtro de capitalización sin mirar al futuro deja pasar errores de escala en ~20 empresas.
+  - Datos en LAWNMOWER: `D:\backup market tracker\flow_negative_v1` (`fn_config.py` usa D: si existe).
+- **Viabilidad de D2 y universo v4 (2026-11-19):** informe en `research/flow_negative_v1/D2_VIABILIDAD_Y_V4.md`.
+  - **Las carteras de los ETF sirven como composición del índice:**
+    - IJR, IJH, VIOO e IVOO en EDGAR, trimestrales desde 2014.
+    - Coinciden con el índice conocido en el 98-99 %, y los gestores entre sí en más del 99 %.
+    - Recogen el 98 % de las altas oficiales.
+  - **Límites:**
+    - Antes de 2019 traen solo el nombre: se enlaza por los nombres de la SEC (con los anteriores) y se verifica por
+      precio implícito (valor / acciones frente al cierre de Alpaca).
+    - Las ~260 empresas desaparecidas del S&P 600 de 2015-2019 no se buscan (decisión del usuario).
+  - **Opción 2 aplicada:** S&P 600 solo desde el 17-dic-2019; S&P 400 de 2015-2020 desde las carteras de IJH e IVOO
+    (`data/membership_etf_sp400.csv`); capitalización con la prueba de rotación en todas las presentaciones.
+    `s1_panel.py`/`s1_stats.py` con `FN_TAG=v4` (sin la etiqueta reproducen la v3).
+  - **Cortes de H1 de la v4** en `data/v4_h1_frozen_cuts.json`; los de la v3 están obsoletos.
+  - **Pendiente:** las pequeñas solo tienen 2020 como desarrollo. Decidir si se alarga su desarrollo antes de
+    escribir el preregistro v3.
 
 ---
 
