@@ -1,5 +1,9 @@
 # AI Picks Lab — Documentación del proyecto
 
+> **⚠ AVISO DE SESIÓN (2026-11-19):** si `hostname` devuelve LAWNMOWER, lo primero es recordarle al usuario todo lo
+> que hay en `wiki/PENDIENTE_LAWNMOWER.md` (firma del preregistro Flow negativo v3 y cabos sueltos). Cuando esté
+> resuelto, borrar ese archivo y este aviso.
+
 > **Convención:** Actualizar este archivo cada vez que se implemente una funcionalidad nueva, se cambie una decisión de diseño, o se añada una regla al sistema. Es la fuente de verdad para futuras sesiones con Claude.
 
 ---
@@ -8740,8 +8744,13 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     (`data/membership_etf_sp400.csv`); capitalización con la prueba de rotación en todas las presentaciones.
     `s1_panel.py`/`s1_stats.py` con `FN_TAG=v4` (sin la etiqueta reproducen la v3).
   - **Cortes de H1 de la v4** en `data/v4_h1_frozen_cuts.json`; los de la v3 están obsoletos.
-  - **Pendiente:** las pequeñas solo tienen 2020 como desarrollo. Decidir si se alarga su desarrollo antes de
-    escribir el preregistro v3.
+  - **Decidido 2026-11-19:** el desarrollo de las pequeñas (y, por confirmar, las micro) se alarga a 2018-2022, con
+    prueba desde 2023. Grandes, medianas y sin capitalización: desarrollo 2018-2020, prueba desde 2021.
+  - **Preregistro v3 en borrador, sin firmar:** `wiki/PREREGISTRO_FLOW_NEGATIVO_V3.md`. Talla por capitalización en t.
+    H1 con 3 veredictos (grande, mediana, pequeña). Etapa 1 en dos tandas: los días de 2021-2022 de las pequeñas no
+    se miran hasta congelar grandes y medianas. Quedan 4 puntos [CONFIRMAR] (§12.2).
+  - La firma se hace en LAWNMOWER, porque el panel v4 solo está en su D:. Antes hay que adaptar `fn_config.DEV_END`,
+    que hoy define los periodos por índice, a periodos por talla.
 
 ---
 
