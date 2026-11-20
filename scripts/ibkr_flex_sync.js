@@ -44,9 +44,9 @@ const SEND_REQUEST_URL = 'https://ndcdyn.interactivebrokers.com/AccountManagemen
 const GET_STATEMENT_URL = 'https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/GetStatement';
 const USER_AGENT = 'market-tracker/1.0 (personal portfolio sync)';
 // Un informe de 365 días tarda en generarse bastante más de 1 min (la primera
-// prueba real, 2026-10-03, seguía en 1019 tras ~70 s). 20 × 15 s ≈ 5 min, a
+// prueba real, 2026-10-03, seguía en 1019 tras ~70 s). 10 × 15 s ≈ 2,5 min por petición, a
 // 4 req/min — bien por debajo del límite de 10 req/min por token.
-const POLL_MAX_ATTEMPTS = 20;
+const POLL_MAX_ATTEMPTS = 10;
 const POLL_WAIT_MS = 15000;
 
 // ── Utilidades ──────────────────────────────────────────────────────────────
@@ -164,33 +164,73 @@ function parseFlexStatement(xml) {
 }
 
 // ── Llamadas al servicio ────────────────────────────────────────────────────
-async function httpGet(url) {
-  const r = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  const text = await r.text();
+// Sin límite, una conexión colgada dejaría la espera sin acotar aunque los
+// bucles de sondeo y de peticiones nuevas sí lo estén.
+const HTTP_TIMEOUT_MS = 30000;
+
+async function httpGet(url, timeoutMs = HTTP_TIMEOUT_MS) {
+  let r, text;
+  try {
+    r = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(timeoutMs) });
+    text = await r.text();
+  } catch (e) {
+    const err = new Error(e.name === 'TimeoutError'
+      ? `sin respuesta en ${timeoutMs / 1000} s de ${url.split('?')[0]}`
+      : `fallo de red en ${url.split('?')[0]}: ${e.message}`);
+    err.retryable = true;   // timeout o red: pedir un informe nuevo
+    throw err;
+  }
   if (!r.ok) throw new Error(`HTTP ${r.status} en ${url.split('?')[0]}`);
   return text;
 }
 
-async function downloadFlexReport(token, queryId, log = console.log) {
-  const sendXml = await httpGet(`${SEND_REQUEST_URL}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&v=3`);
+// Si un ReferenceCode se queda atascado en 1019 (pasó el 2026-11-20: 5 min sin
+// generarse, y una petición nueva justo después estuvo lista en 17 s), se pide
+// un informe nuevo en vez de seguir esperando el mismo.
+const FRESH_REQUESTS = 3;
+
+// Espera máxima con los valores por defecto: cada petición ≤ 30 + 3 + 10 × (30 + 15) = 483 s,
+// y en total ≤ 3 × 483 + 2 × 10 ≈ 24,5 min (en la práctica, cada llamada tarda < 2 s).
+async function downloadFlexReport(token, queryId, log = console.log, deps = {}) {
+  const wait = deps.wait || sleep;
+  let lastErr;
+  for (let r = 1; r <= FRESH_REQUESTS; r++) {
+    try {
+      return await downloadFlexReportOnce(token, queryId, log, deps);
+    } catch (e) {
+      lastErr = e;
+      if (!e.retryable || r === FRESH_REQUESTS) throw e;
+      log(`  el informe no salió (${e.message}); pido uno nuevo (${r + 1}/${FRESH_REQUESTS})…`);
+      await wait(10000);
+    }
+  }
+  throw lastErr;
+}
+
+async function downloadFlexReportOnce(token, queryId, log = console.log, deps = {}) {
+  const get = deps.get || httpGet;
+  const wait = deps.wait || sleep;
+  const sendXml = await get(`${SEND_REQUEST_URL}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(queryId)}&v=3`);
   const send = parseServiceResponse(sendXml);
   if (send.status !== 'Success' || !send.referenceCode) {
     throw new Error(`SendRequest falló: ${send.errorCode || '?'} ${send.errorMessage || sendXml.slice(0, 200)}`);
   }
   const baseUrl = send.url || GET_STATEMENT_URL;
-  await sleep(3000);
+  await wait(3000);
   for (let attempt = 1; attempt <= POLL_MAX_ATTEMPTS; attempt++) {
-    const xml = await httpGet(`${baseUrl}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(send.referenceCode)}&v=3`);
+    const xml = await get(`${baseUrl}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(send.referenceCode)}&v=3`);
     if (xml.includes('<FlexQueryResponse')) return xml;
     const resp = parseServiceResponse(xml);
     if (resp.errorCode === '1019' || resp.errorCode === '1018') {
       log(`  informe aún generándose (${resp.errorCode}), reintento ${attempt}/${POLL_MAX_ATTEMPTS}…`);
-      await sleep(POLL_WAIT_MS);
+      await wait(POLL_WAIT_MS);
       continue;
     }
     throw new Error(`GetStatement falló: ${resp.errorCode || '?'} ${resp.errorMessage || xml.slice(0, 200)}`);
   }
-  throw new Error('GetStatement: el informe no estuvo listo tras varios reintentos');
+  const err = new Error('GetStatement: el informe no estuvo listo tras varios reintentos');
+  err.retryable = true;
+  throw err;
 }
 
 // ── Persistencia ────────────────────────────────────────────────────────────
@@ -385,7 +425,8 @@ function isConfigured() {
 }
 
 let syncInFlight = null;
-async function syncIbkr({ log = console.log } = {}) {
+// `download` solo para tests (sustituye la descarga real).
+async function syncIbkr({ log = console.log, download = downloadFlexReport } = {}) {
   if (syncInFlight) return syncInFlight;   // nunca dos sincronizaciones a la vez (límite por token)
   syncInFlight = (async () => {
     const state = readState();
@@ -393,7 +434,7 @@ async function syncIbkr({ log = console.log } = {}) {
     try {
       if (!isConfigured()) throw new Error('Faltan IBKR_FLEX_TOKEN / IBKR_FLEX_QUERY_ID en .env');
       log('[ibkr] solicitando informe Flex…');
-      const xml = await downloadFlexReport(process.env.IBKR_FLEX_TOKEN, process.env.IBKR_FLEX_QUERY_ID, log);
+      const xml = await download(process.env.IBKR_FLEX_TOKEN, process.env.IBKR_FLEX_QUERY_ID, log);
       fs.mkdirSync(RAW_DIR, { recursive: true });
       const stamp = startedAt.slice(0, 16).replace(/[:T]/g, '-');
       fs.writeFileSync(path.join(RAW_DIR, `flex_${stamp}.xml`), xml);
@@ -435,7 +476,7 @@ function report() {
   latest.warnings.forEach(w => console.log('⚠ ' + w));
 }
 
-module.exports = { syncIbkr, readLatest, processXml, parseFlexStatement, parseServiceResponse, extractRows, buildLatest, normDate, maskAccount, isConfigured, FILES };
+module.exports = { syncIbkr, downloadFlexReport, httpGet, POLL_MAX_ATTEMPTS, POLL_WAIT_MS, FRESH_REQUESTS, HTTP_TIMEOUT_MS, readLatest, processXml, parseFlexStatement, parseServiceResponse, extractRows, buildLatest, normDate, maskAccount, isConfigured, FILES };
 
 if (require.main === module) {
   require('dotenv').config({ path: path.join(ROOT, '.env') });
