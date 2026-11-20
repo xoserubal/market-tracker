@@ -8750,7 +8750,15 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     `data/etapa1_tanda1_frozen.json`. Usarlo en todo el código de la etapa 1.
   - Hashes: `s3_freeze_v3.py --verify` contra `data/preregistro_v3_freeze.json`. El panel v4 está en el disco externo
     (D: en LAWNMOWER, E: en DESPACHOB): poner `FLOWNEG_DATA_DIR` si no es D:.
-  - **Etapa 1 sin autorizar todavía:** pedir permiso explícito antes de calcular ningún rendimiento posterior.
+  - **Etapa 1, tanda 1 hecha y congelada (2026-11-20):** `s4_etapa1.py --tanda 1`, informe
+    `research/flow_negative_v1/ETAPA1_TANDA1_INFORME.md`.
+    - Una celda pasa a la etapa 2: grandes, episodio Flow < −30, 20 sesiones, todos los regímenes (+2,05 pp sobre la
+      talla, t 2,70, n 739). Quedan 3 plazas para pequeñas/micro.
+    - M0/M1 de grandes y medianas congelados en `data/etapa1_tanda1_frozen.json`.
+    - Contrasplits no aplicados (CHK, HPR 2020, `E2_split_incoherente`) dan retornos de +21 600 %: solo
+      pequeñas/micro. Antes de la tanda 2 hay que decidir cómo tratar los días con evento en el plazo (propuesta:
+      resultado desconocido, fuera de la media de la talla).
+  - Tanda 2 y etapa 2: pedir autorización explícita antes de lanzarlas.
 
 ---
 
