@@ -30,7 +30,26 @@ import pandas as pd
 
 import fn_config as C
 
+import os
+
 SER = C.WORK / "series"
+SER_C1 = C.WORK / "series_c1"
+# Enmienda 1 (2026-11-20). Sin variables, reproduce la tanda 1 original sobre el panel v4.
+PANEL_TAG = os.environ.get("FN_PANEL", "v4")            # panel de entrada (p. ej. v4c1)
+OUT_SUFFIX = os.environ.get("FN_OUT", "")               # sufijo de salida (p. ej. c1): nunca toca los originales
+CORR = {x for x in os.environ.get("FN_CORR", "").split(",") if x}
+#   splits/identity: series corregidas; spinoffs: valor de las escindidas; jumps: saltos indeterminados = ausentes;
+#   terminals: fusiones valoradas con Alpaca; missing: §7, los resultados no observados fuera del principal
+#   missing_j (enmienda 2): §7 solo para saltos indeterminados y escisiones no reconstruibles; los desenlaces
+#   terminales desconocidos vuelven al preregistro §4.2 (último cierre en el principal, cotas 0 / último cierre)
+# Enmienda 2: con FN_FREEZE=1 la versión corregida se congela de verdad (etapa1_tanda{n}{sufijo}_frozen.json, sin
+# sobrescribir) y la tanda 2 corregida toma sus plazas de la tanda 1 corregida congelada.
+FREEZE_CORR = os.environ.get("FN_FREEZE") == "1"
+
+
+def tanda1_freeze_path():
+    return C.PUB / f"etapa1_tanda1{OUT_SUFFIX}_frozen.json" if OUT_SUFFIX else C.TANDA1_FREEZE
+
 HS = (5, 10, 20, 40)
 XS = (-10, -20, -30)
 Z_ABS = [(-5, 0, "Z0 [-5,0)"), (-10, -5, "Z1 [-10,-5)"), (-15, -10, "Z2 [-15,-10)"), (-20, -15, "Z3 [-20,-15)"),
@@ -54,7 +73,7 @@ def company_paths(km):
     def ser(k):
         if k not in cache:
             cache.clear() if len(cache) > 50 else None
-            cache[k] = pd.read_parquet(SER / f"{k}.parquet",
+            cache[k] = pd.read_parquet(series_path(k),
                                        columns=["date", "open_adj", "high_adj", "low_adj", "adj", "raw_close",
                                                 "flow", "flow_complete"]).set_index("date")
         return cache[k]
@@ -78,14 +97,38 @@ def company_paths(km):
         out[cid] = pd.DataFrame({"date": d.date.to_numpy(), "o": d.open_adj.to_numpy() * sc,
                                  "h": d.high_adj.to_numpy() * sc, "l": d.low_adj.to_numpy() * sc, "c": idx,
                                  "flow": d.flow.to_numpy(),
-                                 "fc": d.flow_complete.fillna(False).astype(bool).to_numpy()})
+                                 "fc": d.flow_complete.fillna(False).astype(bool).to_numpy(),
+                                 "raw": d.raw_close.to_numpy(), "k": d.k.to_numpy()})
     return out
+
+
+_CORR_KEYS = None
+
+
+def corr_keys():
+    """Claves cuya serie corregida corresponde a las familias activas (mismo criterio que s1_panel)."""
+    global _CORR_KEYS
+    if _CORR_KEYS is None:
+        _CORR_KEYS = set()
+        if CORR & {"splits", "identity"}:
+            ov = json.loads((C.PUB / "corr1_series_overlay.json").read_text(encoding="utf-8"))
+            for fam in ("splits", "identity"):
+                if fam in CORR:
+                    _CORR_KEYS |= set(ov[fam])
+            if "identity" in CORR:
+                _CORR_KEYS |= set(ov["new_keys"])
+    return _CORR_KEYS
+
+
+def series_path(k):
+    return (SER_C1 if k in corr_keys() else SER) / f"{k}.parquet"
 
 
 def terminal_by_company(companies, last_key):
     """Multiplicadores del valor terminal: (central, cota baja, cota alta, desconocido?) por empresa."""
     t = pd.read_csv(C.WORK / "terminal_events_v4_full.csv")
-    comp = pd.read_csv(C.WORK / "companies_v4.csv")
+    comp = pd.read_csv(C.WORK / f"companies_{PANEL_TAG}.csv")
+    merger_val = alpaca_merger_values(comp) if "terminals" in CORR else {}
     term = comp.set_index("key").terminated.astype(str).eq("True").to_dict()
     ev = t.set_index("key")
     out = {}
@@ -99,12 +142,55 @@ def terminal_by_company(companies, last_key):
             if st == "conocido" and e.last_close > 0:
                 m = float(e.terminal_value / e.last_close)
                 out[cid] = (m, m, m, False, cat)
+            elif k in merger_val and e.last_close > 0:
+                m = float(merger_val[k] / e.last_close)
+                out[cid] = (m, m, m, False, cat + "_alpaca")
             elif cat in TERM_UNKNOWN_ACQ and st != "terminos_incoherentes":
                 out[cid] = (1.0, float(np.exp(-0.05)), float(np.exp(0.05)), True, cat)
             else:                                     # quiebra, OTC, escisión, incoherentes, desconocido, ticker sin sucesor
                 out[cid] = (1.0, 0.0, 1.0, True, cat)
+        elif k.endswith("__pre") and k.startswith("FOXA"):
+            # 21st Century Fox: escisión de Fox Corp + compra mixta por Disney, valor no reconstruido (regla §4.2)
+            out[cid] = (1.0, float(np.exp(-0.05)), float(np.exp(0.05)), True, "adquisicion_mixta_21cf")
         else:
             out[cid] = (1.0, 0.0, 1.0, True, "sin_evento")
+    return out
+
+
+def alpaca_merger_values(comp):
+    """Valor por acción de las fusiones de Alpaca (2020+): efectivo + canje × cierre del comprador en la fecha
+    efectiva (o el último cierre anterior). Solo si el comprador tiene serie en el universo que cubre esa fecha."""
+    from s0_series import load_ca
+    raw = load_ca()["raw"]
+    syms = {k: set(str(r.symbols).split("|")) | {r.ticker} for k, r in comp.set_index("key").iterrows()}
+    span = comp.set_index("key")[["start", "end"]]
+    out = {}
+    for typ in ("cash_mergers", "stock_mergers", "stock_and_cash_mergers"):
+        for a in raw.get(typ, []):
+            acq, eff = a.get("acquiree_symbol"), a.get("effective_date")
+            cash = float(a.get("cash_rate") or a.get("rate") or 0) if typ != "stock_mergers" else 0.0
+            rate = float(a.get("acquirer_rate") or 0) / float(a.get("acquiree_rate") or 1)
+            buyer = a.get("acquirer_symbol") or ""
+            for k, ss in syms.items():
+                if acq not in ss or not (span.start[k] <= eff and abs((pd.Timestamp(span.end[k]) - pd.Timestamp(eff)).days) <= 10):
+                    continue
+                v = cash
+                if rate:
+                    if not buyer:
+                        continue
+                    px = None
+                    for kb, sb in syms.items():
+                        if buyer in sb and span.start[kb] <= eff <= span.end[kb]:
+                            sb_ = pd.read_parquet(series_path(kb), columns=["date", "raw_close"])
+                            sb_ = sb_[sb_.date <= eff]
+                            if len(sb_):
+                                px = float(sb_.raw_close.iat[-1])
+                                break
+                    if px is None:
+                        continue
+                    v += rate * px
+                if v > 0:
+                    out[k] = v
     return out
 
 
@@ -120,11 +206,77 @@ def spy_frame():
 
 
 # --------------------------------------------------------------------------------------------- resultados
-def outcomes(rows, paths, term):
+def corr_inputs(paths):
+    """Enmienda 1: por empresa, escisiones a reconstruir (spinoffs/identity) y saltos indeterminados (jumps)."""
+    spins, jumps = defaultdict(list), defaultdict(list)
+    sp = pd.read_csv(C.PUB / "corr1_spinoffs.csv", keep_default_na=False)
+    sp = sp[sp.family.isin(CORR & {"spinoffs", "identity"})]
+    jt = pd.read_csv(C.PUB / "corr1_jumps.csv")
+    jt = jt[(jt["class"] == "indeterminate") & jt.in_scope] if "jumps" in CORR else jt.iloc[0:0]
+    wanted = set(sp.parent_key) | set(jt.key)
+    key_pos = {}
+    for cid, P in paths.items():
+        m = np.isin(P.k.to_numpy(), list(wanted))
+        for i in np.where(m)[0]:
+            key_pos[(P.k.iat[i], P.date.iat[i])] = (cid, int(i))
+    fake = {}
+    if len(sp):
+        comp = pd.read_csv(C.WORK / f"companies_{PANEL_TAG}.csv").drop_duplicates("key").set_index("key")
+        ov = json.loads((C.PUB / "corr1_series_overlay.json").read_text(encoding="utf-8")) if CORR & {"splits", "identity"} else {}
+        for r in sp.itertuples():
+            k = r.parent_key
+            sl = None
+            for fam in ("identity", "splits"):
+                if fam in CORR and k in ov.get(fam, {}) and "splits_list" in ov[fam][k]:
+                    sl = ov[fam][k]["splits_list"]
+            if sl is None and k in comp.index:
+                sl = json.loads(comp.splits_list[k] or "[]")
+            # escisión que Alpaca aplicó como «split»: la serie ya la incorpora (reinversión aproximada)
+            fake[(k, r.ex_date)] = any(abs((pd.Timestamp(d) - pd.Timestamp(r.ex_date)).days) <= 3 and f > 1
+                                       for d, f in (sl or []))
+    if len(sp):
+        for r in sp.itertuples():
+            hit = key_pos.get((r.parent_key, r.ex_date))
+            if hit is None:
+                continue
+            cid, e = hit
+            P = paths[cid]
+            n = len(P)
+            if not r.child_key or r.ratio in ("", None) or (isinstance(r.ratio, float) and np.isnan(r.ratio)):
+                spins[cid].append((e, None, None, None, f"{r.parent_key}@{r.ex_date}"))
+                continue
+            ch = pd.read_parquet(series_path(r.child_key), columns=["date", "open", "high", "low", "close"])
+            ch = ch.set_index("date").reindex(P.date.iloc[e:]).ffill()
+            conv = P.c.iat[e] / P.raw.iat[e]          # unidades del índice por dólar de la matriz el día ex
+            ratio = float(r.ratio)
+            xc, xh, xl = np.zeros(n), np.zeros(n), np.zeros(n)
+            xc[e:] = ratio * ch.close.to_numpy() * conv
+            xh[e:] = ratio * ch.high.to_numpy() * conv
+            xl[e:] = ratio * ch.low.to_numpy() * conv
+            if fake.get((r.parent_key, r.ex_date)) and e > 0:
+                # deshacer la reinversión implícita: factor medido en los datos (índice ajustado / bruto el día ex)
+                fp = (P.c.iat[e] / P.c.iat[e - 1]) / (P.raw.iat[e] / P.raw.iat[e - 1])
+                cc, hh_, ll_ = P.c.to_numpy(), P.h.to_numpy(), P.l.to_numpy()
+                # valor = (índice + escindida) / fp  →  extra = valor − índice
+                xc[e:] = (cc[e:] + xc[e:]) / fp - cc[e:]
+                xh[e:] = (hh_[e:] + xh[e:]) / fp - hh_[e:]
+                xl[e:] = (ll_[e:] + xl[e:]) / fp - ll_[e:]
+            ok = not np.isnan(xc[e:]).any()
+            spins[cid].append((e, np.nan_to_num(xc), np.nan_to_num(xh), np.nan_to_num(xl), None if ok else "child_nan"))
+    for r in jt.itertuples():
+        hit = key_pos.get((r.key, r.date))
+        if hit is not None:
+            jumps[hit[0]].append(hit[1])
+    return spins, jumps
+
+
+def outcomes(rows, paths, term, spins=None, jumps=None):
     """Retornos (entrada apertura t+1, y cierre t+1 como sensibilidad), MFE/MAE, nuevo mínimo, cotas terminales."""
     res = defaultdict(list)
+    spins, jumps = spins or {}, jumps or {}
     for cid, g in rows.groupby("company", sort=False):
         P = paths[cid]
+        SP, JP = spins.get(cid, []), jumps.get(cid, [])
         pos = {d: i for i, d in enumerate(P.date)}
         o, h, l, c, fl, fc = P.o.to_numpy(), P.h.to_numpy(), P.l.to_numpy(), P.c.to_numpy(), P.flow.to_numpy(), P.fc.to_numpy()
         n = len(P)
@@ -141,6 +293,9 @@ def outcomes(rows, paths, term):
                     res[f"mae{H}"].append(np.nan)
                     res[f"nl{H}"].append(np.nan)
                     res[f"unk{H}"].append(False)
+                    res[f"unk_s{H}"].append(False)
+                    res[f"unk_j{H}"].append(False)
+                    res[f"rja{H}"].append(np.nan)
                 res["ret21"].append(np.nan)
                 res["own_pct"].append(np.nan)
                 for X in XS:
@@ -158,20 +313,32 @@ def outcomes(rows, paths, term):
                 e_o, e_c = o[i + 1], c[i + 1]
             else:                                     # termina el mismo día: entrada al valor terminal
                 e_o = e_c = c[i] * tm[0]
+            flow_jump = any(e <= i <= e + 20 for e in JP)     # Flow de t posiblemente afectado por el salto
             for H in HS:
                 j = i + H
+                jj = min(j, n - 1)
+                act = [x for x in SP if i + 1 < x[0] <= jj]      # escisiones dentro del plazo (posición comprada antes)
+                unk_s = any(x[1] is None or x[4] for x in act)
+                xc = sum(x[1] for x in act if x[1] is not None) if act and not unk_s else None
+                xh = sum(x[2] for x in act if x[2] is not None) if xc is not None else None
+                xl = sum(x[3] for x in act if x[3] is not None) if xc is not None else None
+                unk_j = flow_jump or any(i < e <= j for e in JP)
                 if j < n:
-                    vals = (c[j], c[j], c[j])
+                    v = c[j] + (xc[j] if xc is not None else 0.0)
+                    vals = (v, v, v)
                     unk = False
                     win = slice(i + 1, j + 1)
-                    hh, ll = h[win].max(), l[win].min()
+                    hh = (h[win] + (xh[win] if xh is not None else 0)).max()
+                    ll = (l[win] + (xl[win] if xl is not None else 0)).min()
                 elif tm is not None:
-                    last = c[n - 1]
+                    last = c[n - 1] + (xc[n - 1] if xc is not None else 0.0)
                     vals = (last * tm[0], last * tm[1], last * tm[2])
                     unk = tm[3]
                     win = slice(i + 1, n)
-                    hh = max(h[win].max() if n > i + 1 else -np.inf, vals[0])
-                    ll = min(l[win].min() if n > i + 1 else np.inf, vals[0])
+                    hw = (h[win] + (xh[win] if xh is not None else 0)) if n > i + 1 else np.array([-np.inf])
+                    lw = (l[win] + (xl[win] if xl is not None else 0)) if n > i + 1 else np.array([np.inf])
+                    hh = max(hw.max(), vals[0])
+                    ll = min(lw.min(), vals[0])
                 else:
                     vals, unk, hh, ll = (np.nan,) * 3, False, np.nan, np.nan
                 res[f"r{H}"].append(vals[0] / e_o - 1)
@@ -182,6 +349,17 @@ def outcomes(rows, paths, term):
                 res[f"mae{H}"].append(ll / e_o - 1)
                 res[f"nl{H}"].append(bool(ll < low20) if ll == ll else np.nan)
                 res[f"unk{H}"].append(unk)
+                res[f"unk_s{H}"].append(bool(unk_s))
+                res[f"unk_j{H}"].append(bool(unk_j))
+                # enmienda 2: retorno con los saltos indeterminados del plazo anulados (cota de §7 de la enmienda 1).
+                # Salto del día e = c[e]/c[e-1]; si cae en la sesión de entrada, la entrada pasa al cierre de t.
+                ja = [e for e in JP if i < e <= j and e < n]
+                if ja and vals[0] == vals[0]:
+                    fac = float(np.prod([c[e] / c[e - 1] for e in ja]))
+                    base = c[i] if (i + 1) in ja else e_o
+                    res[f"rja{H}"].append(vals[0] / fac / base - 1)
+                else:
+                    res[f"rja{H}"].append(vals[0] / e_o - 1 if vals[0] == vals[0] else np.nan)
     out = pd.DataFrame(res).set_index("row")
     return rows.join(out)
 
@@ -230,6 +408,28 @@ def label(df, spy):
 
 def excess(df, spy_r):
     for H in HS:
+        df[f"unkany{H}"] = df[f"unk{H}"] | df[f"unk_s{H}"] | df[f"unk_j{H}"]
+        if "missing_j" in CORR:
+            # enmienda 2: fuera del principal solo los saltos indeterminados y las escisiones no reconstruibles (en
+            # la señal y en la media de su talla); los terminales desconocidos se quedan con el último cierre.
+            # Sensibilidades: xs = saltos tal cual; xa = saltos anulados (cotas de la enmienda 1 §7).
+            miss = df[f"unk_s{H}"] | df[f"unk_j{H}"]
+            for nm, src in (("rs", f"r{H}"), ("ra", f"rja{H}")):
+                df[f"{nm}{H}"] = df[src]
+                ref = df.groupby(["date", "size"])[f"{nm}{H}"].transform("mean")
+                df[f"{'xs' if nm == 'rs' else 'xa'}{H}"] = df[f"{nm}{H}"] - ref
+            for col in (f"r{H}", f"r{H}_lo", f"r{H}_hi", f"rc{H}", f"mfe{H}", f"mae{H}", f"nl{H}"):
+                df.loc[miss, col] = np.nan
+        elif "missing" in CORR:
+            # enmienda 1 §7: los resultados no observados quedan fuera del principal (también de la media de talla);
+            # sensibilidad (xs*) con ellos dentro y las cotas del preregistro §4.2
+            for b in ("", "_lo", "_hi"):
+                df[f"rs{H}{b}"] = df[f"r{H}{b}"]
+                ref = df.groupby(["date", "size"])[f"rs{H}{b}"].transform("mean")
+                df[f"xs{H}{b}"] = df[f"rs{H}{b}"] - ref
+            miss = df[f"unkany{H}"]
+            for col in (f"r{H}", f"r{H}_lo", f"r{H}_hi", f"rc{H}", f"mfe{H}", f"mae{H}", f"nl{H}"):
+                df.loc[miss, col] = np.nan
         for b in ("", "_lo", "_hi"):
             col = f"r{H}{b}"
             ref = df.groupby(["date", "size"])[col].transform("mean")
@@ -294,9 +494,17 @@ def summarize(g, H, boot=False):
            "new_low": float(g[f"nl{H}"].astype(float).mean()),
            "p5": float(r.quantile(.05)), "p10": float(r.quantile(.10)),
            "p_le_m10": float((r <= -0.10).mean()), "p_le_m20": float((r <= -0.20).mean()),
-           "unknown_share": float(g[f"unk{H}"].mean()), "fut_event_share": float((g.future_event_40 == "evento").mean()),
+           "unknown_share": float(g[f"unkany{H}"].mean()), "unknown_terminal": float(g[f"unk{H}"].mean()),
+           "unknown_spinoff": float(g[f"unk_s{H}"].mean()), "unknown_jump": float(g[f"unk_j{H}"].mean()), "fut_event_share": float((g.future_event_40 == "evento").mean()),
            "sic_share": float((g.sector_src == "sic").mean()),
            "rc_mean": float(g[f"rc{H}"].mean())}
+    if f"xs{H}_lo" in g:
+        out["sens_incl_x_daily_mean"] = float(daily(g, f"xs{H}").mean())
+        out["sens_incl_x_lo_daily"] = float(daily(g, f"xs{H}_lo").mean())
+        out["sens_incl_x_hi_daily"] = float(daily(g, f"xs{H}_hi").mean())
+    elif f"xs{H}" in g:
+        out["sens_jumps_as_is_daily"] = float(daily(g, f"xs{H}").mean())
+        out["sens_jumps_annulled_daily"] = float(daily(g, f"xa{H}").mean())
     out["insufficient_ep"] = None
     if boot:
         for b in (60, 20, 120):
@@ -313,15 +521,17 @@ def main():
 
     cols = ["company", "key", "date", "sector", "sector_src", "flow", "R", "w1", "m1", "raw_close", "adv20",
             "mcap_pit", "idx_now", "future_event_40", "size", "size_retro", "turnover", "usable", "operable"]
-    p = pd.read_parquet(C.WORK / "panel_v4.parquet", columns=cols)
+    p = pd.read_parquet(C.WORK / f"panel_{PANEL_TAG}.parquet", columns=cols)
     p = p[p.usable].reset_index(drop=True)
+    if tanda == 2 and not tanda1_freeze_path().exists():
+        raise SystemExit(f"Tanda 2 bloqueada: falta {tanda1_freeze_path()}")
     p = p[C.dev_mask(p, tanda).to_numpy()].reset_index(drop=True)
     if tanda == 2:      # la tanda 2 solo añade los días 2021-2022 de pequeñas y micro (2018-2020 ya visto)
         p = p[(p.date > C.TANDA1_END) & p["size"].isin(["small", "micro"])].reset_index(drop=True)
     print(f"tanda {tanda}: filas {len(p)}, fechas {p.date.min()} → {p.date.max()}", flush=True)
     assert all(C.period_for(s, d) == "dev" for s, d in p[["size", "date"]].drop_duplicates().itertuples(index=False))
 
-    km = pd.read_parquet(C.WORK / "panel_v4.parquet", columns=["company", "key", "date"])
+    km = pd.read_parquet(C.WORK / f"panel_{PANEL_TAG}.parquet", columns=["company", "key", "date"])
     km = km[km.company.isin(set(p.company))]
     last_key = km.sort_values("date").groupby("company").key.last().to_dict()
     paths = company_paths(km)
@@ -331,11 +541,12 @@ def main():
     miss = ~p.company.isin(paths)
     print("filas sin ruta de precios (se descartan):", int(miss.sum()), flush=True)
     p = p[~miss].reset_index(drop=True)
-    p = outcomes(p, paths, term)
+    spins, jumps = corr_inputs(paths) if CORR else ({}, {})
+    p = outcomes(p, paths, term, spins, jumps)
     spy = spy_frame()
     p = label(p, spy)
     p = excess(p, spy_returns(spy, p.date.unique()))
-    rows_out = C.WORK / f"etapa1_tanda{tanda}_rows.parquet"
+    rows_out = C.WORK / f"etapa1_tanda{tanda}{OUT_SUFFIX}_rows.parquet"
     p.to_parquet(rows_out)
     print("filas con resultado", int(p.r20.notna().sum()), "→", rows_out, flush=True)
 
@@ -387,7 +598,7 @@ def main():
     # ---------- elección de celdas (§5): episodios, población A, exceso frente a la talla
     sel_sizes = ("large", "mid", "unknown") if tanda == 1 else ("small", "micro")
     if tanda == 2:
-        full = pd.concat([pd.read_parquet(C.WORK / "etapa1_tanda1_rows.parquet"), p])
+        full = pd.concat([pd.read_parquet(C.WORK / f"etapa1_tanda1{OUT_SUFFIX}_rows.parquet"), p])
         full = full[full["size"].isin(sel_sizes)]
     else:
         full = p
@@ -407,9 +618,11 @@ def main():
                     ser = daily(g, f"x{H}")
                     m, t = nw_t(ser.to_numpy(), H)
                     halves_m = [daily(g[(g.date >= a_) & (g.date <= b_)], f"x{H}").mean() for a_, b_ in halves]
-                    lo, hi = daily(g, f"x{H}_lo").mean(), daily(g, f"x{H}_hi").mean()
+                    bl = "xs" if "missing" in CORR else "x"      # cotas: con los no observados dentro (§4.2)
+                    # (con missing_j los terminales ya están en el principal con sus cotas: bl = "x")
+                    lo, hi = daily(g, f"{bl}{H}_lo").mean(), daily(g, f"{bl}{H}_hi").mean()
                     weeks = pd.to_datetime(g.date).dt.to_period("W").nunique()
-                    unk = float(g[f"unk{H}"].mean())
+                    unk = float(g[f"unkany{H}"].mean())
                     ok = {"t>=2.5": bool(abs(t) >= 2.5), "n>=100": bool(len(g) >= 100), "weeks>=30": bool(weeks >= 30),
                           "halves_same_sign": bool(all(np.sign(h_) == np.sign(m) for h_ in halves_m if h_ == h_)
                                                    and all(h_ == h_ for h_ in halves_m)),
@@ -421,7 +634,7 @@ def main():
                                  "unknown_share": unk, "criteria": ok, "eligible": all(ok.values())})
     prev_chosen = []
     if tanda == 2:
-        prev_chosen = json.loads(C.TANDA1_FREEZE.read_text(encoding="utf-8"))["chosen_cells"]
+        prev_chosen = json.loads(tanda1_freeze_path().read_text(encoding="utf-8"))["chosen_cells"]
     slots = 4 - len(prev_chosen)
     elig = sorted([c for c in cand if c["eligible"]], key=lambda c: -abs(c["t_nw"]))
     chosen = elig[:slots]
@@ -451,13 +664,22 @@ def main():
     sel = {"tanda": tanda, "sizes": list(sel_sizes), "slots": slots, "candidates": cand,
            "chosen_cells": prev_chosen + [{k: c[k] for k in ("size", "X", "H", "regime")} for c in chosen],
            "chosen_this_tanda": chosen, "models": models}
-    tj = C.PUB / f"etapa1_tanda{tanda}_tables.json"
-    sj = C.PUB / f"etapa1_tanda{tanda}_selection.json"
+    tj = C.PUB / f"etapa1_tanda{tanda}{OUT_SUFFIX}_tables.json"
+    sj = C.PUB / f"etapa1_tanda{tanda}{OUT_SUFFIX}_selection.json"
     tj.write_text(json.dumps(tables, indent=1, default=str), encoding="utf-8")
     sj.write_text(json.dumps(sel, indent=1, default=str), encoding="utf-8")
     print("elegibles", len(elig), "elegidas", len(chosen), flush=True)
 
     freeze = C.TANDA1_FREEZE if tanda == 1 else C.PUB / "etapa1_tanda2_frozen.json"
+    if OUT_SUFFIX and not FREEZE_CORR:
+        # versión corregida (enmienda 1): nunca sustituye a la congelación original; solo propuesta
+        freeze = C.PUB / f"etapa1_tanda{tanda}{OUT_SUFFIX}_candidate.json"
+    elif OUT_SUFFIX:
+        freeze = C.PUB / f"etapa1_tanda{tanda}{OUT_SUFFIX}_frozen.json"
+        if freeze.exists():
+            raise SystemExit(f"{freeze} ya existe: no se sobrescribe una congelación")
+    elif freeze.exists():
+        raise SystemExit(f"{freeze} ya existe: no se sobrescribe una congelación")
     sha = {f.name: hashlib.sha256(f.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
            for f in (tj, sj, C.HERE / "s4_etapa1.py", C.HERE / "fn_config.py")}
     sha[rows_out.name] = hashlib.sha256(rows_out.read_bytes()).hexdigest()

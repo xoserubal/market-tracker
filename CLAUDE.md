@@ -6514,7 +6514,7 @@ cortas), un año de NAV diario y de operaciones; todos los campos estándar
 llegan rellenos. (Las cifras concretas de la cuenta no se documentan aquí:
 este archivo está en un repo público.) Ajustes hechos con datos reales:
 - El informe de 365 días tardó ~1,5 min en generarse (1019 repetido): el
-  sondeo pasó de 8×8 s a 20×15 s (≈5 min, 4 req/min).
+  sondeo pasó de 8×8 s a 20×15 s (≈5 min, 4 req/min). 2026-11-20: una referencia se quedó atascada en 1019 los 5 min y una petición nueva salió en 17 s; ahora 10×15 s por petición y hasta 3 peticiones nuevas.
 - **`percentOfNAV` de IBKR no se usa:** en acciones sale ~1,45× (su
   denominador es NAV − efectivo) y en opciones da valores sin relación con su
   valor de mercado (una put corta de peso pequeño salía como >50 %). El
@@ -8758,6 +8758,19 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     - Contrasplits no aplicados (CHK, HPR 2020, `E2_split_incoherente`) dan retornos de +21 600 %: solo
       pequeñas/micro. Antes de la tanda 2 hay que decidir cómo tratar los días con evento en el plazo (propuesta:
       resultado desconocido, fuera de la media de la talla).
+  - **Enmienda 1 (2026-11-20, aprobada con modificaciones):** `wiki/ENMIENDA_1_FLOW_NEGATIVO_V3.md`. Corrige
+    contrasplits (14, SEC), identidad (7 tickers transferidos a escindidas), CIK (45 tramos) y valora escisiones
+    (matriz + escindida). Registros `data/corr1_*`, series en `work/series_c1/`, paneles `v4c1s/si/sic`
+    (`FN_CORR`), tanda 1 corregida `FN_PANEL/FN_OUT/FN_CORR` (`s6_variantes.sh`). Sin `FN_CORR` reproduce v4 idéntico.
+    Conciliación: `research/flow_negative_v1/CONCILIACION_TANDA1_ENMIENDA1.md`. La candidata grandes/ep<−30/20 sigue
+    pasando (t 2,70 → 2,57); quitó dobles conteos (DowDuPont, Weight Watchers). Alpaca no tiene precios OTC.
+    Pendiente del usuario: aceptar c1 como base, regla §7 (sesga micro al alza), acciones multiclase sin capitalización.
+  - **Enmienda 2 (2026-11-20, en curso, pausada):** `wiki/ENMIENDA_2_FLOW_NEGATIVO_V3.md` (congelada). c1 como base;
+    terminales desconocidos vuelven al preregistro §4.2 (`missing_j`); varias clases: acciones por clase del XBRL
+    original (`s7_xbrl_classes.py`), cota inferior propia clase × precio, solo asigna «grande» (piloto viable, 15
+    emisores). Pasos pendientes: `research/flow_negative_v1/RETOMAR_ENMIENDA2.md`. Autorizada la tanda 2 solo en
+    desarrollo; parar después. `corr1_jumps_evidence.csv` y `corr1_overlay_checks.json` llevan cierres de Alpaca: no
+    se commitean.
   - Tanda 2 y etapa 2: pedir autorización explícita antes de lanzarlas.
 
 ---

@@ -26,6 +26,7 @@ sirven para identificar empresas y fechar su entrada en el marco muestral.
 Salidas: work/panel_v3.parquet, work/companies_v3.csv (fuera del repo); data/v3_*.json (agregados, en el repo).
 """
 import json
+import re
 import os
 from collections import defaultdict
 
@@ -38,6 +39,11 @@ from s0_coverage import calendar
 SER = C.WORK / "series"
 TAG = os.environ.get("FN_TAG", "v3")
 V4 = TAG >= "v4"
+# Enmienda 1 (2026-11-20): familias de corrección activas ("splits,identity,cik"). Vacío = v4 sin cambios.
+CORR = {x for x in os.environ.get("FN_CORR", "").split(",") if x}
+SER_C1 = C.WORK / "series_c1"
+CORR_KEYS = set()          # claves cuya serie se lee de series_c1 (según las familias activas)
+CIK_RANGES = {}            # clave → [(desde, hasta, cik)] para la capitalización (familias activas)
 # v4 (opción 2, aprobada 2026-11-19):
 #  - S&P 600: solo cuenta para entrar en el marco desde el primer cambio oficial registrado (antes, la composición
 #    era la de dic-2019 copiada hacia atrás: supervivientes);
@@ -77,7 +83,39 @@ def load_series_table():
     cm = pd.read_csv(C.SEC / "cik_map.csv", dtype=str, keep_default_na=False)
     cik = dict(zip(cm.key, cm.cik))
     s["cik"] = s.orig_req.map(lambda k: cik.get(k, "") or "")
-    return s.set_index("key")
+    s = s.set_index("key")
+    if CORR:
+        s = apply_corrections(s)
+    return s
+
+
+def apply_corrections(s):
+    """Enmienda 1: aplica data/corr1_series_overlay.json y data/corr1_cik_ranges.csv de las familias activas."""
+    ov = json.loads((C.PUB / "corr1_series_overlay.json").read_text(encoding="utf-8"))
+    for fam in ("splits", "identity"):
+        if fam not in CORR:
+            continue
+        for k, ch in ov[fam].items():
+            for col, v in ch.items():
+                if col == "trace":
+                    continue
+                s.loc[k, col] = json.dumps(v) if isinstance(v, list) else v
+            CORR_KEYS.add(k)
+    if "identity" in CORR:
+        for k, row in ov["new_keys"].items():
+            s.loc[k] = pd.Series(row)
+            CORR_KEYS.add(k)
+    ck = pd.read_csv(C.PUB / "corr1_cik_ranges.csv", dtype={"cik": int})
+    ck = ck[ck.family.isin(CORR)]
+    for k, g in ck.groupby("key"):
+        if k not in s.index:
+            continue
+        CIK_RANGES[k] = [(r["from"], r["to"], str(r.cik) if r.cik else "") for _, r in g.iterrows()]
+        prim = g[g.type.isin(["correccion", "sin_cik"])].sort_values("to")
+        if len(prim):
+            c = int(prim.cik.iat[-1])
+            s.loc[k, "cik"] = str(c) if c else ""
+    return s
 
 
 class UF:
@@ -211,6 +249,66 @@ def filings(cik):
     return g if len(g) else None
 
 
+_NORM = re.compile(r"[^A-Z0-9]")
+_CLASS_TITLE = re.compile(r"Class\s*([A-Z])\b", re.I)
+
+
+def own_class_filings(cik, symbols):
+    """Enmienda 2 §3: acciones de portada de la PROPIA clase de la serie, del XBRL original (s7_xbrl_classes.py).
+
+    Clase de la serie, por orden: (1) miembro con dei:TradingSymbol de la serie; (2) símbolo de la serie sin dimensión
+    y un único título 12(b) sin dimensión que nombra la clase («Class A…») → miembro con «ClassA» en su nombre;
+    (3) para presentaciones sin esa información (antes de 2019), el mismo miembro identificado en otra presentación.
+    Devuelve (DataFrame end/filed/val/n, miembros) o (None, motivo)."""
+    f = C.SEC / "xbrl_classes" / f"{int(cik)}.json"
+    if not f.exists():
+        return None, "sin_xbrl"
+    recs = json.loads(f.read_text())
+    want = {_NORM.sub("", x.upper()) for x in symbols if x}
+    members = set()
+    for rec in recs:
+        sy = rec.get("symbols") or {}
+        cls = {x["class"] for x in rec.get("shares", []) if x["class"] and not x["other_dims"]}
+        for m, ss in sy.items():
+            if m and m in cls and {_NORM.sub("", t) for t in ss} & want:
+                members.add(m)
+        if not members & cls and "" in sy and {_NORM.sub("", t) for x in sy[""] for t in x.split(",")} & want:
+            t = (rec.get("titles") or {}).get("", "").replace("\u00a0", " ")
+            letters = set(_CLASS_TITLE.findall(t))
+            if len(letters) == 1:
+                L = letters.pop().upper()
+                hit = [m for m in cls if re.search(rf"Class{L}(Member|$)", m.split(":")[-1])]
+                if len(hit) == 1:
+                    members.add(hit[0])
+            elif not letters and re.search(r"common stock", t, re.I):
+                # (2b) título «Common stock» sin letra: la única clase cuyo miembro no lleva letra (EXPE: Common Stock
+                # frente a Class B)
+                hit = [m for m in cls if not re.search(r"Class[A-Z](Member|$)", m.split(":")[-1])]
+                if len(hit) == 1:
+                    members.add(hit[0])
+    if not members:
+        return None, "clase_no_identificada"
+    rows = []
+    for rec in recs:
+        if not re.match(r"^(10-K|10-Q|10-KT|10-QT)", rec.get("form", "")):
+            continue
+        v = {}
+        for x in rec.get("shares", []):
+            if x["class"] in members and not x["other_dims"] and x["date"]:
+                v[(x["class"], x["date"])] = x["val"]
+        if v:
+            by_end = defaultdict(float)
+            for (m, d_), val in v.items():
+                by_end[d_] += val
+            for d_, val in by_end.items():
+                rows.append({"end": d_, "filed": rec["filed"], "val": val, "n": 1})
+    if not rows:
+        return None, "sin_acciones_de_la_clase"
+    g = pd.DataFrame(rows).groupby(["end", "filed"]).val.max().reset_index().assign(n=1)
+    g = g[g.val > 0].sort_values(["filed", "end"]).reset_index(drop=True)
+    return (g, sorted(members)) if len(g) else (None, "sin_acciones_de_la_clase")
+
+
 def split_factor(splits, d_from, d_to):
     """Factor que lleva acciones con fecha de cierre d_from a la base de d_to (splits entre ambas)."""
     f = 1.0
@@ -299,7 +397,7 @@ def main():
 
     def load(k):
         if k not in cache:
-            d = pd.read_parquet(SER / f"{k}.parquet")
+            d = pd.read_parquet((SER_C1 if k in CORR_KEYS else SER) / f"{k}.parquet")
             d["adv20"] = d.dollar_vol.rolling(20, min_periods=20).median()
             lh, ll, lc = np.log(d.high), np.log(d.low), np.log(d.close)
             eta = (lh + ll) / 2
@@ -324,12 +422,20 @@ def main():
         t = pd.read_csv(sicf, dtype=str, keep_default_na=False)
         sic_sector = dict(zip(t.cik, t.sector_sic))
     entry, idx_iv = frame_entry(s, mem, etf)
+    if "identity" in CORR:
+        # tramos de pertenencia que pasan de la serie cortada a la entidad que continúa (enmienda 1 §5)
+        fx = pd.read_csv(C.PUB / "corr1_frame_extra.csv", dtype=str)
+        for x in fx.itertuples():
+            if x.key in s.index:
+                idx_iv.setdefault(x.key, []).append((x.start, x.end, x.index, ""))
+                entry[x.key] = min([e for e in (entry.get(x.key), x.start) if e])
     s["frame_entry"] = pd.Series(entry)
     print("series", len(s), "empresas", s.company.nunique(),
           "series sin pertenencia en su época", int(s.frame_entry.isna().sum()), flush=True)
 
     rows = []
     shares_stats = defaultdict(int)
+    mc_stats = defaultdict(int)
     for cid, g in s.groupby("company"):
         ent = g.frame_entry.dropna()
         if ent.empty:
@@ -394,9 +500,52 @@ def main():
             splits = json.loads(r.splits_list) if r.splits_list else []
             mc_pit = mc_retro = np.full(len(d), np.nan)
             multi = np.zeros(len(d), bool)
-            if r.cik and not r.cik_conflict:
-                fl = filings(r.cik)
-                if fl is not None:
+            # tramos de CIK: por defecto el de la serie; la enmienda 1 (familia cik/identity) puede fijar otros
+            pieces = [("0000-00-00", "9999-99-99", r.cik if (r.cik and not r.cik_conflict) else "")]
+            if k in CIK_RANGES:
+                pieces = [(a, b, c) for a, b, c in CIK_RANGES[k]]
+                covered = np.zeros(len(dates), bool)
+                for a, b, _ in pieces:
+                    covered |= (dates >= a) & (dates <= b)
+                if (~covered).any() and r.cik and not r.cik_conflict:
+                    pieces.append(("__rest__", "", r.cik))
+            mc_pit, mc_retro = np.full(len(d), np.nan), np.full(len(d), np.nan)
+            for a, b, ck_ in pieces:
+                if not ck_:
+                    continue
+                fl = filings(ck_)
+                if fl is None:
+                    continue
+                full = load(k)
+
+                def turnover_at(filed, shares):
+                    w = full[full.index <= filed].tail(1)
+                    if w.empty or not (w.adv20.iat[0] > 0):
+                        return None
+                    return float(w.adv20.iat[0] / (shares * w.raw_close.iat[0]))
+                okp = clean_pit(fl, splits, turnover_at)
+                okr = clean_retro(fl, splits)
+                shares_stats["filings"] += len(fl)
+                shares_stats["rejected_pit"] += int((~okp).sum())
+                shares_stats["rejected_retro"] += int((~okr).sum())
+                shares_stats["disagree"] += int((okp != okr).sum())
+                mp, mu = mcap_series(fl, okp, splits, dates, d.raw_close.to_numpy())
+                mr, _ = mcap_series(fl, okr, splits, dates, d.raw_close.to_numpy())
+                sel = ~covered if a == "__rest__" else (dates >= a) & (dates <= b)
+                mc_pit = np.where(sel, mp, mc_pit)
+                mc_retro = np.where(sel, mr, mc_retro)
+                multi = np.where(sel, mu, multi)
+            mc_src = np.where(np.isnan(mc_pit), "", "companyconcept").astype(object)
+            if "multiclass" in CORR and (np.isnan(mc_pit).any() or np.isnan(mc_retro).any()):
+                # enmienda 2 §3: cota inferior = acciones de la propia clase × precio; solo decide la talla grande
+                syms = set(str(r.symbols).split("|")) | {str(r.ticker)}
+                for a, b, ck_ in pieces:
+                    if not ck_:
+                        continue
+                    g_own, info = own_class_filings(ck_, syms)
+                    mc_stats[info if g_own is None else "clase_ok"] += 1
+                    if g_own is None:
+                        continue
                     full = load(k)
 
                     def turnover_at(filed, shares):
@@ -404,14 +553,16 @@ def main():
                         if w.empty or not (w.adv20.iat[0] > 0):
                             return None
                         return float(w.adv20.iat[0] / (shares * w.raw_close.iat[0]))
-                    okp = clean_pit(fl, splits, turnover_at)
-                    okr = clean_retro(fl, splits)
-                    shares_stats["filings"] += len(fl)
-                    shares_stats["rejected_pit"] += int((~okp).sum())
-                    shares_stats["rejected_retro"] += int((~okr).sum())
-                    shares_stats["disagree"] += int((okp != okr).sum())
-                    mc_pit, multi = mcap_series(fl, okp, splits, dates, d.raw_close.to_numpy())
-                    mc_retro, _ = mcap_series(fl, okr, splits, dates, d.raw_close.to_numpy())
+                    fp, _ = mcap_series(g_own, clean_pit(g_own, splits, turnover_at), splits, dates, d.raw_close.to_numpy())
+                    fr, _ = mcap_series(g_own, clean_retro(g_own, splits), splits, dates, d.raw_close.to_numpy())
+                    sel = (~covered if a == "__rest__" else (dates >= a) & (dates <= b)) if k in CIK_RANGES else np.ones(len(dates), bool)
+                    fill_p = sel & np.isnan(mc_pit) & (fp >= 10e9)
+                    fill_r = sel & np.isnan(mc_retro) & (fr >= 10e9)
+                    mc_stats["dias_floor_pit"] += int(fill_p.sum())
+                    mc_stats["dias_floor_bajo_10B"] += int((sel & np.isnan(mc_pit) & (fp < 10e9)).sum())
+                    mc_pit = np.where(fill_p, fp, mc_pit)
+                    mc_retro = np.where(fill_r, fr, mc_retro)
+                    mc_src = np.where(fill_p, "class_floor", mc_src)
             rows.append(pd.DataFrame({
                 "company": cid, "key": k, "date": dates, "cik": r.cik, "sector": sector,
                 "sector_src": sector_src, "cik_conflict": bool(r.cik_conflict),
@@ -420,7 +571,7 @@ def main():
                 "flow_complete": d.flow_complete.fillna(False).astype(bool).to_numpy(),
                 "raw_close": d.raw_close.to_numpy(), "adv20": d.adv20.to_numpy(),
                 "spread_ar21": d.spread_ar21.to_numpy(),
-                "mcap_pit": mc_pit, "mcap_retro": mc_retro, "multiclass": multi,
+                "mcap_pit": mc_pit, "mcap_retro": mc_retro, "multiclass": multi, "mcap_src": mc_src,
                 "idx_now": idx_now, "past_event": past, "future_event_40": fut,
                 "series_end": r.end, "terminated": r.terminated == "True"}))
     p = pd.concat(rows, ignore_index=True)
@@ -437,6 +588,9 @@ def main():
     pd.DataFrame(links, columns=["a", "b", "tipo", "n", "coincidencia"]).to_csv(C.WORK / f"company_links_{TAG}.csv",
                                                                                index=False)
     json.dump(dict(shares_stats), open(C.PUB / f"{TAG}_shares_cleaning.json", "w"), indent=1)
+    if "multiclass" in CORR:
+        json.dump(dict(mc_stats), open(C.PUB / f"{TAG}_multiclass.json", "w"), indent=1)
+        print("multiclass", dict(mc_stats), flush=True)
     print("filas", len(p), "empresas", p.company.nunique(), dict(shares_stats), flush=True)
 
 
