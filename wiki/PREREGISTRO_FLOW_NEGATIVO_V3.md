@@ -1,11 +1,11 @@
 # Preregistro — Flow Score negativo: caracterización y valor incremental (v3)
 
-**Estado: BORRADOR SIN FIRMAR** (2026-11-19).
+**Estado: FIRMADO** (2026-11-20). Hashes en §13.1.
 - Sustituye a la v2 (`wiki/PREREGISTRO_FLOW_NEGATIVO_V2.md`), que se escribió para el universo por índices.
 - Incorpora la muestra por empresa (`research/flow_negative_v1/ETAPA0_V3_INFORME.md`) y el universo v4
   (`research/flow_negative_v1/D2_VIABILIDAD_Y_V4.md`).
-- Las decisiones A, B, C y D están resueltas (§12). Queda revisar los puntos marcados **[CONFIRMAR]** (§12.2).
-- Hasta que se firme y se congele con SHA-256 (§13), no se calcula ningún rendimiento posterior a una señal.
+- Las decisiones A, B, C y D y los cuatro puntos de §12.2 están resueltos (confirmados por el usuario el 2026-11-20).
+- Congelado con SHA-256 (§13.1). La etapa 1 necesita además autorización explícita antes de lanzarse.
 
 Lo que cambia frente a la v2 está en §14.
 
@@ -82,7 +82,7 @@ desarrollo como pequeña y días de prueba como mediana.
 - Por qué el desarrollo de las pequeñas es más largo (decisión del 2026-11-19): en 2018-2019 solo hay pequeñas caídas
   desde otros índices, y el único año con pequeñas del S&P 600 es 2020, el del COVID. Un desarrollo de un único año
   extremo no sirve para elegir nada. Con 2021 (alcista) y 2022 (bajista) hay más de un régimen.
-- **Las micro siguen a las pequeñas** porque tienen el mismo problema en 2018-2019. **[CONFIRMAR]**
+- **Las micro siguen a las pequeñas** porque tienen el mismo problema en 2018-2019 (confirmado 2026-11-20).
 - Señales disponibles, contadas sin ningún rendimiento posterior (episodios, §4.5):
 
   | Talla | X | Desarrollo | Prueba |
@@ -286,7 +286,7 @@ distinguir resultados futuros?
 - Significación y relevancia se informan por separado: un efecto significativo por debajo de 0,5 pp se publica como
   «estadísticamente distinto de cero, sin relevancia económica».
 - **Costes (supuestos, no observados), ida y vuelta:** grande 0,2 % · mediana 0,4 % · pequeña 0,8 % · **micro
-  1,5 %** · sin capitalización 0,8 %. **[CONFIRMAR]**
+  1,5 %** · sin capitalización 0,8 % (confirmado 2026-11-20).
   - Sensibilidades ×2 y ×3.
   - El spread estimado (Abdi-Ranaldo) solo sirve de contraste: micro ~0,7-1,2 %, pequeñas ~0,2-0,6 %; en grandes se
     trunca en 0 y no informa.
@@ -329,7 +329,7 @@ deteriorándose deprisa o tras semanas estable. **En v3 no es hipótesis ni filt
 | — | Unidad de análisis | Empresa, con talla por capitalización en t (2026-11-18) |
 | — | Empresas desaparecidas del S&P 600 de 2015-2019 | No se buscan (2026-11-19) |
 
-### 12.2 Puntos nuevos de este borrador [CONFIRMAR]
+### 12.2 Puntos nuevos de la v3 (confirmados por el usuario el 2026-11-20)
 1. **Las micro siguen el periodo de las pequeñas** (desarrollo hasta 2022). Alternativa: dejarlas con 2018-2020.
 2. **H1 con tres veredictos** (grandes, medianas, pequeñas). Micro y «sin capitalización», solo descriptivas.
 3. **Coste supuesto de las micro: 1,5 %** ida y vuelta (antes no tenían uno propio). «Sin capitalización»: 0,8 %.
@@ -349,14 +349,63 @@ Al firmar, se guardará el SHA-256 de:
    - `data/terminal_events_v4.csv`, `data/sic_gics_rules.csv`, `data/sic_sector_by_cik.csv`;
    - `data/v4_h1_frozen_cuts.json`.
 4. Los datos de fuera del repo, con su hash publicado en el repo: `work/panel_v4.parquet`, `work/companies_v4.csv` y
-   `work/company_links_v4.csv`. Están solo en LAWNMOWER (`D:\backup market tracker\flow_negative_v1`), así que la
-   firma se hace en ese equipo.
+   `work/company_links_v4.csv`. Viven en el disco externo (`D:\backup market tracker\flow_negative_v1` en LAWNMOWER;
+   firmado el 2026-11-20 desde DESPACHOB con el mismo disco montado en E:).
 
 Al terminar cada tanda de la etapa 1, y antes de tocar la prueba, se congela un archivo con las celdas elegidas y los
 parámetros de M0/M1 de esa tanda.
 
-Antes de la etapa 1 hay que adaptar el código a periodos por talla. Hoy `fn_config.DEV_END` los define por índice.
-El cambio se hace antes de firmar y entra en el hash.
+Código adaptado a periodos por talla antes de firmar (entra en el hash). `fn_config.py` define `DEV_END_BY_SIZE`,
+`TEST_START_BY_SIZE`, `period_for()`, los costes por talla y `dev_mask(df, tanda)`. Esta última nunca incluye días de
+prueba, limita la tanda 1 a 2018-2020 y bloquea la tanda 2 hasta que exista `data/etapa1_tanda1_frozen.json`.
+`DEV_END` (por índice) queda solo para reproducir la etapa 0 v3.
+
+### 13.1 Hashes (firmado 2026-11-20)
+
+Generados con `research/flow_negative_v1/s3_freeze_v3.py` (repo: saltos de línea normalizados a LF; externos: bytes).
+El hash de este documento está en `research/flow_negative_v1/data/preregistro_v3_freeze.json`. Comprobación:
+`py -3 s3_freeze_v3.py --verify`.
+
+| Tipo | Fichero | SHA-256 |
+|---|---|---|
+| código | `research/flow_negative_v1/fn_config.py` | `ab8ab08272a20b246727a12ba6ee9730d0be04839ffc4730c3ad4586ff8cc006` |
+| código | `research/flow_negative_v1/s3_freeze_v3.py` | `8e714503e321be1d26edef559a1bbd3bd15095ac18cf3ef4f0d2cda0ae042351` |
+| código | `research/flow_negative_v1/s0_coverage.py` | `831f5c4379738811b44334c7c429b51c9c537d085d89831f57351419540c27b0` |
+| código | `research/flow_negative_v1/s0_h1_cuts.py` | `70b1fb059e83a762192436ba9bd09fdbe594d113225375ae131466d16e4183cb` |
+| código | `research/flow_negative_v1/s0_h1_design.py` | `89a8e39a15c0257553fce631f38f040f7f5e513ba198625d07501928d2470281` |
+| código | `research/flow_negative_v1/s0_parity.py` | `597480d5308d2c84f94dc18d5c8a7bdbc307b734701dd81f97faa2b393a5d302` |
+| código | `research/flow_negative_v1/s0_prices.py` | `8725c750dd43c2cc74c55f2dd0ba90738956500e7451fc5d2d226802b7abe0ad` |
+| código | `research/flow_negative_v1/s0_prices_retry_empty.py` | `ae5e8fcc9d06e6931a7b7417fdb13c34c724f780dc04675962d07ecffb35f0f1` |
+| código | `research/flow_negative_v1/s0_sec.py` | `c020dcb6653c32427c0b80ad37e0f0c9cae4d316ec7b3d0ff1cb17d48176e2b4` |
+| código | `research/flow_negative_v1/s0_series.py` | `92acfa0c0b96d7018823a9a2091d4f0d82567a3dd448520a491e6771a2b85935` |
+| código | `research/flow_negative_v1/s0_terminal.py` | `1a7063d1061534354d8332e1776d06430cfde4eb6e09bd5c490764003130dcc7` |
+| código | `research/flow_negative_v1/s0_terminal_impact.py` | `4ce976b49fa2c48de3aed6284cad66af28ec8415359efd91dcb25645f2fb9eed` |
+| código | `research/flow_negative_v1/s0_universe.py` | `d276809e8aae192d9582ea5bd71ae8abe62087d96df8761423e1db4bb04a8a9a` |
+| código | `research/flow_negative_v1/s0_wiki_monthly.py` | `50c14ce33d74f25a26b80e31f97499b8ec14141b5dd43e40b16a1eb9ad8103ee` |
+| código | `research/flow_negative_v1/s1_extend.py` | `1396f975723e013846787ac3a2c243fdee80ff65e18b960fe2ef7bdbf0d39e0f` |
+| código | `research/flow_negative_v1/s1_sic.py` | `9edf6be3b0939c46b5d64d967a655e8933623a57d32abe381e227e1d021293fd` |
+| código | `research/flow_negative_v1/s1_panel.py` | `6db8772b0adfc7682b7088fb27b425f8e800affa676c77be24dab43b3c4f54fd` |
+| código | `research/flow_negative_v1/s1_stats.py` | `53b386bff14330732cd2d253e089c5a7eadd5bd3e1a725887775d56efa3db95c` |
+| código | `research/flow_negative_v1/s2_etf_gap.py` | `bfb903b85a93d8cf55368fd3325a6d8bfef051c3c80aefde799e47e49a0bfa08` |
+| código | `research/flow_negative_v1/s2_etf_inventory.py` | `dfe90381f2c0120a38272bfc8c9fc271ac1116f7bbd28462d8aeb2d75694884b` |
+| código | `research/flow_negative_v1/s2_etf_lib.py` | `bf5b0369c8e599b69449e16d90f89770c320b2284236a5afb9676ca57a9657ff` |
+| código | `research/flow_negative_v1/s2_etf_membership.py` | `f8a95143cb897b473914a2ac1fb6eae77647b178ed5ecf9dd68272ad6dfdca72` |
+| código | `research/flow_negative_v1/s2_etf_sample.py` | `db316d6ff35d4795743ec6f731307e1dfc276b3da2d90b87abf12384e862540e` |
+| código | `research/flow_negative_v1/s2_etf_validate.py` | `3d1196aafbc040611546ee161f14a6f588280d5472936fc6d947f45ebbb4bcfd` |
+| código | `research/flow_negative_v1/s2_etf_validate_cik.py` | `713394e7ca24ce8b5e0465104c5e3edb88eea939f7a82c88ab503989cb0d93e8` |
+| código | `research/flow_negative_v1/s2_link.py` | `8f2357f03926131b11c3a22d19dbc60dc9e5138f29a47bcd4f6698ac87a745c0` |
+| código | `research/flow_negative_v1/s2_sec_names.py` | `d686bac0c0285f18495fb062fe654d5ceb4b5987091b77194d7603f045e636dc` |
+| código | `research/flow_negative_v1/s3_validate_v4.py` | `c81daa2adb24bbc91207f3d5519e1fc597f63da655f58b251259349668626a28` |
+| datos repo | `research/flow_negative_v1/data/membership.csv` | `ec67600d7b451625d5b6afdca12b05e8fde64b94d61db339f477880cc27e0f69` |
+| datos repo | `research/flow_negative_v1/data/changes.csv` | `3449827ca59f348ac6170940d60f9fa334906fde8a880fae5422178832efd274` |
+| datos repo | `research/flow_negative_v1/data/membership_etf_sp400.csv` | `ad65e63aed75f4c70569e06b349b0729d85c23fc66fd7ca558e8961204cd677e` |
+| datos repo | `research/flow_negative_v1/data/terminal_events_v4.csv` | `1d5622ac73d6f8acf46e2ff7bd4675c2a50010a75a475d25f35835881d04f39e` |
+| datos repo | `research/flow_negative_v1/data/sic_gics_rules.csv` | `0837268492a8d1407237c84b365086364cfcbc5b6307a13a2daba5ecd18710b4` |
+| datos repo | `research/flow_negative_v1/data/sic_sector_by_cik.csv` | `0fa81a8a86df06c312bd3b8cf50d100ace284e412339f7df124b781c81537283` |
+| datos repo | `research/flow_negative_v1/data/v4_h1_frozen_cuts.json` | `6027f7e4be9502ee56fe79686d3386b979369b986db1bf473d6d58be0589bf9e` |
+| datos externos | `work/panel_v4.parquet` | `8c1888326e66d4bc1962c0893c3e7436446694eb8fa0af4cba86e1c4e8ee46c7` |
+| datos externos | `work/companies_v4.csv` | `367b39a30d85292e384cab1c87c7a6fbfe554384103a52004193716d45e289aa` |
+| datos externos | `work/company_links_v4.csv` | `0e43ebae2951f769a7463d3c87ddb04228aa6b94410130b21e0379fd407dca40` |
 
 ## 14. Cambios frente a la v2
 
@@ -372,4 +421,4 @@ El cambio se hace antes de firmar y entra en el hash.
 | Cortes de H1 | Por universo, v2 | Únicos, v4 (2018-2020, todas las tallas) |
 | H1 | 3 universos | 3 tallas (grande, mediana, pequeña) |
 | Regla «M necesita el signo de L o S» | Sí | Eliminada (la composición del S&P 400 ya es fiable) |
-| Coste de micro | — | 1,5 % (por confirmar) |
+| Coste de micro | — | 1,5 % |

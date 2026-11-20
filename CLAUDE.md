@@ -1,9 +1,5 @@
 # AI Picks Lab — Documentación del proyecto
 
-> **⚠ AVISO DE SESIÓN (2026-11-19):** si `hostname` devuelve LAWNMOWER, lo primero es recordarle al usuario todo lo
-> que hay en `wiki/PENDIENTE_LAWNMOWER.md` (firma del preregistro Flow negativo v3 y cabos sueltos). Cuando esté
-> resuelto, borrar ese archivo y este aviso.
-
 > **Convención:** Actualizar este archivo cada vez que se implemente una funcionalidad nueva, se cambie una decisión de diseño, o se añada una regla al sistema. Es la fuente de verdad para futuras sesiones con Claude.
 
 ---
@@ -8744,13 +8740,17 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     (`data/membership_etf_sp400.csv`); capitalización con la prueba de rotación en todas las presentaciones.
     `s1_panel.py`/`s1_stats.py` con `FN_TAG=v4` (sin la etiqueta reproducen la v3).
   - **Cortes de H1 de la v4** en `data/v4_h1_frozen_cuts.json`; los de la v3 están obsoletos.
-  - **Decidido 2026-11-19:** el desarrollo de las pequeñas (y, por confirmar, las micro) se alarga a 2018-2022, con
-    prueba desde 2023. Grandes, medianas y sin capitalización: desarrollo 2018-2020, prueba desde 2021.
-  - **Preregistro v3 en borrador, sin firmar:** `wiki/PREREGISTRO_FLOW_NEGATIVO_V3.md`. Talla por capitalización en t.
-    H1 con 3 veredictos (grande, mediana, pequeña). Etapa 1 en dos tandas: los días de 2021-2022 de las pequeñas no
-    se miran hasta congelar grandes y medianas. Quedan 4 puntos [CONFIRMAR] (§12.2).
-  - La firma se hace en LAWNMOWER, porque el panel v4 solo está en su D:. Antes hay que adaptar `fn_config.DEV_END`,
-    que hoy define los periodos por índice, a periodos por talla.
+  - **Decidido 2026-11-19:** el desarrollo de las pequeñas y las micro se alarga a 2018-2022, con prueba desde 2023.
+    Grandes, medianas y sin capitalización: desarrollo 2018-2020, prueba desde 2021.
+  - **Preregistro v3 FIRMADO (2026-11-20):** `wiki/PREREGISTRO_FLOW_NEGATIVO_V3.md`. Talla por capitalización en t.
+    H1 con 3 veredictos (grande, mediana, pequeña); micro y sin capitalización solo descriptivas; coste micro 1,5 %.
+    Etapa 1 en dos tandas: los días de 2021-2022 de pequeñas y micro no se miran hasta congelar la tanda 1.
+  - `fn_config.py` ya tiene los periodos por talla (`DEV_END_BY_SIZE`, `period_for`, `COST_ROUND_TRIP`) y
+    `dev_mask(df, tanda)`: nunca devuelve días de prueba y la tanda 2 falla si no existe
+    `data/etapa1_tanda1_frozen.json`. Usarlo en todo el código de la etapa 1.
+  - Hashes: `s3_freeze_v3.py --verify` contra `data/preregistro_v3_freeze.json`. El panel v4 está en el disco externo
+    (D: en LAWNMOWER, E: en DESPACHOB): poner `FLOWNEG_DATA_DIR` si no es D:.
+  - **Etapa 1 sin autorizar todavía:** pedir permiso explícito antes de calcular ningún rendimiento posterior.
 
 ---
 
