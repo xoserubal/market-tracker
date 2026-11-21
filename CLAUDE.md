@@ -8771,7 +8771,31 @@ amplitud correlaciona 0,79 con la propia aceleración del ETF: repite lo que ya 
     emisores). Pasos pendientes: `research/flow_negative_v1/RETOMAR_ENMIENDA2.md`. Autorizada la tanda 2 solo en
     desarrollo; parar después. `corr1_jumps_evidence.csv` y `corr1_overlay_checks.json` llevan cierres de Alpaca: no
     se commitean.
-  - Tanda 2 y etapa 2: pedir autorización explícita antes de lanzarlas.
+  - **Enmienda 2 completada (2026-11-21):** `research/flow_negative_v1/ENMIENDA2_INFORME.md`. Elegidas dos celdas, la
+    segunda anidada: grandes / ep < −30 / 20 sesiones, todos los regímenes y solo lateral.
+  - **Etapa 2 hecha (2026-11-21): NO SOPORTADO.** Preparación y congelaciones en `ETAPA2_PREPARACION.md`; resultados en
+    `ETAPA2_RESULTADOS.md` y `data/etapa2_resultados.json`.
+    - Ninguno de los 5 contrastes confirma.
+    - H1: D ≈ −0,1/−0,3 pp en las tres tallas, sin efecto.
+    - Las celdas pasan de +2,0/+2,1 pp en desarrollo a −0,16/−0,11 pp en la prueba.
+    - La atribución, original y estricta, apunta a peor que días comparables.
+    - Rentabilidad absoluta: +3 % por episodio, pero es la subida del mercado. Un tercio de los episodios cae ≥ 10 %
+      antes de las 20 sesiones.
+    - Hubo 3 aperturas que murieron por memoria sin mostrar ninguna cifra (§8 quater). El análisis solo cabe leyendo las
+      columnas que usa: con el resto de aplicaciones abiertas, el equipo deja menos de 5 GB.
+    - Producción sin cambios. Para volver al tema haría falta un preregistro nuevo.
+  - **Estudio CERRADO (2026-11-21), aceptado por el usuario.** Informe final: `research/flow_negative_v1/INFORME_CIERRE.md`.
+    - La hipótesis de reversión por Flow negativo queda **no soportada**. No usar Flow < −30 como señal autónoma de
+      compra ni de reversión.
+    - El indicador Flow sigue en producción: este estudio no evaluó sus demás usos.
+    - **Periodos consumidos para esta familia de hipótesis:** prueba 2021-01-04 → 2026-09-17 (grandes, medianas, sin
+      capitalización) y 2023-01-03 → 2026-09-17 (pequeñas, micro), además del desarrollo 2018-2022. Registro en
+      `research/flow_negative_v1/data/exposicion_flow_negativo.json`.
+    - Sin nuevas optimizaciones de umbrales, plazos o regímenes sobre esos periodos. No rescatar como señal la lateral a
+      10 sesiones ni H1 pequeñas a 40. Todo estudio nuevo necesita una pregunta distinta, declarar esta exposición y
+      una validación independiente.
+    - Error de ejecución encontrado al cerrar: se omitió el embargo de la enmienda 1 §9. Con él, el veredicto es el
+      mismo (`INFORME_CIERRE.md` §8.2).
 
 ---
 

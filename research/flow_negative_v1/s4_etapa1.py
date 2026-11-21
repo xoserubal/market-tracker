@@ -418,6 +418,8 @@ def excess(df, spy_r):
                 df[f"{nm}{H}"] = df[src]
                 ref = df.groupby(["date", "size"])[f"{nm}{H}"].transform("mean")
                 df[f"{'xs' if nm == 'rs' else 'xa'}{H}"] = df[f"{nm}{H}"] - ref
+            # nl puede quedar 100 % booleana (sin NaN) y pandas 3 no admite NaN en bool: object, como hacía pandas 2
+            df[f"nl{H}"] = df[f"nl{H}"].astype(object)
             for col in (f"r{H}", f"r{H}_lo", f"r{H}_hi", f"rc{H}", f"mfe{H}", f"mae{H}", f"nl{H}"):
                 df.loc[miss, col] = np.nan
         elif "missing" in CORR:

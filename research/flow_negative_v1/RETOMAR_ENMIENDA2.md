@@ -1,5 +1,8 @@
 # Retomar la enmienda 2 (pausado 2026-11-20 19:45, en DESPACHOB)
 
+> **Obsoleto.** La enmienda 2 se completó el 2026-11-21 y el estudio está cerrado: ver `INFORME_CIERRE.md`. Esta nota
+> se conserva como registro del traspaso entre equipos.
+
 Nota de trabajo para continuar en LAWNMOWER. Instrucciones del usuario (2026-11-20): IBKR ya commiteado (`5935469b`,
 sin push); Flow negativo **sin commits ni pushes**; no abrir la prueba; parar tras la tanda 2 y entregar el informe.
 
@@ -27,3 +30,8 @@ Desde `research/flow_negative_v1/`, con `PYTHONIOENCODING=utf-8`:
 6. Comparación: `py -3 s8_conciliacion_c2.py` (72 candidatas; ¿grandes / Flow < −30 / 20 sigue pasando?).
 7. Si no hay cambios materiales inesperados, tanda 2 (mismas variables que el paso 5, `--tanda 2`).
 8. Informe completo + selección definitiva al usuario. Alto. La prueba sigue cerrada.
+
+## Estado 2026-11-21 (LAWNMOWER): pasos 1-7 HECHOS
+Informe: `ENMIENDA2_INFORME.md`. Pendiente solo la decisión del usuario sobre la celda anidada grandes/−30/20/lateral
+(§4 del informe) y, después, autorizar la etapa 2. Nota: c1j no se había interrumpido en DESPACHOB; fallaba por un
+`nl{H}` booleano con pandas 3 (corregido en s4_etapa1.py).

@@ -1,0 +1,21 @@
+{
+ "study": "Flow negativo v3 (research/flow_negative_v1)",
+ "closed_at": "2026-11-21",
+ "verdict": "NO SOPORTADO",
+ "hypothesis_family": "Flow Score negativo (niveles, episodios Flow < X, resto R del Flow) como predictor de reversión o continuación del exceso frente a la talla; por talla, régimen de mercado y plazos de 5/10/20/40 sesiones",
+ "universe": "empresas que han pertenecido al S&P 500/400/600 desde su primera pertenencia (2 083 desde 2018); precios Alpaca SIP; capitalización SEC",
+ "inspected_periods": {
+  "development": {"large": ["2018-01-02", "2020-12-31"], "mid": ["2018-01-02", "2020-12-31"], "unknown": ["2018-01-02", "2020-12-31"], "small": ["2018-01-02", "2022-12-30"], "micro": ["2018-01-02", "2022-12-30"]},
+  "test_consumed": {"large": ["2021-01-04", "2026-09-17"], "mid": ["2021-01-04", "2026-09-17"], "unknown": ["2021-01-04", "2026-09-17"], "small": ["2023-01-03", "2026-09-17"], "micro": ["2023-01-03", "2026-09-17"]},
+  "prices_seen_up_to": "2026-11-13 (datos congelados); señales hasta 2026-09-17 con 40 sesiones posteriores"
+ },
+ "test_access_log": "data/etapa2_acceso.jsonl",
+ "results": {"file": "data/etapa2_resultados.json", "sha256": "d512b1b5ba7dd05737bcf3d4c98386d12bc958007c5682c03a02b66feee01ac7"},
+ "post_close_check": {"file": "data/etapa2_embargo_check.json", "note": "H1 con el embargo de la enmienda 1 §9; no cambia el veredicto"},
+ "rules_for_future_work": [
+  "No optimizar umbrales, plazos ni regímenes sobre los periodos inspeccionados",
+  "No rescatar como señal la sensibilidad lateral a 10 sesiones ni H1 pequeñas a 40",
+  "Toda investigación posterior: pregunta sustancialmente nueva, declarar esta exposición, validación independiente (datos posteriores al 2026-09-17, otro mercado u otro universo no inspeccionado)"
+ ],
+ "production": "El indicador Flow sigue en producción; no se usa Flow < -30 como señal autónoma de compra o reversión"
+}
