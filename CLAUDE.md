@@ -321,6 +321,8 @@ Gestionados en `docs/data/reminders.json`. El workflow los comprueba cada día y
 | 2026-12-11 | inverse_etf_estudio_primas_v2 | Segunda lectura del estudio de primas con ~40 sesiones (sustituye a la de 2026-11-12, que se lanzó el 13-nov; ver «Primera lectura del estudio de primas» en la sección de ETFs inversos) |
 | 2026-11-03 | sol_prompt_verificacion | Verificar en los primeros informes reales que el prompt de Sol del 2026-10-27 funciona (change_vs_prev, «QUÉ HA CAMBIADO HOY», mantener hipótesis sin rebajar por rutina, columna Vela) |
 | 2026-11-17 | rfl_toggle_sin_filtro_revision | Revisar la tasa de uso del toggle «Sin filtro» de Top 3 Flow In/Out de RFL (`state_ux_instrumentation.json`) tras ~9 semanas — ✅ revisado 2026-11-18: 0 clics en 10 semanas, se mantiene por decisión del usuario |
+| 2026-11-22 | e3_guard_lawnmower | Instalar el vigilante del piloto E3 en LAWNMOWER antes del 24-nov 03:40 (comprobar antes el disco) |
+| 2027-01-15 | p1_segunda_lectura | Segunda lectura de P1A/P1C con otros 40 cierres: `p1_trade_level_analysis.py` y `p1a_shadow_books.py`, sin tocar parámetros |
 | 2026-12-08 | sol_evaluacion_retroactiva_v2 | Repetir `research/llm_signal_eval_v1/eval.py` con más semanas y medir NEW/STRENGTHENED por separado |
 
 Para añadir un recordatorio: editar `docs/data/reminders.json` directamente (sin tocar código).
