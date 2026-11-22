@@ -23,8 +23,12 @@ class SharedRateLimiter:
         c.execute("PRAGMA journal_mode=WAL")
         return c
 
-    def acquire(self):
-        """Bloquea hasta que haya hueco en la ventana y registra la llamada."""
+    def acquire(self) -> float:
+        """Bloquea hasta que haya hueco en la ventana, registra la llamada y devuelve la hora de la concesión.
+
+        Garantiza las horas de CONCESIÓN, no las de envío: un hilo puede tardar en enviar tras recibir el turno si el
+        equipo va cargado (lo que hacía fallar de forma intermitente test_rate_limiter_threads, que medía después de
+        acquire). El margen del límite (180/min frente a los 200 de Alpaca) absorbe ese desfase."""
         while True:
             c = self._conn()
             try:
@@ -41,7 +45,7 @@ class SharedRateLimiter:
                 if n < self.per_window:
                     c.execute("INSERT INTO calls (ts) VALUES (?)", (now,))
                     c.execute("COMMIT")
-                    return
+                    return now
                 c.execute("COMMIT")
                 wait = oldest + self.window_s - now + 0.05
             finally:

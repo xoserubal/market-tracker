@@ -77,6 +77,30 @@ class Manifest:
             c.execute(f"UPDATE units SET {cols} WHERE unit_key=?", (*fields.values(), unit_key))
         self.event(unit_key, status, fields.get("error") or "")
 
+    def record_done_many(self, items: list):
+        """Registra de una vez (una transacción) unidades ya escritas en disco: [(unit_key, meta, status, fields)].
+
+        Para la descarga múltiple diaria (E3): cada operación de SQLite en este disco cuesta ~75 ms y una por unidad
+        hacía la pasada diaria de horas. Los ficheros se escriben antes (atómicos); si el proceso se corta antes de esta
+        transacción, las unidades no constan como hechas y la siguiente pasada las rehace."""
+        ts = now()
+        with self._c() as c:
+            for key, meta, status, fields in items:
+                f = dict(fields)
+                if "quality_json" in f and not isinstance(f["quality_json"], str):
+                    f["quality_json"] = json.dumps(f["quality_json"], default=str)
+                c.execute("""INSERT INTO units (unit_key, provider, kind, symbol, asof, period, config_hash, config_json,
+                             status, code_version, started_utc, finished_utc, attempts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)
+                             ON CONFLICT(unit_key) DO UPDATE SET status=excluded.status, code_version=excluded.code_version,
+                             started_utc=excluded.started_utc, finished_utc=excluded.finished_utc, error=NULL,
+                             attempts=attempts+1""",
+                          (key, meta["provider"], meta["kind"], meta["symbol"], meta["asof"], meta["period"],
+                           meta["config_hash"], json.dumps(meta["config"], sort_keys=True), status, meta["code_version"],
+                           ts, ts))
+                if f:
+                    c.execute(f"UPDATE units SET {', '.join(f'{k}=?' for k in f)} WHERE unit_key=?", (*f.values(), key))
+                c.execute("INSERT INTO events VALUES (?,?,?,?)", (ts, key, status, str(f.get("quality_json", ""))[:200]))
+
     def event(self, unit_key: str, event: str, detail: str):
         with self._c() as c:
             c.execute("INSERT INTO events VALUES (?,?,?,?)", (now(), unit_key, event, detail[:2000]))

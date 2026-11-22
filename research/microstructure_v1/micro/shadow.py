@@ -1,4 +1,12 @@
-"""Captura prospectiva en sombra — CONSTRUIDA PERO DESACTIVADA.
+"""OBSOLETO para la línea de eventos (E2_AUTORIZACION.md §7, 2026-11-21). Desactivado; no se elimina todavía.
+
+Lo sustituye el registro de eventos (event_scan.ensure_bars + drilldown bajo demanda), que aún no está activado (E3).
+Mientras tanto: `run` solo admite dry_run. Dependencias comprobadas el 2026-11-21: tests/test_micro.py
+(test_shadow_refuses_when_disabled) y sampling.shadow_sample (que usan otros tests); ningún script ni workflow lo lanza.
+El fallo latente de la unidad sin tope quedó corregido en la ruta común (download._window: sesión y mes sin terminar
+exigen un 'cap' explícito).
+
+Captura prospectiva en sombra — CONSTRUIDA PERO DESACTIVADA.
 
 Solo corre si shadow_config.json tiene "enabled": true (requiere autorización expresa) o con --dry-run, que
 registra la selección del día sin descargar nada. No hay tarea programada ni servicio: se lanza a mano.
@@ -39,6 +47,8 @@ def eligible_universe() -> list:
 
 def run(day: str, provider=None, dry_run: bool = True) -> dict:
     cfg = load_config()
+    if not dry_run:
+        raise SystemExit("micro/shadow.py está obsoleto (E2 §7): solo se admite dry_run.")
     if not cfg["enabled"] and not dry_run:
         raise SystemExit("Captura sombra DESACTIVADA (shadow_config.json enabled=false). Requiere autorización.")
     if not calendar.is_trading_day(day):

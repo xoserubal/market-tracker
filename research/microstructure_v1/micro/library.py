@@ -48,6 +48,11 @@ CREATE TABLE IF NOT EXISTS episodes (
   data_units TEXT, code_version TEXT, params_json TEXT, metrics_json TEXT, quality_json TEXT,
   selection_note TEXT, outcome_known_at_selection INTEGER, in_test_period INTEGER, created_utc TEXT, created_by TEXT,
   taxonomy_version TEXT);
+CREATE TABLE IF NOT EXISTS cases (
+  case_id TEXT PRIMARY KEY, kind TEXT, symbol TEXT, start_day TEXT, end_day TEXT, start_utc TEXT, end_utc TEXT,
+  catalog TEXT, catalog_episode_id TEXT, alert_ids TEXT, data_units TEXT, params_json TEXT, metrics_json TEXT,
+  note TEXT, outcome_known_at_selection INTEGER, in_test_period INTEGER, code_version TEXT, created_utc TEXT,
+  created_by TEXT);
 CREATE TABLE IF NOT EXISTS annotations (
   annotation_id TEXT PRIMARY KEY, episode_id TEXT, annotator_type TEXT, annotator_id TEXT, label TEXT,
   confidence REAL, justification TEXT, cursor_utc TEXT, revealed_future INTEGER, max_seen_utc TEXT,
@@ -144,6 +149,36 @@ class Library:
         with self._c() as c:
             c.execute(f"INSERT INTO episodes ({','.join(row)}) VALUES ({','.join('?' * len(row))})", tuple(row.values()))
         return eid
+
+    # ── casos de investigación (acceso libre, 2026-11-21) ──
+    CASE_KINDS = ("manual_window", "catalog_episode", "multi_session")
+
+    def add_case(self, c: dict) -> str:
+        """Ventana consultada guardada como caso trazable: qué se miró, con qué datos (unidades y sha256), con qué
+        parámetros y versión de código, y si el resultado posterior ya se conocía al elegirla. No lleva etiqueta."""
+        if c.get("kind") not in self.CASE_KINDS:
+            raise ValueError(f"tipo de caso desconocido: {c.get('kind')}")
+        base = f"{c['symbol']}|{c.get('start_utc')}|{c.get('end_utc')}|{_now()}|{uuid.uuid4().hex}"
+        cid = f"case_{c['start_day'].replace('-', '')}_{c['symbol']}_{hashlib.sha1(base.encode()).hexdigest()[:6]}"
+        row = {"case_id": cid, "kind": c["kind"], "symbol": c["symbol"], "start_day": c["start_day"],
+               "end_day": c.get("end_day") or c["start_day"], "start_utc": c.get("start_utc"), "end_utc": c.get("end_utc"),
+               "catalog": c.get("catalog"), "catalog_episode_id": c.get("catalog_episode_id"),
+               "alert_ids": json.dumps(c.get("alert_ids", [])), "data_units": json.dumps(c.get("data_units", []), default=str),
+               "params_json": json.dumps(c.get("params", {}), default=str),
+               "metrics_json": json.dumps(c.get("metrics", {}), default=str), "note": c.get("note", ""),
+               "outcome_known_at_selection": int(bool(c.get("outcome_known_at_selection"))),
+               "in_test_period": int(in_test_period(c["start_day"]) or in_test_period(c.get("end_day") or c["start_day"])),
+               "code_version": config.code_version(), "created_utc": _now(), "created_by": c.get("created_by", "human")}
+        with self._c() as cx:
+            cx.execute(f"INSERT INTO cases ({','.join(row)}) VALUES ({','.join('?' * len(row))})", tuple(row.values()))
+        return cid
+
+    def cases(self, symbol: str = None) -> list:
+        q, p = "SELECT * FROM cases", []
+        if symbol:
+            q, p = q + " WHERE symbol=?", [symbol]
+        with self._c() as cx:
+            return [dict(r) for r in cx.execute(q + " ORDER BY created_utc DESC", p).fetchall()]
 
     def episodes(self, symbol: str = None, day: str = None) -> list:
         q, p = "SELECT * FROM episodes WHERE 1=1", []

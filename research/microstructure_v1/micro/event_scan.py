@@ -17,8 +17,8 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
-from . import calendar, config, download, event_catalog as cat, event_store, intraday_features as F, sectors, \
-    sessions, test_guard
+from . import calendar, catalog_v1 as V1, config, download, event_catalog as cat, event_store, \
+    event_universe, intraday_features as F, sectors, sessions, test_guard
 from .manifest import Manifest
 
 DATA_DELAY_MIN = 15
@@ -134,7 +134,8 @@ def _prev_trading_day(day: str) -> str:
     return ds[-2] if len(ds) >= 2 and ds[-1] == day else (ds[-1] if ds else None)
 
 
-def scan_symbol(symbol: str, day: str, pass_name: str, *, corp: dict = None, manifest: Manifest = None) -> dict:
+def scan_symbol(symbol: str, day: str, pass_name: str, *, corp: dict = None, manifest: Manifest = None,
+                catalog: str = "cat-v0") -> dict:
     t0 = time.time()
     test_guard.check([day], symbol=symbol, purpose="escaneo de eventos", script="event_scan")
     cand = baseline_days(day)
@@ -154,8 +155,15 @@ def scan_symbol(symbol: str, day: str, pass_name: str, *, corp: dict = None, man
     bad_ref = {d for _, d in sym_corp}                     # el cierre anterior no es comparable ese día
     result = {"symbol": symbol, "day": day, "pass": pass_name, "measures": [], "alerts": [], "symbol_day": None}
     if not np.isfinite(M.C[di]).any():
-        result["symbol_day"] = {"symbol": symbol, "day": day, "pass": pass_name, "status": "no_data",
-                                "note": "sin barras ese día"}
+        ps = event_universe.provider_status(symbol)
+        uncovered = bool(ps) and ps.get("status") != "covered"
+        result["symbol_day"] = {"symbol": symbol, "day": day, "pass": pass_name,
+                                "status": "provider_not_covered" if uncovered else "no_data",
+                                "note": (f"no cubierto por Alpaca ({ps.get('status')}; comprobado {ps.get('checked_utc')})"
+                                         if uncovered else "sin barras ese día"),
+                                "provider_status": ps.get("status") if ps else None,
+                                "code_version": config.code_version(),
+                                "catalog_version": cat.CATALOG_VERSION if catalog == "cat-v0" else V1.CATALOG_VERSION}
         return result
     prof = F.build_profile(M, base) if base else None
     req_full = required_end(day, "full")
@@ -184,7 +192,9 @@ def scan_symbol(symbol: str, day: str, pass_name: str, *, corp: dict = None, man
     n_base = len(base)
     short = n_base < cat.THRESHOLDS["min_baseline"]
     split_today = [t for t, d in sym_corp if d == day]
-    for name, m in today.items():
+    if catalog == "cat-v1":
+        _v1_symbol(result, M, di, base, measures_by_row, today, b, liq, split_today, sym_corp, pass_name)
+    for name, m in (today.items() if catalog == "cat-v0" else ()):
         code = cat.MEASURE_CODE.get(name, "?")
         bv = np.array([measures_by_row[i].get(name, {}).get("value", np.nan) for i in base], dtype=float)
         nm = F.normalize(m["value"], bv, pct_hi=cat.THRESHOLDS["pct_hi"], z_hi=cat.THRESHOLDS["z_hi"])
@@ -232,11 +242,67 @@ def scan_symbol(symbol: str, day: str, pass_name: str, *, corp: dict = None, man
         "post_computed": bool(post_ok), "quality": quality, "median_trades_per_minute": liq,
         "early_close": bool(b["early_close"]), "corporate_actions": sym_corp,
         "sector": sector, "sector_source": ssrc, "sector_etf": sectors.sector_etf(sector) if sector else None,
+        "sector_point_in_time": ssrc in ("snapshot", "previous_snapshot"),
         "data_units": {d: M.units.get(d, []) for d in [day]}, "baseline_units": sorted({u for d in M.days[:-1]
                                                                                        for u in M.units.get(d, [])}),
-        "catalog_version": cat.CATALOG_VERSION, "detector_version": cat.DETECTOR_VERSION,
+        "catalog_version": cat.CATALOG_VERSION if catalog == "cat-v0" else V1.CATALOG_VERSION,
+        "detector_version": cat.DETECTOR_VERSION if catalog == "cat-v0" else V1.DETECTOR_VERSION,
         "code_version": config.code_version(), "seconds": round(time.time() - t0, 2)}
+    if catalog == "cat-v1":
+        result["symbol_day"].update({"params_sha256": V1.PARAMS_SHA256, "threshold_knowledge": V1.threshold_knowledge(day),
+                                     "minute_coverage": float(np.isfinite(M.C[di, b["open_slot"] + 1:b["close_slot"]]).mean())})
     return result
+
+
+SPLITISH = {"forward_splits", "reverse_splits", "unit_splits", "stock_dividends", "spin_offs"}
+GAP_LIKE = ("C5_gap", "PRE_ret")              
+
+
+def _v1_symbol(result, M, di, base, measures_by_row, today, b, liq, split_today, sym_corp, pass_name):
+    """cat-v1 (catalog_v1): todas las medidas del valor-día con su estado, y las alertas con ventanas reales."""
+    symbol, day = result["symbol"], result["day"]
+    P = V1.params()
+    computed = pd.Timestamp.now("UTC").isoformat(timespec="seconds")
+    base_days = [M.days[i] for i in base]
+    cov = float(np.isfinite(M.C[di, b["open_slot"] + 1:b["close_slot"]]).mean())
+    splits_in_base = [(t, d) for t, d in sym_corp if t in SPLITISH and base_days and base_days[0] <= d <= day]
+    recent = set(base_days[-P["structural"]["post_split_sessions_V2"]:] + [day])
+    recent_split = [(t, d) for t, d in splits_in_base if d in recent]
+    for name, m in today.items():
+        bv = np.array([measures_by_row[i].get(name, {}).get("value", np.nan) for i in base], dtype=float)
+        ev = V1.evaluate(name, m["value"], bv, liq=liq, base_ordered=bv)
+        result["measures"].append({
+            "symbol": symbol, "day": day, "pass": pass_name, "measure": name, "code": cat.MEASURE_CODE.get(name, "?"),
+            "family": ev["family"], "sign": m.get("sign"), "segment": m["segment"], "estimated": m["estimated"],
+            "representation": "point" if V1.is_point(m) else "window", "value": ev["value"], "state": ev["state"],
+            "score_m1": ev["score_m1"], "pct_own": ev["pct_own"], "score_m2": ev["score_m2"],
+            "threshold_m1": ev["threshold_m1"], "threshold_series": ev["threshold_series"], "n": ev["n"],
+            "rule": ev["rule"], "reason": ev["reason"], "m1_exceeds": ev.get("m1_exceeds"),
+            "catalog_version": V1.CATALOG_VERSION})
+        if ev["state"] != "flag":
+            continue
+        extra = {"liq": liq, "cov": cov, "early_close": bool(b["early_close"]), "corp_event": bool(split_today),
+                 "post_split": bool(recent_split)}
+        for a in V1.alert_rows(symbol, day, name, m, ev, b, base_extra=extra, computed_utc=computed):
+            a["pass"] = pass_name
+            if split_today:
+                a["data_quality"].append("corp_event_day")
+                if name in GAP_LIKE:
+                    a["status"], a["status_note"] = "artifact", f"evento corporativo ese día: {split_today}"
+            if splits_in_base:
+                a["data_quality"].append("unadjusted_split_in_baseline")      # E1 no ajusta las barras en vivo
+            if recent_split and name.startswith("V2_"):
+                a["structural"].append("post_split_V2_window")
+            if b["early_close"]:
+                a["structural"].append("early_close")
+            if cov < 0.5:
+                a["data_quality"].append("low_minute_coverage")
+            if day in P["documented_market_halts"]:
+                a["structural"].append("documented_market_halt_day")
+            if m["estimated"]:
+                a["status_note"] = (a["status_note"] + "; " if a["status_note"] else "") + \
+                    "estimada con barras mixtas: confirmar con trades"
+            result["alerts"].append(a)
 
 
 # ── contexto y registro ──
@@ -261,7 +327,7 @@ def _window_ret(ctx, s0: pd.Timestamp, s1: pd.Timestamp):
 
 
 def scan_day(symbols: list, day: str, pass_name: str = "full", *, provider=None, download_missing=True,
-             manifest: Manifest = None, sources: dict = None, log=print) -> dict:
+             manifest: Manifest = None, sources: dict = None, log=print, catalog: str = "cat-v0") -> dict:
     """Escanea una lista de valores (manual). Escribe medidas, contexto, alertas y episodios del día."""
     if pass_name not in ("regular", "full"):
         raise ValueError(pass_name)
@@ -293,7 +359,7 @@ def scan_day(symbols: list, day: str, pass_name: str = "full", *, provider=None,
     t2 = time.time()
     measures, symdays, alerts = [], [], []
     for s in symbols:
-        r = scan_symbol(s, day, pass_name, corp=corp, manifest=m)
+        r = scan_symbol(s, day, pass_name, corp=corp, manifest=m, catalog=catalog)
         measures += r["measures"]
         alerts += r["alerts"]
         sd = r["symbol_day"]
@@ -304,6 +370,8 @@ def scan_day(symbols: list, day: str, pass_name: str = "full", *, provider=None,
     stats["compute_seconds"] = round(time.time() - t2, 1)
     ctx = _ctx_returns(sorted(ctx_syms), day, m)
     sd_by = {sd["symbol"]: sd for sd in symdays}
+    if catalog == "cat-v1":
+        return _finish_v1(symbols, day, pass_name, measures, symdays, alerts, ctx, sd_by, stats, t0, ctx_syms)
     for a in alerts:
         etf = (sd_by.get(a["symbol"]) or {}).get("sector_etf")
         a["context"] = {k: _window_ret(ctx[k], a["t_start_utc"], a["t_end_utc"]) if k in ctx else None
@@ -342,6 +410,169 @@ def scan_day(symbols: list, day: str, pass_name: str = "full", *, provider=None,
     stats["total_seconds"] = round(time.time() - t0, 1)
     return {"day": day, "pass": pass_name, "symbols": len(symbols), "context_symbols": sorted(ctx_syms),
             "measures": len(measures), "alerts": len(alerts), "episodes": len(episodes), "stats": stats}
+
+
+def _finish_v1(symbols, day, pass_name, measures, symdays, alerts, ctx, sd_by, stats, t0, ctx_syms):
+    """cat-v1: contexto, simultaneidad (sobre los valores escaneados), persistencia, calidad y episodios por tramo."""
+    P = V1.params()
+    ok = [s for s in symbols if (sd_by.get(s) or {}).get("status") == "ok"]
+    n_ok = len(ok)
+    fam_syms, d3_syms = {}, set()
+    for a in alerts:
+        fam_syms.setdefault(a["family"], set()).add(a["symbol"])
+        if a["measure"] == "D3_gap":
+            d3_syms.add(a["symbol"])
+    d3_share = len(d3_syms) / n_ok if n_ok else 0.0
+    suspected = n_ok >= 50 and d3_share >= P["simultaneity"]["suspected_outage_share"] and \
+        day not in P["documented_market_halts"]
+    prev_days = [d for d in calendar.trading_days((pd.Timestamp(day) - pd.Timedelta(days=120)).strftime("%Y-%m-%d"), day)
+                 if d < day]
+    # solo los días previos que hacen falta (el registro cat-v1 incluye todo el histórico retrospectivo)
+    frames = [event_store.read("alerts", d, version="cat-v1") for d in prev_days]
+    frames = [f[["symbol", "measure", "day"]] for f in frames if len(f)]
+    prev = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    for a in alerts:
+        sd = sd_by.get(a["symbol"]) or {}
+        etf = sd.get("sector_etf")
+        a["sector"], a["sector_src"] = sd.get("sector"), sd.get("sector_source")
+        a["context"] = {k: _window_ret(ctx[k], a["t_start_utc"], a["t_end_utc"]) if k in ctx else None
+                        for k in ("SPY", "QQQ")}
+        a["context"]["sector_etf"] = etf
+        a["context"]["sector_etf_ret_pct"] = _window_ret(ctx[etf], a["t_start_utc"], a["t_end_utc"]) if etf in ctx else None
+        fs = fam_syms.get(a["family"], set())
+        a["share_market_family"] = len(fs) / n_ok if n_ok else None
+        same_sec = [s for s in ok if (sd_by.get(s) or {}).get("sector") == sd.get("sector")]
+        a["share_sector_family"] = (len([s for s in same_sec if s in fs]) / len(same_sec)
+                                    if same_sec and sd.get("sector") else None)
+        a["simultaneity_denominator"] = n_ok
+        a["market_day"] = bool(n_ok >= 50 and a["share_market_family"] >= P["simultaneity"]["market_wide_share"])
+        if a["market_day"]:
+            a["structural"].append("market_wide_family_day")
+        vinc = V1.valor_day_incident(a["symbol"], day)
+        if vinc:
+            a["data_quality"].append(vinc["classification"])
+            a["status"], a["status_note"] = "suspected_data_issue", f"incidencia de datos del valor-día: {vinc['evidence']}"
+        inc = V1.data_incidents().get(day)
+        if inc:
+            lab, stt, nt = V1.incident_effect(inc, day, a["t_start_utc"], a["t_end_utc"],
+                                              (sd.get("quality") or {}).get("longest_gap_minutes"))
+            a["data_quality"].append(lab)
+            if stt:
+                a["status"], a["status_note"] = stt, nt
+        elif suspected:
+            a["data_quality"].append("suspected_data_outage_day")
+            if a["measure"] == "D3_gap":
+                a["status"] = "suspected_data_issue"
+                a["status_note"] = "hueco simultáneo en ≥ 10 % de los valores escaneados sin parada documentada"
+        # persistencia: sesiones seguidas (hasta hoy) con la misma medida marcada en el registro cat-v1
+        c = 1
+        if len(prev):
+            have = set(prev.loc[(prev["symbol"] == a["symbol"]) & (prev["measure"] == a["measure"]), "day"])
+            for d in reversed(prev_days):
+                if d in have:
+                    c += 1
+                else:
+                    break
+        a["persistence"] = c
+        a["lab_url"] = lab_url({"symbol": a["symbol"], "day": a["day"], "t_start_utc": a["t_start_utc"],
+                                "t_end_utc": a["t_end_utc"]}) + "&catalog=cat-v1"
+    episodes = V1.group_episodes(alerts)
+    for ep in episodes:
+        ep["pass"] = pass_name
+        ep["lab_url"] = lab_url({"symbol": ep["symbol"], "day": ep["day"], "t_start_utc": ep["t_start_utc"],
+                                 "t_end_utc": ep["t_end_utc"], "episode_id": ep["episode_id"]}) + "&catalog=cat-v1"
+    for tbl, rows in (("measures", measures), ("symbol_days", symdays), ("alerts", alerts), ("episodes", episodes)):
+        df = pd.DataFrame(rows)
+        if len(df):
+            for c in df.columns:
+                if c.endswith("_utc"):
+                    df[c] = df[c].map(lambda v: v.isoformat() if isinstance(v, pd.Timestamp) else v)
+        event_store.write_day(tbl, day, df, replace=[(s, pass_name) for s in symbols], version="cat-v1")
+    stats["total_seconds"] = round(time.time() - t0, 1)
+    return {"day": day, "pass": pass_name, "catalog": "cat-v1", "symbols": len(symbols),
+            "context_symbols": sorted(ctx_syms), "measures": len(measures), "alerts": len(alerts),
+            "episodes": len(episodes), "suspected_data_outage": suspected, "d3_share": round(d3_share, 3),
+            "stats": stats}
+
+
+SIMUL_LABELS = ("market_wide_family_day", "suspected_data_outage_day")
+SIMUL_NOTE = "hueco simultáneo en ≥ 10 % de los valores escaneados"
+
+
+def finalize_day_v1(day: str, pass_name: str = "full", mixed: dict = None) -> dict:
+    """cat-v1, registro diario por tandas: recalcula sobre TODOS los valores escaneados del día y la pasada lo que
+    depende del conjunto (simultaneidad de mercado y de sector, día de mercado, sospecha de caída de datos) y vuelve a
+    agrupar los episodios. Idempotente: parte siempre de las alertas guardadas y quita antes lo que añadió la vez
+    anterior. No toca las medidas ni el resto de pasadas."""
+    P = V1.params()
+    sds = event_store.read("symbol_days", day, version="cat-v1")
+    sds = sds[sds["pass"] == pass_name] if len(sds) else sds
+    al = event_store.read("alerts", day, version="cat-v1")
+    al = al[al["pass"] == pass_name].copy() if len(al) else al
+    ok = sds[sds["status"] == "ok"] if len(sds) else sds
+    n_ok = int(len(ok))
+    # solo sectores válidos a fecha (no los de una instantánea posterior)
+    pit = ok["sector_point_in_time"].fillna(True).astype(bool) if n_ok and "sector_point_in_time" in ok         else pd.Series(True, index=ok.index)
+    sec_of = dict(zip(ok.loc[pit, "symbol"], ok.loc[pit, "sector"])) if n_ok else {}
+    out = {"day": day, "pass": pass_name, "symbols_ok": n_ok, "alerts": int(len(al))}
+    if not len(al):
+        event_store.write_day("episodes", day, pd.DataFrame(), replace=[(pass_name,)], keys=("pass",), version="cat-v1")
+        return {**out, "episodes": 0}
+    recs = al.to_dict("records")
+    for a in recs:
+        for c in ("data_quality", "structural"):
+            v = a.get(c)
+            a[c] = [x for x in (json.loads(v) if isinstance(v, str) else (v or [])) if x not in SIMUL_LABELS]
+        if a["status"] == "suspected_data_issue" and str(a.get("status_note") or "").startswith(SIMUL_NOTE):
+            a["status"], a["status_note"] = "candidate_bars", ""
+        for c in [c for c in a if c.endswith("_utc") and c != "computed_utc"]:
+            if isinstance(a[c], str):
+                a[c] = pd.Timestamp(a[c])
+    fam_syms, d3 = {}, set()
+    for a in recs:
+        fam_syms.setdefault(a["family"], set()).add(a["symbol"])
+        if a["measure"] == "D3_gap":
+            d3.add(a["symbol"])
+    d3_share = len(d3) / n_ok if n_ok else 0.0
+    suspected = n_ok >= 50 and d3_share >= P["simultaneity"]["suspected_outage_share"] and \
+        day not in P["documented_market_halts"] and day not in V1.data_incidents()
+    by_sec = {}
+    for s, sec in sec_of.items():
+        by_sec.setdefault(sec, set()).add(s)
+    for a in recs:
+        mx = (mixed or {}).get(a["symbol"])
+        if mx:                                   # control de series de precio mezcladas (micro/dq_checks)
+            if "suspected_mixed_price_series" not in a["data_quality"]:
+                a["data_quality"].append("suspected_mixed_price_series")
+            if a["status"] != "artifact":
+                a["status"] = "suspected_data_issue"
+                a["status_note"] = f"series de precio mezcladas: niveles {mx['levels']}, {mx['switches']} cambios"
+        fs = fam_syms.get(a["family"], set())
+        a["share_market_family"] = len(fs) / n_ok if n_ok else None
+        same = by_sec.get(sec_of.get(a["symbol"]), set()) if sec_of.get(a["symbol"]) else set()
+        a["share_sector_family"] = len(same & fs) / len(same) if same else None
+        a["simultaneity_denominator"] = n_ok
+        a["market_day"] = bool(n_ok >= 50 and a["share_market_family"] >= P["simultaneity"]["market_wide_share"])
+        if a["market_day"]:
+            a["structural"].append("market_wide_family_day")
+        if suspected:
+            a["data_quality"].append("suspected_data_outage_day")
+            if a["measure"] == "D3_gap" and a["status"] == "candidate_bars":
+                a["status"] = "suspected_data_issue"
+                a["status_note"] = SIMUL_NOTE + " sin parada documentada (sin confirmar)"
+    episodes = V1.group_episodes(recs)
+    for ep in episodes:
+        ep["pass"] = pass_name
+        ep["lab_url"] = lab_url({"symbol": ep["symbol"], "day": ep["day"], "t_start_utc": ep["t_start_utc"],
+                                 "t_end_utc": ep["t_end_utc"], "episode_id": ep["episode_id"]}) + "&catalog=cat-v1"
+    for tbl, rows in (("alerts", recs), ("episodes", episodes)):
+        df = pd.DataFrame(rows)
+        for c in df.columns:
+            if c.endswith("_utc"):
+                df[c] = df[c].map(lambda v: v.isoformat() if isinstance(v, pd.Timestamp) else v)
+        event_store.write_day(tbl, day, df, replace=[(pass_name,)], keys=("pass",), version="cat-v1")
+    return {**out, "episodes": len(episodes), "suspected_data_outage": suspected, "d3_share": round(d3_share, 4),
+            "market_day_alerts": int(sum(a["market_day"] for a in recs))}
 
 
 def lab_url(ep: dict, port: int = 8765) -> str:

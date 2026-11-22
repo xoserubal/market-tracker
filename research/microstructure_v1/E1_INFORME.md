@@ -148,9 +148,14 @@ Fichas generadas (`fichas/`, solo agregados):
 
 ### 5.1 PLTR 2026-11-17 (pasada completa)
 
-**Pendiente.** La pasada `full` del 17-nov solo puede correr tras el fin del after hours + retraso (01:20 UTC del
-18-nov). Quedó lanzada en segundo plano (escaneo + desglose del episodio de after hours de PLTR con `--focus close`).
-Se revisará su resultado y la ficha generada en `fichas/` en la siguiente sesión.
+**Hecho 2026-11-20** (el lanzamiento en segundo plano del 18-nov no llegó a completarse). Pasada `full`: PLTR 3
+alertas, NVDA 31, GOOGL 2; 9 episodios. Ficha `fichas/PLTR_2026-11-17_8d280bb8e4b92d69.md` (episodio C3 de after hours,
+16:00-16:36 NY):
+- Subasta de cierre: 2 009 394 acciones a 156,56 (13,0 % de la sesión regular; 15,2 % de la continua). La barra
+  mixta de las 16:00 sumaba 2 531 898.
+- After hours: +1,59 % en 30 min con trades (156,53 → 159,04), con solo 281 597 acciones (90 % odd lots, 63 % TRF).
+- Comunicaciones tardías en la ventana: 838 454 acciones; la mayor, 207 152 a las 16:57.
+- Confirma lo de la ficha del caso: cierre regular normal; lo extremo fue el after hours, con muy poco volumen.
 
 ## 6. Integridad y normalización (punto 5 de la autorización)
 

@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
-from . import aggressor, calendar, config, download, episode, event_catalog as cat, event_store, footprint, \
+from . import aggressor, calendar, catalog_v1 as V1, config, download, episode, event_catalog as cat, event_store, footprint, \
     intraday_features as F, sessions, test_guard
 from .manifest import Manifest
 
@@ -119,7 +119,8 @@ def profile(tr: pd.DataFrame, step: float = None) -> dict:
 
 
 def run(symbol: str, day: str, window: tuple, *, alerts: list = None, provider=None, quotes: str = "auto",
-        budget: dict = None, manifest: Manifest = None, key: str = None, allow_test_period: bool = False) -> dict:
+        budget: dict = None, manifest: Manifest = None, key: str = None, allow_test_period: bool = False,
+        catalog: str = "cat-v0") -> dict:
     test_guard.check([day], symbol=symbol, purpose="desglose de eventos", script="drilldown",
                      allow=allow_test_period)
     alerts = alerts or []
@@ -178,8 +179,10 @@ def run(symbol: str, day: str, window: tuple, *, alerts: list = None, provider=N
                 bar_r = _bar_window_ret(bars, a)
             if bar_r and abs(rc["trade_return_pct"]) < 0.5 * abs(bar_r):
                 st, why = "artifact", f"con trades el movimiento es {rc['trade_return_pct']} % frente a {bar_r} % con barras"
-        if a["status"] == "indeterminate":
-            st, why = "indeterminate", a.get("status_note", "")
+        if a["status"] in (KEEP_STATUS if catalog != "cat-v0" else ("indeterminate",)):   # cat-v0: como antes
+            # el escaneo ya la marcó (dato dudoso, artefacto de split, referencia insuficiente): el desglose lo anota,
+            # no lo borra
+            st, why = a["status"], "; ".join(x for x in (a.get("status_note", ""), why) if x)
         if seg["segments"]["halt_reopen"]["prints"] > 0:
             why = (why + "; " if why else "") + "hay una reapertura tras suspensión en la ventana"
         rechecks.append({"event_id": a["event_id"], "measure": a["measure"], **rc, "new_status": st, "why": why})
@@ -200,8 +203,9 @@ def run(symbol: str, day: str, window: tuple, *, alerts: list = None, provider=N
         "aggressor": agg, "rechecks": rechecks,
         "trades_loaded": int(len(tr)), "quotes_loaded": int(len(q)),
         "duplicate_ids_removed": tr.attrs.get("duplicate_ids_removed", 0),
-        "code_version": config.code_version(), "catalog_version": cat.CATALOG_VERSION,
-        "detector_version": cat.DETECTOR_VERSION,
+        "code_version": config.code_version(),
+        "catalog_version": catalog if catalog != "cat-v0" else cat.CATALOG_VERSION,
+        "detector_version": V1.DETECTOR_VERSION if catalog == "cat-v1" else cat.DETECTOR_VERSION,
         "data_units": [{"unit_key": r["unit_key"], "sha256": r["sha256"]}
                        for k in ("trades", "quotes") for r in episode.units_for(symbol, day, k, manifest)],
         "seconds": round(time.time() - t0, 1),
@@ -222,6 +226,7 @@ def run(symbol: str, day: str, window: tuple, *, alerts: list = None, provider=N
 
 
 MAX_DAY_ROWS = 3_000_000
+KEEP_STATUS = ("indeterminate", "suspected_data_issue", "artifact")
 
 
 def day_shares(symbol: str, day: str, manifest: Manifest = None) -> dict:
@@ -271,9 +276,9 @@ def _methods(sel: pd.DataFrame, q: pd.DataFrame) -> dict:
     return out
 
 
-def apply_statuses(day: str, statuses: dict):
-    """Actualiza el estado de las alertas desglosadas en el registro (y el del episodio)."""
-    p = event_store.root() / "alerts" / f"{day}.parquet"
+def apply_statuses(day: str, statuses: dict, version: str = "cat-v0"):
+    """Actualiza el estado de las alertas desglosadas en el registro de esa versión del catálogo (y el del episodio)."""
+    p = event_store.root(version) / "alerts" / f"{day}.parquet"
     if not p.exists() or not statuses:
         return 0
     df = pd.read_parquet(p)
@@ -284,7 +289,7 @@ def apply_statuses(day: str, statuses: dict):
             df.loc[m, "status_note"] = why
     from . import storage
     storage.write_parquet_atomic(df, p)
-    ep_p = event_store.root() / "episodes" / f"{day}.parquet"
+    ep_p = event_store.root(version) / "episodes" / f"{day}.parquet"
     if ep_p.exists():
         eps = pd.read_parquet(ep_p)
         for eid in eps["episode_id"]:
@@ -292,6 +297,7 @@ def apply_statuses(day: str, statuses: dict):
             if sts:
                 eps.loc[eps["episode_id"] == eid, "status"] = (
                     "artifact" if sts == {"artifact"} else "indeterminate" if sts == {"indeterminate"} else
+                    "suspected_data_issue" if sts == {"suspected_data_issue"} else
                     "enriched_quotes" if "enriched_quotes" in sts else
                     "characterized_trades" if "characterized_trades" in sts else "candidate_bars")
         storage.write_parquet_atomic(eps, ep_p)

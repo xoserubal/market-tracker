@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceso libre · laboratorio</title>
+<style>
+  :root { --bg:#f7f7f5; --panel:#fff; --ink:#1d2329; --muted:#6b7480; --line:#dfe2e6; --accent:#1f5fa8; --warn:#b54708; --bad:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#15181c; --panel:#1d2126; --ink:#e6e8eb; --muted:#9aa3ad; --line:#30363d; --accent:#6ea8fe; --warn:#f0a35b; --bad:#f17c75; } }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; } header a { color:var(--accent); }
+  main { padding:14px 18px; display:grid; gap:14px; max-width:1500px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
+  h2 { font-size:15px; margin:0 0 8px; } .note { color:var(--muted); font-size:12.5px; }
+  label { margin-right:10px; white-space:nowrap; } input, select { font:inherit; padding:3px 6px; border:1px solid var(--line); border-radius:4px; background:var(--panel); color:var(--ink); }
+  input[type=text] { width:90px; } input.d { width:118px; }
+  button { font:inherit; padding:4px 10px; border-radius:4px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.sec { background:transparent; color:var(--accent); } button:disabled { opacity:.45; cursor:default; }
+  table { border-collapse:collapse; font-size:12.5px; margin-top:6px; } td, th { padding:3px 8px; border-bottom:1px solid var(--line); text-align:right; }
+  td:first-child, th:first-child { text-align:left; } th { color:var(--muted); font-weight:600; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:4px 0; }
+  .bad { color:var(--bad); } .warn { color:var(--warn); } .ok { color:#2f7d32; }
+  canvas { width:100%; height:420px; border:1px solid var(--line); border-radius:6px; margin-top:8px; display:block; }
+  .legend span { display:inline-flex; align-items:center; gap:4px; margin-right:12px; font-size:12px; }
+  .legend i { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  pre { font-size:12px; white-space:pre-wrap; margin:6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Acceso libre a la negociación</h1>
+  <span class="note">Cualquier valor, fecha y ventana, haya alerta o no. Descriptivo: nada aquí interpreta intención.</span>
+  <a href="/">← laboratorio</a>
+</header>
+<main>
+<section>
+  <h2>1 · Ventana (hora de Nueva York)</h2>
+  <div class="row">
+    <label>Valor <input type="text" id="sym" value="PLTR"></label>
+    <label>Día <input class="d" type="date" id="day" value="2026-11-17"></label>
+    <label>Desde <input type="text" id="start" value="15:30" placeholder="HH:MM"></label>
+    <label>Hasta <input type="text" id="end" value="17:00" placeholder="HH:MM"></label>
+    <label><input type="checkbox" id="quotes" checked> quotes</label>
+    <label><input type="checkbox" id="allowtest"> permitir periodo reservado (queda anotado)</label>
+    <button id="bEst">Estimar coste</button>
+  </div>
+  <div id="est" class="note"></div>
+  <div class="row" id="fetchRow" style="display:none">
+    <label id="confLbl" style="display:none"><input type="checkbox" id="confirm"> confirmo esta descarga</label>
+    <button id="bFetch">Descargar lo que falta</button><span id="fetchMsg" class="note"></span>
+  </div>
+</section>
+
+<section>
+  <h2>2 · Operaciones y cotizaciones de la ventana</h2>
+  <div class="row"><button id="bTape">Ver</button>
+    <label><input type="checkbox" id="blind"> modo ciego hasta</label><input type="text" id="cursor" placeholder="HH:MM">
+    <span id="tapeMsg" class="note"></span></div>
+  <div class="legend" id="legend"></div>
+  <canvas id="cTape"></canvas>
+  <div id="tapeSum"></div>
+</section>
+
+<section>
+  <h2>3 · Guardar como caso de investigación</h2>
+  <div class="row"><label>Nota <input type="text" id="note" style="width:420px" placeholder="qué se mira y por qué"></label>
+    <label><input type="checkbox" id="known"> el desenlace ya se conocía al elegirla</label>
+    <button id="bCase">Guardar caso</button><span id="caseMsg" class="note"></span></div>
+  <div id="cases"></div>
+</section>
+
+<section>
+  <h2>4 · Varias sesiones (barras de 1 minuto guardadas, sin pedir nada al proveedor)</h2>
+  <div class="row">
+    <label>Desde <input class="d" type="date" id="d0" value="2026-10-23"></label>
+    <label>Hasta <input class="d" type="date" id="d1" value="2026-11-20"></label>
+    <label>Resolución <select id="res"><option value="1">1 min</option><option value="5">5 min</option>
+      <option value="15" selected>15 min</option><option value="60">60 min</option><option value="D">diaria</option></select></label>
+    <button id="bMulti">Ver</button><span id="multiMsg" class="note"></span>
+  </div>
+  <canvas id="cMulti"></canvas>
+</section>
+
+<section>
+  <h2>5 · Desglose con trades de un episodio cat-v1 o de una ventana</h2>
+  <div class="row"><button id="bEps" class="sec">Episodios cat-v1 del día y valor</button>
+    <button id="bDdWin">Desglosar la ventana de arriba</button><span id="ddMsg" class="note"></span></div>
+  <div id="eps"></div>
+  <pre id="dd"></pre>
+</section>
+</main>
+<script src="/access.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+ "note": "Registro de incidencias de datos con huecos simultáneos (D3_gap en ≥ 10 % de los valores). Separado de cat_v1_params.json: crece con nuevas comprobaciones y no cambia ninguna regla. Nada se borra: solo cambia el estado y las etiquetas de las alertas afectadas. Comprobación de cobertura del proveedor: results/cat_v1/gap_coverage_check.json (trades y barras de Alpaca leídos en memoria, sin escribir en la capa 1). valor_day_incidents: problemas de datos de un solo valor-día (p. ej. series de precio mezcladas).",
+ "incidents": {
+  "2019-08-12": {
+   "classification": "corroborated_data_incident",
+   "window_ny": "≈15:20-16:00",
+   "scope": "valores del Tape A/B (cotizados en NYSE y otros no Nasdaq); los de Nasdaq (AAPL, MSFT) tienen trades y barras completos",
+   "provider_check": "en PFE, WFC y T los trades de Alpaca también desaparecen desde ≈15:25 (no es solo la agregación de barras); BAC queda con huecos parciales",
+   "external_source": "CNBC, 2019-08-12: problema de procesado del sistema de cotizaciones consolidado (CTA) desde ≈15:15 ET; las operaciones se completaron, pero la publicación de cotizaciones, operaciones y cierres se retrasó",
+   "external_url": "https://www.cnbc.com/2019/08/12/a-trading-issue-impacted-us-stock-quotes-late-in-the-day-as-dow-flatlined-into-the-close.html",
+   "consequence": "el mercado negoció con normalidad; el hueco es de difusión del dato. Las alertas que se solapan con la ventana pasan a 'artifact'; el resto de alertas del día lleva la etiqueta",
+   "window_start_ny": "15:15",
+   "window_end_ny": "16:00"
+  },
+  "2019-10-09": {
+   "classification": "suspected_data_outage",
+   "window_ny": "≈13:01-14:18",
+   "scope": "23 % de los valores; incluye valores de NYSE (PFE, ORCL, MS, MO) pero no todos (JPM y AAPL completos)",
+   "provider_check": "en PFE, ORCL, MS y MO los trades de Alpaca también faltan de 13:05 a 14:15",
+   "external_source": "ninguna incidencia general de mercado encontrada (búsqueda del 2026-11-21)",
+   "consequence": "se mantiene como sospecha sin confirmar: las alertas que se solapan con la ventana quedan 'suspected_data_issue'; el resto lleva la etiqueta",
+   "window_start_ny": "13:01",
+   "window_end_ny": "14:20"
+  }
+ },
+ "rule": "toda alerta de ese día cuya ventana [t_start, t_end] se solape con [window_start_ny, window_end_ny + 2 min] toma el estado de la incidencia (artifact si está corroborada; suspected_data_issue si es sospecha): los saltos y retornos alrededor de un hueco de datos son consecuencia del hueco. Las demás alertas del día solo llevan la etiqueta.",
+ "valor_day_incidents": {
+  "JWN|2018-03-26": {
+   "classification": "suspected_mixed_price_series",
+   "evidence": "barras alternando entre ≈47 $ (cierre anterior 46,7 $) y ≈63,7 $ minuto a minuto toda la sesión; en los trades de Alpaca de 10:30-10:50 ET, 642 operaciones a 63,58-63,78 $ y 371 a 46,91-47,13 $, en todas las bolsas",
+   "external_source": "ninguna fuente independiente consultada (sin otro proveedor de datos de minuto)",
+   "found_by": "cat-v1: episodio de 1 030 alertas fuera de día de mercado (validación, 2026-11-21)",
+   "consequence": "todas las alertas de ese valor-día quedan 'suspected_data_issue'; las medidas de la capa 2 no se tocan"
+  }
+ }
+}

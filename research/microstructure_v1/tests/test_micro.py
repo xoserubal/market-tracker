@@ -190,9 +190,9 @@ def test_rate_limiter_threads(tmp_path):
 
     def worker():
         for _ in range(3):
-            lim.acquire()
-            with lock:
-                ts.append(time.time())
+            t = lim.acquire()                     # hora de la concesión: medir después de acquire dependía de la
+            with lock:                            # carga del equipo (fallo intermitente identificado 2026-11-21)
+                ts.append(t)
 
     th = [threading.Thread(target=worker) for _ in range(4)]
     [t.start() for t in th]
@@ -203,8 +203,7 @@ def test_rate_limiter_threads(tmp_path):
 def _proc(db, q):
     lim = SharedRateLimiter(Path(db), per_window=4, window_s=1.0)
     for _ in range(3):
-        lim.acquire()
-        q.put(time.time())
+        q.put(lim.acquire())
 
 
 def test_rate_limiter_processes(tmp_path):

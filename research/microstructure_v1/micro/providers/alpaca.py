@@ -94,6 +94,41 @@ class AlpacaProvider:
             if not token:
                 return
 
+    def fetch_bars_multi(self, symbols: list, start: str, end: str, *, asof: Optional[str] = None,
+                         timeframe: str = "1Min", stats: Optional[FetchStats] = None,
+                         page_limit: Optional[int] = None) -> dict:
+        """Barras de varios símbolos en una sola serie de peticiones (/v2/stocks/bars?symbols=...). E2 §6.
+
+        Devuelve {símbolo: [barras]} con TODOS los símbolos pedidos como clave (lista vacía si no hay datos), más
+        '_pages'. El límite de página es global (no por símbolo): Alpaca rellena por símbolo y luego por tiempo y la
+        paginación sigue con next_page_token. Mismo limitador y reintentos que fetch_pages. Si una página falla tras
+        los reintentos, lanza ProviderError: el llamante no debe dar por buena ninguna parte (idempotencia por
+        unidad: se rehace la petición entera o se cae a peticiones individuales).
+        `asof` es común a todos: no sirve para mezclar símbolos de épocas distintas.
+        """
+        stats = stats if stats is not None else FetchStats()
+        params = {"symbols": ",".join(symbols), "start": start, "end": end, "feed": self.feed,
+                  "limit": page_limit or self.page_limit, "timeframe": timeframe, "adjustment": "raw"}
+        asof = clean_asof(asof)
+        if asof is not None:
+            params["asof"] = asof
+        out = {s: [] for s in symbols}
+        token, pages = None, 0
+        while True:
+            p = dict(params)
+            if token:
+                p["page_token"] = token
+            j = self._get(f"{DATA_BASE}/v2/stocks/bars", p, stats)
+            stats.pages += 1
+            pages += 1
+            for s, rows in (j.get("bars") or {}).items():
+                out.setdefault(s, []).extend(rows or [])
+            token = j.get("next_page_token")
+            if not token:
+                break
+        out["_pages"] = pages
+        return out
+
     def calendar(self, start: str, end: str) -> list:
         return self._get(f"{TRADING_BASE}/v2/calendar", {"start": start, "end": end}, FetchStats())
 

@@ -1,6 +1,7 @@
 """Escaneo MANUAL de eventos intradía para un día (E1). No hay tarea programada: se lanza a mano.
 
-    py -3 ev_scan.py --day 2026-11-17 --symbols PLTR,NVDA,GOOGL [--pass full|regular] [--no-download] [--dry-run]
+    py -3 ev_scan.py --day 2026-11-17 --symbols PLTR,NVDA,GOOGL [--pass full|regular] [--catalog cat-v1|cat-v0]
+                      [--no-download] [--dry-run]
     py -3 ev_scan.py --day 2026-11-17 --universe current --dry-run      # solo muestra el plan de descarga
 
 Escribe en MICRO_DATA_DIR/events/ (medidas de TODOS los valores escaneados, alertas, episodios) y
@@ -24,6 +25,8 @@ def main():
     ap.add_argument("--universe", choices=["current"], default=None)
     ap.add_argument("--pass", dest="pass_name", choices=["regular", "full"], default="full")
     ap.add_argument("--no-download", action="store_true")
+    ap.add_argument("--catalog", choices=["cat-v0", "cat-v1"], default="cat-v1",
+                    help="versión del catálogo (cat-v1 desde 2026-11-21; cat-v0 se conserva para reproducir E1)")
     ap.add_argument("--dry-run", action="store_true", help="solo el plan de descarga, sin descargar ni escanear")
     a = ap.parse_args()
     sources = {}
@@ -48,7 +51,7 @@ def main():
         return
     t0 = time.time()
     res = event_scan.scan_day(syms, a.day, a.pass_name, provider=prov, download_missing=not a.no_download,
-                              sources=sources)
+                              sources=sources, catalog=a.catalog)
     res["wall_seconds"] = round(time.time() - t0, 1)
     res["ts"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with open(storage.root() / "results" / "ev_scan_log.jsonl", "a", encoding="utf-8") as f:

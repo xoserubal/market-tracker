@@ -43,7 +43,10 @@ def episode_window(day, ep, alerts, focus="auto"):
         return drilldown.plan_window(day, b["open"] - pd.Timedelta(minutes=5), b["open"] + pd.Timedelta(minutes=60)),             "foco en la apertura"
     if focus == "auto" and (en - st).total_seconds() / 60 <= MAX_WINDOW_MIN:
         return drilldown.plan_window(day, st, en), "episodio completo"
-    a = max(alerts, key=lambda a: abs(a["z"]) if a.get("z") is not None and not pd.isna(a["z"]) else 0)
+    def strength(x):        # cat-v0: z; cat-v1: puntuación M1
+        v = x.get("z") if x.get("z") is not None else x.get("score_m1")
+        return abs(v) if v is not None and not pd.isna(v) else 0
+    a = max(alerts, key=strength)
     late = [x for x in alerts if x["segment"] in ("post", "close_auction")]
     if focus == "close" or (focus == "auto" and late):
         b = sessions.bounds(day)
@@ -71,7 +74,7 @@ def render(dd: dict, ep: dict, alerts: list, sd: dict, why: str) -> str:
                  f"Sector: {sd.get('sector') or '—'} ({sd.get('sector_etf') or '—'}).\n")
     if alerts:
         L.append("## Alertas (barras de 1 minuto, frente a la propia historia)\n")
-        L.append("| Código | Medida | Tramo | Inicio | Detectable | Fin | Valor | Percentil | z robusto | n | Estado tras el desglose |")
+        L.append("| Código | Medida | Tramo | Inicio | Detectable | Fin | Valor | Percentil | z robusto (cat-v1: M1) | n | Estado tras el desglose |")
         L.append("|---|---|---|---|---|---|---:|---:|---:|---:|---|")
         st = dd.get("statuses", {})
         for a in sorted(alerts, key=lambda a: a["t_detectable_utc"]):
@@ -177,8 +180,10 @@ def main():
     ap.add_argument("--allow-test-period", action="store_true")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--focus", choices=["auto", "open", "close", "peak"], default="auto")
+    ap.add_argument("--catalog", choices=["cat-v1", "cat-v0"], default="cat-v1")
     a = ap.parse_args()
-    eps = event_store.read("episodes", a.day)
+    V = a.catalog
+    eps = event_store.read("episodes", a.day, version=V)
     if a.list:
         print(eps[["episode_id", "symbol", "codes", "n_alerts", "t_start_utc", "t_end_utc", "status"]].to_string()
               if len(eps) else "sin episodios")
@@ -187,7 +192,7 @@ def main():
     alerts, ep, sd, why = [], None, None, "ventana manual"
     if a.episode:
         ep = eps[eps["episode_id"] == a.episode].iloc[0].to_dict()
-        al = event_store.read("alerts", a.day)
+        al = event_store.read("alerts", a.day, version=V)
         alerts = al[al["episode_id"] == a.episode].to_dict("records")
         sym = ep["symbol"]
         win, why = episode_window(a.day, ep, alerts, a.focus)
@@ -197,24 +202,27 @@ def main():
         s, e = a.window.split("-")
         win = calendar.ny_range(a.day, s, e)
         key = f"manual_{sym}_{a.day}_{s.replace(':', '')}{e.replace(':', '')}"
-        al = event_store.read("alerts", a.day)
+        al = event_store.read("alerts", a.day, version=V)
         if len(al):
             al = al[(al["symbol"] == sym)]
             alerts = [x for x in al.to_dict("records") if pd.Timestamp(x["t_end_utc"]) > win[0]
                       and pd.Timestamp(x["t_start_utc"]) < win[1]]
-    sdt = event_store.read("symbol_days", a.day)
+    if V == "cat-v1":           # nombres de cat-v1 -> columnas de la ficha (z robusto = puntuación M1)
+        alerts = [{**x, "t_detectable_utc": x.get("t_detect_utc"), "pct": x.get("pct_own"), "z": x.get("score_m1")}
+                  for x in alerts]
+    sdt = event_store.read("symbol_days", a.day, version=V)
     if len(sdt):
         r = sdt[sdt["symbol"] == sym]
         if len(r):
             sd = r.iloc[-1].to_dict()
     dd = drilldown.run(sym, a.day, win, alerts=alerts, provider=prov, quotes=a.quotes, key=key,
-                       allow_test_period=a.allow_test_period)
+                       allow_test_period=a.allow_test_period, catalog=V)
     if dd.get("error"):
         raise SystemExit(dd["error"])
     event_store.drilldown_path(key).write_text(json.dumps(dd, indent=1, default=str), encoding="utf-8")
-    drilldown.apply_statuses(a.day, dd["statuses"])
+    drilldown.apply_statuses(a.day, dd["statuses"], version=V)
     FICHAS.mkdir(exist_ok=True)
-    out = FICHAS / f"{sym}_{a.day}_{key[:24]}.md"
+    out = FICHAS / f"{sym}_{a.day}_{key[:24]}{'_' + V if V != 'cat-v0' else ''}.md"
     out.write_text(render(dd, ep, alerts, sd, why), encoding="utf-8")
     print(json.dumps({"ficha": str(out), "statuses": dd["statuses"], "fetch": dd["fetch"],
                       "seconds": dd["seconds"]}, indent=1, default=str))

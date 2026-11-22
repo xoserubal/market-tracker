@@ -25,8 +25,9 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-from micro import aggressor, calendar, config, episode, footprint, runtime  # noqa: E402
-from micro import drilldown, event_catalog, event_store, intraday_features, sessions, test_guard  # noqa: E402
+from micro import aggressor, calendar, config, episode, footprint, runtime, storage  # noqa: E402
+from micro import catalog_v1, drilldown, event_catalog, event_store, intraday_features, sessions, test_guard  # noqa: E402
+from micro import valorday, vp_observed, vp_windows, window_access  # noqa: E402
 from micro.library import LABELS, Library, in_test_period, ts_iso  # noqa: E402
 
 LIMITATIONS = [
@@ -291,7 +292,39 @@ def api_episode_create(body):
     return {"episode_id": eid}
 
 
-# ── eventos intradía (E1) ──
+# ── eventos intradía (E1: cat-v0 · desde 2026-11-21: cat-v1, por defecto) ──
+CATALOGS = ("cat-v1", "cat-v0")
+
+
+def _cat(q):
+    c = q.get("catalog") or "cat-v1"
+    if c not in CATALOGS:
+        raise ValueError(f"catálogo desconocido: {c}")
+    return c
+
+
+def _catalog_meta(cat):
+    if cat == "cat-v0":
+        t = event_catalog.THRESHOLDS
+        return {"catalog_version": event_catalog.CATALOG_VERSION, "detector_version": event_catalog.DETECTOR_VERSION,
+                "thresholds": t, "statuses": event_catalog.STATUSES,
+                "summary": f"umbrales: percentil ≥ {t['pct_hi']} o z ≥ {t['z_hi']} ({t['status']})"}
+    P = catalog_v1.params()
+    return {"catalog_version": catalog_v1.CATALOG_VERSION, "detector_version": catalog_v1.DETECTOR_VERSION,
+            "params_sha256": catalog_v1.PARAMS_SHA256, "statuses": catalog_v1.STATUSES,
+            "thresholds": {"calibration_period": P["calibration_period"], "gap_minutes": P["episodes"]["gap_minutes"]},
+            "display_groups": P["display_groups"],
+            "summary": f"M1 por medida, calibrado en {P['calibration_period'][0][:4]}-{P['calibration_period'][1][:4]} "
+                       f"(no conocido entonces) · episodios por tramo · medidas de resumen como puntos"}
+
+
+def _v1_alias(df):
+    """cat-v1 nombra t_detect_utc lo que cat-v0 llamaba t_detectable_utc: alias para el navegador."""
+    if len(df) and "t_detect_utc" in df.columns and "t_detectable_utc" not in df.columns:
+        df = df.assign(t_detectable_utc=df["t_detect_utc"])
+    return df
+
+
 def _rows(df):
     if df is None or not len(df):
         return []
@@ -303,22 +336,36 @@ def _rows(df):
 
 
 def api_event_days(q):
+    cat = _cat(q)
     out = []
-    for d in event_store.days("measures"):
+    days = sorted(set(event_store.days("measures", version=cat)) | set(event_store.days("episodes", version=cat)))
+    import pyarrow.parquet as pq
+    root = event_store.root(cat)
+
+    def _cols(table, d, cols):
+        f = root / table / f"{d}.parquet"
+        if not f.exists():
+            return None
+        return pq.read_table(f, columns=[c for c in cols if c in pq.read_schema(f).names]).to_pandas()
+
+    for d in days:
         if test_guard.reserved(d):
             continue
-        eps = event_store.read("episodes", d)
-        sds = event_store.read("symbol_days", d)
-        out.append({"day": d, "symbols": int(sds["symbol"].nunique()) if len(sds) else 0,
-                    "episodes": int(len(eps)), "passes": sorted(set(sds["pass"])) if len(sds) else []})
-    return {"days": out}
+        eps = _cols("episodes", d, ["symbol", "pass"])              # solo dos columnas: el histórico tiene ~1 450 días
+        sds = _cols("symbol_days", d, ["symbol", "pass"])
+        src = sds if sds is not None and len(sds) else eps
+        out.append({"day": d, "symbols": int(src["symbol"].nunique()) if src is not None and len(src) else 0,
+                    "episodes": int(len(eps)) if eps is not None else 0,
+                    "passes": sorted({p for x in (sds, eps) if x is not None and "pass" in x for p in x["pass"]})})
+    return {"days": out, "catalog": cat}
 
 
 def api_events(q):
     """Episodios y alertas de un día (opcionalmente de un valor). En modo ciego solo lo detectable antes del cursor."""
     day = q["day"]
+    cat = _cat(q)
     guard(q, q.get("symbol", "*"), "events")
-    eps, al = event_store.read("episodes", day), event_store.read("alerts", day)
+    eps, al = _v1_alias(event_store.read("episodes", day, version=cat)), _v1_alias(event_store.read("alerts", day, version=cat))
     if q.get("symbol"):
         sym = q["symbol"].upper()
         eps = eps[eps["symbol"] == sym] if len(eps) else eps
@@ -327,14 +374,12 @@ def api_events(q):
     if cur is not None and len(al):
         al = al[pd.to_datetime(al["t_detectable_utc"]) <= cur]
         eps = eps[eps["episode_id"].isin(set(al["episode_id"]))] if len(eps) else eps
-    sds = event_store.read("symbol_days", day)
+    sds = event_store.read("symbol_days", day, version=cat)
     return {"day": day, "episodes": _rows(eps), "alerts": _rows(al),
             "symbol_days": _rows(sds[sds["symbol"] == q["symbol"].upper()]) if q.get("symbol") and len(sds) else [],
-            "statuses": event_catalog.STATUSES, "thresholds": event_catalog.THRESHOLDS,
             "catalog": [{"code": e.code, "family": e.family, "name": e.name, "source": e.source}
                         for e in event_catalog.CATALOG], "planned": event_catalog.PLANNED,
-            "catalog_version": event_catalog.CATALOG_VERSION, "detector_version": event_catalog.DETECTOR_VERSION,
-            "blind_cursor": ts_iso(cur) if cur is not None else None}
+            **_catalog_meta(cat), "blind_cursor": ts_iso(cur) if cur is not None else None}
 
 
 def api_bars(q):
@@ -350,11 +395,15 @@ def api_bars(q):
         bars = bars[bars["t"] + pd.Timedelta(minutes=1) <= cur]
     slots = sessions.slots_of(bars["t"], b)
     seg = [sessions.bar_segment(int(x), b) for x in slots]
-    al = event_store.read("alerts", day)
+    cat = _cat(q)
+    al = _v1_alias(event_store.read("alerts", day, version=cat))
     al = al[al["symbol"] == sym] if len(al) else al
     if cur is not None and len(al):
         al = al[pd.to_datetime(al["t_detectable_utc"]) <= cur]
-    marks = [{"t_start": a["t_start_utc"], "t_detectable": a["t_detectable_utc"], "t_end": a["t_end_utc"],
+    # cat-v1: las medidas de resumen se dibujan como punto en su detección; la ventana original va aparte
+    marks = [{"t_start": a.get("episode_start_utc") or a["t_start_utc"], "t_detectable": a["t_detectable_utc"],
+              "t_end": a.get("episode_end_utc") or a["t_end_utc"], "window_start": a.get("window_start_utc"),
+              "window_end": a.get("window_end_utc"), "representation": a.get("representation", "window"),
               "code": a["code"], "family": a["family"], "measure": a["measure"], "status": a["status"],
               "direction": a["direction"], "episode_id": a.get("episode_id")} for a in _rows(al)]
     Library.log_access({"symbol": sym, "day": day, "cursor": ts_iso(cur) if cur is not None else None,
@@ -365,7 +414,7 @@ def api_bars(q):
             "bars": [{"t": int(t.value // 1_000_000), "o": o, "h": h, "l": lo, "c": c, "v": v, "seg": sg}
                      for t, o, h, lo, c, v, sg in zip(bars["t"], bars["o"], bars["h"], bars["l"], bars["c"],
                                                       bars["v"], seg)],
-            "marks": marks, "units": sorted(set(bars["_unit"]))}
+            "marks": marks, "catalog": cat, "units": sorted(set(bars["_unit"]))}
 
 
 def api_profile(q):
@@ -389,7 +438,7 @@ def api_provenance(q):
     """Datos y versiones de cálculo de un valor y día (y del desglose del episodio, si existe)."""
     sym, day = q["symbol"].upper(), q["day"]
     guard(q, sym, "provenance")
-    sds = event_store.read("symbol_days", day)
+    sds = event_store.read("symbol_days", day, version=_cat(q))
     sd = _rows(sds[sds["symbol"] == sym]) if len(sds) else []
     dd = None
     if q.get("episode"):
@@ -402,6 +451,190 @@ def api_provenance(q):
     return {"symbol_day": sd, "drilldown": dd, "code_version_now": config.code_version()}
 
 
+def api_valorday(q):
+    """Todas las medidas de un valor y día con su estado cat-v1, haya o no alertas (investigación manual).
+
+    En modo ciego no se muestran hasta el fin del after hours: las medidas del día resumen la sesión entera."""
+    sym, day = q["symbol"].upper(), q["day"]
+    guard(q, sym, "valorday")
+    cur = _blind_cursor(q)
+    if cur is not None and cur < sessions.bounds(day)["full_close"]:
+        return {"symbol": sym, "day": day, "blind_locked": True,
+                "error": "modo ciego: las medidas del día resumen la sesión entera y se muestran al terminar el after hours"}
+    r = valorday.valor_day(sym, day, compute=q.get("compute") == "1")
+    Library.log_access({"symbol": sym, "day": day, "cursor": None, "blind": False, "max_t_returned": None,
+                        "endpoint": "valorday", "viewer": "lab-v2"})
+    return r
+
+
+# ── acceso libre: cualquier valor, fecha y ventana, sin necesidad de alerta (2026-11-21) ──
+def _locked(fn):
+    def w(q):
+        try:
+            return fn(q)
+        except test_guard.TestPeriodLocked as e:
+            raise TestLockError(str(e))
+    return w
+
+
+@_locked
+def api_window_estimate(q):
+    sym = q["symbol"].upper()
+    return window_access.estimate(sym, q["day"], q.get("start"), q.get("end"), quotes=q.get("quotes", "1") == "1",
+                                  provider=runtime.alpaca(), allow_test=q.get("allow_test") == "1")
+
+
+def _run_window_fetch(jid, body):
+    try:
+        _jobs[jid]["status"] = "running"
+        r = window_access.fetch(body["symbol"].upper(), body["day"], body.get("start"), body.get("end"),
+                                quotes=bool(body.get("quotes", True)), confirm=bool(body.get("confirm")),
+                                provider=runtime.alpaca(), allow_test=bool(body.get("allow_test")),
+                                purpose=body.get("purpose", "laboratorio"))
+        _jobs[jid].update(status="done" if r["status"] == "done" else r["status"], result=r)
+        with _cache_lock:
+            for k in [k for k in _cache if k[0] == body["symbol"].upper() and k[1] == body["day"]]:
+                _cache.pop(k)
+    except Exception as e:  # noqa: BLE001
+        _jobs[jid].update(status="failed", error=f"{type(e).__name__}: {e}")
+
+
+def api_window_fetch(body):
+    sym, day = body["symbol"].upper(), body["day"]
+    guard({"day": day, "allow_test": "1" if body.get("allow_test") else "0"}, sym, "window_fetch")
+    est = window_access.estimate(sym, day, body.get("start"), body.get("end"), quotes=bool(body.get("quotes", True)),
+                                 provider=runtime.alpaca(), allow_test=bool(body.get("allow_test")))
+    if est.get("error") or est["blocked"]:
+        return {"status": "error" if est.get("error") else "blocked", "estimate": est}
+    if est["needs_confirmation"] and not body.get("confirm"):
+        return {"status": "needs_confirmation", "estimate": est}
+    jid = uuid.uuid4().hex[:8]
+    _jobs[jid] = {"symbol": sym, "day": day, "status": "queued", "kind": "window_fetch", "estimate": est}
+    threading.Thread(target=_run_window_fetch, args=(jid, body), daemon=True).start()
+    return {"job": jid, "status": "queued", "estimate": est}
+
+
+@_locked
+def api_window_tape(q):
+    sym, day = q["symbol"].upper(), q["day"]
+    guard(q, sym, "tape")
+    end = q.get("end")
+    blind = q.get("blind") == "1" and bool(q.get("cursor"))
+    if blind:
+        cur = q["cursor"][:5]
+        end = cur if not end or cur < end else end
+    t = window_access.tape(sym, day, q.get("start"), end, allow_test=q.get("allow_test") == "1")
+    mx = max((x["t"] for x in t.get("trades", [])), default=None)
+    Library.log_access({"symbol": sym, "day": day, "start": q.get("start"), "end": end, "cursor": q.get("cursor"),
+                        "blind": blind, "endpoint": "tape", "viewer": "lab-access",
+                        "max_t_returned": ts_iso(pd.Timestamp(mx, unit="ms", tz="UTC")) if mx else None})
+    return t
+
+
+@_locked
+def api_multisession(q):
+    return window_access.multi_session(q["symbol"].upper(), q["start_day"], q["end_day"], q.get("res", "15"),
+                                       allow_test=q.get("allow_test") == "1")
+
+
+def api_case_create(body):
+    sym = body["symbol"].upper()
+    day = body["start_day"]
+    guard({"day": day, "allow_test": "1" if body.get("allow_test") else "0"}, sym, "case")
+    units = []
+    for d in calendar.trading_days(day, body.get("end_day") or day)[:60]:
+        for k in ("trades", "quotes"):
+            units += [{"unit_key": r["unit_key"], "sha256": r["sha256"], "kind": k, "day": d}
+                      for r in episode.units_for(sym, d, k)]
+    cid = LIB.add_case({**body, "symbol": sym, "data_units": units})
+    return {"case_id": cid, "data_units": len(units)}
+
+
+def _run_drilldown(jid, body):
+    try:
+        _jobs[jid]["status"] = "running"
+        V, day = body.get("catalog", "cat-v1"), body["day"]
+        alerts = []
+        if body.get("episode_id"):
+            eps = event_store.read("episodes", day, version=V)
+            ep = eps[eps["episode_id"] == body["episode_id"]].iloc[0].to_dict()
+            al = event_store.read("alerts", day, version=V)
+            alerts = al[al["episode_id"] == body["episode_id"]].to_dict("records")
+            sym = ep["symbol"]
+            win = drilldown.plan_window(day, ep["t_start_utc"], ep["t_end_utc"])
+            key = body["episode_id"]
+        else:
+            sym = body["symbol"].upper()
+            win = window_access.parse_window(day, body.get("start"), body.get("end"))
+            key = (f"manual_{sym}_{day}_{(body.get('start') or '').replace(':', '')}"
+                   f"{(body.get('end') or '').replace(':', '')}")
+            al = event_store.read("alerts", day, version=V)
+            if len(al):
+                al = al[al["symbol"] == sym]
+                alerts = [x for x in al.to_dict("records") if pd.Timestamp(x["t_end_utc"]) > win[0]
+                          and pd.Timestamp(x["t_start_utc"]) < win[1]]
+        dd = drilldown.run(sym, day, win, alerts=alerts, provider=runtime.alpaca(), quotes=body.get("quotes", "auto"),
+                           key=key, allow_test_period=bool(body.get("allow_test")), catalog=V)
+        if dd.get("error"):
+            _jobs[jid].update(status="failed", error=dd["error"])
+            return
+        event_store.drilldown_path(key).write_text(json.dumps(dd, indent=1, default=str), encoding="utf-8")
+        n = drilldown.apply_statuses(day, dd["statuses"], version=V)
+        _jobs[jid].update(status="done", key=key, statuses_updated=n, fetch=dd["fetch"], seconds=dd["seconds"])
+    except Exception as e:  # noqa: BLE001
+        _jobs[jid].update(status="failed", error=f"{type(e).__name__}: {e}")
+
+
+def api_drilldown(body):
+    day = body["day"]
+    guard({"day": day, "allow_test": "1" if body.get("allow_test") else "0"}, body.get("symbol", "*"), "drilldown")
+    jid = uuid.uuid4().hex[:8]
+    _jobs[jid] = {"day": day, "status": "queued", "kind": "drilldown", "catalog": body.get("catalog", "cat-v1"),
+                  "episode_id": body.get("episode_id"), "symbol": body.get("symbol")}
+    threading.Thread(target=_run_drilldown, args=(jid, body), daemon=True).start()
+    return {"job": jid, **_jobs[jid]}
+
+
+def api_drilldown_result(q):
+    p = event_store.drilldown_path(q["key"])
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {"error": "sin desglose con esa clave"}
+
+
+# ── perfiles de volumen entre sesiones (VP2, 2026-11-22) ──
+def api_vp_symbols(q):
+    ix = vp_windows.index()
+    pre = (q.get("prefix") or "").upper()
+    r = ix[ix["symbol"].str.startswith(pre)] if pre else ix
+    return {"symbols": r.sort_values(["symbol", "first"]).to_dict("records")}
+
+
+@_locked
+def api_vp_window(q):
+    sym, end = q["symbol"].upper(), q["end"]
+    if test_guard.reserved(end) and q.get("allow_test") != "1":
+        raise TestLockError("fecha del periodo reservado de G2A")
+    n = int(q.get("n", 20))
+    if n not in vp_windows.WINDOWS:
+        return {"error": f"ventana {n}: usa {vp_windows.WINDOWS}"}
+    f, ent, per = vp_windows.resolve(sym, end)
+    df = vp_windows.load_file(f)
+    w = vp_windows.window(df, end, n, with_matrix=True)
+    obs = []
+    for d in w.get("days", []):
+        pth = storage.root() / "features" / "vp_profiles_observed" / f"{sym}_{d['date']}.parquet"
+        if pth.exists():
+            obs.append(d["date"])
+    return {**w, "symbol": sym, "entity": ent, "period": per, "observed_available": obs,
+            "periods": vp_windows.index()[vp_windows.index()["symbol"] == sym][["entity", "period", "first", "last"]]
+            .to_dict("records")}
+
+
+def api_vp_observed(body):
+    sym, day = body["symbol"].upper(), body["day"]
+    guard({"day": day, "allow_test": "0"}, sym, "vp_observed")
+    return vp_observed.build(sym, day)
+
+
 ROUTES_GET = {"/api/footprint": api_footprint, "/api/available": api_available, "/api/estimate": api_estimate,
               "/api/labels": lambda q: {"labels": LABELS},
               "/api/jobs": lambda q: {"jobs": _jobs},
@@ -409,10 +642,20 @@ ROUTES_GET = {"/api/footprint": api_footprint, "/api/available": api_available, 
               "/api/library/annotations": lambda q: {"annotations": LIB.annotations(q.get("episode_id"))},
               "/api/library/contamination": lambda q: {"test_period_accessed": LIB.contaminated_test_dates()},
               "/api/events/days": api_event_days, "/api/events": api_events, "/api/bars": api_bars,
-              "/api/profile": api_profile, "/api/provenance": api_provenance}
+              "/api/profile": api_profile, "/api/provenance": api_provenance, "/api/valorday": api_valorday,
+              "/api/window/estimate": api_window_estimate, "/api/window/tape": api_window_tape,
+              "/api/multisession": api_multisession, "/api/cases": lambda q: {"cases": LIB.cases(q.get("symbol"))},
+              "/api/drilldown/result": api_drilldown_result,
+              "/api/vp/symbols": api_vp_symbols, "/api/vp/window": api_vp_window,
+              "/api/window/limits": lambda q: {"limits": window_access.LIMITS,
+                                               "requests_last_24h": window_access.requests_last_24h()}}
 ROUTES_POST = {"/api/fetch": api_fetch, "/api/library/episode": api_episode_create,
+               "/api/window/fetch": api_window_fetch, "/api/case": api_case_create, "/api/drilldown": api_drilldown,
+               "/api/vp/observed": api_vp_observed,
                "/api/library/annotate": lambda b: {"annotation_id": LIB.annotate(b)}}
-STATIC = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css"}
+STATIC = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css",
+          "/access.html": "access.html", "/access.js": "access.js",
+          "/profiles.html": "profiles.html", "/profiles.js": "profiles.js"}
 CTYPE = {".html": "text/html; charset=utf-8", ".js": "application/javascript; charset=utf-8",
          ".css": "text/css; charset=utf-8"}
 

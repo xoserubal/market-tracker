@@ -88,7 +88,8 @@ def _clip(df: pd.DataFrame, window):
     return df[(df["t"] >= window[0]) & (df["t"] < window[1])]
 
 
-def load_trades(symbol: str, day: str, manifest: Manifest = None, window=None, dedupe_ids: bool = False):
+def load_trades(symbol: str, day: str, manifest: Manifest = None, window=None, dedupe_ids: bool = False,
+                legacy_overlap_dedupe: bool = False):
     """window=(inicio, fin) UTC: lee solo las unidades que la tocan y recorta (memoria acotada en días grandes).
 
     dedupe_ids=True (línea de eventos, E1): quita además las repeticiones de una misma operación — mismo mercado,
@@ -97,14 +98,24 @@ def load_trades(symbol: str, day: str, manifest: Manifest = None, window=None, d
     rows = _overlapping(units_for(symbol, day, "trades", manifest), day, window)
     if not rows:
         return pd.DataFrame(), []
-    cols = TRADE_COLS + (["i"] if dedupe_ids else [])
+    cols = TRADE_COLS + ["i"]
     raw = _clip(_read([r["path"] for r in rows], cols), window)
-    raw = _dedupe_overlap(raw, ["t", "x", "p", "s", "c", "z"]).sort_values("t", kind="stable").reset_index(drop=True)
+    # Corregido 2026-11-22: antes se quitaban SIEMPRE las filas iguales en (t, x, p, s, c, z), aunque hubiera una sola
+    # unidad; con marcas de tiempo repetidas (2016-2017) eso borraba operaciones legítimas con identificador distinto
+    # (KSS 2017-05-10: 7 580 de 47 382). Ahora solo se quitan repeticiones entre unidades que se solapan, y con el
+    # identificador en la clave. legacy_overlap_dedupe=True reproduce el comportamiento anterior (G1.5, E1, VP1 v1).
+    overlap_units = len(rows) > 1
+    if legacy_overlap_dedupe:
+        raw = _dedupe_overlap(raw, ["t", "x", "p", "s", "c", "z"])
+    elif overlap_units:
+        raw = _dedupe_overlap(raw, ["t", "x", "p", "s", "c", "z", "i"])
+    raw = raw.sort_values("t", kind="stable").reset_index(drop=True)
     removed = 0
     if dedupe_ids:
         dup = raw["i"].notna() & raw.duplicated(["x", "i", "p", "s", "c"], keep="first")
         removed = int(dup.sum())
-        raw = raw[~dup].drop(columns=["i"]).reset_index(drop=True)
+        raw = raw[~dup].reset_index(drop=True)
+    raw = raw.drop(columns=["i"])
     tr = label_trades(raw, day)
     tr.attrs["duplicate_ids_removed"] = removed
     return tr, coverage_windows(rows, day)

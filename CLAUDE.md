@@ -6820,6 +6820,112 @@ Encargo V3 + autorización G1 (en el chat, no commiteados). Estudio aislado en `
     umbrales; las referencias iniciales marcan el 14,5 % de las medidas).
   - Hallazgos de datos: subastas duplicadas con el mismo identificador (`dedupe_ids` en `episode.load_trades`, solo
     en eventos); las cuotas de subasta exigen trades (la barra de las 16:00 mezcla subasta y after hours).
+- **E2 hecho (2026-11-21), aprobado como caracterización observacional.** Informes: `E2_INFORME.md` y `E2B_INFORME.md`
+  (criterios de las 5 medidas problemáticas, auditoría de ventanas reales, propuesta final de cat-v1, cuatro capas).
+  - **Objetivo fijado por el usuario:** un registro histórico consultable de la negociación intradía. Las alertas son
+    una interfaz de descubrimiento, no lo que se conserva.
+  - Cuatro capas separadas: datos de mercado, medidas, catálogo versionado y estudios. Cambiar el catálogo nunca borra
+    medidas: `features/e2_measures` guarda las 44 medidas de los 759 829 valor-días, marcados o no.
+  - **cat-v1 propuesto, sin aplicar:**
+    - M1 como regla y M2 como contexto;
+    - el 2 % por familia es solo una referencia de calibración;
+    - ninguna medida pierde su alerta por redundancia: I2 y las escalas de 1/5/15 min se conservan;
+    - ventanas reales de cada alerta, con comienzo, detección y disponibilidad.
+  - **Hallazgos de datos:**
+    - **V3_close_est no sirve con barras:** en valores de NYSE la barra de las 16:00 no recoge la subasta de cierre.
+      La subasta se estudia con trades.
+    - **D3_gap:** huecos simultáneos el 2019-08-12 y el 2019-10-09, probablemente barras ausentes. Las paradas de
+      marzo de 2020 sí son reales.
+    - La fusión de episodios de cat-v0 venía de sus umbrales. Con cat-v1 solo queda en los días de COVID.
+- **cat-v1 aprobado e implantado (2026-11-21), manual.** Informe: `research/microstructure_v1/CV1_INFORME.md`.
+  - Parámetros congelados con hash en `catalog/cat_v1_params.json`; cat-v0 en `catalog/cat_v0_params.json`, intacto.
+    `micro/catalog_v1.py` se niega a cargar un fichero alterado. Una versión congelada no se edita: se crea otra.
+  - Histórico regenerado con ventanas reales (`cv1_build.py`, 2016 → 2021-10-28): 235 634 alertas y 97 089 episodios.
+    Reproduce las tasas de E2B y es reproducible (mismo sha256 en dos ejecuciones).
+  - Registro por versión: `events/` (cat-v0) y `events/cat-v1/`. `ev_scan.py --catalog cat-v1` es el valor por defecto.
+  - `/api/valorday` y el panel del laboratorio muestran las 44 medidas de cualquier valor-día, tenga o no alerta.
+  - Capas 1 y 2 sin cambios, comprobado con `cv1_integrity.py`.
+  - **Registro de incidencias de datos** (`catalog/data_incidents.json`, separado de los parámetros):
+    - 2019-08-12 corroborado: incidencia del CTA, con fuente externa y trades;
+    - 2019-10-09 sospecha;
+    - JWN 2018-03-26: dos series de precio mezcladas en las barras y en los trades. Es un error de datos que ningún
+      control detectaba.
+  - Calidad separada en `data_quality` (dato) y `structural` (mercado o valor). Umbrales marcados
+    `in_sample_calibration` / `retrospective_out_of_sample` / `prospective`.
+  - **Limitaciones:**
+    - el after hours de valores activos casi no se marca (umbrales de C3 de 118-318 en unidades de dispersión);
+    - las subastas requieren trades;
+    - `ev_drilldown.py` sigue enlazado a los episodios de cat-v0.
+  - **Pendiente de decisión:** registro diario, control de series mezcladas, etiqueta de opa pendiente, Volume Profile
+    entre sesiones, estructuras semejantes, acceso selectivo a trades y quotes. E3 sin activar.
+- **cat-v1 aceptado; calibración del catálogo cerrada (2026-11-21).** El usuario cambia la prioridad: infraestructura
+  para estudiar la negociación (de minutos a semanas), no mejorar el detector.
+  - Sin nuevas familias, sin optimizar umbrales, sin estudios predictivos.
+  - Propuesta y resultados: `research/microstructure_v1/E3_PROPUESTA.md`.
+  - **E3, prueba manual hecha** (`e3_daily.py run --day D`, pasada `full`):
+    - descarga con la petición múltiple de Alpaca (`download.download_bars_multi_day`), cada valor como unidad diaria;
+    - escaneo cat-v1 por tandas, reanudable, y cierre del día con `event_scan.finalize_day_v1`;
+    - 2026-11-20: 620 valores, 49 días, 1 461 peticiones y 506 MB de barras la primera vez; en régimen, unos
+      20 min y 10 MB por día;
+    - interrupciones (simulada y reales) y reanudación probadas, idempotencia confirmada;
+    - EQR no existe para Alpaca (la lista del S&P 500 actual puede estar desfasada).
+    - No está programado.
+  - **Control de series mezcladas:** `micro/dq_checks.py`, `dq_mixed_history.py`. Sobre 759 827 valor-días, solo marca
+    JWN 2018-03-26. Se aplica también en la pasada diaria.
+  - **Sectores de una instantánea posterior:** ya no se usan como sector a fecha (`sector_point_in_time=false`,
+    `sector_retrospective`).
+- **Herramienta de investigación (aprobado 2026-11-21; criterio: estudiar cómo se negocia, no mejorar el detector).**
+  Sin nuevas familias de alertas ni estudios predictivos. Sin commits.
+  - **Prueba intermitente:** era `test_rate_limiter_threads`.
+    - Medía la hora después de recibir el turno; con el equipo cargado, un hilo tardaba hasta 477 ms en anotarla.
+    - El limitador sí respeta su límite (0 excesos en 40 repeticiones con carga).
+    - `acquire()` devuelve ahora la hora de concesión y las pruebas la usan.
+    - Dependencia del entorno encontrada de paso: las pruebas del laboratorio fallaban con menos de 2,5 GB de memoria
+      libre (protección del servidor). `tests/conftest.py` fija la memoria libre en las pruebas.
+  - **Piloto E3 de 5 jornadas** (`e3_pilot.py`, Programador de tareas de Windows, tarea `MicroE3Pilot` en LAWNMOWER):
+    - jornadas 23, 24, 25, 27 (media sesión) y 30 de noviembre;
+    - recupera las jornadas pendientes; usa su propio cerrojo además del de `e3_daily`;
+    - antes de cada jornada pasa la batería de pruebas;
+    - mide tiempo, CPU, memoria y disco, comprueba la calidad y avisa por Telegram;
+    - al acabar se deshabilita solo. Informe: `py -3 e3_pilot.py report`.
+    - `MICRO_E3_PILOT_DIR` = modo prueba, con directorio aparte.
+  - **Universo U1** (`u1_universe_registry.py`, informe `U1_INFORME.md`):
+    - cuatro capas: emisor (CIK), instrumento/ticker, composición a cada fecha (96 revisiones de Wikipedia del S&P 500
+      desde 2026-01-14; del Nasdaq 100 desde 2026-07-09) y disponibilidad en Alpaca;
+    - EQR→VMRK desde 2026-08-18 (mismo CIK 906107; SEC, Alpaca y continuidad de precio); AVB sale y entra RDDT;
+    - SATS se reutiliza para otra empresa desde 2026-10-20;
+    - GTBIF, MAPS y PLNH (OTC) se registran como `provider_not_covered`, no como días sin negociación;
+    - `universe_intervals.parquet` de G1 no se toca; desde 2026-01-14 manda el registro.
+  - **Acceso libre** (`micro/window_access.py`, `lab/access.html`): cualquier valor, día y ventana.
+    - Coste estimado con las barras guardadas, descontando lo ya descargado.
+    - Descarga con confirmación por encima de 150 peticiones, tope de 1 500 por descarga y de 6 000 en 24 h, y
+      registro en `results/lab_access/`.
+    - Cinta de operaciones y cotizaciones por tramo, con el criterio de `sessions.classify_trades`.
+    - Casos de investigación trazables (tabla `cases` de la biblioteca, con unidades y sha256).
+    - Varias sesiones a 1, 5, 15 y 60 minutos y diaria.
+    - Desglose (`ev_drilldown.py --catalog`, `/api/drilldown`) integrado con cat-v1, que conserva los estados «sospecha
+      de datos» y «artefacto» del escaneo.
+  - **Piloto de Volume Profile VP1** (`vp1_pilot.py`, `micro/volume_profile.py`, informe `VP1_INFORME.md`), sobre
+    191 sesiones:
+    - las barras con reparto triangular en el VWAP reproducen la forma del perfil (variación total 0,045), el área de
+      valor y los nodos altos;
+    - el POC coincide en el 66-86 % de las sesiones y, cuando no, es un casi empate;
+    - hacen falta trades para la subasta de cierre, los valores muy líquidos y los niveles finos.
+    - La diferencia de volumen trades/barras de 2016-2017 resultó ser un fallo NUESTRO (ver VP2).
+  - **VP2, perfiles históricos (aprobado y hecho 2026-11-22)** (`vp_build.py`, `micro/vp_store.py`,
+    `micro/vp_windows.py`, `vp_study.py`, `lab/profiles.html`; informe `VP2_INFORME.md`):
+    - **Tabla `features/vp_profiles/`** (513 MB), fuente `estimated_bars_1m_ex_auction`:
+      - 759 822 valor-días de 2016-2021 y 30 172 recientes (desde 2026-09-15), nada del periodo reservado;
+      - perfil base fino en precio sin ajustar, del que salen la rejilla del 0,10 % y la rejilla común de cada ventana;
+      - por día: POC, área de valor, zona del 90 % por segmentos, planitud, confianza y picos;
+      - controles: volumen = barras en el 100 %, recálculo idéntico de 8/8.
+    - **Hallazgos:** el perfil diario se desplaza con el precio (Jaccard del área de valor entre días ~0,18) y apenas
+      hay niveles persistentes; la confianza del POC con barras se sobrestima en valores muy líquidos.
+    - **Fallo corregido:** `episode.load_trades` quitaba operaciones legítimas idénticas salvo el id (KSS 2017: 16 %).
+      Ahora con barras = trades exacto; `legacy_overlap_dedupe=True` reproduce lo anterior. G2A no lo usaba.
+    - **Perfiles observados por lotes** (`micro/vp_observed.py`): NVDA 9,6 M de trades con < 0,5 GB; tabla aparte.
+    - `micro/heavy_lock.py`: el piloto E3 no arranca durante un cálculo pesado.
+    - La cobertura E3 escala lo esperado en días de cierre anticipado (27-nov).
 
 ## Roadmap de mejoras pendientes
 

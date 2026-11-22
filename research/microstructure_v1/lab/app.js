@@ -75,7 +75,12 @@ if (typeof document !== 'undefined') (function () {
   let EV = { episode: null, bars: null, events: null };
   const FAM_COLOR = { D: '#1f5fa8', V: '#7b4fbf', I: '#c26b00', N: '#2e7d6b', C: '#b0306a', PM: '#5a6b85', P: '#2f8f3a' };
   const STATUS = { candidate_bars: 'candidata (barras)', characterized_trades: 'caracterizada (trades)',
-    enriched_quotes: 'enriquecida (quotes)', indeterminate: 'indeterminada', artifact: 'artefacto' };
+    enriched_quotes: 'enriquecida (quotes)', indeterminate: 'indeterminada', artifact: 'artefacto',
+    requires_trades: 'requiere trades', suspected_data_issue: 'sospecha de datos', flag: 'marca', below: 'por debajo',
+    not_evaluable: 'no evaluable' };
+  const CAT = () => ($('evcat') ? $('evcat').value : 'cat-v1');
+  const isV1 = () => CAT() === 'cat-v1';
+  const list = (x) => Array.isArray(x) ? x : (typeof x === 'string' && x.startsWith('[') ? JSON.parse(x) : []);
   const nyHM = (iso) => iso ? Layout.nyTime(Date.parse(iso)).slice(0, 5) : '—';
   const nyHMS = (iso) => iso ? Layout.nyTime(Date.parse(iso)) : '';
   const fmtN = (x, d = 2) => (x == null || Number.isNaN(x)) ? '—' : Number(x).toFixed(d);
@@ -85,14 +90,15 @@ if (typeof document !== 'undefined') (function () {
   }
   function syncUrl() {
     const p = params(); const q = { symbol: p.symbol, day: p.day, start: p.start, end: p.end, tf: p.tf, session: p.session,
-      method: p.method, blind: p.blind === '1' ? '1' : '', cursor: p.blind === '1' ? p.cursor : '', episode: EV.episode || '' };
+      method: p.method, blind: p.blind === '1' ? '1' : '', cursor: p.blind === '1' ? p.cursor : '', episode: EV.episode || '',
+      catalog: CAT() === 'cat-v1' ? '' : CAT() };
     history.replaceState(null, '', '?' + qs(q));
   }
-  async function afterLoad() { syncUrl(); await Promise.all([loadBars(), loadEvents(), loadProv()]); }
+  async function afterLoad() { syncUrl(); await Promise.all([loadBars(), loadEvents(), loadProv(), loadValorDay()]); }
 
   async function loadBars() {
     const p = params();
-    const d = await get('/api/bars', { symbol: p.symbol, day: p.day, blind: p.blind, cursor: p.cursor });
+    const d = await get('/api/bars', { symbol: p.symbol, day: p.day, blind: p.blind, cursor: p.cursor, catalog: CAT() });
     if (lockBanner(d)) { EV.bars = null; drawPV(); return; }
     EV.bars = d.error ? null : d; drawPV();
   }
@@ -131,8 +137,12 @@ if (typeof document !== 'undefined') (function () {
     for (const m of d.marks) {
       const c = FAM_COLOR[m.family] || '#333'; const xs = x(Date.parse(m.t_start)), xe = x(Date.parse(m.t_end)), xd = x(Date.parse(m.t_detectable));
       const yy = T + 4 + (row++ % 6) * 7;
-      ctx.strokeStyle = c; ctx.globalAlpha = m.status === 'artifact' ? 0.35 : 1; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(xs, yy); ctx.lineTo(Math.max(xe, xs + 2), yy); ctx.stroke();
+      ctx.strokeStyle = c; ctx.globalAlpha = (m.status === 'artifact' || m.status === 'suspected_data_issue') ? 0.35 : 1; ctx.lineWidth = 2;
+      if (m.representation === 'point') {
+        // medida de resumen: punto en su detección y ventana original en trazo fino discontinuo
+        if (m.window_start && m.window_end) { ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x(Date.parse(m.window_start)), yy); ctx.lineTo(x(Date.parse(m.window_end)), yy); ctx.stroke(); ctx.setLineDash([]); }
+        ctx.fillStyle = c; ctx.beginPath(); ctx.arc(xd, yy, 3, 0, 2 * Math.PI); ctx.fill();
+      } else { ctx.beginPath(); ctx.moveTo(xs, yy); ctx.lineTo(Math.max(xe, xs + 2), yy); ctx.stroke(); }
       ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(xd, yy + 2); ctx.lineTo(xd - 4, yy + 9); ctx.lineTo(xd + 4, yy + 9); ctx.fill();
       ctx.globalAlpha = 1;
     }
@@ -146,24 +156,25 @@ if (typeof document !== 'undefined') (function () {
   }
 
   async function loadDays() {
-    const d = await get('/api/events/days');
+    const d = await get('/api/events/days', { catalog: CAT() });
     const cur = $('day').value;
     $('evday').innerHTML = (d.days || []).slice().reverse().map((x) => `<option value="${x.day}"${x.day === cur ? ' selected' : ''}>${x.day} · ${x.symbols} valores · ${x.episodes} episodios</option>`).join('');
   }
   async function loadEvents() {
     const p = params(); const day = $('evall').checked ? ($('evday').value || p.day) : p.day;
-    const q = { day, blind: p.blind, cursor: p.blind === '1' && day === p.day ? p.cursor : '' };
+    const q = { day, blind: p.blind, cursor: p.blind === '1' && day === p.day ? p.cursor : '', catalog: CAT() };
     if (!$('evall').checked) q.symbol = p.symbol;
     const d = await get('/api/events', q);
     if (lockBanner(d)) { $('events').textContent = '—'; return; }
     EV.events = d;
-    $('evmeta').textContent = `${d.catalog_version} · ${d.detector_version} · umbrales: percentil ≥ ${d.thresholds.pct_hi} o z ≥ ${d.thresholds.z_hi} (${d.thresholds.status})` + (d.blind_cursor ? ` · modo ciego hasta ${nyHMS(d.blind_cursor)} NY` : '');
-    const eps = (d.episodes || []).slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    $('evmeta').textContent = `${d.catalog_version} · ${d.detector_version} · ${d.summary || ''}` + (d.blind_cursor ? ` · modo ciego hasta ${nyHMS(d.blind_cursor)} NY` : '');
+    const eps = (d.episodes || []).slice().sort((a, b) => isV1() ? (Date.parse(a.t_detectable_utc) - Date.parse(b.t_detectable_utc)) : ((b.priority || 0) - (a.priority || 0)));
     if (!eps.length) { $('events').innerHTML = '<p class="muted">Sin episodios registrados.</p>'; $('alerts').innerHTML = ''; return; }
-    let h = '<table><tr><th>Valor</th><th>Ventana NY</th><th>Detectable</th><th>Códigos</th><th>Alertas</th><th>Estado</th><th></th></tr>';
+    let h = `<table><tr><th>Valor</th>${isV1() ? '<th>Tramo</th>' : ''}<th>Ventana NY</th><th>Detectable</th><th>Códigos</th><th>Alertas</th>${isV1() ? '<th>Día de mercado</th><th>Calidad / estructural</th>' : ''}<th>Estado</th><th></th></tr>`;
     for (const e of eps) {
-      h += `<tr${e.episode_id === EV.episode ? ' class="cur"' : ''}><td><b>${e.symbol}</b></td><td>${nyHM(e.t_start_utc)}–${nyHM(e.t_end_utc)}</td><td>${nyHM(e.t_detectable_utc)}</td>` +
-        `<td>${(e.codes || []).join(' ')}</td><td>${e.n_alerts}</td><td><span class="st ${e.status}">${STATUS[e.status] || e.status}</span></td>` +
+      const extra = isV1() ? `<td>${e.market_day ? 'sí' : ''}</td><td class="small">${[...list(e.data_quality), ...list(e.structural)].join(', ')}</td>` : '';
+      h += `<tr${e.episode_id === EV.episode ? ' class="cur"' : ''}><td><b>${e.symbol}</b></td>${isV1() ? `<td>${e.segment}</td>` : ''}<td>${nyHM(e.t_start_utc)}–${nyHM(e.t_end_utc)}</td><td>${nyHM(e.t_detectable_utc)}</td>` +
+        `<td>${list(e.codes).join(' ')}</td><td>${e.n_alerts}</td>${extra}<td><span class="st ${e.status}">${STATUS[e.status] || e.status}</span></td>` +
         `<td><button data-ep="${e.episode_id}" data-day="${e.day}">abrir</button></td></tr>`;
     }
     $('events').innerHTML = h + '</table>';
@@ -174,6 +185,21 @@ if (typeof document !== 'undefined') (function () {
     const d = EV.events; if (!d) return; const p = params();
     const al = (d.alerts || []).filter((a) => (EV.episode ? a.episode_id === EV.episode : a.symbol === p.symbol)).sort((a, b) => Date.parse(a.t_detectable_utc) - Date.parse(b.t_detectable_utc));
     if (!al.length) { $('alerts').innerHTML = ''; return; }
+    if (isV1()) {
+      let h = `<h4>Alertas ${EV.episode ? 'del episodio' : 'de ' + p.symbol} (cat-v1)</h4><table><tr><th>Código</th><th>Medida</th><th>Tramo</th><th>Repr.</th><th>Inicio</th><th>Detección</th><th>Disponible</th><th>Fin</th>` +
+        `<th>Valor</th><th title="rareza: puntuación M1 / umbral">M1 / umbral</th><th title="percentil frente a su propia línea base">Pctl. propio</th><th title="contexto adaptativo">M2</th><th title="sesiones seguidas con la misma marca">Persist.</th>` +
+        `<th title="fracción de valores con marca de la familia ese día (mercado / sector)">Simult. mercado / sector</th><th>Calidad de datos</th><th>Estructural</th><th>Umbral conocido</th><th>Estado</th></tr>`;
+      for (const a of al) {
+        const win = a.representation === 'point' ? ` title="ventana original ${nyHM(a.window_start_utc)}–${nyHM(a.window_end_utc)}"` : '';
+        h += `<tr><td>${a.code}</td><td>${a.measure}${a.estimated ? ' <span class="tag">estimada</span>' : ''}</td><td>${a.segment}</td><td${win}>${a.representation === 'point' ? 'punto' : 'ventana'}</td>` +
+          `<td>${nyHM(a.t_start_utc)}</td><td>${nyHM(a.t_detect_utc)}</td><td>${nyHM(a.t_available_utc)}</td><td>${nyHM(a.t_end_utc)}</td>` +
+          `<td>${fmtN(a.peak_value, 4)}</td><td>${fmtN(a.score_m1, 1)} / ${fmtN(a.threshold_m1, 1)}</td><td>${fmtN(a.pct_own, 1)}</td><td>${fmtN(a.score_m2, 1)}</td><td>${a.persistence ?? '—'}</td>` +
+          `<td>${a.share_market_family == null ? '—' : (100 * a.share_market_family).toFixed(1) + ' %'} / ${a.share_sector_family == null ? '—' : (100 * a.share_sector_family).toFixed(0) + ' %'}</td>` +
+          `<td class="small">${list(a.data_quality).join(', ')}</td><td class="small">${list(a.structural).join(', ')}</td><td class="small">${a.threshold_knowledge || ''}</td>` +
+          `<td><span class="st ${a.status}" title="${a.status_note || ''}">${STATUS[a.status] || a.status}</span></td></tr>`;
+      }
+      $('alerts').innerHTML = h + '</table>'; return;
+    }
     let h = `<h4>Alertas ${EV.episode ? 'del episodio' : 'de ' + p.symbol}</h4><table><tr><th>Código</th><th>Medida</th><th>Tramo</th><th>Inicio</th><th>Detectable</th><th>Fin</th><th>Valor</th><th>Pctl.</th><th>z</th><th>n</th><th>Estado</th></tr>`;
     for (const a of al) {
       h += `<tr><td>${a.code}</td><td>${a.measure}${a.direction === -1 ? ' (−)' : ''}${a.estimated ? ' <span class="tag">estimada</span>' : ''}</td><td>${a.segment}</td><td>${nyHM(a.t_start_utc)}</td><td>${nyHM(a.t_detectable_utc)}</td><td>${nyHM(a.t_end_utc)}</td>` +
@@ -182,17 +208,23 @@ if (typeof document !== 'undefined') (function () {
     $('alerts').innerHTML = h + '</table>';
   }
   async function openEpisode(day, eid) {
-    const d = await get('/api/events', { day });
+    const d = await get('/api/events', { day, catalog: CAT() });
     const ep = (d.episodes || []).find((e) => e.episode_id === eid); if (!ep) return;
     EV.episode = eid;
-    const u = new URL(ep.lab_url);
-    for (const k of ['symbol', 'day', 'start', 'end', 'tf', 'session']) if (u.searchParams.get(k)) $(k).value = u.searchParams.get(k);
+    if (ep.lab_url) {
+      const u = new URL(ep.lab_url);
+      for (const k of ['symbol', 'day', 'start', 'end', 'tf', 'session']) if (u.searchParams.get(k)) $(k).value = u.searchParams.get(k);
+    } else {   // cat-v1 retrospectivo: ventana del episodio ±15 min, vela de 1 min, sesión extendida
+      $('symbol').value = ep.symbol; $('day').value = ep.day; $('tf').value = '1'; $('session').value = 'extended';
+      $('start').value = nyHM(new Date(Date.parse(ep.t_start_utc) - 15 * 60000).toISOString());
+      $('end').value = nyHM(new Date(Date.parse(ep.t_end_utc) + 15 * 60000).toISOString());
+    }
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     if (day < today) { $('blind').checked = true; $('cursor').value = nyHMS(ep.t_detectable_utc); }  // histórico: ciego por defecto
     load();
   }
   async function loadProv() {
-    const p = params(); const d = await get('/api/provenance', { symbol: p.symbol, day: p.day, episode: EV.episode || '' });
+    const p = params(); const d = await get('/api/provenance', { symbol: p.symbol, day: p.day, episode: EV.episode || '', catalog: CAT() });
     if (lockBanner(d)) { $('prov').textContent = '—'; return; }
     const sd = (d.symbol_day || [])[0]; let h = '';
     if (sd) {
@@ -217,6 +249,27 @@ if (typeof document !== 'undefined') (function () {
     $('profile').innerHTML = `<p>POC ${fmtN(va.poc)} · área de valor 70 % ${fmtN(va.val)}–${fmtN(va.vah)} · ${d.levels} niveles de ${d.step} $ · nivel más negociado ${(d.top_level_share * 100).toFixed(1)} % (±1 nivel ${(d.poc_pm1_share * 100).toFixed(1)} %)</p>` +
       (pr.length ? '<table>' + pr.slice().sort((a, b) => b.level - a.level).map((r) => { const w = Math.round(220 * r.vol / Math.max(...pr.map((x) => x.vol))); const cls = Math.abs(r.level - va.poc) < 1e-9 ? 'poc' : (r.level >= va.val - 1e-9 && r.level <= va.vah + 1e-9 ? 'va' : ''); return `<tr><td>${fmtN(r.level)}</td><td style="text-align:left"><span class="profbar ${cls}" style="width:${w}px"></span> ${Layout.fmtVol(r.vol)}</td></tr>`; }).join('') + '</table>' : '');
   };
+  async function loadValorDay(compute) {
+    const p = params();
+    const d = await get('/api/valorday', { symbol: p.symbol, day: p.day, blind: p.blind, cursor: p.cursor, compute: compute ? '1' : '' });
+    if (lockBanner(d)) { $('valorday').textContent = '—'; return; }
+    if (d.error) { $('vdmeta').textContent = ''; $('valorday').innerHTML = `<p class="muted">${d.error}</p>`; return; }
+    const ms = (d.measures || []).slice();
+    $('vdmeta').textContent = `${d.source || ''} · ${d.catalog_version} · umbral conocido: ${d.threshold_knowledge} · alertas registradas: ${d.alerts}`;
+    if (!ms.length) { $('valorday').innerHTML = `<p class="muted">${d.hint || 'Sin medidas para este valor y día.'}</p>`; return; }
+    const rank = { flag: 0, requires_trades: 1, below: 2, not_evaluable: 3 };
+    ms.sort((a, b) => (rank[a.state] - rank[b.state]) || ((b.score_m1 ?? -1e9) / (b.threshold_m1 || 1) - (a.score_m1 ?? -1e9) / (a.threshold_m1 || 1)));
+    const show = $('vdall').checked ? ms : ms.slice(0, 15);
+    let h = '<table><tr><th>Medida</th><th>Familia</th><th>Valor</th><th>M1</th><th>Umbral M1</th><th>M1 / umbral</th><th>Pctl. propio</th><th>M2</th><th>n</th><th>Estado</th><th>Motivo</th></tr>';
+    for (const m of show) {
+      const r = (m.score_m1 != null && m.threshold_m1) ? m.score_m1 / m.threshold_m1 : null;
+      h += `<tr><td>${m.measure}</td><td>${m.family}</td><td>${fmtN(m.value, 4)}</td><td>${fmtN(m.score_m1, 2)}</td><td>${fmtN(m.threshold_m1, 2)}</td><td>${fmtN(r, 2)}</td>` +
+        `<td>${fmtN(m.pct_own, 1)}</td><td>${fmtN(m.score_m2, 2)}</td><td>${m.n ?? '—'}</td><td><span class="st ${m.state}">${STATUS[m.state] || m.state}</span></td><td class="small">${m.reason || ''}</td></tr>`;
+    }
+    $('valorday').innerHTML = h + '</table>' + (ms.length > show.length ? `<p class="small">${ms.length - show.length} medidas más (marca la casilla para verlas).</p>` : '');
+  }
+  $('vdcompute').onclick = () => loadValorDay(true); $('vdall').onchange = () => loadValorDay(false);
+  $('evcat').onchange = async () => { EV.episode = null; syncUrl(); await loadDays(); await Promise.all([loadEvents(), loadBars(), loadProv()]); };
   $('evday').onchange = loadEvents; $('evall').onchange = loadEvents;
   window.addEventListener('resize', drawPV);
 
@@ -486,6 +539,7 @@ if (typeof document !== 'undefined') (function () {
     const u = new URLSearchParams(location.search);
     for (const k of ['symbol', 'day', 'start', 'end', 'tf', 'session', 'method', 'cursor']) if (u.get(k)) $(k).value = u.get(k);
     if (u.get('blind') === '1') $('blind').checked = true;
+    if (u.get('catalog')) $('evcat').value = u.get('catalog');
     await loadDays();
     if (u.get('episode') && u.get('day')) { await openEpisode(u.get('day'), u.get('episode')); return; }
     if (u.get('symbol') && u.get('day')) load(); else loadEvents();

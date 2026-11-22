@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <h1>Laboratorio de microestructura <span class="sub">footprint de operaciones ejecutadas · uso local</span></h1>
+  <h1>Laboratorio de microestructura <span class="sub">footprint de operaciones ejecutadas · uso local · <a href="/access.html">acceso libre a cualquier ventana</a> · <a href="/profiles.html">perfiles entre sesiones</a></span></h1>
   <div id="banner"></div>
 </header>
 
@@ -54,6 +54,7 @@
   <div class="panel">
     <h3>Acontecimientos detectados <span class="small" id="evmeta"></span></h3>
     <div class="form">
+      <label>Catálogo <select id="evcat"><option value="cat-v1" selected>cat-v1</option><option value="cat-v0">cat-v0 (E1)</option></select></label>
       <label>Día <select id="evday"></select></label>
       <label><input type="checkbox" id="evall" checked> todos los valores del día</label>
     </div>
@@ -64,8 +65,15 @@
     <h3>Precio y volumen (velas de 1 min, todos los tramos) con las anomalías</h3>
     <canvas id="pv" height="280"></canvas>
     <div class="small" id="pvlegend">Gris: premercado y after hours · morado: barras mixtas (subasta + primer minuto) ·
-      triángulo: instante en que la anomalía es detectable · línea: ventana de la anomalía · línea vertical roja: cursor del modo ciego.</div>
+      triángulo: instante en que la anomalía es detectable · línea: ventana de la anomalía · punto (cat-v1): medida de resumen,
+      con su ventana original en trazo fino discontinuo · línea vertical roja: cursor del modo ciego.</div>
   </div>
+</section>
+<section class="panel">
+  <h3>Medidas del valor-día con cat-v1 (todas, con o sin alerta) <span class="small" id="vdmeta"></span></h3>
+  <div class="form"><button id="vdcompute" title="solo si no está en el registro ni en la capa 2: calcula desde las barras locales, sin escribir nada">Calcular desde barras locales</button>
+    <label><input type="checkbox" id="vdall"> mostrar las 44 (por defecto, las más raras)</label></div>
+  <div id="valorday" class="evlist">—</div>
 </section>
 
 <main>
