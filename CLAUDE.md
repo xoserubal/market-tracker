@@ -4543,6 +4543,31 @@ precedencia (§6.1).
 
 ---
 
+### Primera lectura de P1A/P1C (2026-11-22)
+
+El monitor avisó el 2026-11-20 (45 cierres, 45 eventos). Dos cambios:
+- **P0 registra el día de cierre.** Las carteras cierran antes de Step 10i, así que la posición ya no estaba en
+  `positions` y su último día nunca se guardaba (37 de 38 cierres de Cava). `closed_on()` añade una fila por cada
+  cierre con `close_date` = hoy, con `closed_today`, `real_close_price` y `real_close_reason`. Solo hacia delante:
+  los cierres anteriores no tienen esa fila.
+- **`scripts/p1_trade_level_analysis.py`** (manual, `--save` → `docs/data/p1_trade_level_report.json`): lectura por
+  operación de los brazos ya registrados, sin tocar sus parámetros. Retornos de una sola serie ajustada de yfinance
+  (control y brazos comparables); IC 95 % por bootstrap agrupado por evento; falsos positivos de P1C a 21 sesiones.
+
+**Resultado (45 episodios, 38 de Cava; un solo régimen, mercado a la baja; control −2,8 % de media):**
+- P1A FIXED Δ +1,18 pp (IC +0,33 a +2,20), ATR Δ +1,58 pp (IC +0,64 a +2,70), 0 % de episodios empeorados > 5 pp:
+  cumplen la parte trade-level del §6, con 7 y 10 disparos. Sin los 2 mejores episodios bajan a +0,71 y +1,10.
+- P1C: ningún brazo cumple (Δp10 ≤ +1,75 pp frente a los 3 exigidos; falsos positivos 60-83 % de los maduros).
+- **Libros de cartera** (`scripts/p1a_shadow_books.py`, manual, `--save` → `docs/data/p1a_shadow_books.json`;
+  reglas fijadas antes de ver resultados y escritas en el docstring: size_pct real, sin reinversión, desde la firma,
+  0,10 % por salida, sin reentrada, moneda local). 47 posiciones: control −17,2 % (CAGR −55,9 %, caída −18,6 %);
+  FIXED excess +10,9 pp y caída 3,6 pp menor; ATR +16,4 pp y 5,5 pp menor. Solo Cava: +6,8 / +11,2 pp.
+  Cumplen el §6 sobre el papel, pero con 7-9 disparos, un solo régimen bajista y 40 de 47 posiciones de Cava.
+- Nada se promueve. Siguiente: acumular otros 40 episodios sin tocar parámetros (cláusula del §6) y releer;
+  idealmente con algún tramo alcista o lateral en la muestra.
+- P2 sigue sin lectura válida: faltan las filas del día de ruptura en los cierres pasados y, en las carteras de Grok,
+  el control ya no es la regla real (brazo D en producción desde el 22-sep).
+
 ## Situaciones Especiales — condición de precio (implementado 2026-08-30)
 
 Origen: el usuario intentó crear por nota de voz en Telegram *"avisar si TNZ
@@ -6926,6 +6951,31 @@ Encargo V3 + autorización G1 (en el chat, no commiteados). Estudio aislado en `
     - **Perfiles observados por lotes** (`micro/vp_observed.py`): NVDA 9,6 M de trades con < 0,5 GB; tabla aparte.
     - `micro/heavy_lock.py`: el piloto E3 no arranca durante un cálculo pesado.
     - La cobertura E3 escala lo esperado en días de cierre anticipado (27-nov).
+- **Estructuras A/B/C y entorno del piloto (2026-11-22, sin commits).** Plan aprobado: método → C → A → B (tras E3).
+  - **Método:** `research/microstructure_v1/ESTRUCTURAS_METODO.md`. Descriptivo, reglas fijadas antes de calcular,
+    variables convencionales obligatorias (OHLC, VWAP, CLV, rango, RVOL) y registro de exposición previa (§8).
+    C y A aún sin calcular.
+  - **Vigilante de E3:** `e3_integrity.py`, solo biblioteca estándar.
+    - Su manifiesto son 96 archivos: el cierre de importaciones de `e3_pilot`/`e3_daily`/`tests` más la configuración
+      estática; huella `89b95875…`.
+    - Se instala con `install --expect-digest` en LAWNMOWER, en `<piloto>/guard/` (fuera de Dropbox), y cambia solo la
+      acción de la tarea `MicroE3Pilot` a `guard-tick`.
+    - Si algo no cuadra no lanza la pasada, lo anota y avisa por Telegram.
+    - **Sin instalar todavía.**
+    - Mientras dure el piloto no se toca nada del manifiesto (`micro/`, `tests/`, `catalog/`, `lab/`, `e3_*.py`).
+  - **Pruebas fuera de la batería del piloto** (`tests_extra/`, 40):
+    - del vigilante;
+    - de regresión de `episode.load_trades` (cada regla en un caso sintético, y los consumidores de G1.5/E1 con la
+      carga corregida).
+    - `loader_correction_diff.py` mide el efecto real de la corrección en G1.5 y E1; está pendiente de ejecutarse en el
+      equipo con datos.
+  - **CRLF:** el `pull --rebase` de las 07:46 en DESPACHOB (`core.autocrlf=true` en el gitconfig del sistema) reescribió
+    112 archivos del estudio con CRLF y rompió la huella congelada de `catalog/cat_v1_params.json`; el piloto habría
+    fallado. Se restauraron los bytes de HEAD y se añadió `research/microstructure_v1/.gitattributes` (`* -text`).
+    Otros ~418 archivos del repositorio siguen en CRLF (p. ej. `flow_negative_v1`): sin tocar, falta decisión.
+  - **Disco externo TOSHIBA (MICRO_DATA_DIR) con NTFS dañado:** `manifest.sqlite` ilegible, `results/` inaccesible, no
+    aparece `features/vp_profiles`; `chkdsk` en solo lectura encuentra errores. No escribir en él hasta que el usuario
+    decida (copiar lo legible antes de `chkdsk /f`).
 
 ## Roadmap de mejoras pendientes
 

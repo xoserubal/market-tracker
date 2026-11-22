@@ -243,101 +243,127 @@ def compute_mechanical_exit(portfolio: str, cand: dict | None, pos: dict,
     return None, "unknown_portfolio_type"
 
 
+def closed_on(picks: dict, day: str) -> list[tuple[str, dict]]:
+    """(cartera, evento de cierre) de las posiciones cerradas en `day`.
+
+    Las carteras cierran ANTES de este paso (paper_trading en Step 10, Cava en
+    10d, Espejo/Cruce Rojo antes), así que la posición ya no está en
+    `positions` cuando P0 corre. Sin esta fila, el día en que se rompe la regla
+    real nunca quedaba registrado (añadido 2026-11-22: 37 de 38 cierres de Cava
+    post-firma no tenían la lectura del día de cierre)."""
+    out = []
+    for portfolio in ALL_LIVE_PORTFOLIOS:
+        for h in picks.get("portfolios", {}).get(portfolio, {}).get("history", []):
+            if h.get("event") == "close" and h.get("close_date") == day:
+                out.append((portfolio, h))
+    return out
+
+
+def _positions_to_capture(picks: dict, today: str) -> list[tuple[str, dict, bool]]:
+    items = [(pf, pos, False)
+             for pf in ALL_LIVE_PORTFOLIOS
+             for pos in picks.get("portfolios", {}).get(pf, {}).get("positions", [])]
+    items += [(pf, h, True) for pf, h in closed_on(picks, today)]
+    return items
+
+
 def build_rows(picks: dict, cand_by_ticker: dict[str, dict], shadow_lookup: dict,
                price_hist: dict[str, dict], prior_by_position: dict[str, list[dict]],
                today: str) -> list[dict]:
     rows = []
-    for portfolio in ALL_LIVE_PORTFOLIOS:
-        ptf = picks.get("portfolios", {}).get(portfolio, {})
-        for pos in ptf.get("positions", []):
-            ticker = pos["ticker"]
-            entry_date = pos.get("entry_date")
-            entry_price = pos.get("entry_price")
-            if not entry_date:
-                continue
-            position_id = f"{ticker}__{entry_date}"
-            event_id = f"{ticker}_{entry_date}"
-            prior_rows = prior_by_position.get(position_id, [])
+    for portfolio, pos, closed_today in _positions_to_capture(picks, today):
+        ticker = pos["ticker"]
+        entry_date = pos.get("entry_date")
+        entry_price = pos.get("entry_price")
+        if not entry_date:
+            continue
+        position_id = f"{ticker}__{entry_date}"
+        event_id = f"{ticker}_{entry_date}"
+        prior_rows = prior_by_position.get(position_id, [])
 
-            hist = price_hist.get(ticker)
-            current_price = float(hist["close"][-1]) if hist else None
-            atr = _atr14(hist["high"], hist["low"], hist["close"]) if hist else None
-            atr_pct = round(atr / current_price * 100, 2) if (atr and current_price) else None
-            w1_ret_5d = _w1_ret_5d(hist["close"]) if hist else None
-            from_high_window = _from_high_window(hist["close"]) if hist else None
+        hist = price_hist.get(ticker)
+        current_price = float(hist["close"][-1]) if hist else None
+        atr = _atr14(hist["high"], hist["low"], hist["close"]) if hist else None
+        atr_pct = round(atr / current_price * 100, 2) if (atr and current_price) else None
+        w1_ret_5d = _w1_ret_5d(hist["close"]) if hist else None
+        from_high_window = _from_high_window(hist["close"]) if hist else None
 
-            prev_running_high = _closest_at_or_before(prior_rows, today, "running_high")
-            prev_running_low  = _closest_at_or_before(prior_rows, today, "running_low")
-            base_high = prev_running_high if prev_running_high is not None else entry_price
-            base_low  = prev_running_low  if prev_running_low  is not None else entry_price
-            running_high = max(base_high, current_price) if (base_high and current_price) else base_high
-            running_low  = min(base_low,  current_price) if (base_low  and current_price) else base_low
-            mfe = round((running_high / entry_price - 1) * 100, 2) if (running_high and entry_price) else None
-            mae = round((running_low  / entry_price - 1) * 100, 2) if (running_low  and entry_price) else None
+        prev_running_high = _closest_at_or_before(prior_rows, today, "running_high")
+        prev_running_low  = _closest_at_or_before(prior_rows, today, "running_low")
+        base_high = prev_running_high if prev_running_high is not None else entry_price
+        base_low  = prev_running_low  if prev_running_low  is not None else entry_price
+        running_high = max(base_high, current_price) if (base_high and current_price) else base_high
+        running_low  = min(base_low,  current_price) if (base_low  and current_price) else base_low
+        mfe = round((running_high / entry_price - 1) * 100, 2) if (running_high and entry_price) else None
+        mae = round((running_low  / entry_price - 1) * 100, 2) if (running_low  and entry_price) else None
 
-            cand = cand_by_ticker.get(ticker)
-            left_universe = cand is None
-            pcs = cand.get("pcs") if cand else None
-            rot_score = cand.get("rot_score") if cand else None
-            streak_weeks = cand.get("streak_weeks") if cand else None
-            rs = cand.get("ret_4w_vs_spy") if cand else None  # proxy de RS, ver docstring
-            extension_risk = cand.get("extension_risk") if cand else None
-            extension_points = cand.get("extension_points") if cand else None
+        cand = cand_by_ticker.get(ticker)
+        left_universe = cand is None
+        pcs = cand.get("pcs") if cand else None
+        rot_score = cand.get("rot_score") if cand else None
+        streak_weeks = cand.get("streak_weeks") if cand else None
+        rs = cand.get("ret_4w_vs_spy") if cand else None  # proxy de RS, ver docstring
+        extension_risk = cand.get("extension_risk") if cand else None
+        extension_points = cand.get("extension_points") if cand else None
 
-            pcs_1d = _closest_at_or_before(prior_rows, (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d"), "PCS")
-            pcs_3d = _closest_at_or_before(prior_rows, (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=3)).strftime("%Y-%m-%d"), "PCS")
-            pcs_5d = _closest_at_or_before(prior_rows, (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=5)).strftime("%Y-%m-%d"), "PCS")
-            pcs_delta_1d = round(pcs - pcs_1d, 2) if (pcs is not None and pcs_1d is not None) else None
-            pcs_delta_3d = round(pcs - pcs_3d, 2) if (pcs is not None and pcs_3d is not None) else None
-            pcs_delta_5d = round(pcs - pcs_5d, 2) if (pcs is not None and pcs_5d is not None) else None
+        pcs_1d = _closest_at_or_before(prior_rows, (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d"), "PCS")
+        pcs_3d = _closest_at_or_before(prior_rows, (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=3)).strftime("%Y-%m-%d"), "PCS")
+        pcs_5d = _closest_at_or_before(prior_rows, (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=5)).strftime("%Y-%m-%d"), "PCS")
+        pcs_delta_1d = round(pcs - pcs_1d, 2) if (pcs is not None and pcs_1d is not None) else None
+        pcs_delta_3d = round(pcs - pcs_3d, 2) if (pcs is not None and pcs_3d is not None) else None
+        pcs_delta_5d = round(pcs - pcs_5d, 2) if (pcs is not None and pcs_5d is not None) else None
 
-            t_active, t_source = compute_t_active(portfolio, streak_weeks)
-            mech_trigger, exit_rule_id = compute_mechanical_exit(portfolio, cand, pos, current_price)
+        t_active, t_source = compute_t_active(portfolio, streak_weeks)
+        mech_trigger, exit_rule_id = compute_mechanical_exit(portfolio, cand, pos, current_price)
 
-            if portfolio in PCS_GATED_PORTFOLIOS:
-                model = shadow_lookup.get((ticker, portfolio, entry_date))
-            elif portfolio == "CAVA_MACRO":
-                model = "cava-engine-1.1.0"
-            elif portfolio == "MIRROR_ESPEJO":
-                model = "x-ai/grok-4.3-espejo"
-            elif portfolio in ("CRUCE_ROJO_D", "CRUCE_ROJO_D_25"):
-                model = "mechanical-no-model"
-            else:
-                model = None
+        if portfolio in PCS_GATED_PORTFOLIOS:
+            model = shadow_lookup.get((ticker, portfolio, entry_date))
+        elif portfolio == "CAVA_MACRO":
+            model = "cava-engine-1.1.0"
+        elif portfolio == "MIRROR_ESPEJO":
+            model = "x-ai/grok-4.3-espejo"
+        elif portfolio in ("CRUCE_ROJO_D", "CRUCE_ROJO_D_25"):
+            model = "mechanical-no-model"
+        else:
+            model = None
 
-            days_in_trade = (datetime.strptime(today, "%Y-%m-%d")
-                              - datetime.strptime(entry_date, "%Y-%m-%d")).days
+        days_in_trade = (datetime.strptime(today, "%Y-%m-%d")
+                          - datetime.strptime(entry_date, "%Y-%m-%d")).days
 
-            rows.append({
-                "ticker": ticker, "date": today,
-                "portfolio": portfolio, "position_id": position_id, "trade_id": position_id,
-                "entry_price": entry_price, "current_price": current_price,
-                "running_high": running_high, "running_low": running_low,
-                "MFE": mfe, "MAE": mae, "ATR": atr, "days_in_trade": days_in_trade,
-                "PCS": pcs,
-                # ai_candidates.json expone A-F como top-level component_A.._F (Fase 0.2 del
-                # Ranking Score, 2026-08-07) además del dict anidado pcs_components (claves
-                # largas, "A_macro_permission" etc.) — se usa el campo plano, más simple.
-                "comp_A": cand.get("component_A") if cand else None,
-                "comp_B": cand.get("component_B") if cand else None,
-                "comp_C": cand.get("component_C") if cand else None,
-                "comp_D": cand.get("component_D") if cand else None,
-                "comp_E": cand.get("component_E") if cand else None,
-                "comp_F": cand.get("component_F") if cand else None,
-                "PCS_delta_1d": pcs_delta_1d, "PCS_delta_3d": pcs_delta_3d, "PCS_delta_5d": pcs_delta_5d,
-                "rot_score": rot_score, "streak_weeks": streak_weeks, "RS": rs,
-                "left_universe": left_universe,
-                "w1_ret_5d": w1_ret_5d, "atrPct": atr_pct,
-                "extension_risk_level": extension_risk, "extension_risk_points": extension_points,
-                "fromHigh52w": from_high_window,  # ver limitación en fetch_history()
-                "trigger_threshold": t_active, "trigger_threshold_source": t_source,
-                "event_id": event_id,
-                "portfolio_threshold": PORTFOLIOS.get(portfolio, {}).get("pcs_min_entry"),
-                "absolute_floor": ABSOLUTE_FLOOR,
-                "mechanical_exit_trigger": mech_trigger, "exit_rule_id": exit_rule_id,
-                "model": model, "prompt_version": "v1",
-                "scoring_version": SCORING_VERSION, "data_version": DATA_VERSION,
-            })
+        rows.append({
+            "ticker": ticker, "date": today,
+            "portfolio": portfolio, "position_id": position_id, "trade_id": position_id,
+            "entry_price": entry_price, "current_price": current_price,
+            "running_high": running_high, "running_low": running_low,
+            "MFE": mfe, "MAE": mae, "ATR": atr, "days_in_trade": days_in_trade,
+            "PCS": pcs,
+            # ai_candidates.json expone A-F como top-level component_A.._F (Fase 0.2 del
+            # Ranking Score, 2026-08-07) además del dict anidado pcs_components (claves
+            # largas, "A_macro_permission" etc.) — se usa el campo plano, más simple.
+            "comp_A": cand.get("component_A") if cand else None,
+            "comp_B": cand.get("component_B") if cand else None,
+            "comp_C": cand.get("component_C") if cand else None,
+            "comp_D": cand.get("component_D") if cand else None,
+            "comp_E": cand.get("component_E") if cand else None,
+            "comp_F": cand.get("component_F") if cand else None,
+            "PCS_delta_1d": pcs_delta_1d, "PCS_delta_3d": pcs_delta_3d, "PCS_delta_5d": pcs_delta_5d,
+            "rot_score": rot_score, "streak_weeks": streak_weeks, "RS": rs,
+            "left_universe": left_universe,
+            "w1_ret_5d": w1_ret_5d, "atrPct": atr_pct,
+            "extension_risk_level": extension_risk, "extension_risk_points": extension_points,
+            "fromHigh52w": from_high_window,  # ver limitación en fetch_history()
+            "trigger_threshold": t_active, "trigger_threshold_source": t_source,
+            "event_id": event_id,
+            "portfolio_threshold": PORTFOLIOS.get(portfolio, {}).get("pcs_min_entry"),
+            "absolute_floor": ABSOLUTE_FLOOR,
+            "mechanical_exit_trigger": mech_trigger, "exit_rule_id": exit_rule_id,
+            "model": model, "prompt_version": "v1",
+            "scoring_version": SCORING_VERSION, "data_version": DATA_VERSION,
+            # Fila del día en que la cartera real cerró la posición (ver closed_on).
+            "closed_today": closed_today,
+            "real_close_price": pos.get("close_price") if closed_today else None,
+            "real_close_reason": pos.get("close_reason") if closed_today else None,
+        })
     return rows
 
 
@@ -370,14 +396,13 @@ def run(dry_run: bool) -> int:
     prior_by_position = _prior_rows_by_position(existing)
     already_today = {r["position_id"] for r in existing if r["date"] == today}
 
-    all_tickers = sorted({
-        pos["ticker"]
-        for pf in ALL_LIVE_PORTFOLIOS
-        for pos in picks.get("portfolios", {}).get(pf, {}).get("positions", [])
-    })
-    print(f"Posiciones abiertas a capturar: {len(all_tickers)} tickers únicos en {len(ALL_LIVE_PORTFOLIOS)} carteras.")
+    to_capture = _positions_to_capture(picks, today)
+    all_tickers = sorted({pos["ticker"] for _, pos, _ in to_capture})
+    n_closed = sum(1 for *_, c in to_capture if c)
+    print(f"Posiciones a capturar: {len(to_capture) - n_closed} abiertas + {n_closed} cerradas hoy "
+          f"({len(all_tickers)} tickers únicos).")
     if not all_tickers:
-        print("Sin posiciones abiertas en ninguna cartera — nada que capturar hoy.")
+        print("Sin posiciones abiertas ni cerradas hoy — nada que capturar.")
         return 0
 
     price_hist = fetch_history(all_tickers)
