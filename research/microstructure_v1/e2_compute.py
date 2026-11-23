@@ -83,7 +83,7 @@ def _init():
         man = pd.DataFrame([dict(r) for r in c.execute(
             "SELECT symbol, asof, period, status, path FROM units WHERE kind='bars'")])
     norm = lambda x: x if isinstance(x, str) and x.strip() not in ("", "-") else None  # noqa: E731
-    _G["man"] = {(r.symbol, norm(r.asof), r.period): (r.status, r.path) for r in man.itertuples()}
+    _G["man"] = {(r.symbol, norm(r.asof), r.period): (r.status, manifest.localize(r.path)) for r in man.itertuples()}
     _G["splits"] = D.applied_splits_by_entity()
     _G["events"] = D.events_by_entity()
     _G["outages"] = g2a_outages.outage_days()

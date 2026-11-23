@@ -165,11 +165,15 @@ def fetch_alpaca_recent(symbols: list, start: str, end: str) -> dict:
     prov = runtime.alpaca()
     last = {}
     syms = sorted(set(symbols))
+    # una fecha sin hora es el final de ese día en Nueva York: entre las 00:00 y las ~05:00 UTC cae en el futuro y el
+    # plan gratuito la rechaza ("recent SIP data"); se limita a 16 min antes de ahora (fallo visto el 23-nov a la 01:10)
+    end_q = min(pd.Timestamp(end, tz="America/New_York") + pd.Timedelta(days=1),
+                pd.Timestamp(datetime.now(timezone.utc)) - pd.Timedelta(minutes=16)).isoformat()
     for i in range(0, len(syms), 100):
         part = syms[i:i + 100]
         tok = None
         while True:
-            prm = {"symbols": ",".join(part), "timeframe": "1Day", "start": start, "end": end, "feed": "sip",
+            prm = {"symbols": ",".join(part), "timeframe": "1Day", "start": start, "end": end_q, "feed": "sip",
                    "adjustment": "raw", "limit": 10000}
             if tok:
                 prm["page_token"] = tok

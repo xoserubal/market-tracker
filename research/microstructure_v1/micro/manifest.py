@@ -24,6 +24,32 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def localize(path):
+    """Ruta guardada -> ruta en la raíz de datos actual.
+
+    El manifiesto guarda rutas absolutas y el disco externo cambia de letra según el equipo (D: en LAWNMOWER, E: en
+    DESPACHOB): sin esto, en el otro equipo todas las unidades parecían ausentes y se volvían a descargar (incidente
+    del 22-nov-2026). Si la ruta no cuelga de la raíz actual, se rehace desde la capa `raw`. Solo texto: sin acceso a
+    disco, para no ralentizar consultas de decenas de miles de filas."""
+    if not path:
+        return path
+    s = str(path)
+    root = str(storage.root())
+    if s.lower().startswith(root.lower()):
+        return s
+    parts = s.replace("\\", "/").split("/")
+    if "raw" not in parts:
+        return s
+    i = len(parts) - 1 - parts[::-1].index("raw")
+    return str(Path(root).joinpath(*parts[i:]))
+
+
+def _loc(row: dict) -> dict:
+    if row and row.get("path"):
+        row["path"] = localize(row["path"])
+    return row
+
+
 class Manifest:
     def __init__(self, db_path: Path = None):
         self.db_path = str(db_path or (storage.root() / "manifest" / "manifest.sqlite"))
@@ -39,7 +65,7 @@ class Manifest:
     def get(self, unit_key: str):
         with self._c() as c:
             r = c.execute("SELECT * FROM units WHERE unit_key=?", (unit_key,)).fetchone()
-            return dict(r) if r else None
+            return _loc(dict(r)) if r else None
 
     def is_done(self, unit_key: str, verify_checksum: bool = True) -> bool:
         r = self.get(unit_key)
@@ -107,4 +133,4 @@ class Manifest:
 
     def rows(self, where: str = "1=1", params=()):
         with self._c() as c:
-            return [dict(r) for r in c.execute(f"SELECT * FROM units WHERE {where}", params).fetchall()]
+            return [_loc(dict(r)) for r in c.execute(f"SELECT * FROM units WHERE {where}", params).fetchall()]

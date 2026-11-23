@@ -86,7 +86,7 @@ def main(limit_months=None):
         man = pd.DataFrame([dict(r) for r in c.execute(
             "SELECT symbol, asof, period, status, path FROM units WHERE kind='bars'")])
     norm = lambda x: x if isinstance(x, str) and x.strip() not in ("", "-") else None  # noqa: E731
-    man_key = {(r.symbol, norm(r.asof), r.period): (r.status, r.path) for r in man.itertuples()}
+    man_key = {(r.symbol, norm(r.asof), r.period): (r.status, manifest.localize(r.path)) for r in man.itertuples()}
     out_d, out_v = root / "features" / "intraday_daily", root / "features" / "vap_daily"
     out_d.mkdir(parents=True, exist_ok=True)
     out_v.mkdir(parents=True, exist_ok=True)

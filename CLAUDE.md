@@ -6975,9 +6975,89 @@ Encargo V3 + autorización G1 (en el chat, no commiteados). Estudio aislado en `
     112 archivos del estudio con CRLF y rompió la huella congelada de `catalog/cat_v1_params.json`; el piloto habría
     fallado. Se restauraron los bytes de HEAD y se añadió `research/microstructure_v1/.gitattributes` (`* -text`).
     Otros ~418 archivos del repositorio siguen en CRLF (p. ej. `flow_negative_v1`): sin tocar, falta decisión.
-  - **Disco externo TOSHIBA (MICRO_DATA_DIR) con NTFS dañado:** `manifest.sqlite` ilegible, `results/` inaccesible, no
-    aparece `features/vp_profiles`; `chkdsk` en solo lectura encuentra errores. No escribir en él hasta que el usuario
-    decida (copiar lo legible antes de `chkdsk /f`).
+  - **Disco externo TOSHIBA (MICRO_DATA_DIR) con NTFS dañado:** ver la sección siguiente (incidente del 22-nov,
+    reparado y reconciliado el 23-nov).
+
+## Incidente del disco de datos externo y reconciliación (22-23 nov 2026)
+
+**Qué pasó (versión del usuario):**
+- DESPACHOB se «apagó» con el inicio rápido de Windows y el disco conectado.
+- LAWNMOWER escribió en el disco el 20-nov a las 23:26 y el 21-nov a las 19:01.
+- De vuelta en DESPACHOB, Windows reanudó con la vista NTFS del día 20 y escribió encima.
+- `chkdsk /f` lo dejó sano, sin sectores defectuosos, pero quitó entradas de carpetas y cambió permisos.
+
+El disco es `E:` en DESPACHOB y `D:` en LAWNMOWER. Registro completo en `MICRO_DATA_DIR/_incident_2026-11-22/`
+(informe de reconstrucción, cuarentena y logs de cada regeneración).
+
+**Lo que se perdió:**
+- `manifest/manifest.sqlite`, a 0 bytes.
+- Los diarios E3 posteriores a las 15:27 del 21-nov.
+- 101 mensuales: 13 carpetas `asof=-` convertidas en fichero de 0 bytes; son los 101 de `found.000`.
+- `BIO 2024-02`, a 0 bytes, y `HD 2024-02`, con el tamaño correcto pero el contenido cruzado.
+- La capa 2 de E2 (`e2_measures` y `e2_norm`, 629 + 629), `results/e2_*`, `e2c_*`, `results/e3`, `events/cat-v1`,
+  `results/cat_v1`, el registro U1 y `features/vp_profiles`.
+- En `flow_negative_v1`:
+  - todos los artefactos c2 y c1j;
+  - 123 ficheros de `sec/xbrl_classes` perdidos y 3 corruptos;
+  - 109 ficheros con permisos de solo SYSTEM/Administradores.
+
+**Referencia para comparar:** `results/cv1_integrity_before.json` (21-nov 15:27, LAWNMOWER) tiene el tamaño y la
+fecha de 71 587 ficheros de `raw/`, y el sha256 de `e2_measures`, `e2_norm`, `events` y algunos `results`. Fue la base
+de toda la conciliación.
+
+**Restauración:**
+- **Manifiesto:** reconstruido desde el disco con `manifest_rebuild.py`.
+  - Recorre `raw/`, decodifica cada fichero entero y calcula su sha256.
+  - La configuración de los ficheros sin hash en el nombre se deduce del plan o del contenido; la de los hashes no
+    estándar (topes y ventanas horarias) se recupera por fuerza bruta (`recover-configs`).
+  - Resultado: 71 477 unidades. Se pierden la calidad original y las unidades `empty`, que se vuelven a pedir.
+  - Órdenes: `scan`, `quarantine-from-report`, `swap` y `recover-configs`.
+- **Rutas:** el manifiesto guardaba rutas absolutas y el disco cambia de letra (`D:`/`E:`).
+  `micro/manifest.py → localize()` las traduce a la raíz actual (en `get`, `rows` e `is_done`; también en
+  `e2_compute` y `g2a_intraday_daily`). Sin esto, en el otro equipo todo parecía ausente.
+  Pruebas: `tests_extra/test_manifest_localize.py`.
+- **raw:** `g2_downloads run --stages quotes,B1q,A`.
+  - **La etapa A está completa por primera vez:** 76 340 de 76 340. Nunca había terminado (se quedó en 70 562 el
+    16-nov), así que incluye ~5 800 unidades que no se habían bajado nunca.
+  - Quotes 400/400 y B1q 400/400.
+  - E3 del 2026-11-20: 30 233 unidades diarias.
+- **U1:** `u1_universe_registry.py fetch` + `build`. Resultado idéntico al original: 96/17 revisiones, 630 tramos,
+  503/101 miembros. Se corrigió un fallo: entre las 00:00 y las ~05:00 UTC la petición de barras recientes caía en el
+  futuro y el plan gratuito la rechazaba.
+- **E2:** 629 + 629 particiones **idénticas byte a byte** al snapshot. También `e2_alerts_M0/M1/M2`, `e2b_criteria` y
+  los parquet de `e2c`. Los JSON de informe solo difieren en la fecha y la duración de la ejecución.
+- **E3 2026-11-20:** 619 valores, 616 con barras, **162 alertas y 80 episodios**, igual que la prueba original
+  (E3_PROPUESTA §5.1). El desglose de ADP `c06bc9557614a592` sale con el mismo id y la misma ficha.
+- **flow_negative_v1:** `s10_restaurar_incidente_disco.py`.
+  - Panel c2, tandas 1 y 2 c2 y filas de prueba de la etapa 2, **idénticos byte a byte** a sus hashes congelados.
+  - `s8_freeze_c2 --verify` y `s9_etapa2 --verify` dan OK; la reconstrucción de desarrollo sale idéntica y c1j
+    también.
+  - Para reconstruir las filas de prueba se registró el acceso en `etapa2_acceso.jsonl`; no se calculó ningún
+    resultado.
+
+**Lección de reproducibilidad: el entorno importa.** Todo el estudio se escribió con **pandas 3.1.0 / pyarrow 26.0.0**.
+El `py -3` de DESPACHOB tiene pandas 2.3.3 / pyarrow 23: con él, el panel c2 salía con otros bytes (CSV iguales,
+parquet no). Las regeneraciones se hicieron con un entorno temporal con las versiones originales, y así cuadra todo.
+Para cualquier reproducción futura, usar esas versiones.
+
+**Daño de contenido, no solo pérdidas:** algunos ficheros de la ventana del incidente seguían ahí con el contenido
+cruzado: `HD 2024-02` con su tamaño correcto y 3 JSON de la SEC. Mirar que exista o que el tamaño cuadre no basta: hay
+que leer el fichero entero.
+
+**Piloto E3:** se perdió su `pilot.json` (jornadas 23, 24, 25, 27 y 30-nov). Se retuvo durante la reconciliación con un
+`pilot.json` de espera y luego se volvió a fijar con las mismas jornadas (ver «Pendiente»).
+
+**Prevención:** desactivar el inicio rápido en los dos equipos (`powercfg /h off` como administrador) y expulsar siempre
+el disco antes de cambiarlo de equipo.
+
+**Pendiente (al volver a conectar el disco):**
+- `features/vp_profiles` sin regenerar. El intento del 23-nov a las 04:16 se paró porque había una pasada E3 en marcha
+  (`heavy_lock`), y no se relanzó.
+- 2 ficheros de `flow_negative_v1/sec/shares` siguen sin acceso (`1000229.json`, `1001039.json`).
+- El recordatorio `e3_guard_lawnmower` ya se envió el 22-nov con el texto antiguo («instalar el vigilante»). La versión
+  «en espera» del recordatorio quedó obsoleta al volver a fijar el piloto: no se publicó.
+- DESPACHOB se apagó en seco hacia las 06:45 del 23-nov, unos 20 min después de terminar la reconciliación. No hay
+  pantalla azul ni volcado de memoria (probable corte de luz o cuelgue de hardware).
 
 ## Roadmap de mejoras pendientes
 
