@@ -61,7 +61,13 @@
       primaryQuestion: "Is high-yield credit confirming the equity market's risk appetite?",
       positiveMeaning: "HYG outperforming SPY suggests credit investors are buying into risk alongside equities — broad risk-on confirmation.",
       negativeMeaning: "SPY outperforming HYG suggests credit is lagging equities — an early warning of stress beneath the surface.",
-      primaryUse: "regime_confirmation", actionability: "high", enabled: true },
+      primaryUse: "regime_confirmation", actionability: "high", enabled: true,
+      // Fuera del recuento del monitor desde 2026-11-24: HYG se mueve menos que SPY, así que
+      // en mercados alcistas el ratio cae casi siempre (risk-off el 64 % de los días
+      // tranquilos, 2017-2026) y en una caída HYG baja menos y marca risk-on (44 % de los días
+      // de estrés). Se lee al revés de lo que mide. Sigue en la tabla como contexto.
+      countedInMonitor: false,
+      monitorNote: "No cuenta: HYG se mueve menos que SPY, así que el ratio cae en cualquier subida y sube en las caídas. 2017-2026: risk-off el 64 % de los días tranquilos y risk-on el 44 % de los de estrés." },
 
     { id: "xlu_xly", label: "Utilities vs Discretionary", pair: ["XLU", "XLY"],
       type: "risk_appetite", cluster: "RISK APPETITE", signalDirection: "higher_is_risk_off",
@@ -114,6 +120,7 @@
       // producción — mismo tratamiento (se muestra, no cuenta) que QQQ/RSP, pero vía un flag
       // explícito en vez de signalDirection:"contextual" (aquí la lectura sí es inequívoca).
       countedInMonitor: false,
+      monitorNote: "No cuenta: se reasignó a este bloque en agosto de 2026 y se dejó fuera para no cambiar el recuento.",
       primaryQuestion: "Is long-duration Treasury debt beating equities?",
       positiveMeaning: "TLT outperforming SPY indicates money leaving equities for fixed income — risk-off.",
       negativeMeaning: "SPY outperforming TLT indicates money leaving bonds for equities — risk-on.",
@@ -135,7 +142,11 @@
       primaryQuestion: "Is the options market pricing rising uncertainty about future volatility itself, ahead of a spike in realized volatility?",
       positiveMeaning: "VVIX outperforming VIX suggests the options market is bidding up uncertainty about future volatility — often an early tail-risk warning before VIX itself spikes.",
       negativeMeaning: "VIX outperforming VVIX suggests volatility concerns are already reflected in spot vol, without an incremental vol-of-vol warning.",
-      primaryUse: "regime_confirmation", actionability: "medium", enabled: true },
+      primaryUse: "regime_confirmation", actionability: "medium", enabled: true,
+      // Fuera del recuento del monitor desde 2026-11-24: cuando el VIX se dispara sube más que
+      // el VVIX y el ratio baja, así que marca risk-on el 60 % de los días de estrés (2017-2026).
+      countedInMonitor: false,
+      monitorNote: "No cuenta: cuando el VIX se dispara sube más que el VVIX y el ratio baja. 2017-2026: risk-on el 60 % de los días de estrés." },
 
     // ── ANTICIPATION / INTERNAL CONVICTION ──────────────────────────────────
     { id: "xle_brent", label: "Energy Equities vs Brent", pair: ["XLE", "BZ=F"],

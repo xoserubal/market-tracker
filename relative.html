@@ -401,16 +401,20 @@ function riskAppetiteSignalStyle(signal, direction) {
   return { label: "Neutral", bg: "#f0f0f0", fg: "#555" };
 }
 
-// Risk Appetite Monitor — cuenta cuántos ratios direccionales (excluye
-// signalDirection:"contextual") muestran signal="risk-off". No confundir con
-// el régimen del MacroScore v2 (sistema completamente distinto —
-// rotacion.html/backtest). Este bloque nunca debe llamarse "Macro Regime".
-function riskAppetiteMonitorState(riskOffCount) {
-  if (riskOffCount >= 4) return { label: "Confirmed Defensive Pressure",     color: "#b71c1c", bg: "#ffcdd2" };
-  if (riskOffCount >= 3) return { label: "Risk-Off Warning",                color: "#c62828", bg: "#ffdad6" };
-  if (riskOffCount >= 2) return { label: "Mixed / Defensive Rotation Warning", color: "#7a5200", bg: "#fff0cc" };
-  if (riskOffCount >= 1) return { label: "Mild Defensive Warning",          color: "#8a5200", bg: "#fff7e0" };
-  return                       { label: "Risk-On / No Warning",            color: "#1b5e20", bg: "#c8e6c9" };
+// Risk Appetite Monitor — balance de los ratios que cuentan: (risk-on) − (risk-off).
+// Rediseñado 2026-11-24: antes solo contaba los risk-off con umbrales pensados para 4
+// ratios (>=4 = "Confirmed Defensive Pressure") y llegó a tener 8, así que marcaba presión
+// defensiva el 37 % de los días, igual en calma que en estrés. Ahora cuentan 6 (fuera
+// HYG/SPY y VVIX/VIX, que se dan la vuelta en el estrés; ver monitorNote en el registry).
+// Reconstrucción 2017-2026 con el mismo código: "Defensivo" el 34 % de los días de estrés
+// frente al 20 % de los tranquilos. Describe el momento, no anticipa.
+// No confundir con el régimen del MacroScore v2 (rotacion.html/backtest).
+function riskAppetiteMonitorState(balance) {
+  if (balance <= -3) return { label: "Defensivo",             color: "#b71c1c", bg: "#ffcdd2" };
+  if (balance <= -1) return { label: "Inclinado a defensivo", color: "#8a4b00", bg: "#ffe7c2" };
+  if (balance === 0) return { label: "Mixto",                 color: "#555",    bg: "#eceff1" };
+  if (balance <= 2)  return { label: "Inclinado a risk-on",   color: "#33691e", bg: "#e6f2d6" };
+  return                    { label: "Risk-on",               color: "#1b5e20", bg: "#c8e6c9" };
 }
 
 // Texto de interpretación dinámico: score>=0 usa positiveMeaning, si no negativeMeaning.
@@ -769,9 +773,13 @@ function RelativeFlowLab() {
     }),
   [history]);
 
-  const riskOffCount = React.useMemo(() =>
-    riskAppetiteRows.filter(m => m.signal === "risk-off" && m.countedInMonitor !== false).length,
+  const riskCounted = React.useMemo(() =>
+    riskAppetiteRows.filter(m => m.signalDirection !== "contextual" && m.countedInMonitor !== false),
   [riskAppetiteRows]);
+  const riskOffCount = riskCounted.filter(m => m.signal === "risk-off").length;
+  const riskOnCount  = riskCounted.filter(m => m.signal === "risk-on").length;
+  const riskNeutralCount = riskCounted.length - riskOffCount - riskOnCount;
+  const riskBalance  = riskOnCount - riskOffCount;
 
   // countedInMonitor:false (ej. TLT/SPY) se muestra en la tabla con lectura direccional
   // real, pero no altera el denominador — mismo criterio que signalDirection:"contextual"
@@ -960,18 +968,19 @@ function RelativeFlowLab() {
   };
 
   const buildRelativeMarkdown = () => {
-    const rs = riskAppetiteMonitorState(riskOffCount);
+    const rs = riskAppetiteMonitorState(riskBalance);
     const lines = [];
     lines.push("# Relative Flow Lab v2");
     lines.push("");
-    lines.push(`## Risk Appetite Monitor — ${riskOffCount}/${riskAppetiteCountable} defensive warnings (${rs.label})`);
+    lines.push(`## Risk Appetite Monitor — ${rs.label} (balance ${riskBalance > 0 ? "+" : ""}${riskBalance}: ${riskOnCount} risk-on, ${riskNeutralCount} neutral, ${riskOffCount} risk-off, de ${riskAppetiteCountable})`);
     lines.push("Question: Is the market favoring risk-taking or safety?");
+    lines.push("Balance = risk-on − risk-off entre los ratios que cuentan. Describe el momento, no anticipa. Los marcados 'no cuenta' se muestran como contexto.");
     lines.push("| Ratio | Pair | Direction | Signal | 1W | 1M | 3M | RSI | Trend |");
     lines.push("|---|---:|---|---|---:|---:|---:|---:|---|");
     riskAppetiteRows.forEach(m => {
       const r = m.row;
       const st = riskAppetiteSignalStyle(m.signal, m.signalDirection);
-      const dir = m.signalDirection + (m.countedInMonitor === false ? " (no cuenta)" : "");
+      const dir = m.signalDirection + (m.countedInMonitor === false ? ` (no cuenta${m.monitorNote ? ": " + m.monitorNote.replace(/^No cuenta: /, "") : ""})` : "");
       lines.push(`| ${m.name} | ${m.a}/${m.b} | ${dir} | ${st.label} | ${fmtPct(r.r1w)} | ${fmtPct(r.r1m)} | ${fmtPct(r.r3m)} | ${r.rsi == null ? "-" : r.rsi.toFixed(0)} | ${r.trend ?? "-"} |`);
     });
     // Orden RFL v2 (arquitectura de información, 2026-08-28): Sector Relative Snapshot
@@ -1136,7 +1145,7 @@ function RelativeFlowLab() {
       .catch(() => showToast('❌ Error al copiar'));
   };
 
-  const rs = riskAppetiteMonitorState(riskOffCount);
+  const rs = riskAppetiteMonitorState(riskBalance);
 
   return (
     <div className="wrap">
@@ -1177,7 +1186,7 @@ function RelativeFlowLab() {
                 <tr>
                   <th style={{textAlign:"left"}} data-tip="Nombre del ratio. La columna Dirección indica cómo leer la subida del ratio — no todos suben con lectura risk-on.">Ratio</th>
                   <th>Pair</th>
-                  <th data-tip={"higher_is_risk_on: sube = risk-on\nhigher_is_risk_off: sube = risk-off (ratio invertido)\ncontextual: sin lectura risk-on/off inequívoca, no cuenta en el agregado\n'no cuenta': lectura inequívoca pero excluida del denominador (ej. TLT/SPY, ver countedInMonitor)"}>Dirección</th>
+                  <th data-tip={"higher_is_risk_on: sube = risk-on\nhigher_is_risk_off: sube = risk-off (ratio invertido)\ncontextual: sin lectura risk-on/off inequívoca, no cuenta en el agregado\n'no cuenta': se muestra como contexto pero no entra en el balance (pasa el ratón por ⓘ para ver por qué)"}>Dirección</th>
                   <th data-tip={"Retorno del ratio en los últimos 5 días."}>1W</th>
                   <th data-tip={"Retorno del ratio en los últimos 21 días.\nBase del señal de régimen."}>1M</th>
                   <th data-tip={"Retorno del ratio en los últimos 63 días."}>3M</th>
@@ -1200,7 +1209,7 @@ function RelativeFlowLab() {
                       <td style={{fontFamily:"Consolas,monospace",fontSize:10,color:"#1a6baa"}}>{m.a}/{m.b}</td>
                       <td style={{fontSize:9,color:"#8a94a6"}}>
                         {m.signalDirection.replace(/_/g," ")}
-                        {m.countedInMonitor === false && <span style={{color:"#b08d3a"}}> · no cuenta</span>}
+                        {m.countedInMonitor === false && <span style={{color:"#b08d3a",cursor:m.monitorNote?"help":undefined}} title={m.monitorNote || undefined}> · no cuenta{m.monitorNote ? " ⓘ" : ""}</span>}
                       </td>
                       <td style={{fontFamily:"Consolas,monospace",...c1w}}>{r.error ? "-" : fmtPct(r.r1w)}</td>
                       <td style={{fontFamily:"Consolas,monospace",...c1m}}>{r.error ? "-" : fmtPct(r.r1m)}</td>
@@ -1208,7 +1217,7 @@ function RelativeFlowLab() {
                       <td style={{fontFamily:"Consolas,monospace",color:r.rsi>60?"#1a7a1a":r.rsi<40?"#b71c1c":"#555"}}>{r.rsi == null ? "-" : r.rsi.toFixed(0)}</td>
                       <td style={{fontWeight:700,color:r.trend==="Up"?"#1a7a1a":r.trend==="Down"?"#b71c1c":"#777"}}>{r.trend ?? "-"}</td>
                       <td>
-                        <span style={{background:st.bg,color:st.fg,fontWeight:700,borderRadius:3,padding:"2px 8px",fontSize:10,display:"inline-block",minWidth:68}}>
+                        <span title={m.countedInMonitor === false ? "No entra en el balance" : undefined} style={{background:st.bg,color:st.fg,fontWeight:700,borderRadius:3,padding:"2px 8px",fontSize:10,display:"inline-block",minWidth:68,opacity:m.countedInMonitor === false ? 0.45 : 1}}>
                           {st.label}
                         </span>
                       </td>
@@ -1221,8 +1230,15 @@ function RelativeFlowLab() {
           <div className="regime-box">
             <div className="regime-inner" style={{background: rs.bg}}>
               <div className="regime-label">Risk Appetite Monitor</div>
-              <div className="regime-score" style={{color: rs.color}}>{riskOffCount}<span style={{fontSize:18,fontWeight:400}}>/{riskAppetiteCountable} warnings</span></div>
+              <div className="regime-score" style={{color: rs.color}} title="Balance = ratios en risk-on − ratios en risk-off">{riskBalance > 0 ? "+" : ""}{riskBalance}<span style={{fontSize:14,fontWeight:400}}> balance</span></div>
               <div className="regime-state" style={{color: rs.color}}>{rs.label}</div>
+              <div style={{display:"flex",gap:2,margin:"8px auto 4px",width:"fit-content"}}>
+                {[...Array(riskOffCount).fill("#c62828"), ...Array(riskNeutralCount).fill("#b0bec5"), ...Array(riskOnCount).fill("#2e7d32")].map((c, i) => (
+                  <span key={i} style={{width:14,height:10,borderRadius:2,background:c}} />
+                ))}
+              </div>
+              <div style={{fontSize:10,color:"#555"}}>{riskOffCount} risk-off · {riskNeutralCount} neutral · {riskOnCount} risk-on <span style={{color:"#888"}}>(de {riskAppetiteCountable})</span></div>
+              <div style={{fontSize:9,color:"#888",marginTop:4,lineHeight:1.3}}>Describe el momento, no anticipa.</div>
             </div>
           </div>
         </div>

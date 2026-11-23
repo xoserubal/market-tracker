@@ -8745,6 +8745,37 @@ Fix: `RECENT_DAYS = 60` (~42 sesiones); `flow_path` solo se calcula para señale
 
 ---
 
+## Risk Appetite Monitor de RFL — balance en vez de contar avisos (implementado 2026-11-24)
+
+El usuario notó que el monitor casi siempre marcaba 4 o 5 de 8 avisos, es decir, «siempre en risk-off».
+Reconstruido día a día con el mismo código (`shared/relative-lib.js`), 2017-2026:
+- **Umbrales heredados de 4 ratios.** Desde 4 avisos ya era «Confirmed Defensive Pressure», pero el monitor había
+  crecido a 8 ratios. Resultado: presión defensiva el 37 % de los días, el 36 % en calma y el 40 % en estrés.
+- **Solo contaba los risk-off;** los risk-on no restaban.
+- **HYG/SPY y VVIX/VIX se dan la vuelta en el estrés:**
+  - HYG/SPY: risk-off el 64 % de los días tranquilos y risk-on el 44 % de los de estrés;
+  - VVIX/VIX: risk-on el 60 % de los días de estrés.
+
+**Cambio** (`relative.html`, `shared/relative-ratio-registry.js`):
+- Balance = risk-on − risk-off. Cinco estados: Defensivo ≤ −3, Inclinado a defensivo −2/−1, Mixto 0, Inclinado a
+  risk-on +1/+2 y Risk-on ≥ +3.
+- Recuadro con el balance, una barra de 6 casillas y el recuento.
+- HYG/SPY y VVIX/VIX pasan a `countedInMonitor:false`, con un campo nuevo `monitorNote` que explica el motivo (en el
+  ⓘ de la tabla y en el export a LLM). TLT/SPY sigue fuera, como antes.
+- Cuentan 6: XLU/XLY, SPLV/MTUM, XLY/XLP, cobre/oro, IWM/SPY y HYG/LQD.
+- La señal de cada ratio (r1m ±1 % con tendencia) no cambia.
+
+**Resultado con la misma reconstrucción:** «Defensivo» el 34 % de los días de estrés frente al 20 % de los tranquilos.
+Las 21 sesiones siguientes a un día defensivo traen una caída máxima media del S&P del 3,8 %, frente al 2,0 % tras uno
+risk-on.
+
+**Limitaciones:**
+- Los dos ratios excluidos se eligieron viendo estos mismos datos; no es una validación fuera de muestra.
+- Describe el momento, no anticipa.
+- No lo usa ningún otro módulo (solo esta página y su export).
+
+---
+
 ## HY — concordancia entre módulos y escala única (implementado 2026-11-06)
 
 El usuario notó que la pestaña principal mostraba el HY «Normal» desde el inicio mientras el bot de Telegram avisaba con otros umbrales. Auditoría: había **7 criterios distintos** para el mismo dato (BAMLH0A0HYM2). Con el HY en 340 pb (sube desde ~270 a mediados de septiembre; >300 desde el 29-sep, >325 desde el 14-oct):
