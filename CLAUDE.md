@@ -8768,6 +8768,33 @@ Con los 3 años que FRED sirve de esta serie (licencia ICE), mediana 302 pb y 34
 
 ---
 
+## Estimación del HY spread antes de que lo publique FRED (implementado 2026-11-23)
+
+FRED publica BAMLH0A0HYM2 con ~1 día hábil de retraso (el viernes llega el lunes). `scripts/hy_spread_estimate.py`
+(Step 9e1b, `continue-on-error`) estima los días sin dato oficial y guarda cada estimación para medir su error.
+
+- **Modelo**, elegido entre 4 variantes con errores fuera de muestra sobre los 3 años de FRED:
+  `ΔOAS = a + b1·HJ + b2·IEI + b3·HJ(t−1) + b4·IEI(t−1)`.
+  - HJ es la media de los retornos de HYG y JNK; IEI es el Tesoro 3-7 años.
+  - La regresión es móvil, con las 250 sesiones anteriores.
+  - La estimación parte del último dato oficial y suma el cambio estimado de cada sesión.
+  - Error fuera de muestra (2024-11 → 2026-11): 2,7 pb de media a 1 día (p90 5,3) y 3,2 pb a 2 días.
+  - El equity (SPY) no mejora el modelo.
+  - En saltos grandes se queda corto: el 20-nov estimó +20 pb y el real fue +24.
+- **Salidas:**
+  - `docs/data/hy_spread_estimate_latest.json`: último dato oficial, estimaciones de los días siguientes con una banda
+    del 80 %, coeficientes, error histórico y una referencia de precios (`live_reference`). Con esa referencia, una
+    página puede calcular la estimación del día con precios en vivo.
+  - `docs/data/hy_spread_estimate_log.jsonl`: una fila por (día estimado, dato oficial de partida). Cuando FRED
+    publica ese día se rellenan `actual_bp`, `error_bp` e `in_band`.
+  - `--report` resume el seguimiento real: error medio, sesgo, % dentro de ±5 pb y % dentro de la banda.
+- Solo cuenta como estimación una sesión ya cerrada (16:15 ET). Con el pipeline a las 23:10 de Madrid, cada noche se
+  estima el día que acaba de cerrar.
+- Es solo observacional: no alimenta Duration, el MacroScore, Sol ni las alertas.
+- **Pendiente:** decidir dónde mostrarlo.
+
+---
+
 ## Pipeline diario lanzado por el bot de Telegram, sin cron de GitHub (implementado 2026-11-10)
 
 El scheduler de GitHub llegaba ya con 7-10h de retraso (08:07 UTC → 18:41 UTC; 20:07 UTC → 02:40 UTC).
