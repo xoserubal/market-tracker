@@ -8791,7 +8791,19 @@ FRED publica BAMLH0A0HYM2 con ~1 día hábil de retraso (el viernes llega el lun
 - Solo cuenta como estimación una sesión ya cerrada (16:15 ET). Con el pipeline a las 23:10 de Madrid, cada noche se
   estima el día que acaba de cerrar.
 - Es solo observacional: no alimenta Duration, el MacroScore, Sol ni las alertas.
-- **Pendiente:** decidir dónde mostrarlo.
+- **Dónde se muestra:**
+  - Informe diario de Telegram del HY (`hy_spread_report.py`): estimación del día aún no publicado y su rango, con el
+    acierto real acumulado (o el simulado mientras no haya datos).
+  - Tabla macro de `index.html` (fila amarilla bajo el HY) y tarjeta «HY estimado (no oficial)» en `duration.html`, ambas
+    desde `GET /api/hy-estimate`.
+  - Esa ruta (`server.js` + `shared/hy-estimate-live.js`, caché de 60 s) continúa el cálculo del pipeline con las
+    cotizaciones actuales de Yahoo. Con el mercado abierto se mueve al pulsar actualizar (estado `live`).
+  - En la ruta, el día en que HYG/JNK cotizan sin el dividendo se suma el dividendo al retorno, para que el pago mensual
+    no parezca una ampliación de ~10 pb.
+  - Texto común en `shared/hy-estimate-view.js`.
+  - `duration.html` muestra además el seguimiento: barras de error (estimado − real) de las últimas 40 estimaciones, en
+    rojo si el real cayó fuera del rango.
+  - Pruebas: `node scripts/test_hy_estimate_live.js` (6).
 
 ---
 

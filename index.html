@@ -19,6 +19,7 @@
   <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
   <script src="/shared/flow-score.js"></script>
   <script src="/shared/market-macro.js"></script>
+  <script src="/shared/hy-estimate-view.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f0f2f5; }
@@ -334,6 +335,13 @@ const EARLY_STYLE = {
 // ── MacroPulse component ─────────────────────────────────────────────────
 function MacroPulse({ macroData, macroLoading }) {
   const dot = <span style={{color:'#ccc'}}>···</span>;
+  // Estimación del HY con precios del día (/api/hy-estimate). Se vuelve a pedir
+  // cada vez que se recarga el HY oficial (botón de actualizar).
+  const [hyEst, setHyEst] = React.useState(null);
+  React.useEffect(() => {
+    fetch('/api/hy-estimate').then(r => r.ok ? r.json() : null).then(setHyEst).catch(() => setHyEst(null));
+  }, [macroData.hy]);
+  const hyEstView = hyEstimateSummary(hyEst);
 
   return (
     <div style={{marginBottom:16}}>
@@ -386,7 +394,8 @@ function MacroPulse({ macroData, macroLoading }) {
             const isFirstFred = item.id === 'c3m';
 
             return (
-              <tr key={item.id} style={{background:rowBg, borderTop: isFirstFred?'2px solid #bdc3c7':'none'}}>
+              <React.Fragment key={item.id}>
+              <tr style={{background:rowBg, borderTop: isFirstFred?'2px solid #bdc3c7':'none'}}>
                 <td style={{padding:'3px 10px',borderBottom:'1px solid #eee',color:'#222'}}>{item.name}</td>
                 <td style={{padding:'3px 5px',textAlign:'center',borderBottom:'1px solid #eee'}}>{srcBadge(item.src)}</td>
                 <td style={{padding:'3px 10px',textAlign:'right',fontWeight:600,color:'#111',borderRight:'1px solid #ddd',borderBottom:'1px solid #eee',fontFamily:'monospace',fontSize:12}}>
@@ -405,6 +414,14 @@ function MacroPulse({ macroData, macroLoading }) {
                   {isLoad ? dot : st ? st[0] : '—'}
                 </td>
               </tr>
+              {item.id === 'hy' && hyEstView && (
+                <tr key="hy-est" style={{background:'#fff8e1'}}>
+                  <td colSpan={9} title={hyEstView.title} style={{padding:'2px 10px 3px 22px',borderBottom:'1px solid #eee',borderLeft:'3px dashed #f0a500',fontSize:10,color:'#7a5b00',fontStyle:'italic',cursor:'help'}}>
+                    ↳ {hyEstView.text} <span style={{fontStyle:'normal',color:'#b08a2e'}}>· estimación, no dato oficial ⓘ</span>
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             );
           })}
         </tbody>

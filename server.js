@@ -389,6 +389,39 @@ let _fearGreedCache = null;
 let _fearGreedCacheTs = 0;
 const FEAR_GREED_TTL = 15 * 60 * 1000;
 
+// ── HY spread estimado con precios del día (2026-11-23) ─────────────────
+// Continúa la estimación del pipeline (docs/data/hy_spread_estimate_latest.json)
+// con las cotizaciones actuales de HYG/JNK/IEI. Caché de 60 s. Solo lectura.
+const { computeLiveHyEstimate } = require("./shared/hy-estimate-live.js");
+let _hyEstCache = { at: 0, body: null };
+app.get("/api/hy-estimate", async (_req, res) => {
+  try {
+    if (_hyEstCache.body && Date.now() - _hyEstCache.at < 60_000) return res.json(_hyEstCache.body);
+    const latest = JSON.parse(fs.readFileSync(path.join(__dirname, "docs", "data", "hy_spread_estimate_latest.json"), "utf8"));
+    const fetchRaw = async (url) => {
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Accept": "application/json" } });
+      if (!r.ok) throw new Error(`Yahoo ${r.status}`);
+      return r.json();
+    };
+    let body;
+    try {
+      body = await computeLiveHyEstimate(latest, fetchRaw);
+    } catch (e) {
+      // Sin Yahoo: se devuelve lo último que calculó el pipeline, marcado así.
+      const last = (latest.estimates || []).slice(-1)[0];
+      body = { official: latest.official, label: "ESTIMACIÓN — no es el dato oficial de FRED", status: "pipeline_fallback",
+               error: e.message, date: last?.date ?? latest.official.date, est_bp: last?.est_bp ?? latest.official.value_bp,
+               low_bp: last?.low_bp ?? null, high_bp: last?.high_bp ?? null, bridge_days: last?.bridge_days ?? 0, session_open: false };
+    }
+    body.tracking = latest.tracking || null;
+    body.backtest_1d = latest.backtest?.bridge_1d || null;
+    _hyEstCache = { at: Date.now(), body };
+    res.json(body);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/fear-greed", async (_req, res) => {
   if (_fearGreedCache && Date.now() - _fearGreedCacheTs < FEAR_GREED_TTL) {
     return res.json(_fearGreedCache);

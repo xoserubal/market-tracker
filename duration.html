@@ -6,6 +6,7 @@
   <title>Duration Stress Monitor — Market Tracker</title>
   <link rel="manifest" href="/manifest.json"/>
   <script src="/shared/cloud-mode.js"></script>
+  <script src="/shared/hy-estimate-view.js"></script>
   <meta name="theme-color" content="#0b3d63"/>
   <link rel="icon" href="/icons/favicon-32.png" sizes="32x32"/>
   <link rel="icon" href="/icons/favicon-16.png" sizes="16x16"/>
@@ -191,10 +192,10 @@ const FRED_SERIES = ['DGS10', 'DGS2', 'DGS30', 'DFII10', 'T5YIE', 'BAMLH0A0HYM2'
 const AUCTION_TENOR_ORDER = ['10-Year', '30-Year', '20-Year', '2-Year']; // 10Y/30Y priorizadas sobre 20Y/2Y
 const HISTORY_TICKERS = ['TLT', '^VIX']; // 10Y/HY spread ya traen su propio .history vía /api/fred/:series
 
-function Stat({ label, value, sub, style, staleDays }) {
+function Stat({ label, value, sub, style, staleDays, title }) {
   const isStale = staleDays != null;
   return (
-    <div className="stat" style={{ background: style.bg, color: style.fg,
+    <div className="stat" title={title} style={{ background: style.bg, color: style.fg,
       ...(isStale ? { outline: '2px dashed #bf360c', outlineOffset: '-2px' } : {}) }}>
       <div className="label">
         {label}
@@ -443,12 +444,67 @@ const GEX_REGIME = {
   transition:     { label: 'Transición',     bg: '#fff9c4', fg: '#e65100' },
 };
 
+// ── Seguimiento de la estimación del HY frente al dato de FRED (2026-11-23) ──
+// Lee docs/data/hy_spread_estimate_log.jsonl (scripts/hy_spread_estimate.py).
+// Barras = error de cada estimación (estimado − real) una vez FRED publica.
+function HyEstimateTracking({ rows, est }) {
+  if (rows == null) return null;
+  const done = rows.filter(r => r.error_bp != null).sort((a, b) => a.target_date.localeCompare(b.target_date));
+  const pending = rows.filter(r => r.error_bp == null);
+  const bt = est?.backtest_1d;
+  const box = { margin: '8px 0 14px', padding: '8px 12px', border: '1px dashed #f0a500', borderRadius: 6, background: '#fffdf5', fontSize: 12, color: '#5d4a00' };
+  if (!done.length) {
+    return (
+      <div style={box}>
+        <b>Seguimiento de la estimación del HY</b>: aún sin comparaciones con FRED
+        {pending.length ? ` (${pending.length} pendiente${pending.length > 1 ? 's' : ''} de publicar)` : ''}.
+        {bt ? ` Acierto simulado (2 años): error medio ${bt.mae_bp} pb a 1 día, 9 de cada 10 días por debajo de ${bt.p90_abs_bp} pb.` : ''}
+      </div>
+    );
+  }
+  const errs = done.map(r => r.error_bp);
+  const mae = errs.reduce((a, e) => a + Math.abs(e), 0) / errs.length;
+  const bias = errs.reduce((a, e) => a + e, 0) / errs.length;
+  const inBand = done.filter(r => r.in_band).length / done.length * 100;
+  const last = done.slice(-40);
+  const W = 520, H = 90, pad = 4, maxAbs = Math.max(6, ...last.map(r => Math.abs(r.error_bp)));
+  const bw = (W - 2 * pad) / last.length;
+  const y0 = H / 2, k = (H / 2 - pad) / maxAbs;
+  return (
+    <div style={box}>
+      <div style={{ marginBottom: 4 }}>
+        <b>Seguimiento de la estimación del HY</b> (estimado − real de FRED, n={done.length}): error medio <b>{mae.toFixed(1)} pb</b>,
+        sesgo {bias >= 0 ? '+' : ''}{bias.toFixed(1)} pb, {inBand.toFixed(0)}% dentro del rango
+        {bt ? ` · simulado: ${bt.mae_bp} pb` : ''}{pending.length ? ` · ${pending.length} pendiente${pending.length > 1 ? 's' : ''}` : ''}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: W, height: H, display: 'block' }}>
+        <line x1={0} x2={W} y1={y0} y2={y0} stroke="#bbb" strokeDasharray="3,3" />
+        {last.map((r, i) => {
+          const h = r.error_bp * k;
+          return (
+            <rect key={r.target_date + r.anchor_date} x={pad + i * bw + 1} width={Math.max(1, bw - 2)}
+              y={h >= 0 ? y0 - h : y0} height={Math.max(1, Math.abs(h))}
+              fill={r.in_band ? '#c9a227' : '#c62828'}>
+              <title>{`${r.target_date}: estimado ${r.est_bp}, real ${r.actual_bp}, error ${r.error_bp >= 0 ? '+' : ''}${r.error_bp} pb (${r.bridge_days} día${r.bridge_days > 1 ? 's' : ''} sin dato)`}</title>
+            </rect>
+          );
+        })}
+        <text x={W - 2} y={10} fontSize="9" textAnchor="end" fill="#888">+{maxAbs.toFixed(0)} pb (estimó de más)</text>
+        <text x={W - 2} y={H - 2} fontSize="9" textAnchor="end" fill="#888">−{maxAbs.toFixed(0)} pb (estimó de menos)</text>
+      </svg>
+      <div style={{ fontSize: 10, color: '#8a7a40' }}>Barra roja = el dato real cayó fuera del rango estimado.</div>
+    </div>
+  );
+}
+
 function DurationPage() {
   const [quotes, setQuotes] = React.useState({});
   const [fred, setFred] = React.useState({});
   const [histories, setHistories] = React.useState({});
   const [auctions, setAuctions] = React.useState(null);
   const [gexDiy, setGexDiy] = React.useState(null);
+  const [hyEst, setHyEst] = React.useState(null);     // /api/hy-estimate (estimación, no oficial)
+  const [hyEstLog, setHyEstLog] = React.useState(null); // seguimiento estimación vs FRED
   const [gexRange, setGexRange] = React.useState(730);
   const [moveHist, setMoveHist] = React.useState(null);
   const [sparkRange, setSparkRange] = React.useState(182);
@@ -481,6 +537,13 @@ function DurationPage() {
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(setGexDiy)
       .catch(() => setGexDiy(null));
+    // Estimación del HY con precios del día + su seguimiento frente a FRED
+    fetch('/api/hy-estimate?t=' + Date.now())
+      .then(r => r.ok ? r.json() : null).then(setHyEst).catch(() => setHyEst(null));
+    fetch('/docs/data/hy_spread_estimate_log.jsonl?t=' + Date.now())
+      .then(r => r.ok ? r.text() : '')
+      .then(t => setHyEstLog(t.split('\n').filter(Boolean).map(l => JSON.parse(l))))
+      .catch(() => setHyEstLog([]));
     // ^MOVE: histórico largo aparte (5 años) para el gráfico con selector de escala
     fetch('/api/history/' + encodeURIComponent('^MOVE') + '?range=5y&t=' + Date.now())
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -530,6 +593,7 @@ function DurationPage() {
   const moveIsProxy = moveMissing && moveProxy != null;
 
   const hyBps = hy?.current != null ? hy.current * 100 : null;
+  const hyEstView = hyEstimateSummary(hyEst);
   const { phase, checks } = React.useMemo(() => computePhase({
     tlt: tlt?.price ?? null, y10: y10?.current ?? null, hyBps, vix: vix?.price ?? null, move: moveEffective,
   }), [tlt, y10, hyBps, vix, moveEffective]);
@@ -778,6 +842,12 @@ function DurationPage() {
             base comprimida), no la lectura general del crédito: en la escala única del
             proyecto (shared/market-macro.js) 300-375 pb sigue siendo «Normal». */}
         <Stat label="HY Spread" value={hyBps != null ? Math.round(hyBps) + 'bps' : '—'} sub={`${hy?.date || ''} · rojo >${LEVELS.confirmHyBps} = disparador de la tesis (escala general: 300-375 normal)`} style={styleHy(hyBps)} staleDays={staleHy.stale ? staleHy.days : null} />
+        {hyEstView && hyEst?.est_bp != null && (
+          <Stat label="HY estimado (no oficial)" value={'~' + Math.round(hyEst.est_bp) + 'bps'}
+            sub={hyEstView.text.replace(/^Estimado( ahora)? ≈\d+ pb ?/, '')}
+            title={hyEstView.title}
+            style={{ bg: '#fff8e1', fg: '#7a5b00' }} />
+        )}
         <Stat label="VIX" value={fmt(vix?.price, 1)} sub={vix?.asOf?.slice(0, 10)} style={styleVix(vix?.price)} staleDays={staleVix.stale ? staleVix.days : null} />
         <Stat label="MOVE" value={move?.price != null ? fmt(move.price, 1) : 'no disponible'} sub={move?.asOf?.slice(0, 10)} style={styleMove(move?.price)} staleDays={staleMove.stale ? staleMove.days : null} />
         {moveIsProxy && (
@@ -788,6 +858,7 @@ function DurationPage() {
         <Stat label="TLT / IEF" value={fmt(ratioTltIef, 3)} style={C.neutral} />
         <Stat label="EDV / IEF" value={fmt(ratioEdvIef, 3)} style={C.neutral} />
       </div>
+      <HyEstimateTracking rows={hyEstLog} est={hyEst} />
 
       <div className="section-sub" style={{ marginTop: -4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
         <span>Tendencia (drivers de la fase A/B/C/D + MOVE) · Escala:</span>

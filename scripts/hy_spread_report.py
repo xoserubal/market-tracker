@@ -132,6 +132,34 @@ def format_date_es(date_str: str) -> str:
     return f"{d.day:02d}-{months[d.month - 1]}"
 
 
+ESTIMATE_PATH = ROOT / "docs" / "data" / "hy_spread_estimate_latest.json"
+
+
+def estimate_lines(official_date: str) -> list[str]:
+    """Lineas de la estimacion (scripts/hy_spread_estimate.py, Step 9e1b). Solo
+    se muestran estimaciones de dias posteriores al ultimo dato oficial de FRED."""
+    import json
+    try:
+        est = json.loads(ESTIMATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    out = []
+    pending = [e for e in est.get("estimates", []) if e["date"] > official_date]
+    for e in pending:
+        out.append(f"Estimado {format_date_es(e['date'])} (FRED aún no lo publica): "
+                   f"<b>~{e['est_bp']:.0f} bps</b> (rango {e['low_bp']:.0f}–{e['high_bp']:.0f}) — estimación con HYG/JNK/IEI")
+    tr = est.get("tracking") or {}
+    if tr.get("n"):
+        out.append(f"Acierto de la estimación hasta hoy: error medio {tr['mae_bp']:.1f} pb "
+                   f"(sesgo {tr['bias_bp']:+.1f}), {tr['in_band_pct']:.0f}% dentro del rango, n={tr['n']}")
+    else:
+        bt = (est.get("backtest") or {}).get("bridge_1d") or {}
+        if bt:
+            out.append(f"Acierto esperado (simulado 2 años): error medio {bt['mae_bp']:.1f} pb a 1 día; "
+                       "el seguimiento real empieza ahora")
+    return out
+
+
 def build_report(history: list[tuple[str, float]], wti: float | None, y10: float | None) -> str:
     current_date, current_bps = history[-1]
     week_ago = find_closest_at_or_before(history[:-1], datetime.strptime(current_date, "%Y-%m-%d").date() - timedelta(days=7))
@@ -146,6 +174,11 @@ def build_report(history: list[tuple[str, float]], wti: float | None, y10: float
         lines.append(f"Hace 1 semana: {week_ago_bps:.0f} bps ({week_ago_date}) → Δ {sign}{delta:.0f} bps")
     else:
         lines.append("Hace 1 semana: sin dato suficiente todavía")
+
+    est = estimate_lines(current_date)
+    if est:
+        lines.append("")
+        lines.extend(est)
 
     lines.append("")
     lines.append("Últimos días hábiles:")
