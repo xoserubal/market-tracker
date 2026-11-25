@@ -245,8 +245,8 @@ Con cada run de `paper_trading.py` se registra en `baselines.jsonl`:
 
 Bot que procesa comandos de Telegram para gestionar el Portfolio Tracker
 (`portfolio.json` / `localhost:3000/portfolio.html`).
-Se ejecuta como Step 12 en el pipeline de GitHub Actions (2×/día, modo `--once`).
-También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_portfolio_bot.py`
+Corre en continuo en Railway (y lanza el pipeline diario a las 23:10 de Madrid). El pipeline
+también lo ejecuta como Step 12 (modo `--once`). En local: `py -3 scripts/telegram_portfolio_bot.py`
 
 **Estado persistido en:** `docs/data/telegram_bot_state.json` (commiteado en cada run).
 
@@ -267,7 +267,7 @@ También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_po
 | `/alert` | `/alert TICKER PRECIO [(nota opcional)]` | Activa una alerta de precio. El bot te avisa cuando TICKER cruce PRECIO. La nota entre paréntesis es opcional y se muestra en /alerts y en el aviso. |
 | `/alerts` | `/alerts` | Lista tus alertas de precio activas. |
 | `/delalert` | `/delalert TICKER` | Elimina la alerta de precio de un ticker. |
-| `/kalert` | `/kalert TICKER TIMEFRAME CONDICION  |  /kalert <texto libre>` | Crea una alerta sobre una condición de Koncorde (blue/green/estado, en D/3D/W). Acepta sintaxis exacta o una petición en lenguaje natural (se interpreta con IA). También se puede crear mandando una nota de voz al bot. |
+| `/kalert` | `/kalert TICKER TF[,TF] CONDICION [>N|<N]  |  /kalert <texto libre>` | Alerta de Koncorde en D, 3D o W; avisa una vez y se borra. Condiciones: blue/green positivo o negativo, blue cruza a positivo, estado acumulación/distribución, dirección de la flecha de blue/green/trend (sube, baja o gira) y cruce de la línea roja (trend_cross_up/down). Con varios timeframes (d,w) avisa con el primero que se cumpla; >N o <N exige además el precio. Acepta lenguaje natural y notas de voz que empiecen por 'avisa…'/'alerta…'. Si el bot deduce el ticker de un nombre, responde 'ok' para confirmar o escribe el ticker correcto. /kalert sin nada muestra la lista exacta de condiciones. |
 | `/kalerts` | `/kalerts` | Lista tus alertas de Koncorde activas. |
 | `/delkalert` | `/delkalert TICKER` | Elimina la(s) alerta(s) de Koncorde de un ticker. |
 | `/nota` | `/nota TEXTO (o texto / voz sin comando)` | Guarda una idea en el cuaderno de notas (una por línea). Cualquier texto o nota de voz que no sea un comando se guarda como nota; las notas de voz que empiezan por 'avisa…'/'alerta…' siguen creando una alerta Koncorde. |
@@ -278,7 +278,7 @@ También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_po
 ### Flujo de datos (write commands)
 
 ```
-Usuario → Telegram → getUpdates (pipeline 2×/día o local continuo)
+Usuario → Telegram → getUpdates (Railway en continuo, Step 12 del pipeline o local)
         → modifica portfolio.json en disco
         → git commit + push  (paso "Commit updated data" del workflow)
         → server.js git pull (al arrancar o botón Sincronizar)

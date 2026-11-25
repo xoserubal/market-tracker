@@ -178,8 +178,8 @@ COMMANDS = [
     },
     {
         "cmd":   "/kalert",
-        "usage": "/kalert TICKER TIMEFRAME CONDICION  |  /kalert <texto libre>",
-        "desc":  "Crea una alerta sobre una condición de Koncorde (blue/green/estado, en D/3D/W). Acepta sintaxis exacta o una petición en lenguaje natural (se interpreta con IA). También se puede crear mandando una nota de voz al bot.",
+        "usage": "/kalert TICKER TF[,TF] CONDICION [>N|<N]  |  /kalert <texto libre>",
+        "desc":  "Alerta de Koncorde en D, 3D o W; avisa una vez y se borra. Condiciones: blue/green positivo o negativo, blue cruza a positivo, estado acumulación/distribución, dirección de la flecha de blue/green/trend (sube, baja o gira) y cruce de la línea roja (trend_cross_up/down). Con varios timeframes (d,w) avisa con el primero que se cumpla; >N o <N exige además el precio. Acepta lenguaje natural y notas de voz que empiecen por 'avisa…'/'alerta…'. Si el bot deduce el ticker de un nombre, responde 'ok' para confirmar o escribe el ticker correcto. /kalert sin nada muestra la lista exacta de condiciones.",
     },
     {
         "cmd":   "/kalerts",
@@ -230,8 +230,8 @@ def _generate_docs_section() -> str:
 
 Bot que procesa comandos de Telegram para gestionar el Portfolio Tracker
 (`portfolio.json` / `localhost:3000/portfolio.html`).
-Se ejecuta como Step 12 en el pipeline de GitHub Actions (2×/día, modo `--once`).
-También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_portfolio_bot.py`
+Corre en continuo en Railway (y lanza el pipeline diario a las 23:10 de Madrid). El pipeline
+también lo ejecuta como Step 12 (modo `--once`). En local: `py -3 scripts/telegram_portfolio_bot.py`
 
 **Estado persistido en:** `docs/data/telegram_bot_state.json` (commiteado en cada run).
 
@@ -246,7 +246,7 @@ También se puede lanzar en modo continuo localmente: `py -3 scripts/telegram_po
 ### Flujo de datos (write commands)
 
 ```
-Usuario → Telegram → getUpdates (pipeline 2×/día o local continuo)
+Usuario → Telegram → getUpdates (Railway en continuo, Step 12 del pipeline o local)
         → modifica portfolio.json en disco
         → git commit + push  (paso "Commit updated data" del workflow)
         → server.js git pull (al arrancar o botón Sincronizar)
@@ -1152,7 +1152,9 @@ def cmd_kalert(token: str, chat_id: str, args_text: str) -> None:
               "a la vez — PRECIO admite &gt;N o &lt;N)\n"
               "O en lenguaje natural: <code>/kalert avisa si TNZ supera 70 y en vela diaria "
               "azul positivo</code>\n"
-              "También puedes mandar una nota de voz.")
+              "También puedes mandar una nota de voz que empiece por «avisa…» o «alerta…».\n\n"
+              f"TIMEFRAME: {', '.join(KONC_VALID_TIMEFRAMES)}\n"
+              f"CONDICION: {', '.join(KONC_CONDITIONS)}")
         return
 
     parsed = _parse_koncorde_alert_strict(args_text)
@@ -1564,6 +1566,8 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
             cmd_note_delete(token, chat_id, args[0])
         else:
             _send(token, chat_id, "Uso: /delnota NUMERO")
+    else:
+        _send(token, chat_id, f"Comando no reconocido: /{html.escape(cmd)}. Escribe /help para ver la lista.")
     return False
 
 
