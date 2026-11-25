@@ -207,6 +207,21 @@ COMMANDS = [
         "desc":  "Borra la nota con ese número (el que muestra /notas).",
     },
     {
+        "cmd":   "/sector",
+        "usage": "/sector TICKER[,TICKER] alza|baja [#ciclo #flujos #rfl] [nota]",
+        "desc":  "Diario sectorial: apunta un sector/ETF que ves girando (alza) o perdiendo fuerza (baja) y qué pestaña te lo dijo. Acepta nombres (salud, staples, inmobiliario, energia…). Se mide después a 5/20/60 sesiones frente a SPY y a la media de sectores; resultados en Relative Flow.",
+    },
+    {
+        "cmd":   "/sectores",
+        "usage": "/sectores [N]",
+        "desc":  "Muestra las últimas N lecturas del diario sectorial (10 por defecto) con su número.",
+    },
+    {
+        "cmd":   "/delsector",
+        "usage": "/delsector NUMERO",
+        "desc":  "Borra la lectura del diario sectorial con ese número (el que muestra /sectores).",
+    },
+    {
         "cmd":   "/help",
         "usage": "/help",
         "desc":  "Muestra este mensaje de ayuda.",
@@ -1442,6 +1457,184 @@ def cmd_note_delete(token: str, chat_id: str, num_text: str) -> None:
                           "(las notas posteriores bajan un número)")
 
 
+# ── Diario sectorial (2026-11-25) ─────────────────────────────────────────
+# Lecturas del usuario sobre sectores/ETFs ("veo Salud girando al alza; me lo dijo
+# Cycle + RFL"). Se apuntan ANTES de saber cómo acaban, para medir después si lo
+# que ve al recorrer Cycle → Flujos & Rotación → Relative Flow anticipa algo
+# (scripts/sector_journal_report.js). Una lectura por línea (JSONL), mismo
+# mecanismo de escritura que el cuaderno de notas.
+
+_SECTOR_JOURNAL_PATH = "docs/data/sector_journal.jsonl"
+SECTOR_JOURNAL_FILE  = ROOT / _SECTOR_JOURNAL_PATH
+
+_SECTOR_ALIASES = {
+    "salud": "XLV", "healthcare": "XLV", "sanidad": "XLV",
+    "staples": "XLP", "basico": "XLP", "básico": "XLP", "consumobasico": "XLP",
+    "inmobiliario": "XLRE", "realestate": "XLRE", "reits": "XLRE", "reit": "XLRE",
+    "tecnologia": "XLK", "tecnología": "XLK", "tech": "XLK",
+    "financiero": "XLF", "financieras": "XLF", "bancos": "XLF", "financials": "XLF",
+    "energia": "XLE", "energía": "XLE", "energy": "XLE",
+    "industria": "XLI", "industriales": "XLI", "industrials": "XLI",
+    "materiales": "XLB", "materials": "XLB",
+    "utilities": "XLU", "electricas": "XLU", "eléctricas": "XLU",
+    "discrecional": "XLY", "consumo": "XLY", "discretionary": "XLY",
+    "comunicacion": "XLC", "comunicación": "XLC", "communication": "XLC",
+}
+_SECTOR_DIRS = {"alza": "up", "sube": "up", "up": "up", "+": "up", "alcista": "up",
+                "baja": "down", "cae": "down", "down": "down", "-": "down", "bajista": "down"}
+_SECTOR_SOURCES = {"ciclo": "cycle", "cycle": "cycle",
+                   "flujos": "flujos", "rotacion": "flujos", "rotación": "flujos", "fr": "flujos",
+                   "rfl": "rfl", "relative": "rfl", "relativeflow": "rfl"}
+_SECTOR_TICKER_OK = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-=^")
+_SECTOR_SRC_LABEL = {"cycle": "Cycle", "flujos": "Flujos", "rfl": "RFL"}
+
+
+def _parse_sector_reading(args_text: str) -> tuple[dict | None, str]:
+    """'XLV,staples alza #ciclo #rfl gira desde mínimos' → (entry, error)."""
+    toks = args_text.split()
+    if len(toks) < 2:
+        return None, "faltan el sector y la dirección"
+    tickers: list[str] = []
+    for raw in toks[0].split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        t = _SECTOR_ALIASES.get(raw.lower(), raw.upper())
+        if not (1 <= len(t) <= 12) or not set(t) <= _SECTOR_TICKER_OK or not t[0].isalnum() and t[0] != "^":
+            return None, f"no reconozco «{raw}» como ticker o sector"
+        if t not in tickers:
+            tickers.append(t)
+    if not tickers:
+        return None, "falta el sector"
+    direction = _SECTOR_DIRS.get(toks[1].lower())
+    if not direction:
+        return None, f"la dirección debe ser alza o baja (no «{toks[1]}»)"
+    sources: list[str] = []
+    note_words: list[str] = []
+    for w in toks[2:]:
+        if w.startswith("#") and len(w) > 1:
+            src = _SECTOR_SOURCES.get(w[1:].lower())
+            if src:
+                if src not in sources:
+                    sources.append(src)
+                continue
+        note_words.append(w)
+    return {"tickers": tickers, "direction": direction, "sources": sources,
+            "note": " ".join(note_words)}, ""
+
+
+def _journal_read_text() -> tuple[str, str]:
+    if USE_GITHUB_API:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{_SECTOR_JOURNAL_PATH}"
+        r = requests.get(url, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=10)
+        if r.status_code == 404:
+            return "", ""
+        r.raise_for_status()
+        blob = r.json()
+        return base64.b64decode(blob["content"]).decode("utf-8"), blob["sha"]
+    return (SECTOR_JOURNAL_FILE.read_text(encoding="utf-8") if SECTOR_JOURNAL_FILE.exists() else ""), ""
+
+
+def _journal_write_text(content: str, sha: str, message: str) -> None:
+    if USE_GITHUB_API:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{_SECTOR_JOURNAL_PATH}"
+        payload: dict = {"message": message,
+                         "content": base64.b64encode(content.encode("utf-8")).decode()}
+        if sha:
+            payload["sha"] = sha
+        r = requests.put(url, json=payload,
+                         headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=15)
+        r.raise_for_status()
+        return
+    SECTOR_JOURNAL_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SECTOR_JOURNAL_FILE.write_text(content, encoding="utf-8")
+
+
+def cmd_sector_add(token: str, chat_id: str, args_text: str) -> bool:
+    parsed, err = _parse_sector_reading(args_text)
+    if not parsed:
+        _send(token, chat_id,
+              f"No la he guardado: {html.escape(err)}.\n"
+              "Uso: <code>/sector TICKER[,TICKER] alza|baja [#ciclo #flujos #rfl] [nota]</code>\n"
+              "Ej: <code>/sector salud alza #ciclo #rfl gira desde mínimos</code>")
+        return False
+    from datetime import datetime, timezone
+    entry = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+             "via": "telegram", **parsed}
+    for attempt in range(2):   # 1 reintento si el sha quedó viejo (409)
+        try:
+            content, sha = _journal_read_text()
+            lines = _notes_lines(content)
+            lines.append(json.dumps(entry, ensure_ascii=False))
+            _journal_write_text("\n".join(lines) + "\n", sha, "bot: add sector journal reading")
+            arrow = "↗ alza" if parsed["direction"] == "up" else "↘ baja"
+            src = ", ".join(_SECTOR_SRC_LABEL[s] for s in parsed["sources"]) or "sin pestaña"
+            note = f"\n<i>{html.escape(parsed['note'])}</i>" if parsed["note"] else ""
+            _send(token, chat_id,
+                  f"📓 Lectura #{len(lines)}: <b>{', '.join(parsed['tickers'])}</b> {arrow} ({src}){note}")
+            return True
+        except Exception as exc:
+            print(f"Sector journal save failed (attempt {attempt + 1}): {exc}")
+    _send(token, chat_id, "⚠️ No he podido guardar la lectura. Repite el comando más tarde.")
+    return False
+
+
+def cmd_sector_list(token: str, chat_id: str, n: int = 10) -> None:
+    try:
+        content, _ = _journal_read_text()
+    except Exception as exc:
+        _send(token, chat_id, f"No he podido leer el diario: <code>{html.escape(str(exc))}</code>")
+        return
+    lines = _notes_lines(content)
+    if not lines:
+        _send(token, chat_id, "El diario sectorial está vacío.")
+        return
+    n = max(1, min(n, 30))
+    out = [f"<b>Últimas {min(n, len(lines))} de {len(lines)} lecturas:</b>", ""]
+    for idx in range(max(0, len(lines) - n), len(lines)):
+        try:
+            e = json.loads(lines[idx])
+            arrow = "↗" if e.get("direction") == "up" else "↘"
+            src = ", ".join(_SECTOR_SRC_LABEL.get(x, x) for x in e.get("sources", []))
+            src = f" ({src})" if src else ""
+            note = f" — <i>{html.escape(e.get('note', ''))}</i>" if e.get("note") else ""
+            out.append(f"<b>#{idx + 1}</b> {e.get('ts', '')[:10]} {arrow} "
+                       f"<b>{', '.join(e.get('tickers', []))}</b>{src}{note}")
+        except Exception:
+            out.append(f"<b>#{idx + 1}</b> (línea ilegible)")
+    msg = "\n".join(out)
+    if len(msg) > 4000:
+        msg = msg[:3990] + "\n…"
+    _send(token, chat_id, msg)
+
+
+def cmd_sector_delete(token: str, chat_id: str, num_text: str) -> None:
+    try:
+        num = int(num_text.lstrip("#"))
+    except ValueError:
+        _send(token, chat_id, "Uso: /delsector NUMERO  (el número que muestra /sectores)")
+        return
+    try:
+        content, sha = _journal_read_text()
+        lines = _notes_lines(content)
+        if not 1 <= num <= len(lines):
+            _send(token, chat_id, f"No existe la lectura #{num} (hay {len(lines)}).")
+            return
+        removed = lines.pop(num - 1)
+        _journal_write_text(("\n".join(lines) + "\n") if lines else "", sha,
+                            "bot: delete sector journal reading")
+    except Exception as exc:
+        _send(token, chat_id, f"No he podido borrarla: <code>{html.escape(str(exc))}</code>")
+        return
+    try:
+        e = json.loads(removed)
+        desc = f"{', '.join(e.get('tickers', []))} {e.get('direction', '')} {e.get('ts', '')[:10]}"
+    except Exception:
+        desc = removed[:100]
+    _send(token, chat_id, f"🗑️ Lectura #{num} borrada: {html.escape(desc)}\n"
+                          "(las posteriores bajan un número)")
+
+
 def check_alerts(token: str, chat_id: str) -> None:
     alerts = _load_alerts()
     if not alerts:
@@ -1564,6 +1757,20 @@ def dispatch(token: str, chat_id: str, text: str, portfolio: dict) -> bool:
             cmd_note_delete(token, chat_id, args[0])
         else:
             _send(token, chat_id, "Uso: /delnota NUMERO")
+    elif cmd == "sector":
+        rest = text.strip().split(maxsplit=1)
+        cmd_sector_add(token, chat_id, rest[1] if len(rest) > 1 else "")
+    elif cmd == "sectores":
+        try:
+            n = int(args[0]) if args else 10
+        except ValueError:
+            n = 10
+        cmd_sector_list(token, chat_id, n)
+    elif cmd == "delsector":
+        if args:
+            cmd_sector_delete(token, chat_id, args[0])
+        else:
+            _send(token, chat_id, "Uso: /delsector NUMERO")
     return False
 
 

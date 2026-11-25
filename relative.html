@@ -748,11 +748,109 @@ function SignalTrackRecord({ rep }) {
   );
 }
 
+// ── Diario sectorial (docs/data/sector_journal_report.json) ───────────────────────────
+// Lecturas que el usuario apunta con /sector en Telegram, medidas por
+// scripts/sector_journal_report.js (Step 9g1c2). Solo lectura: aquí no se escribe nada.
+const SJ_SRC = { cycle: "Cycle", flujos: "Flujos", rfl: "RFL" };
+const SJ_GROUPS = [["all", "Todas"], ["up", "↗ Alza"], ["down", "↘ Baja"], ["cycle", "Citan Cycle"], ["flujos", "Citan Flujos"], ["rfl", "Citan RFL"], ["sin_pestana", "Sin pestaña"]];
+
+function SectorJournal({ rep }) {
+  const [indep, setIndep] = React.useState(true);
+  const [showAll, setShowAll] = React.useState(false);
+  if (!rep) return null;
+  const hs = rep.horizons || [5, 20, 60];
+  const signed = v => v == null ? <span style={{color:"#bbb"}}>—</span>
+    : <span style={{color: v >= 0 ? "#1a7a1a" : "#c0392b", fontWeight:700}}>{v >= 0 ? "+" : ""}{v.toFixed(2)}</span>;
+  const rows = [...(rep.rows || [])].reverse();
+  const COLLAPSED = 15;
+  const shown = showAll ? rows : rows.slice(0, COLLAPSED);
+  return (
+    <div className="panel" style={{marginBottom:12}}>
+      <div className="panel-title">Tus lecturas apuntadas con /sector — qué hicieron después ({rep.n_readings} lecturas)</div>
+      {!rep.n_readings ? (
+        <div style={{fontSize:11.5,color:"#475467",padding:"8px 10px"}}>
+          Todavía no hay lecturas. En Telegram: <code>/sector salud alza #ciclo #rfl gira desde mínimos</code> (varios a la vez: <code>/sector XLV,XLP alza</code>; dirección <code>alza</code> o <code>baja</code>; pestañas <code>#ciclo #flujos #rfl</code>). <code>/sectores</code> las lista y <code>/delsector N</code> borra una.
+        </div>
+      ) : (<>
+        <div style={{display:"flex",gap:10,alignItems:"center",padding:"6px 10px 0",flexWrap:"wrap"}}>
+          <label style={{fontSize:10.5,color:"#475467",cursor:"pointer"}}>
+            <input type="checkbox" checked={indep} onChange={e => setIndep(e.target.checked)} /> solo lecturas independientes (sin otra del mismo ticker y dirección en 20 sesiones)
+          </label>
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table className="flow-table">
+            <thead><tr><th style={{textAlign:"left"}}>Grupo</th>{hs.map(h => <th key={h}>{h} ses.: exceso vs sectores · acierto (n)</th>)}</tr></thead>
+            <tbody>
+              {SJ_GROUPS.map(([g, label]) => (
+                <tr key={g}>
+                  <td className="name" style={{textAlign:"left"}}>{label}</td>
+                  {hs.map(h => {
+                    const x = rep.summary?.[g]?.[h]?.[indep ? "independent" : "all"];
+                    const concl = rep.summary?.[g]?.[h]?.conclusive;
+                    if (!x || !x.n) return <td key={h} className="num"><span style={{color:"#bbb"}}>—</span></td>;
+                    return <td key={h} className="num"><span style={{opacity: concl ? 1 : 0.6}} title={concl ? undefined : `n < ${rep.min_n_conclusive}: no concluyente`}>{signed(x.mean_vs_sectors)} · {x.hit_rate}% <span style={{fontSize:9}}>({x.n})</span></span></td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{overflowX:"auto",padding:"8px 0 2px"}}>
+          <table className="flow-table">
+            <thead><tr>
+              <th>#</th><th style={{textAlign:"left"}}>Apuntada</th><th style={{textAlign:"left"}}>Ticker</th><th>Dir.</th><th style={{textAlign:"left"}}>Pestañas</th>
+              <th title="Ratio TICKER/SPY en la última sesión cerrada cuando se apuntó (mismo cálculo que esta página)">RFL entonces</th>
+              <th title="Flow change del ratio TICKER/SPY ese día">Flow chg</th>
+              <th title="Puesto entre los 11 sectores SPDR por retorno a 3 meses (1 = el más fuerte)">Puesto 3M</th>
+              <th title="Distancia del ratio TICKER/SPY a su máximo de 52 semanas">Ratio vs máx.</th>
+              <th>Entrada</th>{hs.map(h => <th key={h} title="Exceso frente a la media de los 11 sectores; en lecturas 'baja' con el signo cambiado (+ = acertaste). En gris: aún no ha llegado al plazo, es lo que lleva.">{h} ses.</th>)}
+              <th style={{textAlign:"left"}}>Nota</th>
+            </tr></thead>
+            <tbody>
+              {shown.map((r, i) => (
+                <tr key={i}>
+                  <td className="num">{r.num}{r.independent === false ? <span style={{color:"#98a2b3"}} title="No independiente: repite ticker y dirección en menos de 20 sesiones">*</span> : null}</td>
+                  <td className="num" style={{textAlign:"left"}}>{(r.ts || "").slice(0, 10)}</td>
+                  <td className="name" style={{textAlign:"left"}}>{r.ticker}</td>
+                  <td style={{color: r.direction === "up" ? "#1a7a1a" : "#c0392b", fontWeight:700}}>{r.direction === "up" ? "↗" : "↘"}</td>
+                  <td style={{textAlign:"left"}}>{(r.sources || []).map(s => SJ_SRC[s] || s).join(", ") || <span style={{color:"#bbb"}}>—</span>}</td>
+                  <td>{r.context ? <>{r.context.rfl_signal} <span style={{color:"#999"}}>({r.context.rfl_score})</span></> : "—"}</td>
+                  <td className="num">{r.context?.rfl_flow_change == null ? "—" : fmtPct(r.context.rfl_flow_change)}</td>
+                  <td className="num">{r.context?.sector_rank_3m ? `${r.context.sector_rank_3m}/${r.context.sectors_ranked}` : "—"}</td>
+                  <td className="num">{r.context?.rel_from_high_52w == null ? "—" : fmtPct(r.context.rel_from_high_52w)}</td>
+                  <td className="num">{r.entry_date || (r.error ? "sin datos" : "pendiente")}</td>
+                  {hs.map(h => {
+                    const x = r.horizons?.[h];
+                    if (!x) return <td key={h} className="num"><span style={{color:"#bbb"}}>—</span></td>;
+                    return <td key={h} className="num" style={{opacity: x.matured ? 1 : 0.5}} title={x.matured ? `vs SPY ${x.vs_spy}` : `Lleva ${x.sessions} sesiones`}>{signed(x.vs_sectors)}</td>;
+                  })}
+                  <td style={{textAlign:"left",color:"#475467"}}>{r.note || ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {rows.length > COLLAPSED && (
+          <button onClick={() => setShowAll(v => !v)} style={{margin:"6px 10px 4px",background:"#eef0f2",color:"#344054",border:"1px solid #d0d5dd",borderRadius:14,padding:"3px 12px",fontSize:10.5,fontWeight:700,cursor:"pointer"}}>
+            {showAll ? "▲ Mostrar solo las " + COLLAPSED + " más recientes" : "▼ Ver las " + (rows.length - COLLAPSED) + " anteriores"}
+          </button>
+        )}
+      </>)}
+      <div className="xmod-note">
+        Se mide desde el cierre de la primera sesión de EE.UU. que termina después de apuntar la lectura. «Exceso» = retorno del ETF − media de los 11 sectores SPDR en las mismas fechas; en lecturas «baja», con el signo cambiado (+ = acertaste). «Acierto» = % con exceso positivo.
+        El contexto (RFL, flow change, puesto a 3 meses) es el de la última sesión cerrada cuando apuntaste. Concluyente solo con {rep.min_n_conclusive} lecturas independientes maduradas: hasta entonces, en gris.
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────
 function RelativeFlowLab() {
   const [signalReport, setSignalReport] = React.useState(null);
+  const [journalReport, setJournalReport] = React.useState(null);
   React.useEffect(() => {
     fetch("/docs/data/relative_signal_report.json?t=" + Date.now()).then(r => r.ok ? r.json() : null).then(setSignalReport).catch(() => {});
+    fetch("/docs/data/sector_journal_report.json?t=" + Date.now()).then(r => r.ok ? r.json() : null).then(setJournalReport).catch(() => {});
   }, []);
   const [history, setHistory] = React.useState({});
   const [loading, setLoading] = React.useState(new Set());
@@ -1409,6 +1507,10 @@ function RelativeFlowLab() {
       {/* ── Historial propio de las señales (log diario en pipeline) ── */}
       {signalReport && <div className="section-label">📈 Historial propio de las señales de entrada — qué hizo el ratio después</div>}
       <SignalTrackRecord rep={signalReport} />
+
+      {/* ── Diario sectorial (/sector en Telegram) ── */}
+      {journalReport && <div className="section-label">📓 Diario sectorial — tus lecturas, medidas después</div>}
+      <SectorJournal rep={journalReport} />
 
       {/* ── Cluster View (secundaria) ── */}
       <div className="section-label">🟡 Cluster Coherence View (secondary)</div>

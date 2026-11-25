@@ -327,6 +327,14 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Diario sectorial (2026-11-25): mide las lecturas que el usuario apunta con /sector en
+      # Telegram (docs/data/sector_journal.jsonl) a 5/20/60 sesiones frente a SPY y a la media
+      # de los 11 sectores. Con el diario vacio escribe un informe vacio. Ver CLAUDE.md.
+      - name: Run pipeline - Step 9g1c2 Sector journal report
+        run: node scripts/sector_journal_report.js
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Cartera sombra SCREENER_SHADOW (2026-10-09): una cartera, una pestaña por filtro del
       # Screener. 100% mecanica; lee el log de Step 9g1 y el snapshot de Step 9g. Ver
       # wiki/PREREGISTRO_SCREENER_SHADOW_V0.md y CLAUDE.md. No avisa por Telegram.

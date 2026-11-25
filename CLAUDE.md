@@ -6785,6 +6785,32 @@ decidir qué sistema de seguimiento montar: plantillas de vigilancia, avisos y d
 
 **Pendiente:** analizar las notas acumuladas y diseñar el sistema.
 
+## Diario sectorial + estudio de giro de sectores deprimidos (2026-11-25)
+
+**Origen.** El usuario recorre Cycle → Flujos & Rotación → Relative Flow y recuerda haber visto girar Real Estate,
+Salud y Staples sin actuar. La versión mecánica de ese recorrido ya está descartada (confluencia sectorial, NO
+SOPORTADO), pero esos casos son sectores deprimidos que giran, no líderes. Hallazgo al definirlo: por fuerza relativa a
+3/6/12 meses ninguno era rezagado (Salud, 2.º de 11 el 30-sep); lo común era estar −26 a −31 % bajo su máximo de 3 años
+frente a SPY.
+
+**1. Diario sectorial (`/sector` en el bot).** Mide lo que ve el usuario, apuntado antes de saber cómo acaba.
+- `/sector TICKER[,TICKER] alza|baja [#ciclo #flujos #rfl] [nota]`; acepta nombres (salud, staples, inmobiliario…).
+  `/sectores [N]` lista y `/delsector N` borra. Guarda en `docs/data/sector_journal.jsonl` (repo público).
+- `scripts/sector_journal_report.js` (Step 9g1c2) → `docs/data/sector_journal_report.json`. Entrada = cierre de la
+  primera sesión de EE.UU. que termina después de apuntar; exceso a 5/20/60 sesiones frente a SPY y a la media de los 11
+  SPDR (signo cambiado en «baja»); contexto RFL del ratio TICKER/SPY y puesto a 3 meses en la última sesión cerrada;
+  independiente = sin otra del mismo ticker y dirección en 20 sesiones; concluyente con ≥ 30 independientes.
+- Vista: sección «📓 Diario sectorial» en `relative.html`, debajo del historial de señales.
+- Probado con lecturas sintéticas (fechas antes/después del cierre, viernes, pendiente) y el componente renderizado.
+  El bot necesita push para que Railway lo despliegue.
+
+**2. Preregistro en borrador, sin firmar:** `wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V1.md`. H1: sector deprimido
+(≥ 20 % bajo su máximo de 3 años frente al índice) que gira (cruza su SMA50) bate a la media de sectores a 40 sesiones;
+H2: mejor si es el sector de la fase siguiente a la dominante de Cycle (fases calculadas con los ETFs proxy). Desarrollo
+en los SPDR de EE.UU. (ya muy expuestos), confirmación en los 19 ETFs sectoriales STOXX 600 de Xetra (2008+, nunca
+usados para rotación). Recuento sin resultados: 153 eventos independientes en EE.UU., 179 en Europa. Tres puntos
+[DECIDIR] pendientes del usuario. La selección de acciones dentro del sector va después y solo si esto sale.
+
 ## Investigación de microestructura con Alpaca — G0, G1 y G1.5 hechos (2026-11-15)
 
 Encargo V3 + autorización G1 (en el chat, no commiteados). Estudio aislado en `research/microstructure_v1/`
@@ -7044,18 +7070,31 @@ Para cualquier reproducción futura, usar esas versiones.
 cruzado: `HD 2024-02` con su tamaño correcto y 3 JSON de la SEC. Mirar que exista o que el tamaño cuadre no basta: hay
 que leer el fichero entero.
 
-**Piloto E3:** se perdió su `pilot.json` (jornadas 23, 24, 25, 27 y 30-nov). Se retuvo durante la reconciliación con un
-`pilot.json` de espera y luego se volvió a fijar con las mismas jornadas (ver «Pendiente»).
+**Piloto E3:** se perdió su `pilot.json` (jornadas 23, 24, 25, 27 y 30-nov). Durante la reconciliación quedó un
+`pilot.json` «en espera» en el disco (no se llegó a volver a fijar en DESPACHOB).
+
+**Rearmado en LAWNMOWER (23-nov, 23:25 hora local):**
+- Pruebas del piloto 124/124 y `PRAGMA quick_check` del manifiesto ok (107 448 unidades `ok`, 12 `empty`).
+- El `pilot.json` de espera pasa a `_incident_2026-11-22/pilot.json.on_hold`; `init --first 2026-11-23 --n 5` fija las
+  mismas jornadas (23, 24, 25, 27 y 30-nov; el 27 cierra pronto).
+- Tarea `MicroE3Pilot` habilitada. Primera pasada: 24-nov a las 03:40.
+- Vigilante instalado con la huella nueva **`7a5801f0…`** (96 archivos). La huella `89b95875…` ya no vale porque la
+  reconciliación cambió `micro/manifest.py` (`localize`). `verify` con la copia instalada: ok, sin avisos.
+- Mientras dure el piloto no se toca nada del manifiesto del vigilante (`micro/`, `tests/`, `catalog/`, `lab/`, `e3_*.py`).
 
 **Prevención:** desactivar el inicio rápido en los dos equipos (`powercfg /h off` como administrador) y expulsar siempre
-el disco antes de cambiarlo de equipo.
+el disco antes de cambiarlo de equipo. En LAWNMOWER el inicio rápido ya está deshabilitado por directiva; queda DESPACHOB.
 
-**Pendiente (al volver a conectar el disco):**
-- `features/vp_profiles` sin regenerar. El intento del 23-nov a las 04:16 se paró porque había una pasada E3 en marcha
-  (`heavy_lock`), y no se relanzó.
-- 2 ficheros de `flow_negative_v1/sec/shares` siguen sin acceso (`1000229.json`, `1001039.json`).
-- El recordatorio `e3_guard_lawnmower` ya se envió el 22-nov con el texto antiguo («instalar el vigilante»). La versión
-  «en espera» del recordatorio quedó obsoleta al volver a fijar el piloto: no se publicó.
+**Pendiente:**
+- ~~`features/vp_profiles`~~ **regenerado** en LAWNMOWER (23-24 nov). DESPACHOB llegó a 425/629 entidades antes del
+  apagón; aquí se completó el resto (las escrituras son atómicas). `verify`: 1 245 ficheros, 789 994 filas
+  (= 759 822 + 30 172 de VP2), 513 MB, conservación y estadísticas ok, recálculo 8/8 idéntico. Log:
+  `_incident_2026-11-22/regen_vp2_lawnmower.log`. Fallo menor sin corregir: `vp_build.py recent` termina con un `print`
+  con «→» que revienta en consola cp1252 cuando la salida va a un fichero (el trabajo ya está escrito); lanzar con
+  `PYTHONIOENCODING=utf-8`.
+- Los 2 ficheros de `flow_negative_v1/sec/shares` (`1000229.json`, `1001039.json`) se leen bien en LAWNMOWER: el problema
+  de permisos era solo de DESPACHOB.
+- El recordatorio `e3_guard_lawnmower` ya se envió el 22-nov; la versión «en espera» no se publicó.
 - DESPACHOB se apagó en seco hacia las 06:45 del 23-nov, unos 20 min después de terminar la reconciliación. No hay
   pantalla azul ni volcado de memoria (probable corte de luz o cuelgue de hardware).
 
