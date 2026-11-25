@@ -286,6 +286,34 @@ def _send(token: str, chat_id: str, text: str) -> bool:
         return False
 
 
+def _menu_description(desc: str) -> str:
+    """Primera frase de la descripción, apta para el menú «/» de Telegram (≤256)."""
+    first = re.split(r"(?<=[.;])\s", desc.strip(), maxsplit=1)[0].rstrip(".;")
+    return first if len(first) <= 256 else first[:253] + "..."
+
+
+def register_bot_commands(token: str) -> bool:
+    """Publica COMMANDS en Telegram (setMyCommands) para que al escribir «/»
+    salga el menú con sugerencias. Idempotente; un fallo no detiene el bot."""
+    commands = [
+        {"command": c["cmd"].lstrip("/"), "description": _menu_description(c["desc"])}
+        for c in COMMANDS
+    ]
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/setMyCommands",
+            json={"commands": commands}, timeout=15,
+        )
+        if not r.ok:
+            print(f"setMyCommands error {r.status_code}: {r.text[:200]}")
+        else:
+            print(f"Telegram command menu registered ({len(commands)} commands).")
+        return r.ok
+    except Exception as exc:
+        print(f"setMyCommands failed: {exc}")
+        return False
+
+
 def _get_updates(token: str, offset: int | None) -> list[dict]:
     params: dict = {"timeout": 10, "allowed_updates": ["message"]}
     if offset is not None:
@@ -1724,6 +1752,7 @@ def run_once(token: str, chat_id: str) -> None:
 def run_loop(token: str, chat_id: str, interval: int = 30) -> None:
     """Continuous polling loop. For local/daemon use."""
     print(f"Portfolio bot running. Polling every {interval}s. Ctrl+C to stop.")
+    register_bot_commands(token)
     state        = _load_state()
     alert_cycles = 0
 
