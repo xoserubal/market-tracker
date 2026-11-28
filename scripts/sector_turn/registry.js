@@ -597,6 +597,7 @@ if (require.main === module) {
       if (cmd === 'publish') return console.log(JSON.stringify(await publish({ now }), null, 1));
       if (cmd === 'supplement') return console.log(JSON.stringify(await supplement({ week: val('--week'), now }), null, 1));
       if (cmd === 'run-weekly') return console.log(JSON.stringify(await runWeekly({ privateGit: flag('--private-git'), now }), null, 1));
+      if (cmd === 'alert') { await telegram(`⚠️ Registro de giros sectoriales: ${argv.slice(1).join(' ')}`.slice(0, 1500)); return; }
       console.log('uso: registry.js capture|publish|run-weekly|verify|status|supplement'); process.exit(2);
     } catch (e) { await fail(e); }
   })();

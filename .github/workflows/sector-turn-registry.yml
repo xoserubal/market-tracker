@@ -1,0 +1,89 @@
+name: Sector turn registry (manual)
+
+# Registro semanal prospectivo de giros sectoriales (wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md, §10).
+# Solo se lanza a mano. El paso semanal real corre dentro de market-update.yml (Step 9g2c).
+#   mode=check : clona el registro privado, verify --deep, captura en ensayo (no escribe) y prueba de escritura
+#                (crea y borra una rama temporal en el repositorio privado). No publica nada.
+#   mode=run   : lo mismo que el paso del pipeline (capture → push privado → publicar huellas) y sube las huellas a
+#                market-tracker. Sirve para recuperar una semana si el pipeline falló.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check (sin escribir) o run (captura y publica)'
+        required: true
+        default: 'check'
+        type: choice
+        options: [check, run]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sector-turn-registry
+  cancel-in-progress: false
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SECTOR_TURN_PRIVATE_DIR: ${{ runner.temp }}/private_registry
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm install --omit=dev
+
+      - name: Clone private registry
+        env:
+          PRIVATE_REGISTRY_TOKEN: ${{ secrets.PRIVATE_REGISTRY_TOKEN }}
+        run: |
+          if [ -z "$PRIVATE_REGISTRY_TOKEN" ]; then
+            node scripts/sector_turn/registry.js alert "falta el secreto PRIVATE_REGISTRY_TOKEN"; exit 1
+          fi
+          git clone -q "https://x-access-token:${PRIVATE_REGISTRY_TOKEN}@github.com/xoserubal/market-tracker-registry.git" "$SECTOR_TURN_PRIVATE_DIR" \
+            || { node scripts/sector_turn/registry.js alert "no se pudo clonar el registro privado (¿token revocado o sin permisos?)"; exit 1; }
+          git -C "$SECTOR_TURN_PRIVATE_DIR" log --oneline -3
+
+      - name: Verify (deep)
+        run: node scripts/sector_turn/registry.js verify --deep
+
+      - name: Check mode - dry-run capture and write permission
+        if: inputs.mode == 'check'
+        run: |
+          node scripts/sector_turn/registry.js capture --dry-run
+          node scripts/sector_turn/registry.js status
+          cd "$SECTOR_TURN_PRIVATE_DIR"
+          git push origin HEAD:refs/heads/actions-permcheck
+          git push origin :refs/heads/actions-permcheck
+          echo "Escritura en el repositorio privado: OK (rama temporal creada y borrada)"
+
+      - name: Run mode - capture, push private, publish anchors
+        if: inputs.mode == 'run'
+        run: node scripts/sector_turn/registry.js run-weekly --private-git --alert
+
+      - name: Run mode - commit anchors to market-tracker
+        if: inputs.mode == 'run'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/sector_turn_anchors.jsonl 2>/dev/null || true
+          git diff --staged --quiet && { echo "sin huellas nuevas"; exit 0; }
+          git commit -m "chore: huellas del registro de giros sectoriales $(date -u '+%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3 4 5; do
+            git push && exit 0
+            git fetch origin master
+            if ! git rebase origin/master; then git rebase --abort; echo "::error::conflicto al subir las huellas"; exit 1; fi
+          done
+          node scripts/sector_turn/registry.js alert "no se pudieron subir las huellas a market-tracker tras 5 intentos"
+          exit 1
