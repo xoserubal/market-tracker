@@ -1,0 +1,7642 @@
+{
+ "generated_utc": "2026-11-28T16:34:56.424Z",
+ "mode": "final",
+ "preregistration": "wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md",
+ "script_sha256": "d53df3e5cf6ca8b636c75b30e5c792fbeb8c2c72e3d9d59443459388d95809f5",
+ "freeze": {
+  "wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md": "c0aff0cc9ec74a26004b535b701c60582196a87e7aff9ac052adaebd1c8ac2a5",
+  "scripts/sector_turn/lib.js": "01698fea536b9d2a7b3eb46f64867ed76f3b3a0ab6c32e77afe40e022b0ad23c",
+  "scripts/sector_turn/cycle_copy.js": "3c6929c6a67b985f2dce2d30f57ee4d39eeaca956ea2a51f71aeee589ab527f6",
+  "research/sector_turnaround_v2/counts.js": "0022c3f377fa5072d01630533afff15169476919c255bfac83bb9812e6756e1b",
+  "research/sector_turnaround_v2/counts.json": "30bc64aecd91e6ec2adecccad1d39eba592129aebb348ab23e267c1e5f568be5",
+  "research/sector_turnaround_v2/_work/prices_max.json": "a989938f4156af345478eb676529319f354ba494ccc2ef25865968301ac80755"
+ },
+ "conventions": {
+  "hist_end": "2026-08-28",
+  "analysis_date": "2026-08-28",
+  "complete_outcome": "entrada (sesión siguiente a la decisión) y las h sesiones posteriores dentro del bloque (≤ hist_end)",
+  "excess": "retorno ajustado del ETF − media de los ETFs del nivel con precio en entrada y salida (incluido él), menos coste",
+  "mom21": "retorno propio del ETF a 21 sesiones (interpretación de «momentum a 21 sesiones», distinto de la fuerza relativa a 63)",
+  "leave_one_out": "se quitan los eventos de ese ETF; la media del nivel no cambia",
+  "bootstrap_reps": 10000,
+  "ci": "95 % percentil, bloques de trimestre (principal)"
+ },
+ "counts": {
+  "sector": {
+   "registered": 148,
+   "complete": 147
+  },
+  "industry": {
+   "registered": 409,
+   "complete": 405
+  }
+ },
+ "level_overlap": {
+  "industry_events": 405,
+  "in_week_with_sector_event": 102
+ },
+ "H1": {
+  "A_sectores": {
+   "status": "exploratorio",
+   "estimate": 0.00638,
+   "ci95_quarter": [
+    -0.00435,
+    0.01745
+   ],
+   "verdict": "INCONCLUYENTE",
+   "lower_bound_reaches_threshold": false,
+   "block_sensitivity": {
+    "quarter": {
+     "n_blocks": 73,
+     "ci95": [
+      -0.00435,
+      0.01745
+     ],
+     "verdict": "INCONCLUYENTE"
+    },
+    "semester": {
+     "n_blocks": 44,
+     "ci95": [
+      -0.00275,
+      0.01589
+     ],
+     "verdict": "INCONCLUYENTE"
+    },
+    "year": {
+     "n_blocks": 25,
+     "ci95": [
+      -0.00221,
+      0.01507
+     ],
+     "verdict": "INCONCLUYENTE"
+    }
+   },
+   "sensitive_to_temporal_dependence": false,
+   "overlap": {
+    "quarter": {
+     "events": 147,
+     "window_enters_next_block": 92,
+     "and_overlaps_event_of_later_block": 29,
+     "share": 0.197
+    },
+    "semester": {
+     "events": 147,
+     "window_enters_next_block": 37,
+     "and_overlaps_event_of_later_block": 9,
+     "share": 0.061
+    },
+    "year": {
+     "events": 147,
+     "window_enters_next_block": 19,
+     "and_overlaps_event_of_later_block": 8,
+     "share": 0.054
+    }
+   },
+   "descriptive": {
+    "events": 147,
+    "weeks": 133,
+    "quarters": 73,
+    "mean_abs_return": 0.02518,
+    "mean_cost": 0.001,
+    "sd_excess": 0.06459,
+    "share_positive": 0.531,
+    "mae_mean": -0.04549,
+    "mae_median": -0.02692,
+    "mae_worst": -0.31486,
+    "min_comparison_etfs": 9
+   },
+   "robustness": {
+    "triple_cost": {
+     "estimate": 0.00438,
+     "pass": true
+    },
+    "without_top5": {
+     "estimate": -0.00064,
+     "pass": false
+    },
+    "leave_one_etf_out": {
+     "evaluable": 11,
+     "share_positive": 1,
+     "pass": true,
+     "detail": [
+      {
+       "excluded": "XLB",
+       "evaluable": true,
+       "estimate": 0.00575
+      },
+      {
+       "excluded": "XLC",
+       "evaluable": true,
+       "estimate": 0.00617
+      },
+      {
+       "excluded": "XLE",
+       "evaluable": true,
+       "estimate": 0.00443
+      },
+      {
+       "excluded": "XLF",
+       "evaluable": true,
+       "estimate": 0.00571
+      },
+      {
+       "excluded": "XLI",
+       "evaluable": true,
+       "estimate": 0.00629
+      },
+      {
+       "excluded": "XLK",
+       "evaluable": true,
+       "estimate": 0.00879
+      },
+      {
+       "excluded": "XLP",
+       "evaluable": true,
+       "estimate": 0.00722
+      },
+      {
+       "excluded": "XLRE",
+       "evaluable": true,
+       "estimate": 0.00541
+      },
+      {
+       "excluded": "XLU",
+       "evaluable": true,
+       "estimate": 0.00875
+      },
+      {
+       "excluded": "XLV",
+       "evaluable": true,
+       "estimate": 0.0068
+      },
+      {
+       "excluded": "XLY",
+       "evaluable": true,
+       "estimate": 0.00513
+      }
+     ]
+    },
+    "label": "NO ROBUSTA"
+   },
+   "secondary_horizons": {
+    "h20": {
+     "events": 147,
+     "estimate": 0.00524,
+     "ci95": [
+      -0.00205,
+      0.01275
+     ]
+    },
+    "h60": {
+     "events": 143,
+     "estimate": 0.00276,
+     "ci95": [
+      -0.0086,
+      0.01434
+     ]
+    }
+   },
+   "cost_sensitivity": {
+    "x2": {
+     "estimate": 0.00538,
+     "ci95": [
+      -0.00496,
+      0.01601
+     ]
+    },
+    "x3": {
+     "estimate": 0.00438,
+     "ci95": [
+      -0.00602,
+      0.01531
+     ]
+    }
+   }
+  },
+  "Aprime_industrias": {
+   "status": "generalización, exploratorio",
+   "estimate": -0.00437,
+   "ci95_quarter": [
+    -0.01137,
+    0.00259
+   ],
+   "verdict": "DESFAVORABLE",
+   "lower_bound_reaches_threshold": false,
+   "block_sensitivity": {
+    "quarter": {
+     "n_blocks": 85,
+     "ci95": [
+      -0.01137,
+      0.00259
+     ],
+     "verdict": "DESFAVORABLE"
+    },
+    "semester": {
+     "n_blocks": 45,
+     "ci95": [
+      -0.01065,
+      0.0022
+     ],
+     "verdict": "DESFAVORABLE"
+    },
+    "year": {
+     "n_blocks": 24,
+     "ci95": [
+      -0.01118,
+      0.00292
+     ],
+     "verdict": "DESFAVORABLE"
+    }
+   },
+   "sensitive_to_temporal_dependence": false,
+   "overlap": {
+    "quarter": {
+     "events": 405,
+     "window_enters_next_block": 281,
+     "and_overlaps_event_of_later_block": 149,
+     "share": 0.368
+    },
+    "semester": {
+     "events": 405,
+     "window_enters_next_block": 149,
+     "and_overlaps_event_of_later_block": 84,
+     "share": 0.207
+    },
+    "year": {
+     "events": 405,
+     "window_enters_next_block": 72,
+     "and_overlaps_event_of_later_block": 48,
+     "share": 0.119
+    }
+   },
+   "descriptive": {
+    "events": 405,
+    "weeks": 286,
+    "quarters": 85,
+    "mean_abs_return": 0.02637,
+    "mean_cost": 0.002,
+    "sd_excess": 0.07986,
+    "share_positive": 0.491,
+    "mae_mean": -0.05914,
+    "mae_median": -0.0375,
+    "mae_worst": -0.3825,
+    "min_comparison_etfs": 4
+   },
+   "robustness": {
+    "triple_cost": {
+     "estimate": -0.00837,
+     "pass": false
+    },
+    "without_top5": {
+     "estimate": -0.00567,
+     "pass": false
+    },
+    "leave_one_etf_out": {
+     "evaluable": 18,
+     "share_positive": 0,
+     "pass": false,
+     "detail": [
+      {
+       "excluded": "CARZ",
+       "evaluable": true,
+       "estimate": -0.00415
+      },
+      {
+       "excluded": "FCG",
+       "evaluable": true,
+       "estimate": -0.00185
+      },
+      {
+       "excluded": "IAT",
+       "evaluable": true,
+       "estimate": -0.00404
+      },
+      {
+       "excluded": "IBB",
+       "evaluable": true,
+       "estimate": -0.00416
+      },
+      {
+       "excluded": "IHE",
+       "evaluable": true,
+       "estimate": -0.00362
+      },
+      {
+       "excluded": "IHI",
+       "evaluable": true,
+       "estimate": -0.00477
+      },
+      {
+       "excluded": "ITB",
+       "evaluable": true,
+       "estimate": -0.00624
+      },
+      {
+       "excluded": "IYR",
+       "evaluable": true,
+       "estimate": -0.00413
+      },
+      {
+       "excluded": "IYZ",
+       "evaluable": true,
+       "estimate": -0.00401
+      },
+      {
+       "excluded": "KBE",
+       "evaluable": true,
+       "estimate": -0.00474
+      },
+      {
+       "excluded": "OIH",
+       "evaluable": true,
+       "estimate": -0.00369
+      },
+      {
+       "excluded": "PAVE",
+       "evaluable": true,
+       "estimate": -0.00439
+      },
+      {
+       "excluded": "PBJ",
+       "evaluable": true,
+       "estimate": -0.0028
+      },
+      {
+       "excluded": "XES",
+       "evaluable": true,
+       "estimate": -0.0033
+      },
+      {
+       "excluded": "XHS",
+       "evaluable": true,
+       "estimate": -0.00609
+      },
+      {
+       "excluded": "XRT",
+       "evaluable": true,
+       "estimate": -0.00369
+      },
+      {
+       "excluded": "XSD",
+       "evaluable": true,
+       "estimate": -0.00416
+      },
+      {
+       "excluded": "XTN",
+       "evaluable": true,
+       "estimate": -0.00489
+      }
+     ]
+    },
+    "label": "NO ROBUSTA"
+   },
+   "secondary_horizons": {
+    "h20": {
+     "events": 405,
+     "estimate": -0.00117,
+     "ci95": [
+      -0.00709,
+      0.00475
+     ]
+    },
+    "h60": {
+     "events": 400,
+     "estimate": -0.00741,
+     "ci95": [
+      -0.01756,
+      0.00247
+     ]
+    }
+   },
+   "cost_sensitivity": {
+    "x2": {
+     "estimate": -0.00637,
+     "ci95": [
+      -0.01341,
+      0.00069
+     ]
+    },
+    "x3": {
+     "estimate": -0.00837,
+     "ci95": [
+      -0.01542,
+      -0.00147
+     ]
+    }
+   }
+  },
+  "Aprime_sin_IBB_IHI_XHS": {
+   "estimate": -0.00674,
+   "ci95": [
+    -0.01483,
+    0.00128
+   ],
+   "events": 346
+  },
+  "E_amp_A_mas_Aprime": {
+   "status": "exploratorio (referencia para H1-ampliada)",
+   "estimate": 0.00101,
+   "ci95_quarter": [
+    -0.00558,
+    0.00766
+   ],
+   "verdict": "DESFAVORABLE",
+   "lower_bound_reaches_threshold": false,
+   "block_sensitivity": {
+    "quarter": {
+     "n_blocks": 95,
+     "ci95": [
+      -0.00558,
+      0.00766
+     ],
+     "verdict": "DESFAVORABLE"
+    },
+    "semester": {
+     "n_blocks": 50,
+     "ci95": [
+      -0.00461,
+      0.00713
+     ],
+     "verdict": "DESFAVORABLE"
+    },
+    "year": {
+     "n_blocks": 26,
+     "ci95": [
+      -0.00545,
+      0.00776
+     ],
+     "verdict": "DESFAVORABLE"
+    }
+   },
+   "sensitive_to_temporal_dependence": false,
+   "overlap": {
+    "quarter": {
+     "events": 552,
+     "window_enters_next_block": 373,
+     "and_overlaps_event_of_later_block": 232,
+     "share": 0.42
+    },
+    "semester": {
+     "events": 552,
+     "window_enters_next_block": 186,
+     "and_overlaps_event_of_later_block": 116,
+     "share": 0.21
+    },
+    "year": {
+     "events": 552,
+     "window_enters_next_block": 91,
+     "and_overlaps_event_of_later_block": 67,
+     "share": 0.121
+    }
+   },
+   "descriptive": {
+    "sector": {
+     "events": 147,
+     "weeks": 133,
+     "quarters": 73,
+     "mean_abs_return": 0.02518,
+     "mean_cost": 0.001,
+     "sd_excess": 0.06459,
+     "share_positive": 0.531,
+     "mae_mean": -0.04549,
+     "mae_median": -0.02692,
+     "mae_worst": -0.31486,
+     "min_comparison_etfs": 9
+    },
+    "industry": {
+     "events": 405,
+     "weeks": 286,
+     "quarters": 85,
+     "mean_abs_return": 0.02637,
+     "mean_cost": 0.002,
+     "sd_excess": 0.07986,
+     "share_positive": 0.491,
+     "mae_mean": -0.05914,
+     "mae_median": -0.0375,
+     "mae_worst": -0.3825,
+     "min_comparison_etfs": 4
+    },
+    "all": {
+     "events": 552,
+     "weeks": 363,
+     "quarters": 95,
+     "mean_abs_return": 0.02605,
+     "mean_cost": 0.00173,
+     "sd_excess": 0.07608,
+     "share_positive": 0.502,
+     "mae_mean": -0.0555,
+     "mae_median": -0.03546,
+     "mae_worst": -0.3825,
+     "min_comparison_etfs": 4
+    }
+   },
+   "robustness": {
+    "triple_cost": {
+     "estimate": -0.00199,
+     "pass": false
+    },
+    "without_top5": {
+     "estimate": -0.00043,
+     "pass": false
+    },
+    "leave_one_etf_out": {
+     "evaluable": 29,
+     "share_positive": 1,
+     "pass": true,
+     "detail": [
+      {
+       "excluded": "CARZ",
+       "evaluable": true,
+       "estimate": 0.00111
+      },
+      {
+       "excluded": "FCG",
+       "evaluable": true,
+       "estimate": 0.00226
+      },
+      {
+       "excluded": "IAT",
+       "evaluable": true,
+       "estimate": 0.00117
+      },
+      {
+       "excluded": "IBB",
+       "evaluable": true,
+       "estimate": 0.00111
+      },
+      {
+       "excluded": "IHE",
+       "evaluable": true,
+       "estimate": 0.00138
+      },
+      {
+       "excluded": "IHI",
+       "evaluable": true,
+       "estimate": 0.00081
+      },
+      {
+       "excluded": "ITB",
+       "evaluable": true,
+       "estimate": 0.00007
+      },
+      {
+       "excluded": "IYR",
+       "evaluable": true,
+       "estimate": 0.00113
+      },
+      {
+       "excluded": "IYZ",
+       "evaluable": true,
+       "estimate": 0.00119
+      },
+      {
+       "excluded": "KBE",
+       "evaluable": true,
+       "estimate": 0.00082
+      },
+      {
+       "excluded": "OIH",
+       "evaluable": true,
+       "estimate": 0.00135
+      },
+      {
+       "excluded": "PAVE",
+       "evaluable": true,
+       "estimate": 0.00099
+      },
+      {
+       "excluded": "PBJ",
+       "evaluable": true,
+       "estimate": 0.00179
+      },
+      {
+       "excluded": "XES",
+       "evaluable": true,
+       "estimate": 0.00154
+      },
+      {
+       "excluded": "XHS",
+       "evaluable": true,
+       "estimate": 0.00014
+      },
+      {
+       "excluded": "XLB",
+       "evaluable": true,
+       "estimate": 0.00069
+      },
+      {
+       "excluded": "XLC",
+       "evaluable": true,
+       "estimate": 0.0009
+      },
+      {
+       "excluded": "XLE",
+       "evaluable": true,
+       "estimate": 0.00003
+      },
+      {
+       "excluded": "XLF",
+       "evaluable": true,
+       "estimate": 0.00067
+      },
+      {
+       "excluded": "XLI",
+       "evaluable": true,
+       "estimate": 0.00096
+      },
+      {
+       "excluded": "XLK",
+       "evaluable": true,
+       "estimate": 0.00221
+      },
+      {
+       "excluded": "XLP",
+       "evaluable": true,
+       "estimate": 0.00143
+      },
+      {
+       "excluded": "XLRE",
+       "evaluable": true,
+       "estimate": 0.00052
+      },
+      {
+       "excluded": "XLU",
+       "evaluable": true,
+       "estimate": 0.00219
+      },
+      {
+       "excluded": "XLV",
+       "evaluable": true,
+       "estimate": 0.00122
+      },
+      {
+       "excluded": "XLY",
+       "evaluable": true,
+       "estimate": 0.00038
+      },
+      {
+       "excluded": "XRT",
+       "evaluable": true,
+       "estimate": 0.00135
+      },
+      {
+       "excluded": "XSD",
+       "evaluable": true,
+       "estimate": 0.00111
+      },
+      {
+       "excluded": "XTN",
+       "evaluable": true,
+       "estimate": 0.00075
+      }
+     ]
+    },
+    "label": "NO ROBUSTA"
+   },
+   "secondary_horizons": {
+    "h20": {
+     "events": 552,
+     "estimate": 0.00204,
+     "ci95": [
+      -0.00293,
+      0.0071
+     ]
+    },
+    "h60": {
+     "events": 543,
+     "estimate": -0.00233,
+     "ci95": [
+      -0.01007,
+      0.00562
+     ]
+    }
+   },
+   "cost_sensitivity": {
+    "x2": {
+     "estimate": -0.00049,
+     "ci95": [
+      -0.00693,
+      0.0063
+     ]
+    },
+    "x3": {
+     "estimate": -0.00199,
+     "ci95": [
+      -0.00848,
+      0.00491
+     ]
+    }
+   }
+  },
+  "E_amp_sensitivities": {
+   "old_rule": {
+    "estimate": -0.00324,
+    "ci95": [
+     -0.00929,
+     0.00257
+    ]
+   },
+   "per_event": {
+    "estimate": 0.0021,
+    "ci95": [
+     -0.00471,
+     0.00919
+    ]
+   },
+   "without_IBB_IHI_XHS": {
+    "estimate": -0.00018,
+    "ci95": [
+     -0.00725,
+     0.00723
+    ]
+   }
+  }
+ },
+ "comparators": {
+  "A_sectores": {
+   "B0": {
+    "question": "¿Aporta el giro sobre estar deprimido? (D∧G − D sin G, efectos fijos de semana)",
+    "weeks_with_both": 117,
+    "n_obs": 437,
+    "n_DG": 130,
+    "evaluable": true,
+    "estimate": 0.00389,
+    "ci95": [
+     -0.00768,
+     0.01626
+    ],
+    "positive": false
+   },
+   "B0prime": {
+    "question": "Emparejamiento descriptivo D∧G − D sin G",
+    "matched": 107,
+    "of": 147,
+    "estimate": 0.00133,
+    "ci95": [
+     -0.0116,
+     0.01449
+    ]
+   },
+   "B1": {
+    "question": "Azar: mismo número de ETFs del nivel en las mismas semanas",
+    "random_mean": -0.00098,
+    "random_ci95": [
+     -0.00925,
+     0.00763
+    ],
+    "actual_percentile": 95.5
+   },
+   "B2": {
+    "question": "Momentum: D∧G − tercio superior por fuerza relativa 63 de las mismas semanas",
+    "momentum_mean": -0.00715,
+    "diff": 0.01353,
+    "ci95": [
+     0.00211,
+     0.02483
+    ]
+   },
+   "B3": {
+    "question": "¿Importa estar deprimido? (D∧G − G sin D, efectos fijos de semana)",
+    "weeks_with_both": 57,
+    "n_obs": 147,
+    "estimate": 0.01385,
+    "ci95": [
+     -0.00543,
+     0.03723
+    ]
+   }
+  },
+  "Aprime_industrias": {
+   "B0": {
+    "question": "¿Aporta el giro sobre estar deprimido? (D∧G − D sin G, efectos fijos de semana)",
+    "weeks_with_both": 274,
+    "n_obs": 2559,
+    "n_DG": 391,
+    "evaluable": true,
+    "estimate": 0.00307,
+    "ci95": [
+     -0.00514,
+     0.01152
+    ],
+    "positive": false
+   },
+   "B0prime": {
+    "question": "Emparejamiento descriptivo D∧G − D sin G",
+    "matched": 361,
+    "of": 405,
+    "estimate": 0.00186,
+    "ci95": [
+     -0.00759,
+     0.01129
+    ]
+   },
+   "B1": {
+    "question": "Azar: mismo número de ETFs del nivel en las mismas semanas",
+    "random_mean": -0.00206,
+    "random_ci95": [
+     -0.00962,
+     0.00562
+    ],
+    "actual_percentile": 27.8
+   },
+   "B2": {
+    "question": "Momentum: D∧G − tercio superior por fuerza relativa 63 de las mismas semanas",
+    "momentum_mean": -0.00235,
+    "diff": -0.00202,
+    "ci95": [
+     -0.0111,
+     0.0071
+    ]
+   },
+   "B3": {
+    "question": "¿Importa estar deprimido? (D∧G − G sin D, efectos fijos de semana)",
+    "weeks_with_both": 132,
+    "n_obs": 385,
+    "estimate": -0.00628,
+    "ci95": [
+     -0.02415,
+     0.01268
+    ]
+   }
+  }
+ },
+ "attribution_to_G": {
+  "A_sectores": "B0 no positivo o no evaluable: una eventual ventaja no puede atribuirse específicamente al giro",
+  "Aprime_industrias": "B0 no positivo o no evaluable: una eventual ventaja no puede atribuirse específicamente al giro"
+ },
+ "H2_descriptive": {
+  "sectors_cycle": {
+   "sample": "sectores, tabla Cycle",
+   "status": "descriptivo (Cycle simplificado, §7.6)",
+   "events_with_position": 130,
+   "unmapped": 17,
+   "concordant": 28,
+   "non_concordant": 102,
+   "quarters_concordant": 24,
+   "quarters_non_concordant": 58,
+   "evaluability_met": false,
+   "raw_mean_concordant": 0.00481,
+   "raw_mean_non_concordant": 0.0054,
+   "beta": -0.02267,
+   "ci95_quarter": [
+    -0.0622,
+    0.01646
+   ],
+   "beta_per_event_weights": -0.01954,
+   "corr_concordance_with": {
+    "depth": 0.04928,
+    "rs63": -0.02474,
+    "mom21": 0.00352
+   }
+  },
+  "sectors_cycle_plus_xlre": {
+   "sample": "sectores, Cycle + XLRE",
+   "status": "descriptivo (Cycle simplificado, §7.6)",
+   "events_with_position": 142,
+   "unmapped": 5,
+   "concordant": 29,
+   "non_concordant": 113,
+   "quarters_concordant": 25,
+   "quarters_non_concordant": 60,
+   "evaluability_met": false,
+   "raw_mean_concordant": 0.00796,
+   "raw_mean_non_concordant": 0.00576,
+   "beta": -0.00985,
+   "ci95_quarter": [
+    -0.04954,
+    0.0289
+   ],
+   "beta_per_event_weights": -0.00859,
+   "corr_concordance_with": {
+    "depth": 0.0394,
+    "rs63": -0.02122,
+    "mom21": -0.0067
+   }
+  },
+  "industries_book": {
+   "sample": "industrias A′, tabla del libro",
+   "status": "descriptivo (Cycle simplificado, §7.6)",
+   "events_with_position": 405,
+   "unmapped": 0,
+   "concordant": 88,
+   "non_concordant": 317,
+   "quarters_concordant": 53,
+   "quarters_non_concordant": 81,
+   "evaluability_met": true,
+   "raw_mean_concordant": 0.02206,
+   "raw_mean_non_concordant": -0.00535,
+   "beta": 0.0153,
+   "ci95_quarter": [
+    -0.00899,
+    0.04007
+   ],
+   "beta_per_event_weights": 0.03042,
+   "corr_concordance_with": {
+    "depth": 0.02884,
+    "rs63": 0.00545,
+    "mom21": -0.09082
+   }
+  },
+  "industries_book_without_IBB_IHI_XHS": {
+   "sample": "industrias A′ sin IBB/IHI/XHS",
+   "status": "descriptivo (Cycle simplificado, §7.6)",
+   "events_with_position": 346,
+   "unmapped": 0,
+   "concordant": 55,
+   "non_concordant": 291,
+   "quarters_concordant": 34,
+   "quarters_non_concordant": 78,
+   "evaluability_met": true,
+   "raw_mean_concordant": 0.03408,
+   "raw_mean_non_concordant": -0.0078,
+   "beta": 0.0305,
+   "ci95_quarter": [
+    -0.00669,
+    0.06803
+   ],
+   "beta_per_event_weights": 0.04973,
+   "corr_concordance_with": {
+    "depth": -0.01559,
+    "rs63": -0.01034,
+    "mom21": -0.04128
+   }
+  },
+  "combined": {
+   "sample": "sectores (Cycle + XLRE) + industrias (libro), 50/50 por nivel",
+   "status": "descriptivo (Cycle simplificado, §7.6)",
+   "events_with_position": 547,
+   "unmapped": 5,
+   "concordant": 117,
+   "non_concordant": 430,
+   "quarters_concordant": 60,
+   "quarters_non_concordant": 88,
+   "evaluability_met": true,
+   "raw_mean_concordant": 0.01857,
+   "raw_mean_non_concordant": -0.00243,
+   "beta": 0.00774,
+   "ci95_quarter": [
+    -0.01602,
+    0.03352
+   ],
+   "beta_per_event_weights": 0.02277,
+   "corr_concordance_with": {
+    "depth": 0.0275,
+    "rs63": -0.00071,
+    "mom21": -0.07109
+   }
+  }
+ },
+ "pring": {
+  "status": "descriptivo, solo reparto (§8)",
+  "series_first": {
+   "TNX": "1970-01-02",
+   "SPGSCI": "1984-01-03"
+  },
+  "distribution": {
+   "sector": {
+    "I": 14,
+    "sin etapa": 24,
+    "II": 23,
+    "IV": 60,
+    "V": 2,
+    "VI": 5,
+    "III": 19
+   },
+   "industry": {
+    "I": 36,
+    "III": 60,
+    "II": 81,
+    "IV": 138,
+    "sin etapa": 60,
+    "VI": 20,
+    "V": 10
+   }
+  }
+ },
+ "events": [
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2009-W02",
+   "date": "2009-01-09",
+   "depth": -0.20869,
+   "rs63": -0.09288,
+   "ret40": -0.11623,
+   "excess40": 0.05631,
+   "mae40": -0.19177,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2013-W32",
+   "date": "2013-08-09",
+   "depth": -0.20024,
+   "rs63": -0.01326,
+   "ret40": 0.00598,
+   "excess40": 0.01957,
+   "mae40": -0.02323,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2020-W15",
+   "date": "2020-04-09",
+   "depth": -0.20223,
+   "rs63": 0.01008,
+   "ret40": 0.17677,
+   "excess40": 0.00977,
+   "mae40": -0.04931,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2024-W34",
+   "date": "2024-08-23",
+   "depth": -0.21267,
+   "rs63": -0.04056,
+   "ret40": 0.0352,
+   "excess40": -0.00086,
+   "mae40": -0.03489,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2025-W07",
+   "date": "2025-02-14",
+   "depth": -0.29437,
+   "rs63": -0.04688,
+   "ret40": -0.10743,
+   "excess40": -0.02033,
+   "mae40": -0.17987,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2025-W28",
+   "date": "2025-07-11",
+   "depth": -0.29145,
+   "rs63": -0.00093,
+   "ret40": -0.00516,
+   "excess40": -0.02486,
+   "mae40": -0.04714,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2025-W50",
+   "date": "2025-12-12",
+   "depth": -0.35926,
+   "rs63": -0.03551,
+   "ret40": 0.17692,
+   "excess40": 0.12153,
+   "mae40": -0.00266,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2026-W13",
+   "date": "2026-03-27",
+   "depth": -0.20379,
+   "rs63": 0.16368,
+   "ret40": 0.04257,
+   "excess40": -0.04687,
+   "mae40": -0.00102,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLB",
+   "level": "sector",
+   "week": "2026-W26",
+   "date": "2026-06-26",
+   "depth": -0.23057,
+   "rs63": -0.06877,
+   "ret40": 0.05764,
+   "excess40": 0.02202,
+   "mae40": -0.01244,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLC",
+   "level": "sector",
+   "week": "2022-W27",
+   "date": "2022-07-08",
+   "depth": -0.25093,
+   "rs63": -0.0573,
+   "ret40": -0.0331,
+   "excess40": -0.06355,
+   "mae40": -0.0331,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLC",
+   "level": "sector",
+   "week": "2023-W01",
+   "date": "2023-01-06",
+   "depth": -0.336,
+   "rs63": -0.03425,
+   "ret40": 0.07429,
+   "excess40": 0.0643,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLC",
+   "level": "sector",
+   "week": "2023-W30",
+   "date": "2023-07-28",
+   "depth": -0.23247,
+   "rs63": 0.04357,
+   "ret40": -0.05201,
+   "excess40": 0.01112,
+   "mae40": -0.05422,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLC",
+   "level": "sector",
+   "week": "2024-W01",
+   "date": "2024-01-05",
+   "depth": -0.21739,
+   "rs63": -0.00683,
+   "ret40": 0.07217,
+   "excess40": 0.02728,
+   "mae40": -0.00301,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLC",
+   "level": "sector",
+   "week": "2024-W12",
+   "date": "2024-03-22",
+   "depth": -0.20234,
+   "rs63": 0.0221,
+   "ret40": 0.01472,
+   "excess40": -0.00883,
+   "mae40": -0.04513,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2008-W45",
+   "date": "2008-11-07",
+   "depth": -0.23455,
+   "rs63": -0.02404,
+   "ret40": 0.01142,
+   "excess40": 0.01037,
+   "mae40": -0.20112,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2009-W19",
+   "date": "2009-05-08",
+   "depth": -0.2004,
+   "rs63": -0.02168,
+   "ret40": -0.10948,
+   "excess40": -0.07303,
+   "mae40": -0.10968,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2009-W37",
+   "date": "2009-09-11",
+   "depth": -0.26668,
+   "rs63": -0.09145,
+   "ret40": 0.08201,
+   "excess40": 0.0396,
+   "mae40": -0.03332,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2010-W01",
+   "date": "2010-01-08",
+   "depth": -0.24578,
+   "rs63": -0.00171,
+   "ret40": -0.0274,
+   "excess40": -0.02651,
+   "mae40": -0.10761,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2010-W16",
+   "date": "2010-04-23",
+   "depth": -0.27,
+   "rs63": -0.01184,
+   "ret40": -0.12547,
+   "excess40": -0.03412,
+   "mae40": -0.18342,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2014-W13",
+   "date": "2014-03-28",
+   "depth": -0.21061,
+   "rs63": 0.00525,
+   "ret40": 0.06187,
+   "excess40": 0.03665,
+   "mae40": -0.00685,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2015-W06",
+   "date": "2015-02-06",
+   "depth": -0.30501,
+   "rs63": -0.08306,
+   "ret40": -0.01047,
+   "excess40": -0.02562,
+   "mae40": -0.06596,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2015-W40",
+   "date": "2015-10-02",
+   "depth": -0.36769,
+   "rs63": -0.07771,
+   "ret40": 0.04226,
+   "excess40": -0.01071,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2016-W06",
+   "date": "2016-02-12",
+   "depth": -0.42624,
+   "rs63": -0.0895,
+   "ret40": 0.15921,
+   "excess40": 0.04705,
+   "mae40": 0,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2016-W33",
+   "date": "2016-08-19",
+   "depth": -0.36826,
+   "rs63": 0.00207,
+   "ret40": 0.00807,
+   "excess40": 0.03132,
+   "mae40": -0.03313,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2017-W37",
+   "date": "2017-09-15",
+   "depth": -0.426,
+   "rs63": -0.02515,
+   "ret40": 0.04749,
+   "excess40": 0.01668,
+   "mae40": 0,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2018-W12",
+   "date": "2018-03-23",
+   "depth": -0.32967,
+   "rs63": -0.01453,
+   "ret40": 0.14551,
+   "excess40": 0.1165,
+   "mae40": -0.02869,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2018-W39",
+   "date": "2018-09-28",
+   "depth": -0.22326,
+   "rs63": -0.06715,
+   "ret40": -0.15757,
+   "excess40": -0.09657,
+   "mae40": -0.16773,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2019-W03",
+   "date": "2019-01-18",
+   "depth": -0.28194,
+   "rs63": -0.07036,
+   "ret40": 0.07837,
+   "excess40": 0.00572,
+   "mae40": -0.01025,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2019-W38",
+   "date": "2019-09-20",
+   "depth": -0.37674,
+   "rs63": -0.04542,
+   "ret40": -0.03181,
+   "excess40": -0.05997,
+   "mae40": -0.08809,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2020-W01",
+   "date": "2020-01-03",
+   "depth": -0.40532,
+   "rs63": -0.01256,
+   "ret40": -0.23213,
+   "excess40": -0.19648,
+   "mae40": -0.25628,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2020-W18",
+   "date": "2020-05-01",
+   "depth": -0.52983,
+   "rs63": -0.22426,
+   "ret40": 0.03358,
+   "excess40": -0.04454,
+   "mae40": -0.03667,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2020-W46",
+   "date": "2020-11-13",
+   "depth": -0.64178,
+   "rs63": -0.14758,
+   "ret40": 0.24827,
+   "excess40": 0.19471,
+   "mae40": -0.01911,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2021-W05",
+   "date": "2021-02-05",
+   "depth": -0.5806,
+   "rs63": 0.2869,
+   "ret40": 0.12024,
+   "excess40": 0.05681,
+   "mae40": -0.0106,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2021-W18",
+   "date": "2021-05-07",
+   "depth": -0.51105,
+   "rs63": 0.16584,
+   "ret40": -0.01991,
+   "excess40": -0.03789,
+   "mae40": -0.03802,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2021-W37",
+   "date": "2021-09-17",
+   "depth": -0.54077,
+   "rs63": -0.10889,
+   "ret40": 0.22841,
+   "excess40": 0.14542,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2022-W01",
+   "date": "2022-01-07",
+   "depth": -0.38122,
+   "rs63": 0.02822,
+   "ret40": 0.22927,
+   "excess40": 0.27614,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2023-W29",
+   "date": "2023-07-21",
+   "depth": -0.22497,
+   "rs63": -0.09714,
+   "ret40": 0.07312,
+   "excess40": 0.09562,
+   "mae40": -0.00082,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2024-W10",
+   "date": "2024-03-08",
+   "depth": -0.27698,
+   "rs63": -0.0381,
+   "ret40": 0.05482,
+   "excess40": 0.03943,
+   "mae40": -0.00157,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2024-W30",
+   "date": "2024-07-26",
+   "depth": -0.28251,
+   "rs63": -0.11348,
+   "ret40": -0.01932,
+   "excess40": -0.07903,
+   "mae40": -0.07713,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLE",
+   "level": "sector",
+   "week": "2025-W02",
+   "date": "2025-01-10",
+   "depth": -0.34822,
+   "rs63": -0.03602,
+   "ret40": -0.02737,
+   "excess40": -0.02144,
+   "mae40": -0.05042,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2008-W04",
+   "date": "2008-01-25",
+   "depth": -0.21159,
+   "rs63": -0.05665,
+   "ret40": -0.08254,
+   "excess40": -0.08376,
+   "mae40": -0.16696,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2008-W31",
+   "date": "2008-08-01",
+   "depth": -0.33376,
+   "rs63": -0.12108,
+   "ret40": -0.06384,
+   "excess40": 0.00478,
+   "mae40": -0.1352,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2009-W13",
+   "date": "2009-03-27",
+   "depth": -0.55894,
+   "rs63": -0.17304,
+   "ret40": 0.3988,
+   "excess40": 0.24827,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2009-W31",
+   "date": "2009-07-31",
+   "depth": -0.48173,
+   "rs63": 0.08606,
+   "ret40": 0.12867,
+   "excess40": 0.06882,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2010-W01",
+   "date": "2010-01-08",
+   "depth": -0.47648,
+   "rs63": -0.06426,
+   "ret40": 0.01576,
+   "excess40": 0.01665,
+   "mae40": -0.10309,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2010-W25",
+   "date": "2010-06-25",
+   "depth": -0.42944,
+   "rs63": -0.01373,
+   "ret40": -0.06828,
+   "excess40": -0.06232,
+   "mae40": -0.06828,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2010-W44",
+   "date": "2010-11-05",
+   "depth": -0.39882,
+   "rs63": -0.03766,
+   "ret40": 0.06919,
+   "excess40": 0.02215,
+   "mae40": -0.06792,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2011-W11",
+   "date": "2011-03-18",
+   "depth": -0.35937,
+   "rs63": 0.0221,
+   "ret40": -0.02936,
+   "excess40": -0.06396,
+   "mae40": -0.0367,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2011-W42",
+   "date": "2011-10-21",
+   "depth": -0.36048,
+   "rs63": -0.06929,
+   "ret40": -0.04609,
+   "excess40": -0.04176,
+   "mae40": -0.12444,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2011-W51",
+   "date": "2011-12-23",
+   "depth": -0.28787,
+   "rs63": -0.00863,
+   "ret40": 0.12156,
+   "excess40": 0.04717,
+   "mae40": -0.01605,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2012-W28",
+   "date": "2012-07-13",
+   "depth": -0.25947,
+   "rs63": -0.01817,
+   "ret40": 0.06812,
+   "excess40": 0.01154,
+   "mae40": -0.03134,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2012-W49",
+   "date": "2012-12-07",
+   "depth": -0.21136,
+   "rs63": 0.0415,
+   "ret40": 0.10507,
+   "excess40": 0.033,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2020-W23",
+   "date": "2020-06-05",
+   "depth": -0.22995,
+   "rs63": -0.04089,
+   "ret40": -0.09674,
+   "excess40": -0.08655,
+   "mae40": -0.15019,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2020-W36",
+   "date": "2020-09-04",
+   "depth": -0.3068,
+   "rs63": -0.10595,
+   "ret40": 0.01407,
+   "excess40": -0.00166,
+   "mae40": -0.05326,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLF",
+   "level": "sector",
+   "week": "2021-W05",
+   "date": "2021-02-05",
+   "depth": -0.24994,
+   "rs63": 0.11567,
+   "ret40": 0.11839,
+   "excess40": 0.05496,
+   "mae40": -0.00288,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLI",
+   "level": "sector",
+   "week": "2020-W22",
+   "date": "2020-05-29",
+   "depth": -0.22634,
+   "rs63": -0.09687,
+   "ret40": 0.06102,
+   "excess40": 0.01808,
+   "mae40": -0.02044,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2001-W52",
+   "date": "2001-12-28",
+   "depth": -0.51484,
+   "rs63": 0.14476,
+   "ret40": -0.13958,
+   "excess40": -0.13171,
+   "mae40": -0.15208,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2002-W29",
+   "date": "2002-07-19",
+   "depth": -0.60111,
+   "rs63": -0.04107,
+   "ret40": -0.03983,
+   "excess40": -0.10713,
+   "mae40": -0.08819,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2002-W42",
+   "date": "2002-10-18",
+   "depth": -0.6476,
+   "rs63": -0.09518,
+   "ret40": 0.11807,
+   "excess40": 0.10256,
+   "mae40": -0.00427,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2003-W02",
+   "date": "2003-01-10",
+   "depth": -0.598,
+   "rs63": 0.17303,
+   "ret40": -0.15988,
+   "excess40": -0.04019,
+   "mae40": -0.17082,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2003-W34",
+   "date": "2003-08-22",
+   "depth": -0.52822,
+   "rs63": 0.05357,
+   "ret40": 0.09474,
+   "excess40": 0.04588,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2003-W44",
+   "date": "2003-10-31",
+   "depth": -0.42333,
+   "rs63": 0.03537,
+   "ret40": 0.02211,
+   "excess40": -0.04672,
+   "mae40": -0.04781,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2004-W17",
+   "date": "2004-04-23",
+   "depth": -0.2748,
+   "rs63": -0.04387,
+   "ret40": 0.00097,
+   "excess40": -0.01474,
+   "mae40": -0.06192,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2004-W26",
+   "date": "2004-06-25",
+   "depth": -0.24399,
+   "rs63": -0.00966,
+   "ret40": -0.08354,
+   "excess40": -0.06434,
+   "mae40": -0.11794,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLK",
+   "level": "sector",
+   "week": "2004-W40",
+   "date": "2004-10-01",
+   "depth": -0.2538,
+   "rs63": -0.0355,
+   "ret40": 0.06174,
+   "excess40": 0.01496,
+   "mae40": -0.02176,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2003-W32",
+   "date": "2003-08-08",
+   "depth": -0.20072,
+   "rs63": -0.00857,
+   "ret40": 0.04724,
+   "excess40": -0.01117,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2004-W06",
+   "date": "2004-02-06",
+   "depth": -0.23815,
+   "rs63": -0.0257,
+   "ret40": 0.02866,
+   "excess40": 0.00992,
+   "mae40": -0.00621,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2005-W01",
+   "date": "2005-01-07",
+   "depth": -0.24397,
+   "rs63": 0.01183,
+   "ret40": 0.00602,
+   "excess40": -0.0382,
+   "mae40": -0.00775,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2005-W12",
+   "date": "2005-03-24",
+   "depth": -0.24169,
+   "rs63": 0.02242,
+   "ret40": 0.02747,
+   "excess40": 0.01719,
+   "mae40": -0.01962,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2005-W34",
+   "date": "2005-08-26",
+   "depth": -0.26256,
+   "rs63": -0.02219,
+   "ret40": -0.00022,
+   "excess40": 0.01149,
+   "mae40": -0.02066,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2011-W10",
+   "date": "2011-03-11",
+   "depth": -0.20651,
+   "rs63": -0.02996,
+   "ret40": 0.08132,
+   "excess40": 0.02356,
+   "mae40": -0.02303,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2017-W48",
+   "date": "2017-12-01",
+   "depth": -0.20631,
+   "rs63": -0.04079,
+   "ret40": 0.02253,
+   "excess40": -0.02453,
+   "mae40": -0.00494,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2018-W14",
+   "date": "2018-04-06",
+   "depth": -0.24309,
+   "rs63": -0.03127,
+   "ret40": -0.04867,
+   "excess40": -0.09005,
+   "mae40": -0.06509,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2018-W25",
+   "date": "2018-06-22",
+   "depth": -0.29297,
+   "rs63": -0.04344,
+   "ret40": 0.05223,
+   "excess40": 0.00722,
+   "mae40": -0.01272,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2018-W36",
+   "date": "2018-09-07",
+   "depth": -0.28875,
+   "rs63": 0.038,
+   "ret40": 0.02995,
+   "excess40": 0.06952,
+   "mae40": -0.03853,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2019-W12",
+   "date": "2019-03-22",
+   "depth": -0.24071,
+   "rs63": -0.04462,
+   "ret40": 0.04167,
+   "excess40": 0.01789,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2021-W11",
+   "date": "2021-03-19",
+   "depth": -0.2619,
+   "rs63": -0.06251,
+   "ret40": 0.058,
+   "excess40": -0.0073,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2021-W33",
+   "date": "2021-08-20",
+   "depth": -0.28314,
+   "rs63": -0.03809,
+   "ret40": -0.02304,
+   "excess40": -0.04506,
+   "mae40": -0.04551,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2021-W48",
+   "date": "2021-12-03",
+   "depth": -0.30843,
+   "rs63": -0.01507,
+   "ret40": 0.06188,
+   "excess40": 0.03602,
+   "mae40": -0.00096,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2022-W14",
+   "date": "2022-04-08",
+   "depth": -0.22573,
+   "rs63": 0.06037,
+   "ret40": -0.06467,
+   "excess40": -0.01868,
+   "mae40": -0.10013,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2024-W16",
+   "date": "2024-04-19",
+   "depth": -0.22924,
+   "rs63": 0.01088,
+   "ret40": 0.035,
+   "excess40": -0.00765,
+   "mae40": -0.00173,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2024-W30",
+   "date": "2024-07-26",
+   "depth": -0.25768,
+   "rs63": -0.03763,
+   "ret40": 0.06126,
+   "excess40": 0.00155,
+   "mae40": -0.01044,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2025-W08",
+   "date": "2025-02-21",
+   "depth": -0.29013,
+   "rs63": 0.00477,
+   "ret40": 0.00298,
+   "excess40": 0.08151,
+   "mae40": -0.06885,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2025-W47",
+   "date": "2025-11-21",
+   "depth": -0.38113,
+   "rs63": -0.05931,
+   "ret40": 0.08539,
+   "excess40": 0.02623,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLP",
+   "level": "sector",
+   "week": "2026-W24",
+   "date": "2026-06-12",
+   "depth": -0.29686,
+   "rs63": -0.09313,
+   "ret40": 0.00223,
+   "excess40": -0.02604,
+   "mae40": -0.03193,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2018-W42",
+   "date": "2018-10-19",
+   "depth": -0.26261,
+   "rs63": 0.00181,
+   "ret40": 0.02614,
+   "excess40": 0.09637,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2019-W02",
+   "date": "2019-01-11",
+   "depth": -0.20509,
+   "rs63": 0.08805,
+   "ret40": 0.1208,
+   "excess40": 0.03048,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2021-W04",
+   "date": "2021-01-29",
+   "depth": -0.25657,
+   "rs63": -0.03682,
+   "ret40": 0.06533,
+   "excess40": -0.02226,
+   "mae40": -0.03113,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2021-W27",
+   "date": "2021-07-09",
+   "depth": -0.20324,
+   "rs63": 0.07871,
+   "ret40": 0.0406,
+   "excess40": 0.01908,
+   "mae40": -0.01727,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2021-W37",
+   "date": "2021-09-17",
+   "depth": -0.20032,
+   "rs63": -0.00332,
+   "ret40": 0.04733,
+   "excess40": -0.03566,
+   "mae40": -0.03933,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2022-W49",
+   "date": "2022-12-09",
+   "depth": -0.22377,
+   "rs63": -0.07323,
+   "ret40": 0.04854,
+   "excess40": 0.02809,
+   "mae40": -0.04521,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2023-W28",
+   "date": "2023-07-14",
+   "depth": -0.23884,
+   "rs63": -0.03576,
+   "ret40": -0.04732,
+   "excess40": -0.04204,
+   "mae40": -0.06708,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2023-W44",
+   "date": "2023-11-03",
+   "depth": -0.28478,
+   "rs63": -0.02597,
+   "ret40": 0.14897,
+   "excess40": 0.06954,
+   "mae40": -0.0179,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2024-W28",
+   "date": "2024-07-12",
+   "depth": -0.35673,
+   "rs63": -0.01018,
+   "ret40": 0.11877,
+   "excess40": 0.09911,
+   "mae40": -0.00249,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2025-W06",
+   "date": "2025-02-07",
+   "depth": -0.36359,
+   "rs63": -0.07361,
+   "ret40": -0.11213,
+   "excess40": 0.0263,
+   "mae40": -0.11213,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2025-W47",
+   "date": "2025-11-21",
+   "depth": -0.3459,
+   "rs63": -0.049,
+   "ret40": 0.01809,
+   "excess40": -0.04108,
+   "mae40": -0.01538,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLRE",
+   "level": "sector",
+   "week": "2026-W24",
+   "date": "2026-06-12",
+   "depth": -0.25162,
+   "rs63": -0.03759,
+   "ret40": -0.00245,
+   "excess40": -0.03072,
+   "mae40": -0.02512,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2002-W07",
+   "date": "2002-02-15",
+   "depth": -0.2047,
+   "rs63": -0.01492,
+   "ret40": 0.05139,
+   "excess40": -0.01567,
+   "mae40": -0.0076,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2002-W34",
+   "date": "2002-08-23",
+   "depth": -0.21985,
+   "rs63": -0.05024,
+   "ret40": -0.23164,
+   "excess40": -0.15769,
+   "mae40": -0.31486,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2002-W50",
+   "date": "2002-12-13",
+   "depth": -0.28596,
+   "rs63": -0.02561,
+   "ret40": -0.09347,
+   "excess40": 0.00174,
+   "mae40": -0.10606,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2003-W10",
+   "date": "2003-03-07",
+   "depth": -0.27164,
+   "rs63": 0.09774,
+   "ret40": 0.14906,
+   "excess40": 0.00293,
+   "mae40": -0.00171,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2003-W37",
+   "date": "2003-09-12",
+   "depth": -0.27695,
+   "rs63": -0.05232,
+   "ret40": 0.01929,
+   "excess40": -0.00972,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2004-W25",
+   "date": "2004-06-18",
+   "depth": -0.27763,
+   "rs63": -0.03222,
+   "ret40": 0.03671,
+   "excess40": 0.06437,
+   "mae40": -0.0097,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2009-W49",
+   "date": "2009-12-04",
+   "depth": -0.22367,
+   "rs63": -0.02055,
+   "ret40": -0.05164,
+   "excess40": -0.0196,
+   "mae40": -0.05164,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2010-W18",
+   "date": "2010-05-07",
+   "depth": -0.25607,
+   "rs63": -0.03078,
+   "ret40": -0.01067,
+   "excess40": 0.06712,
+   "mae40": -0.06367,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2011-W10",
+   "date": "2011-03-11",
+   "depth": -0.28074,
+   "rs63": -0.00111,
+   "ret40": 0.06493,
+   "excess40": 0.00717,
+   "mae40": -0.03428,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2011-W30",
+   "date": "2011-07-29",
+   "depth": -0.24983,
+   "rs63": 0.06071,
+   "ret40": 0.0263,
+   "excess40": 0.10633,
+   "mae40": -0.09227,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2013-W41",
+   "date": "2013-10-11",
+   "depth": -0.22185,
+   "rs63": -0.03683,
+   "ret40": -0.00211,
+   "excess40": -0.05174,
+   "mae40": -0.01398,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2014-W04",
+   "date": "2014-01-24",
+   "depth": -0.25824,
+   "rs63": -0.04149,
+   "ret40": 0.08038,
+   "excess40": 0.02323,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2014-W26",
+   "date": "2014-06-27",
+   "depth": -0.21057,
+   "rs63": 0.01803,
+   "ret40": -0.04587,
+   "excess40": -0.06002,
+   "mae40": -0.09241,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2014-W36",
+   "date": "2014-09-05",
+   "depth": -0.23641,
+   "rs63": -0.01263,
+   "ret40": 0.0651,
+   "excess40": 0.05616,
+   "mae40": -0.02962,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2015-W28",
+   "date": "2015-07-10",
+   "depth": -0.21354,
+   "rs63": -0.02187,
+   "ret40": -0.02698,
+   "excess40": 0.03596,
+   "mae40": -0.04722,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2018-W11",
+   "date": "2018-03-16",
+   "depth": -0.26561,
+   "rs63": -0.11059,
+   "ret40": -0.0034,
+   "excess40": -0.01118,
+   "mae40": -0.01762,
+   "n_cmp": 10
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2018-W25",
+   "date": "2018-06-22",
+   "depth": -0.25648,
+   "rs63": -0.02408,
+   "ret40": 0.04555,
+   "excess40": 0.00054,
+   "mae40": -0.00116,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2018-W36",
+   "date": "2018-09-07",
+   "depth": -0.24284,
+   "rs63": 0.07952,
+   "ret40": 0.00027,
+   "excess40": 0.03984,
+   "mae40": -0.04687,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2020-W39",
+   "date": "2020-09-25",
+   "depth": -0.21832,
+   "rs63": -0.02424,
+   "ret40": 0.0795,
+   "excess40": -0.01355,
+   "mae40": -0.00034,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2021-W12",
+   "date": "2021-03-26",
+   "depth": -0.29271,
+   "rs63": -0.02661,
+   "ret40": 0.01699,
+   "excess40": -0.03944,
+   "mae40": -0.00904,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2021-W48",
+   "date": "2021-12-03",
+   "depth": -0.33826,
+   "rs63": -0.02658,
+   "ret40": 0.02126,
+   "excess40": -0.0046,
+   "mae40": -0.01968,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2023-W11",
+   "date": "2023-03-17",
+   "depth": -0.21933,
+   "rs63": -0.05526,
+   "ret40": -0.00522,
+   "excess40": -0.03125,
+   "mae40": -0.04925,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2023-W37",
+   "date": "2023-09-15",
+   "depth": -0.24303,
+   "rs63": -0.0308,
+   "ret40": -0.0741,
+   "excess40": -0.04284,
+   "mae40": -0.12708,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2024-W01",
+   "date": "2024-01-05",
+   "depth": -0.27766,
+   "rs63": 0.0426,
+   "ret40": -0.028,
+   "excess40": -0.07289,
+   "mae40": -0.07769,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2024-W13",
+   "date": "2024-03-28",
+   "depth": -0.33923,
+   "rs63": -0.04521,
+   "ret40": 0.09471,
+   "excess40": 0.09762,
+   "mae40": -0.03801,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2024-W30",
+   "date": "2024-07-26",
+   "depth": -0.30847,
+   "rs63": -0.01174,
+   "ret40": 0.12324,
+   "excess40": 0.06353,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2024-W42",
+   "date": "2024-10-18",
+   "depth": -0.25567,
+   "rs63": 0.10351,
+   "ret40": -0.06039,
+   "excess40": -0.06759,
+   "mae40": -0.06039,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2025-W03",
+   "date": "2025-01-17",
+   "depth": -0.29605,
+   "rs63": -0.06093,
+   "ret40": -0.01387,
+   "excess40": 0.01265,
+   "mae40": -0.05209,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2025-W31",
+   "date": "2025-08-01",
+   "depth": -0.25771,
+   "rs63": -0.02215,
+   "ret40": 0.00546,
+   "excess40": -0.0386,
+   "mae40": -0.05382,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2025-W40",
+   "date": "2025-10-03",
+   "depth": -0.25691,
+   "rs63": 0.00949,
+   "ret40": -0.02105,
+   "excess40": -0.02143,
+   "mae40": -0.02105,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLU",
+   "level": "sector",
+   "week": "2026-W06",
+   "date": "2026-02-06",
+   "depth": -0.23391,
+   "rs63": -0.03829,
+   "ret40": 0.08342,
+   "excess40": 0.08761,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2004-W50",
+   "date": "2004-12-10",
+   "depth": -0.25688,
+   "rs63": -0.06163,
+   "ret40": 0.00205,
+   "excess40": -0.0077,
+   "mae40": -0.0142,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2005-W07",
+   "date": "2005-02-18",
+   "depth": -0.24369,
+   "rs63": 0.03842,
+   "ret40": 0.01078,
+   "excess40": 0.0416,
+   "mae40": -0.01366,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2005-W35",
+   "date": "2005-09-02",
+   "depth": -0.22506,
+   "rs63": -0.00854,
+   "ret40": -0.05352,
+   "excess40": -0.02848,
+   "mae40": -0.06913,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2005-W51",
+   "date": "2005-12-23",
+   "depth": -0.20435,
+   "rs63": -0.01628,
+   "ret40": 0.02029,
+   "excess40": -0.01211,
+   "mae40": -0.01124,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2006-W22",
+   "date": "2006-06-02",
+   "depth": -0.22342,
+   "rs63": -0.04786,
+   "ret40": 0.0525,
+   "excess40": 0.04163,
+   "mae40": -0.0244,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2009-W45",
+   "date": "2009-11-06",
+   "depth": -0.2,
+   "rs63": -0.01333,
+   "ret40": 0.07606,
+   "excess40": 0.02156,
+   "mae40": 0,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2010-W22",
+   "date": "2010-06-04",
+   "depth": -0.21688,
+   "rs63": -0.04942,
+   "ret40": 0.03724,
+   "excess40": -0.04123,
+   "mae40": -0.01188,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2010-W32",
+   "date": "2010-08-13",
+   "depth": -0.21059,
+   "rs63": 0.02132,
+   "ret40": 0.07146,
+   "excess40": -0.01657,
+   "mae40": -0.02936,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2011-W09",
+   "date": "2011-03-04",
+   "depth": -0.26538,
+   "rs63": -0.01417,
+   "ret40": 0.08491,
+   "excess40": 0.04023,
+   "mae40": -0.03893,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2024-W30",
+   "date": "2024-07-26",
+   "depth": -0.22871,
+   "rs63": -0.00817,
+   "ret40": 0.03075,
+   "excess40": -0.02896,
+   "mae40": -0.02692,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2025-W05",
+   "date": "2025-01-31",
+   "depth": -0.31538,
+   "rs63": -0.04217,
+   "ret40": -0.02405,
+   "excess40": -0.00412,
+   "mae40": -0.02448,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2025-W36",
+   "date": "2025-09-05",
+   "depth": -0.40071,
+   "rs63": -0.04903,
+   "ret40": 0.05267,
+   "excess40": 0.03457,
+   "mae40": -0.02254,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2026-W04",
+   "date": "2026-01-23",
+   "depth": -0.32667,
+   "rs63": 0.04674,
+   "ret40": -0.08042,
+   "excess40": -0.06971,
+   "mae40": -0.08077,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLV",
+   "level": "sector",
+   "week": "2026-W23",
+   "date": "2026-06-05",
+   "depth": -0.31472,
+   "rs63": -0.08525,
+   "ret40": 0.08014,
+   "excess40": 0.03877,
+   "mae40": -0.02129,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLY",
+   "level": "sector",
+   "week": "2008-W04",
+   "date": "2008-01-25",
+   "depth": -0.21093,
+   "rs63": -0.03159,
+   "ret40": 0.00323,
+   "excess40": 0.00201,
+   "mae40": -0.05515,
+   "n_cmp": 9
+  },
+  {
+   "ticker": "XLY",
+   "level": "sector",
+   "week": "2023-W03",
+   "date": "2023-01-20",
+   "depth": -0.22895,
+   "rs63": -0.08484,
+   "ret40": 0.03347,
+   "excess40": 0.0577,
+   "mae40": -0.0209,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLY",
+   "level": "sector",
+   "week": "2023-W19",
+   "date": "2023-05-12",
+   "depth": -0.21175,
+   "rs63": -0.01152,
+   "ret40": 0.18106,
+   "excess40": 0.10731,
+   "mae40": -0.00405,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLY",
+   "level": "sector",
+   "week": "2024-W27",
+   "date": "2024-07-05",
+   "depth": -0.25671,
+   "rs63": -0.01645,
+   "ret40": -0.02556,
+   "excess40": -0.06847,
+   "mae40": -0.10212,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XLY",
+   "level": "sector",
+   "week": "2024-W36",
+   "date": "2024-09-06",
+   "depth": -0.26487,
+   "rs63": 0.01061,
+   "ret40": 0.07971,
+   "excess40": 0.04812,
+   "mae40": 0,
+   "n_cmp": 11
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2016-W05",
+   "date": "2016-02-05",
+   "depth": -0.20476,
+   "rs63": -0.04802,
+   "ret40": 0.14592,
+   "excess40": 0.00824,
+   "mae40": -0.00609,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2016-W33",
+   "date": "2016-08-19",
+   "depth": -0.20292,
+   "rs63": -0.00112,
+   "ret40": 0.01239,
+   "excess40": 0.02411,
+   "mae40": -0.01009,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2019-W41",
+   "date": "2019-10-11",
+   "depth": -0.21329,
+   "rs63": -0.00329,
+   "ret40": 0.04605,
+   "excess40": -0.027,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2020-W21",
+   "date": "2020-05-22",
+   "depth": -0.34148,
+   "rs63": -0.15781,
+   "ret40": 0.0776,
+   "excess40": -0.00799,
+   "mae40": -0.0135,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2020-W43",
+   "date": "2020-10-23",
+   "depth": -0.2831,
+   "rs63": 0.06879,
+   "ret40": 0.16296,
+   "excess40": -0.04267,
+   "mae40": -0.05881,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2021-W06",
+   "date": "2021-02-12",
+   "depth": -0.20232,
+   "rs63": 0.07752,
+   "ret40": 0.1484,
+   "excess40": 0.10539,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2021-W34",
+   "date": "2021-08-27",
+   "depth": -0.20966,
+   "rs63": -0.10958,
+   "ret40": 0.05568,
+   "excess40": 0.00043,
+   "mae40": -0.02077,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2023-W22",
+   "date": "2023-06-02",
+   "depth": -0.23323,
+   "rs63": -0.10118,
+   "ret40": 0.15664,
+   "excess40": 0.04795,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2023-W48",
+   "date": "2023-12-01",
+   "depth": -0.26469,
+   "rs63": -0.06139,
+   "ret40": -0.00787,
+   "excess40": -0.05162,
+   "mae40": -0.04162,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2024-W29",
+   "date": "2024-07-19",
+   "depth": -0.32148,
+   "rs63": -0.06414,
+   "ret40": -0.00783,
+   "excess40": -0.00554,
+   "mae40": -0.08452,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2024-W39",
+   "date": "2024-09-27",
+   "depth": -0.32993,
+   "rs63": -0.00038,
+   "ret40": 0.15442,
+   "excess40": 0.09306,
+   "mae40": -0.03445,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2025-W02",
+   "date": "2025-01-10",
+   "depth": -0.26281,
+   "rs63": 0.07461,
+   "ret40": -0.15179,
+   "excess40": -0.09414,
+   "mae40": -0.15179,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2025-W19",
+   "date": "2025-05-09",
+   "depth": -0.34803,
+   "rs63": -0.11021,
+   "ret40": 0.11472,
+   "excess40": 0.04415,
+   "mae40": -0.04102,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2025-W48",
+   "date": "2025-11-28",
+   "depth": -0.36753,
+   "rs63": -0.04922,
+   "ret40": 0.12584,
+   "excess40": 0.05112,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XTN",
+   "level": "industry",
+   "week": "2026-W14",
+   "date": "2026-04-02",
+   "depth": -0.25697,
+   "rs63": 0.08776,
+   "ret40": 0.15233,
+   "excess40": 0.04059,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2012-W03",
+   "date": "2012-01-20",
+   "depth": -0.20522,
+   "rs63": -0.00566,
+   "ret40": 0.0426,
+   "excess40": -0.03113,
+   "mae40": -0.02759,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2012-W32",
+   "date": "2012-08-10",
+   "depth": -0.31587,
+   "rs63": -0.02144,
+   "ret40": -0.09762,
+   "excess40": -0.13669,
+   "mae40": -0.09762,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2012-W48",
+   "date": "2012-11-30",
+   "depth": -0.37209,
+   "rs63": -0.06417,
+   "ret40": 0.11005,
+   "excess40": 0.01088,
+   "mae40": 0,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2013-W18",
+   "date": "2013-05-03",
+   "depth": -0.35907,
+   "rs63": -0.03438,
+   "ret40": 0.04775,
+   "excess40": 0.02827,
+   "mae40": -0.00584,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2013-W36",
+   "date": "2013-09-06",
+   "depth": -0.31219,
+   "rs63": 0.0318,
+   "ret40": 0.02143,
+   "excess40": -0.03238,
+   "mae40": -0.00855,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2013-W52",
+   "date": "2013-12-27",
+   "depth": -0.33716,
+   "rs63": -0.03288,
+   "ret40": 0.09644,
+   "excess40": 0.05162,
+   "mae40": -0.03209,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2014-W22",
+   "date": "2014-05-30",
+   "depth": -0.21597,
+   "rs63": 0.01061,
+   "ret40": 0.02197,
+   "excess40": 0.00176,
+   "mae40": 0,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2022-W44",
+   "date": "2022-11-04",
+   "depth": -0.20533,
+   "rs63": -0.05329,
+   "ret40": 0.01673,
+   "excess40": 0.0209,
+   "mae40": -0.01438,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2024-W39",
+   "date": "2024-09-27",
+   "depth": -0.22617,
+   "rs63": -0.06844,
+   "ret40": 0.03546,
+   "excess40": -0.02589,
+   "mae40": -0.06281,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XSD",
+   "level": "industry",
+   "week": "2025-W19",
+   "date": "2025-05-09",
+   "depth": -0.30137,
+   "rs63": -0.07602,
+   "ret40": 0.17623,
+   "excess40": 0.10566,
+   "mae40": -0.02868,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PAVE",
+   "level": "industry",
+   "week": "2020-W21",
+   "date": "2020-05-22",
+   "depth": -0.28204,
+   "rs63": -0.13104,
+   "ret40": 0.09984,
+   "excess40": 0.01425,
+   "mae40": -0.00302,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2006-W44",
+   "date": "2006-11-03",
+   "depth": -0.22062,
+   "rs63": -0.10262,
+   "ret40": -0.05118,
+   "excess40": -0.06655,
+   "mae40": -0.05655,
+   "n_cmp": 13
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2007-W08",
+   "date": "2007-02-23",
+   "depth": -0.24931,
+   "rs63": -0.022,
+   "ret40": 0.08013,
+   "excess40": 0.067,
+   "mae40": -0.05865,
+   "n_cmp": 13
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2009-W04",
+   "date": "2009-01-23",
+   "depth": -0.47849,
+   "rs63": -0.02301,
+   "ret40": 0.06409,
+   "excess40": 0.06978,
+   "mae40": -0.15061,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2009-W34",
+   "date": "2009-08-21",
+   "depth": -0.39794,
+   "rs63": -0.03152,
+   "ret40": 0.16969,
+   "excess40": 0.09457,
+   "mae40": -0.07164,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2010-W01",
+   "date": "2010-01-08",
+   "depth": -0.34405,
+   "rs63": 0.0011,
+   "ret40": -0.03269,
+   "excess40": -0.06955,
+   "mae40": -0.12184,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2010-W27",
+   "date": "2010-07-09",
+   "depth": -0.45841,
+   "rs63": -0.09325,
+   "ret40": 0.00082,
+   "excess40": -0.00206,
+   "mae40": -0.05755,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2010-W36",
+   "date": "2010-09-10",
+   "depth": -0.45261,
+   "rs63": 0.06671,
+   "ret40": 0.17996,
+   "excess40": 0.08195,
+   "mae40": -0.01662,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2011-W22",
+   "date": "2011-06-03",
+   "depth": -0.33896,
+   "rs63": -0.04829,
+   "ret40": 0.03216,
+   "excess40": 0.06289,
+   "mae40": -0.04222,
+   "n_cmp": 16
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2011-W48",
+   "date": "2011-12-02",
+   "depth": -0.21103,
+   "rs63": -0.08557,
+   "ret40": 0.00244,
+   "excess40": -0.0727,
+   "mae40": -0.14859,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2012-W29",
+   "date": "2012-07-20",
+   "depth": -0.34205,
+   "rs63": -0.02967,
+   "ret40": 0.12117,
+   "excess40": 0.01932,
+   "mae40": -0.01637,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2013-W01",
+   "date": "2013-01-04",
+   "depth": -0.34857,
+   "rs63": 0.00151,
+   "ret40": 0.04465,
+   "excess40": -0.01417,
+   "mae40": -0.01036,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2013-W19",
+   "date": "2013-05-10",
+   "depth": -0.36605,
+   "rs63": -0.06055,
+   "ret40": 0.01218,
+   "excess40": -0.01078,
+   "mae40": -0.05438,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2013-W45",
+   "date": "2013-11-08",
+   "depth": -0.34111,
+   "rs63": 0.06025,
+   "ret40": -0.07059,
+   "excess40": -0.11099,
+   "mae40": -0.07468,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2014-W08",
+   "date": "2014-02-21",
+   "depth": -0.39847,
+   "rs63": -0.061,
+   "ret40": 0.06704,
+   "excess40": 0.05068,
+   "mae40": -0.0292,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2015-W06",
+   "date": "2015-02-06",
+   "depth": -0.47926,
+   "rs63": -0.18508,
+   "ret40": -0.02841,
+   "excess40": -0.07541,
+   "mae40": -0.11641,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2015-W23",
+   "date": "2015-06-05",
+   "depth": -0.40639,
+   "rs63": 0.06988,
+   "ret40": -0.17224,
+   "excess40": -0.13803,
+   "mae40": -0.17224,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2015-W35",
+   "date": "2015-08-28",
+   "depth": -0.48463,
+   "rs63": -0.11093,
+   "ret40": -0.05976,
+   "excess40": -0.04543,
+   "mae40": -0.14209,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2016-W09",
+   "date": "2016-03-04",
+   "depth": -0.5311,
+   "rs63": -0.05181,
+   "ret40": 0.0247,
+   "excess40": 0.00465,
+   "mae40": -0.08879,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2016-W33",
+   "date": "2016-08-19",
+   "depth": -0.53756,
+   "rs63": 0.01933,
+   "ret40": 0.03466,
+   "excess40": 0.04638,
+   "mae40": -0.08769,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2017-W37",
+   "date": "2017-09-15",
+   "depth": -0.6201,
+   "rs63": -0.06528,
+   "ret40": 0.01892,
+   "excess40": -0.00193,
+   "mae40": -0.05998,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2018-W15",
+   "date": "2018-04-13",
+   "depth": -0.46751,
+   "rs63": -0.05938,
+   "ret40": 0.01826,
+   "excess40": -0.03409,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2018-W40",
+   "date": "2018-10-05",
+   "depth": -0.43645,
+   "rs63": -0.08215,
+   "ret40": -0.30599,
+   "excess40": -0.21913,
+   "mae40": -0.30599,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2019-W03",
+   "date": "2019-01-18",
+   "depth": -0.57565,
+   "rs63": -0.23851,
+   "ret40": 0.06415,
+   "excess40": 0.01124,
+   "mae40": -0.03657,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2019-W49",
+   "date": "2019-12-06",
+   "depth": -0.7465,
+   "rs63": -0.10239,
+   "ret40": -0.06866,
+   "excess40": -0.08798,
+   "mae40": -0.10012,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2020-W19",
+   "date": "2020-05-08",
+   "depth": -0.83756,
+   "rs63": -0.44137,
+   "ret40": 0.11581,
+   "excess40": 0.03138,
+   "mae40": -0.08066,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2020-W30",
+   "date": "2020-07-24",
+   "depth": -0.81019,
+   "rs63": 0.20081,
+   "ret40": -0.19814,
+   "excess40": -0.18082,
+   "mae40": -0.19814,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2020-W46",
+   "date": "2020-11-13",
+   "depth": -0.84714,
+   "rs63": -0.18701,
+   "ret40": 0.44935,
+   "excess40": 0.25915,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2021-W18",
+   "date": "2021-05-07",
+   "depth": -0.76254,
+   "rs63": 0.12508,
+   "ret40": -0.02054,
+   "excess40": -0.03484,
+   "mae40": -0.0228,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2021-W38",
+   "date": "2021-09-24",
+   "depth": -0.76269,
+   "rs63": -0.20361,
+   "ret40": -0.07563,
+   "excess40": -0.1096,
+   "mae40": -0.08568,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2022-W01",
+   "date": "2022-01-07",
+   "depth": -0.65103,
+   "rs63": -0.06405,
+   "ret40": 0.31642,
+   "excess40": 0.33953,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2022-W34",
+   "date": "2022-08-26",
+   "depth": -0.34967,
+   "rs63": -0.15835,
+   "ret40": 0.11397,
+   "excess40": 0.14421,
+   "mae40": -0.21779,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2023-W26",
+   "date": "2023-06-30",
+   "depth": -0.22582,
+   "rs63": -0.04866,
+   "ret40": 0.16778,
+   "excess40": 0.14199,
+   "mae40": -0.00912,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2024-W11",
+   "date": "2024-03-15",
+   "depth": -0.24107,
+   "rs63": 0.00199,
+   "ret40": 0.00401,
+   "excess40": -0.02006,
+   "mae40": -0.04841,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2024-W29",
+   "date": "2024-07-19",
+   "depth": -0.2853,
+   "rs63": -0.07144,
+   "ret40": -0.12678,
+   "excess40": -0.12448,
+   "mae40": -0.17904,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2024-W46",
+   "date": "2024-11-15",
+   "depth": -0.40688,
+   "rs63": -0.0851,
+   "ret40": 0.03489,
+   "excess40": 0.0177,
+   "mae40": -0.10684,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2025-W13",
+   "date": "2025-03-28",
+   "depth": -0.43246,
+   "rs63": 0.06956,
+   "ret40": -0.16538,
+   "excess40": -0.16331,
+   "mae40": -0.2495,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2025-W24",
+   "date": "2025-06-13",
+   "depth": -0.49999,
+   "rs63": -0.08499,
+   "ret40": -0.02185,
+   "excess40": -0.0904,
+   "mae40": -0.07358,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2026-W01",
+   "date": "2026-01-02",
+   "depth": -0.47152,
+   "rs63": 0.13032,
+   "ret40": 0.22956,
+   "excess40": 0.15208,
+   "mae40": -0.02195,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "OIH",
+   "level": "industry",
+   "week": "2026-W17",
+   "date": "2026-04-24",
+   "depth": -0.25497,
+   "rs63": 0.23847,
+   "ret40": -0.15507,
+   "excess40": -0.18926,
+   "mae40": -0.15507,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2009-W34",
+   "date": "2009-08-21",
+   "depth": -0.39789,
+   "rs63": -0.02525,
+   "ret40": 0.19204,
+   "excess40": 0.11692,
+   "mae40": -0.07891,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2010-W01",
+   "date": "2010-01-08",
+   "depth": -0.32933,
+   "rs63": -0.00453,
+   "ret40": -0.01033,
+   "excess40": -0.04719,
+   "mae40": -0.13073,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2010-W16",
+   "date": "2010-04-23",
+   "depth": -0.33782,
+   "rs63": 0.03816,
+   "ret40": -0.19217,
+   "excess40": -0.07514,
+   "mae40": -0.25667,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2010-W27",
+   "date": "2010-07-09",
+   "depth": -0.39164,
+   "rs63": -0.03355,
+   "ret40": 0.02608,
+   "excess40": 0.0232,
+   "mae40": -0.03987,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2011-W02",
+   "date": "2011-01-14",
+   "depth": -0.29516,
+   "rs63": 0.09473,
+   "ret40": 0.05005,
+   "excess40": 0.06601,
+   "mae40": -0.03714,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2011-W26",
+   "date": "2011-07-01",
+   "depth": -0.23089,
+   "rs63": -0.05628,
+   "ret40": -0.15676,
+   "excess40": -0.02256,
+   "mae40": -0.26687,
+   "n_cmp": 16
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2012-W29",
+   "date": "2012-07-20",
+   "depth": -0.29515,
+   "rs63": -0.03696,
+   "ret40": 0.12325,
+   "excess40": 0.0214,
+   "mae40": -0.02365,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2012-W48",
+   "date": "2012-11-30",
+   "depth": -0.30586,
+   "rs63": -0.00237,
+   "ret40": 0.1476,
+   "excess40": 0.04843,
+   "mae40": -0.00655,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2013-W11",
+   "date": "2013-03-15",
+   "depth": -0.2438,
+   "rs63": 0.08242,
+   "ret40": 0.01761,
+   "excess40": -0.05599,
+   "mae40": -0.08753,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2013-W23",
+   "date": "2013-06-07",
+   "depth": -0.28726,
+   "rs63": -0.03224,
+   "ret40": 0.01678,
+   "excess40": -0.03086,
+   "mae40": -0.03703,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2013-W36",
+   "date": "2013-09-06",
+   "depth": -0.27493,
+   "rs63": 0.01729,
+   "ret40": 0.05997,
+   "excess40": 0.00616,
+   "mae40": -0.01058,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2013-W45",
+   "date": "2013-11-08",
+   "depth": -0.26763,
+   "rs63": 0.04362,
+   "ret40": -0.06717,
+   "excess40": -0.10758,
+   "mae40": -0.075,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2014-W08",
+   "date": "2014-02-21",
+   "depth": -0.32539,
+   "rs63": -0.05227,
+   "ret40": 0.06238,
+   "excess40": 0.04602,
+   "mae40": -0.0259,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2014-W24",
+   "date": "2014-06-13",
+   "depth": -0.27583,
+   "rs63": 0.06738,
+   "ret40": -0.07958,
+   "excess40": -0.05893,
+   "mae40": -0.08911,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2015-W07",
+   "date": "2015-02-13",
+   "depth": -0.56339,
+   "rs63": -0.22764,
+   "ret40": 0.06272,
+   "excess40": 0.02349,
+   "mae40": -0.14991,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2015-W41",
+   "date": "2015-10-09",
+   "depth": -0.60523,
+   "rs63": -0.06737,
+   "ret40": -0.12386,
+   "excess40": -0.11189,
+   "mae40": -0.12386,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2016-W09",
+   "date": "2016-03-04",
+   "depth": -0.66295,
+   "rs63": -0.0758,
+   "ret40": 0.00234,
+   "excess40": -0.01772,
+   "mae40": -0.11998,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2016-W21",
+   "date": "2016-05-27",
+   "depth": -0.66817,
+   "rs63": 0.10692,
+   "ret40": -0.02924,
+   "excess40": -0.06615,
+   "mae40": -0.03642,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2016-W39",
+   "date": "2016-09-30",
+   "depth": -0.66286,
+   "rs63": -0.05219,
+   "ret40": -0.00633,
+   "excess40": -0.0322,
+   "mae40": -0.0934,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2017-W37",
+   "date": "2017-09-15",
+   "depth": -0.72045,
+   "rs63": -0.06324,
+   "ret40": 0.05479,
+   "excess40": 0.03394,
+   "mae40": -0.04762,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2018-W15",
+   "date": "2018-04-13",
+   "depth": -0.57924,
+   "rs63": -0.11104,
+   "ret40": 0.03484,
+   "excess40": -0.01751,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2018-W39",
+   "date": "2018-09-28",
+   "depth": -0.4831,
+   "rs63": -0.08288,
+   "ret40": -0.28495,
+   "excess40": -0.18561,
+   "mae40": -0.28791,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2019-W04",
+   "date": "2019-01-25",
+   "depth": -0.60357,
+   "rs63": -0.20607,
+   "ret40": 0.05993,
+   "excess40": 0.02708,
+   "mae40": -0.01754,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2019-W14",
+   "date": "2019-04-05",
+   "depth": -0.60348,
+   "rs63": 0.07434,
+   "ret40": -0.28079,
+   "excess40": -0.20994,
+   "mae40": -0.29146,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2019-W49",
+   "date": "2019-12-06",
+   "depth": -0.78285,
+   "rs63": -0.14831,
+   "ret40": -0.07646,
+   "excess40": -0.09578,
+   "mae40": -0.10674,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2020-W21",
+   "date": "2020-05-22",
+   "depth": -0.86265,
+   "rs63": -0.44413,
+   "ret40": 0.08465,
+   "excess40": -0.00094,
+   "mae40": -0.04056,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2020-W30",
+   "date": "2020-07-24",
+   "depth": -0.84062,
+   "rs63": 0.2145,
+   "ret40": -0.17059,
+   "excess40": -0.15328,
+   "mae40": -0.17059,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2020-W46",
+   "date": "2020-11-13",
+   "depth": -0.86491,
+   "rs63": -0.1653,
+   "ret40": 0.49215,
+   "excess40": 0.30195,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2021-W18",
+   "date": "2021-05-07",
+   "depth": -0.79652,
+   "rs63": 0.04746,
+   "ret40": 0.0206,
+   "excess40": 0.0063,
+   "mae40": -0.0178,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2021-W38",
+   "date": "2021-09-24",
+   "depth": -0.80489,
+   "rs63": -0.21971,
+   "ret40": -0.09478,
+   "excess40": -0.12875,
+   "mae40": -0.10591,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2022-W01",
+   "date": "2022-01-07",
+   "depth": -0.71867,
+   "rs63": -0.1081,
+   "ret40": 0.30023,
+   "excess40": 0.32334,
+   "mae40": -0.02138,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2022-W34",
+   "date": "2022-08-26",
+   "depth": -0.45879,
+   "rs63": -0.15413,
+   "ret40": 0.0947,
+   "excess40": 0.12494,
+   "mae40": -0.2188,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2022-W51",
+   "date": "2022-12-23",
+   "depth": -0.21514,
+   "rs63": 0.44274,
+   "ret40": 0.05882,
+   "excess40": -0.00112,
+   "mae40": -0.04858,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2023-W26",
+   "date": "2023-06-30",
+   "depth": -0.21961,
+   "rs63": -0.04484,
+   "ret40": 0.16631,
+   "excess40": 0.14051,
+   "mae40": -0.01088,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2024-W10",
+   "date": "2024-03-08",
+   "depth": -0.28304,
+   "rs63": -0.0359,
+   "ret40": 0.06294,
+   "excess40": 0.06217,
+   "mae40": -0.00012,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2024-W29",
+   "date": "2024-07-19",
+   "depth": -0.25976,
+   "rs63": -0.03589,
+   "ret40": -0.12695,
+   "excess40": -0.12465,
+   "mae40": -0.18963,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2024-W47",
+   "date": "2024-11-22",
+   "depth": -0.37267,
+   "rs63": -0.07119,
+   "ret40": -0.0381,
+   "excess40": -0.01485,
+   "mae40": -0.13097,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2025-W24",
+   "date": "2025-06-13",
+   "depth": -0.50423,
+   "rs63": -0.0626,
+   "ret40": -0.02467,
+   "excess40": -0.09321,
+   "mae40": -0.07734,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2026-W01",
+   "date": "2026-01-02",
+   "depth": -0.46263,
+   "rs63": 0.14997,
+   "ret40": 0.26889,
+   "excess40": 0.19141,
+   "mae40": -0.01949,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XES",
+   "level": "industry",
+   "week": "2026-W17",
+   "date": "2026-04-24",
+   "depth": -0.2385,
+   "rs63": 0.27128,
+   "ret40": -0.13791,
+   "excess40": -0.1721,
+   "mae40": -0.13791,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2010-W22",
+   "date": "2010-06-04",
+   "depth": -0.3837,
+   "rs63": -0.04094,
+   "ret40": -0.00108,
+   "excess40": -0.0602,
+   "mae40": -0.08077,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2010-W39",
+   "date": "2010-10-01",
+   "depth": -0.43023,
+   "rs63": -0.02439,
+   "ret40": 0.09774,
+   "excess40": 0.03999,
+   "mae40": 0,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2011-W28",
+   "date": "2011-07-15",
+   "depth": -0.25944,
+   "rs63": -0.0119,
+   "ret40": -0.16432,
+   "excess40": -0.02671,
+   "mae40": -0.19564,
+   "n_cmp": 16
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2012-W07",
+   "date": "2012-02-17",
+   "depth": -0.20966,
+   "rs63": -0.10318,
+   "ret40": -0.14953,
+   "excess40": -0.13994,
+   "mae40": -0.15265,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2012-W26",
+   "date": "2012-06-29",
+   "depth": -0.329,
+   "rs63": -0.04007,
+   "ret40": 0.02333,
+   "excess40": -0.00848,
+   "mae40": -0.03683,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2013-W06",
+   "date": "2013-02-08",
+   "depth": -0.3917,
+   "rs63": -0.04425,
+   "ret40": 0.02464,
+   "excess40": -0.0166,
+   "mae40": -0.05096,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2013-W21",
+   "date": "2013-05-24",
+   "depth": -0.42928,
+   "rs63": -0.02266,
+   "ret40": -0.00877,
+   "excess40": -0.03789,
+   "mae40": -0.08489,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2014-W04",
+   "date": "2014-01-24",
+   "depth": -0.40308,
+   "rs63": -0.02338,
+   "ret40": 0.03686,
+   "excess40": -0.0193,
+   "mae40": -0.01812,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2014-W22",
+   "date": "2014-05-30",
+   "depth": -0.35922,
+   "rs63": 0.09376,
+   "ret40": -0.02848,
+   "excess40": -0.04869,
+   "mae40": -0.03525,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2015-W06",
+   "date": "2015-02-06",
+   "depth": -0.62826,
+   "rs63": -0.23363,
+   "ret40": -0.01709,
+   "excess40": -0.06408,
+   "mae40": -0.1163,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2015-W41",
+   "date": "2015-10-09",
+   "depth": -0.718,
+   "rs63": -0.09747,
+   "ret40": -0.3003,
+   "excess40": -0.28832,
+   "mae40": -0.30473,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2016-W09",
+   "date": "2016-03-04",
+   "depth": -0.82438,
+   "rs63": -0.1879,
+   "ret40": -0.01552,
+   "excess40": -0.03557,
+   "mae40": -0.15592,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2016-W32",
+   "date": "2016-08-12",
+   "depth": -0.80798,
+   "rs63": 0.02313,
+   "ret40": 0.02655,
+   "excess40": 0.03469,
+   "mae40": -0.04784,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2016-W48",
+   "date": "2016-12-02",
+   "depth": -0.79615,
+   "rs63": 0.03392,
+   "ret40": -0.04678,
+   "excess40": -0.07728,
+   "mae40": -0.0588,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2017-W30",
+   "date": "2017-07-28",
+   "depth": -0.839,
+   "rs63": -0.10131,
+   "ret40": 0.03302,
+   "excess40": 0.00768,
+   "mae40": -0.10271,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2018-W12",
+   "date": "2018-03-23",
+   "depth": -0.7277,
+   "rs63": -0.02602,
+   "ret40": 0.11971,
+   "excess40": 0.06759,
+   "mae40": -0.05096,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2018-W25",
+   "date": "2018-06-22",
+   "depth": -0.64546,
+   "rs63": 0.05388,
+   "ret40": -0.01151,
+   "excess40": -0.04962,
+   "mae40": -0.04252,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2018-W40",
+   "date": "2018-10-05",
+   "depth": -0.56885,
+   "rs63": -0.08608,
+   "ret40": -0.21156,
+   "excess40": -0.1247,
+   "mae40": -0.2212,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2019-W03",
+   "date": "2019-01-18",
+   "depth": -0.47796,
+   "rs63": -0.16201,
+   "ret40": 0.03241,
+   "excess40": -0.0205,
+   "mae40": -0.07248,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2019-W15",
+   "date": "2019-04-12",
+   "depth": -0.51734,
+   "rs63": -0.06317,
+   "ret40": -0.2267,
+   "excess40": -0.16352,
+   "mae40": -0.2267,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2019-W38",
+   "date": "2019-09-20",
+   "depth": -0.66901,
+   "rs63": -0.13353,
+   "ret40": -0.15558,
+   "excess40": -0.16937,
+   "mae40": -0.18945,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2019-W51",
+   "date": "2019-12-20",
+   "depth": -0.69194,
+   "rs63": -0.11413,
+   "ret40": -0.23593,
+   "excess40": -0.2187,
+   "mae40": -0.23758,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2020-W17",
+   "date": "2020-04-24",
+   "depth": -0.76195,
+   "rs63": -0.23305,
+   "ret40": 0.20178,
+   "excess40": 0.064,
+   "mae40": -0.00445,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2020-W46",
+   "date": "2020-11-13",
+   "depth": -0.76659,
+   "rs63": -0.16378,
+   "ret40": 0.49462,
+   "excess40": 0.30442,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2021-W18",
+   "date": "2021-05-07",
+   "depth": -0.59983,
+   "rs63": 0.21682,
+   "ret40": 0.09798,
+   "excess40": 0.08369,
+   "mae40": -0.04517,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2021-W37",
+   "date": "2021-09-17",
+   "depth": -0.56187,
+   "rs63": -0.05757,
+   "ret40": 0.29219,
+   "excess40": 0.18726,
+   "mae40": -0.00068,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2022-W01",
+   "date": "2022-01-07",
+   "depth": -0.36871,
+   "rs63": -0.04219,
+   "ret40": 0.23523,
+   "excess40": 0.25834,
+   "mae40": -0.02524,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2023-W15",
+   "date": "2023-04-14",
+   "depth": -0.21306,
+   "rs63": -0.07124,
+   "ret40": -0.03458,
+   "excess40": -0.06032,
+   "mae40": -0.10038,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2023-W27",
+   "date": "2023-07-07",
+   "depth": -0.28086,
+   "rs63": -0.07582,
+   "ret40": 0.1484,
+   "excess40": 0.13144,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2024-W09",
+   "date": "2024-03-01",
+   "depth": -0.3246,
+   "rs63": -0.08362,
+   "ret40": 0.08136,
+   "excess40": 0.10299,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2024-W40",
+   "date": "2024-10-04",
+   "depth": -0.38685,
+   "rs63": -0.05872,
+   "ret40": 0.00899,
+   "excess40": -0.04992,
+   "mae40": -0.09226,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2025-W11",
+   "date": "2025-03-14",
+   "depth": -0.41274,
+   "rs63": 0.04294,
+   "ret40": -0.02534,
+   "excess40": -0.03,
+   "mae40": -0.19629,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2025-W24",
+   "date": "2025-06-13",
+   "depth": -0.42202,
+   "rs63": -0.01581,
+   "ret40": -0.0566,
+   "excess40": -0.12515,
+   "mae40": -0.07621,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "FCG",
+   "level": "industry",
+   "week": "2025-W35",
+   "date": "2025-08-29",
+   "depth": -0.47908,
+   "rs63": 0.00253,
+   "ret40": -0.08703,
+   "excess40": -0.12675,
+   "mae40": -0.09323,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2016-W20",
+   "date": "2016-05-20",
+   "depth": -0.20977,
+   "rs63": -0.0425,
+   "ret40": 0.08014,
+   "excess40": 0.00863,
+   "mae40": -0.04083,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2016-W45",
+   "date": "2016-11-11",
+   "depth": -0.21916,
+   "rs63": -0.03879,
+   "ret40": -0.03008,
+   "excess40": -0.10504,
+   "mae40": -0.07939,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2017-W36",
+   "date": "2017-09-08",
+   "depth": -0.27725,
+   "rs63": 0.02122,
+   "ret40": -0.03423,
+   "excess40": -0.09057,
+   "mae40": -0.04451,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2018-W20",
+   "date": "2018-05-18",
+   "depth": -0.37676,
+   "rs63": -0.02969,
+   "ret40": 0.07232,
+   "excess40": 0.0632,
+   "mae40": -0.0058,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2018-W38",
+   "date": "2018-09-21",
+   "depth": -0.32043,
+   "rs63": 0.02777,
+   "ret40": -0.08635,
+   "excess40": 0.01744,
+   "mae40": -0.10159,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2019-W09",
+   "date": "2019-03-01",
+   "depth": -0.24044,
+   "rs63": -0.0142,
+   "ret40": -0.04052,
+   "excess40": -0.05113,
+   "mae40": -0.06699,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2019-W26",
+   "date": "2019-06-28",
+   "depth": -0.30428,
+   "rs63": -0.05678,
+   "ret40": -0.09508,
+   "excess40": -0.0116,
+   "mae40": -0.09692,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2019-W44",
+   "date": "2019-11-01",
+   "depth": -0.31913,
+   "rs63": -0.03716,
+   "ret40": 0.10685,
+   "excess40": 0.05296,
+   "mae40": -0.01449,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2020-W10",
+   "date": "2020-03-06",
+   "depth": -0.24718,
+   "rs63": 0.01985,
+   "ret40": 0.08366,
+   "excess40": 0.03916,
+   "mae40": -0.16874,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2020-W38",
+   "date": "2020-09-18",
+   "depth": -0.21676,
+   "rs63": 0.00907,
+   "ret40": 0.06642,
+   "excess40": -0.10408,
+   "mae40": -0.01811,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2021-W19",
+   "date": "2021-05-14",
+   "depth": -0.26042,
+   "rs63": -0.0629,
+   "ret40": 0.01664,
+   "excess40": 0.01881,
+   "mae40": -0.01352,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2021-W47",
+   "date": "2021-11-26",
+   "depth": -0.28775,
+   "rs63": -0.02494,
+   "ret40": -0.01278,
+   "excess40": 0.02207,
+   "mae40": -0.01887,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2024-W06",
+   "date": "2024-02-09",
+   "depth": -0.20865,
+   "rs63": -0.00104,
+   "ret40": -0.02782,
+   "excess40": -0.06273,
+   "mae40": -0.02782,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2024-W29",
+   "date": "2024-07-19",
+   "depth": -0.26625,
+   "rs63": -0.02033,
+   "ret40": 0.05329,
+   "excess40": 0.05559,
+   "mae40": -0.02738,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2025-W05",
+   "date": "2025-01-31",
+   "depth": -0.31385,
+   "rs63": -0.04586,
+   "ret40": -0.01846,
+   "excess40": 0.04505,
+   "mae40": -0.01846,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2025-W16",
+   "date": "2025-04-17",
+   "depth": -0.26723,
+   "rs63": 0.08649,
+   "ret40": 0.02921,
+   "excess40": -0.10781,
+   "mae40": -0.03031,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHE",
+   "level": "industry",
+   "week": "2025-W33",
+   "date": "2025-08-15",
+   "depth": -0.33438,
+   "rs63": 0.00638,
+   "ret40": 0.06415,
+   "excess40": 0.02449,
+   "mae40": -0.00146,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2023-W47",
+   "date": "2023-11-24",
+   "depth": -0.28669,
+   "rs63": -0.06313,
+   "ret40": 0.1032,
+   "excess40": 0.01658,
+   "mae40": -0.01078,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2024-W07",
+   "date": "2024-02-16",
+   "depth": -0.26368,
+   "rs63": 0.05957,
+   "ret40": -0.04095,
+   "excess40": -0.03974,
+   "mae40": -0.04095,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2024-W31",
+   "date": "2024-08-02",
+   "depth": -0.32585,
+   "rs63": -0.04417,
+   "ret40": 0.07796,
+   "excess40": 0.00364,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2024-W44",
+   "date": "2024-11-01",
+   "depth": -0.29383,
+   "rs63": -0.01634,
+   "ret40": -0.01225,
+   "excess40": -0.01655,
+   "mae40": -0.01903,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2025-W02",
+   "date": "2025-01-10",
+   "depth": -0.27894,
+   "rs63": 0.01265,
+   "ret40": -0.00603,
+   "excess40": 0.05163,
+   "mae40": -0.00603,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2025-W13",
+   "date": "2025-03-28",
+   "depth": -0.25397,
+   "rs63": 0.08167,
+   "ret40": 0.02392,
+   "excess40": 0.026,
+   "mae40": -0.09836,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2025-W46",
+   "date": "2025-11-14",
+   "depth": -0.35551,
+   "rs63": -0.03374,
+   "ret40": 0.01269,
+   "excess40": -0.10468,
+   "mae40": -0.00908,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IHI",
+   "level": "industry",
+   "week": "2026-W26",
+   "date": "2026-06-26",
+   "depth": -0.46663,
+   "rs63": -0.16911,
+   "ret40": 0.09947,
+   "excess40": 0.08271,
+   "mae40": -0.02862,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2017-W01",
+   "date": "2017-01-06",
+   "depth": -0.27723,
+   "rs63": -0.06238,
+   "ret40": 0.05499,
+   "excess40": 0.05172,
+   "mae40": -0.00619,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2017-W13",
+   "date": "2017-03-31",
+   "depth": -0.25444,
+   "rs63": 0.04225,
+   "ret40": 0.04001,
+   "excess40": 0.05857,
+   "mae40": -0.01126,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2017-W50",
+   "date": "2017-12-15",
+   "depth": -0.31803,
+   "rs63": -0.04659,
+   "ret40": 0.04639,
+   "excess40": 0.04675,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2018-W09",
+   "date": "2018-03-02",
+   "depth": -0.29525,
+   "rs63": 0.02566,
+   "ret40": 0.02004,
+   "excess40": 0.01759,
+   "mae40": -0.04573,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2018-W31",
+   "date": "2018-08-03",
+   "depth": -0.2369,
+   "rs63": 0.03854,
+   "ret40": 0.03115,
+   "excess40": 0.03195,
+   "mae40": -0.01595,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2019-W21",
+   "date": "2019-05-24",
+   "depth": -0.23415,
+   "rs63": -0.09939,
+   "ret40": 0.07159,
+   "excess40": 0.00596,
+   "mae40": -0.01944,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2019-W44",
+   "date": "2019-11-01",
+   "depth": -0.22249,
+   "rs63": -0.05418,
+   "ret40": 0.09854,
+   "excess40": 0.04465,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2020-W20",
+   "date": "2020-05-15",
+   "depth": -0.20213,
+   "rs63": -0.05013,
+   "ret40": 0.07665,
+   "excess40": -0.0288,
+   "mae40": -0.0178,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2022-W06",
+   "date": "2022-02-11",
+   "depth": -0.256,
+   "rs63": -0.10603,
+   "ret40": 0.06273,
+   "excess40": 0.04084,
+   "mae40": -0.0357,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2022-W20",
+   "date": "2022-05-20",
+   "depth": -0.24122,
+   "rs63": 0.03486,
+   "ret40": 0.11743,
+   "excess40": 0.13483,
+   "mae40": -0.0846,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2023-W02",
+   "date": "2023-01-13",
+   "depth": -0.22192,
+   "rs63": -0.07495,
+   "ret40": -0.07272,
+   "excess40": 0.01596,
+   "mae40": -0.07626,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2023-W51",
+   "date": "2023-12-22",
+   "depth": -0.35705,
+   "rs63": -0.03496,
+   "ret40": -0.01353,
+   "excess40": -0.01447,
+   "mae40": -0.03982,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2024-W13",
+   "date": "2024-03-28",
+   "depth": -0.358,
+   "rs63": -0.04446,
+   "ret40": -0.03518,
+   "excess40": -0.009,
+   "mae40": -0.08144,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2024-W22",
+   "date": "2024-05-31",
+   "depth": -0.3821,
+   "rs63": -0.01315,
+   "ret40": 0.07867,
+   "excess40": 0.01105,
+   "mae40": -0.03531,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2025-W02",
+   "date": "2025-01-10",
+   "depth": -0.3719,
+   "rs63": -0.01517,
+   "ret40": -0.00474,
+   "excess40": 0.05292,
+   "mae40": -0.00474,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2025-W34",
+   "date": "2025-08-22",
+   "depth": -0.40229,
+   "rs63": -0.07049,
+   "ret40": 0.06914,
+   "excess40": 0.03429,
+   "mae40": -0.00215,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2025-W45",
+   "date": "2025-11-07",
+   "depth": -0.37457,
+   "rs63": 0.07489,
+   "ret40": 0.08013,
+   "excess40": 0.00741,
+   "mae40": -0.01534,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2026-W07",
+   "date": "2026-02-13",
+   "depth": -0.3355,
+   "rs63": 0.04507,
+   "ret40": -0.02609,
+   "excess40": -0.0346,
+   "mae40": -0.0923,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XHS",
+   "level": "industry",
+   "week": "2026-W23",
+   "date": "2026-06-05",
+   "depth": -0.28111,
+   "rs63": -0.0016,
+   "ret40": 0.14924,
+   "excess40": 0.11712,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2004-W14",
+   "date": "2004-04-02",
+   "depth": -0.21008,
+   "rs63": 0.0614,
+   "ret40": -0.05987,
+   "excess40": -0.01332,
+   "mae40": -0.10189,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2004-W35",
+   "date": "2004-08-27",
+   "depth": -0.28208,
+   "rs63": -0.08097,
+   "ret40": -0.01413,
+   "excess40": -0.07422,
+   "mae40": -0.03346,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2004-W49",
+   "date": "2004-12-03",
+   "depth": -0.29786,
+   "rs63": -0.0185,
+   "ret40": -0.0116,
+   "excess40": -0.0175,
+   "mae40": -0.03702,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2005-W15",
+   "date": "2005-04-15",
+   "depth": -0.28877,
+   "rs63": -0.07887,
+   "ret40": 0.01896,
+   "excess40": -0.05659,
+   "mae40": -0.02098,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2005-W45",
+   "date": "2005-11-11",
+   "depth": -0.21707,
+   "rs63": 0.03127,
+   "ret40": 0.04866,
+   "excess40": -0.03351,
+   "mae40": -0.02102,
+   "n_cmp": 5
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2006-W35",
+   "date": "2006-09-01",
+   "depth": -0.3046,
+   "rs63": -0.02144,
+   "ret40": 0.07557,
+   "excess40": 0.03278,
+   "mae40": -0.03042,
+   "n_cmp": 13
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2006-W49",
+   "date": "2006-12-08",
+   "depth": -0.25604,
+   "rs63": 0.03932,
+   "ret40": -0.00521,
+   "excess40": -0.02532,
+   "mae40": -0.03456,
+   "n_cmp": 13
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2007-W14",
+   "date": "2007-04-05",
+   "depth": -0.29875,
+   "rs63": -0.02207,
+   "ret40": 0.0302,
+   "excess40": -0.02938,
+   "mae40": -0.00998,
+   "n_cmp": 13
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2007-W30",
+   "date": "2007-07-27",
+   "depth": -0.21306,
+   "rs63": -0.04521,
+   "ret40": 0.06787,
+   "excess40": 0.05268,
+   "mae40": -0.01888,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2009-W52",
+   "date": "2009-12-24",
+   "depth": -0.22734,
+   "rs63": -0.0615,
+   "ret40": 0.03016,
+   "excess40": 0.01626,
+   "mae40": -0.01114,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2010-W25",
+   "date": "2010-06-25",
+   "depth": -0.20142,
+   "rs63": -0.03323,
+   "ret40": -0.03305,
+   "excess40": 0.00827,
+   "mae40": -0.06992,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2010-W43",
+   "date": "2010-10-29",
+   "depth": -0.20838,
+   "rs63": 0.0302,
+   "ret40": 0.06123,
+   "excess40": -0.05255,
+   "mae40": -0.02285,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2011-W10",
+   "date": "2011-03-11",
+   "depth": -0.23574,
+   "rs63": 0.00098,
+   "ret40": 0.1419,
+   "excess40": 0.07977,
+   "mae40": -0.0209,
+   "n_cmp": 15
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2016-W14",
+   "date": "2016-04-08",
+   "depth": -0.28725,
+   "rs63": -0.14881,
+   "ret40": 0.02222,
+   "excess40": -0.05271,
+   "mae40": -0.0769,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2017-W05",
+   "date": "2017-02-03",
+   "depth": -0.36094,
+   "rs63": 0.01219,
+   "ret40": 0.02879,
+   "excess40": 0.03167,
+   "mae40": -0.00642,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2017-W15",
+   "date": "2017-04-13",
+   "depth": -0.355,
+   "rs63": 0.01166,
+   "ret40": 0.01325,
+   "excess40": -0.00228,
+   "mae40": -0.02161,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2017-W35",
+   "date": "2017-09-01",
+   "depth": -0.30368,
+   "rs63": 0.11916,
+   "ret40": -0.05629,
+   "excess40": -0.11067,
+   "mae40": -0.05689,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2018-W02",
+   "date": "2018-01-12",
+   "depth": -0.38413,
+   "rs63": -0.09058,
+   "ret40": 0.02875,
+   "excess40": 0.06822,
+   "mae40": -0.0519,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2018-W22",
+   "date": "2018-06-01",
+   "depth": -0.3888,
+   "rs63": -0.01875,
+   "ret40": 0.06896,
+   "excess40": 0.05352,
+   "mae40": -0.01501,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2018-W35",
+   "date": "2018-08-31",
+   "depth": -0.34095,
+   "rs63": 0.057,
+   "ret40": -0.14333,
+   "excess40": -0.03933,
+   "mae40": -0.15176,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2019-W01",
+   "date": "2019-01-04",
+   "depth": -0.28782,
+   "rs63": -0.02819,
+   "ret40": 0.03661,
+   "excess40": -0.04573,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2019-W25",
+   "date": "2019-06-21",
+   "depth": -0.23007,
+   "rs63": -0.04284,
+   "ret40": -0.01904,
+   "excess40": 0.01884,
+   "mae40": -0.04509,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2019-W43",
+   "date": "2019-10-25",
+   "depth": -0.26176,
+   "rs63": -0.00268,
+   "ret40": 0.15476,
+   "excess40": 0.07522,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2020-W08",
+   "date": "2020-02-21",
+   "depth": -0.21724,
+   "rs63": 0.01082,
+   "ret40": 0.02208,
+   "excess40": 0.27449,
+   "mae40": -0.21237,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2022-W11",
+   "date": "2022-03-18",
+   "depth": -0.3779,
+   "rs63": -0.09205,
+   "ret40": -0.09752,
+   "excess40": -0.02675,
+   "mae40": -0.17544,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2023-W16",
+   "date": "2023-04-21",
+   "depth": -0.32528,
+   "rs63": -0.05694,
+   "ret40": -0.02423,
+   "excess40": -0.0461,
+   "mae40": -0.05171,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2023-W34",
+   "date": "2023-08-25",
+   "depth": -0.36392,
+   "rs63": -0.05552,
+   "ret40": -0.08277,
+   "excess40": -0.0086,
+   "mae40": -0.09317,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2023-W50",
+   "date": "2023-12-15",
+   "depth": -0.38795,
+   "rs63": -0.00825,
+   "ret40": 0.04447,
+   "excess40": 0.02044,
+   "mae40": -0.01399,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2024-W23",
+   "date": "2024-06-07",
+   "depth": -0.37846,
+   "rs63": -0.05714,
+   "ret40": 0.00913,
+   "excess40": 0.02291,
+   "mae40": -0.01869,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2025-W05",
+   "date": "2025-01-31",
+   "depth": -0.35902,
+   "rs63": -0.06157,
+   "ret40": -0.09648,
+   "excess40": -0.03297,
+   "mae40": -0.09648,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2025-W28",
+   "date": "2025-07-11",
+   "depth": -0.41593,
+   "rs63": -0.02703,
+   "ret40": 0.08378,
+   "excess40": 0.03708,
+   "mae40": -0.02153,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IBB",
+   "level": "industry",
+   "week": "2026-W04",
+   "date": "2026-01-23",
+   "depth": -0.2853,
+   "rs63": 0.10162,
+   "ret40": -0.08014,
+   "excess40": -0.08552,
+   "mae40": -0.08014,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2017-W32",
+   "date": "2017-08-11",
+   "depth": -0.21734,
+   "rs63": -0.03925,
+   "ret40": -0.00215,
+   "excess40": -0.07013,
+   "mae40": -0.0285,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2017-W48",
+   "date": "2017-12-01",
+   "depth": -0.25321,
+   "rs63": -0.02616,
+   "ret40": 0.00559,
+   "excess40": -0.04954,
+   "mae40": -0.01824,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2018-W12",
+   "date": "2018-03-23",
+   "depth": -0.28609,
+   "rs63": -0.03987,
+   "ret40": 0.01343,
+   "excess40": -0.03868,
+   "mae40": -0.01624,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2018-W25",
+   "date": "2018-06-22",
+   "depth": -0.27867,
+   "rs63": 0.01041,
+   "ret40": -0.01517,
+   "excess40": -0.05327,
+   "mae40": -0.04878,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2018-W42",
+   "date": "2018-10-19",
+   "depth": -0.30568,
+   "rs63": -0.01168,
+   "ret40": -0.05348,
+   "excess40": 0.06899,
+   "mae40": -0.05348,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2019-W13",
+   "date": "2019-03-29",
+   "depth": -0.29329,
+   "rs63": -0.01187,
+   "ret40": -0.01752,
+   "excess40": 0.05188,
+   "mae40": -0.01752,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2019-W31",
+   "date": "2019-08-02",
+   "depth": -0.27224,
+   "rs63": 0.01709,
+   "ret40": 0.03943,
+   "excess40": 0.02929,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2020-W10",
+   "date": "2020-03-06",
+   "depth": -0.28028,
+   "rs63": -0.03951,
+   "ret40": 0.00595,
+   "excess40": -0.03855,
+   "mae40": -0.15361,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2020-W30",
+   "date": "2020-07-24",
+   "depth": -0.2452,
+   "rs63": -0.04089,
+   "ret40": -0.02688,
+   "excess40": -0.00956,
+   "mae40": -0.0317,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2020-W42",
+   "date": "2020-10-16",
+   "depth": -0.24341,
+   "rs63": -0.0053,
+   "ret40": 0.02075,
+   "excess40": -0.20204,
+   "mae40": -0.05786,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2021-W02",
+   "date": "2021-01-15",
+   "depth": -0.23145,
+   "rs63": -0.02262,
+   "ret40": 0.08894,
+   "excess40": -0.01384,
+   "mae40": -0.00595,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2021-W16",
+   "date": "2021-04-23",
+   "depth": -0.21054,
+   "rs63": 0.03749,
+   "ret40": 0.01881,
+   "excess40": -0.03175,
+   "mae40": -0.00773,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2021-W37",
+   "date": "2021-09-17",
+   "depth": -0.25355,
+   "rs63": -0.04898,
+   "ret40": 0.07091,
+   "excess40": -0.03402,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2021-W50",
+   "date": "2021-12-17",
+   "depth": -0.2317,
+   "rs63": 0.00562,
+   "ret40": 0.0212,
+   "excess40": -0.01954,
+   "mae40": -0.00593,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2023-W49",
+   "date": "2023-12-08",
+   "depth": -0.20832,
+   "rs63": -0.00682,
+   "ret40": -0.00078,
+   "excess40": -0.04646,
+   "mae40": -0.0141,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2024-W11",
+   "date": "2024-03-15",
+   "depth": -0.24083,
+   "rs63": -0.05308,
+   "ret40": 0.00084,
+   "excess40": -0.02323,
+   "mae40": -0.01508,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2024-W31",
+   "date": "2024-08-02",
+   "depth": -0.29804,
+   "rs63": -0.08622,
+   "ret40": 0.07392,
+   "excess40": -0.0004,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2025-W05",
+   "date": "2025-01-31",
+   "depth": -0.35299,
+   "rs63": -0.01175,
+   "ret40": -0.02247,
+   "excess40": 0.04104,
+   "mae40": -0.07248,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "PBJ",
+   "level": "industry",
+   "week": "2025-W50",
+   "date": "2025-12-12",
+   "depth": -0.45083,
+   "rs63": -0.05115,
+   "ret40": 0.10202,
+   "excess40": 0.01477,
+   "mae40": -0.03359,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2003-W44",
+   "date": "2003-10-31",
+   "depth": -0.46614,
+   "rs63": -0.04464,
+   "ret40": 0.06621,
+   "excess40": -0.00717,
+   "mae40": -0.04945,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2004-W18",
+   "date": "2004-04-30",
+   "depth": -0.41612,
+   "rs63": 0.01746,
+   "ret40": -0.00835,
+   "excess40": -0.02184,
+   "mae40": -0.03787,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2004-W29",
+   "date": "2004-07-16",
+   "depth": -0.43029,
+   "rs63": -0.01219,
+   "ret40": 0.10358,
+   "excess40": 0.05064,
+   "mae40": 0,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2004-W49",
+   "date": "2004-12-03",
+   "depth": -0.24783,
+   "rs63": 0.01648,
+   "ret40": -0.03427,
+   "excess40": -0.04017,
+   "mae40": -0.04917,
+   "n_cmp": 4
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2008-W17",
+   "date": "2008-04-25",
+   "depth": -0.22065,
+   "rs63": -0.04842,
+   "ret40": -0.02437,
+   "excess40": 0.02497,
+   "mae40": -0.02437,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2008-W46",
+   "date": "2008-11-14",
+   "depth": -0.2159,
+   "rs63": -0.03373,
+   "ret40": 0.05251,
+   "excess40": 0.07919,
+   "mae40": -0.13975,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2009-W39",
+   "date": "2009-09-25",
+   "depth": -0.2035,
+   "rs63": -0.08125,
+   "ret40": -0.00848,
+   "excess40": -0.00438,
+   "mae40": -0.0832,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2009-W48",
+   "date": "2009-11-27",
+   "depth": -0.23786,
+   "rs63": -0.01317,
+   "ret40": -0.00043,
+   "excess40": -0.04472,
+   "mae40": -0.00043,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2010-W11",
+   "date": "2010-03-19",
+   "depth": -0.22449,
+   "rs63": -0.02545,
+   "ret40": -0.00809,
+   "excess40": 0.0193,
+   "mae40": -0.05641,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2018-W12",
+   "date": "2018-03-23",
+   "depth": -0.34622,
+   "rs63": -0.05097,
+   "ret40": 0.00551,
+   "excess40": -0.04661,
+   "mae40": -0.02608,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2018-W26",
+   "date": "2018-06-29",
+   "depth": -0.35703,
+   "rs63": -0.01061,
+   "ret40": 0.07667,
+   "excess40": 0.02858,
+   "mae40": -0.00325,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2019-W07",
+   "date": "2019-02-15",
+   "depth": -0.33642,
+   "rs63": 0.01365,
+   "ret40": 0.06275,
+   "excess40": 0.04413,
+   "mae40": -0.01634,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2019-W42",
+   "date": "2019-10-18",
+   "depth": -0.37327,
+   "rs63": -0.01592,
+   "ret40": 0.00407,
+   "excess40": -0.0721,
+   "mae40": -0.01452,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2020-W09",
+   "date": "2020-02-28",
+   "depth": -0.34214,
+   "rs63": 0.0064,
+   "ret40": -0.04242,
+   "excess40": 0.09297,
+   "mae40": -0.21816,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2020-W46",
+   "date": "2020-11-13",
+   "depth": -0.26722,
+   "rs63": -0.03653,
+   "ret40": 0.06351,
+   "excess40": -0.12669,
+   "mae40": -0.01347,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2021-W02",
+   "date": "2021-01-15",
+   "depth": -0.21309,
+   "rs63": 0.04736,
+   "ret40": 0.03635,
+   "excess40": -0.06643,
+   "mae40": -0.02615,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2021-W11",
+   "date": "2021-03-19",
+   "depth": -0.22656,
+   "rs63": -0.00369,
+   "ret40": 0.01622,
+   "excess40": -0.02705,
+   "mae40": -0.02187,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2021-W50",
+   "date": "2021-12-17",
+   "depth": -0.33132,
+   "rs63": -0.07435,
+   "ret40": -0.04802,
+   "excess40": -0.08876,
+   "mae40": -0.07515,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2022-W07",
+   "date": "2022-02-18",
+   "depth": -0.33519,
+   "rs63": 0.01901,
+   "ret40": -0.00008,
+   "excess40": -0.07119,
+   "mae40": -0.03757,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2022-W20",
+   "date": "2022-05-20",
+   "depth": -0.3373,
+   "rs63": -0.03309,
+   "ret40": 0.00223,
+   "excess40": 0.01963,
+   "mae40": -0.08381,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2022-W49",
+   "date": "2022-12-09",
+   "depth": -0.417,
+   "rs63": -0.04265,
+   "ret40": 0.00673,
+   "excess40": -0.05722,
+   "mae40": -0.06104,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2023-W32",
+   "date": "2023-08-11",
+   "depth": -0.40913,
+   "rs63": -0.02683,
+   "ret40": -0.05263,
+   "excess40": 0.00778,
+   "mae40": -0.07496,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2023-W44",
+   "date": "2023-11-03",
+   "depth": -0.39486,
+   "rs63": 0.01639,
+   "ret40": 0.06059,
+   "excess40": -0.04075,
+   "mae40": -0.01967,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2024-W01",
+   "date": "2024-01-05",
+   "depth": -0.41398,
+   "rs63": -0.00727,
+   "ret40": -0.03925,
+   "excess40": -0.07421,
+   "mae40": -0.04928,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2024-W22",
+   "date": "2024-05-31",
+   "depth": -0.47406,
+   "rs63": -0.04516,
+   "ret40": 0.07506,
+   "excess40": 0.00744,
+   "mae40": -0.02658,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2025-W01",
+   "date": "2025-01-03",
+   "depth": -0.32979,
+   "rs63": 0.02743,
+   "ret40": 0.02691,
+   "excess40": 0.06983,
+   "mae40": -0.02285,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2025-W19",
+   "date": "2025-05-09",
+   "depth": -0.26152,
+   "rs63": 0.0489,
+   "ret40": 0.06194,
+   "excess40": -0.00863,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYZ",
+   "level": "industry",
+   "week": "2025-W32",
+   "date": "2025-08-08",
+   "depth": -0.22385,
+   "rs63": -0.00682,
+   "ret40": 0.07706,
+   "excess40": -0.00471,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2009-W13",
+   "date": "2009-03-27",
+   "depth": -0.57042,
+   "rs63": -0.25733,
+   "ret40": 0.35878,
+   "excess40": 0.15661,
+   "mae40": 0,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2009-W24",
+   "date": "2009-06-12",
+   "depth": -0.51,
+   "rs63": 0.21037,
+   "ret40": 0.15834,
+   "excess40": 0.06116,
+   "mae40": -0.09693,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2010-W01",
+   "date": "2010-01-08",
+   "depth": -0.48518,
+   "rs63": -0.07215,
+   "ret40": 0.06772,
+   "excess40": 0.03086,
+   "mae40": -0.06087,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2010-W27",
+   "date": "2010-07-09",
+   "depth": -0.38409,
+   "rs63": -0.01609,
+   "ret40": -0.0854,
+   "excess40": -0.08828,
+   "mae40": -0.13013,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2010-W49",
+   "date": "2010-12-10",
+   "depth": -0.39657,
+   "rs63": -0.04201,
+   "ret40": 0.08051,
+   "excess40": 0.01102,
+   "mae40": -0.02619,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2011-W43",
+   "date": "2011-10-28",
+   "depth": -0.49091,
+   "rs63": -0.10594,
+   "ret40": 0.00291,
+   "excess40": 0.01429,
+   "mae40": -0.11134,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2012-W09",
+   "date": "2012-03-02",
+   "depth": -0.32456,
+   "rs63": 0.05798,
+   "ret40": 0.06418,
+   "excess40": 0.03671,
+   "mae40": -0.02488,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2012-W28",
+   "date": "2012-07-13",
+   "depth": -0.32297,
+   "rs63": -0.01685,
+   "ret40": 0.06615,
+   "excess40": -0.00414,
+   "mae40": -0.04304,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2012-W47",
+   "date": "2012-11-23",
+   "depth": -0.31131,
+   "rs63": 0.04291,
+   "ret40": 0.09278,
+   "excess40": -0.00915,
+   "mae40": -0.01585,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2013-W20",
+   "date": "2013-05-17",
+   "depth": -0.27298,
+   "rs63": -0.01642,
+   "ret40": 0.06466,
+   "excess40": 0.04395,
+   "mae40": -0.03057,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2016-W11",
+   "date": "2016-03-18",
+   "depth": -0.20524,
+   "rs63": -0.09559,
+   "ret40": 0.00226,
+   "excess40": -0.00582,
+   "mae40": -0.05735,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2016-W31",
+   "date": "2016-08-05",
+   "depth": -0.21388,
+   "rs63": -0.01045,
+   "ret40": 0.02962,
+   "excess40": 0.03402,
+   "mae40": -0.01192,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2019-W18",
+   "date": "2019-05-03",
+   "depth": -0.20543,
+   "rs63": -0.01616,
+   "ret40": -0.05455,
+   "excess40": -0.02786,
+   "mae40": -0.10806,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2019-W30",
+   "date": "2019-07-26",
+   "depth": -0.24291,
+   "rs63": -0.02848,
+   "ret40": -0.02871,
+   "excess40": -0.00918,
+   "mae40": -0.11336,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2020-W22",
+   "date": "2020-05-29",
+   "depth": -0.44719,
+   "rs63": -0.20946,
+   "ret40": -0.02688,
+   "excess40": -0.08474,
+   "mae40": -0.10091,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2020-W36",
+   "date": "2020-09-04",
+   "depth": -0.48447,
+   "rs63": -0.17704,
+   "ret40": 0.12069,
+   "excess40": 0.08196,
+   "mae40": -0.09569,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2021-W19",
+   "date": "2021-05-14",
+   "depth": -0.26944,
+   "rs63": 0.09796,
+   "ret40": -0.09955,
+   "excess40": -0.09737,
+   "mae40": -0.11478,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2021-W34",
+   "date": "2021-08-27",
+   "depth": -0.30161,
+   "rs63": -0.10181,
+   "ret40": 0.09966,
+   "excess40": 0.04441,
+   "mae40": -0.04983,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2022-W01",
+   "date": "2022-01-07",
+   "depth": -0.20329,
+   "rs63": 0.01388,
+   "ret40": -0.09868,
+   "excess40": -0.07558,
+   "mae40": -0.13377,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2022-W20",
+   "date": "2022-05-20",
+   "depth": -0.20291,
+   "rs63": -0.09161,
+   "ret40": 0.00428,
+   "excess40": 0.02168,
+   "mae40": -0.09048,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2023-W23",
+   "date": "2023-06-09",
+   "depth": -0.3593,
+   "rs63": -0.17243,
+   "ret40": 0.11445,
+   "excess40": 0.03507,
+   "mae40": -0.05817,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2023-W44",
+   "date": "2023-11-03",
+   "depth": -0.34436,
+   "rs63": -0.05245,
+   "ret40": 0.20144,
+   "excess40": 0.1001,
+   "mae40": -0.03297,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2024-W13",
+   "date": "2024-03-28",
+   "depth": -0.29685,
+   "rs63": -0.07445,
+   "ret40": -0.00886,
+   "excess40": 0.01732,
+   "mae40": -0.06959,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2024-W28",
+   "date": "2024-07-12",
+   "depth": -0.30484,
+   "rs63": 0.02887,
+   "ret40": 0.01491,
+   "excess40": 0.04293,
+   "mae40": -0.03559,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2024-W38",
+   "date": "2024-09-20",
+   "depth": -0.2511,
+   "rs63": 0.15402,
+   "ret40": 0.12516,
+   "excess40": 0.10484,
+   "mae40": -0.03533,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2025-W05",
+   "date": "2025-01-31",
+   "depth": -0.21825,
+   "rs63": 0.03732,
+   "ret40": -0.08058,
+   "excess40": -0.01707,
+   "mae40": -0.11219,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2025-W19",
+   "date": "2025-05-09",
+   "depth": -0.2486,
+   "rs63": -0.04995,
+   "ret40": 0.07652,
+   "excess40": 0.00595,
+   "mae40": -0.04676,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "KBE",
+   "level": "industry",
+   "week": "2025-W47",
+   "date": "2025-11-21",
+   "depth": -0.25441,
+   "rs63": -0.06504,
+   "ret40": 0.09461,
+   "excess40": -0.00272,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2009-W31",
+   "date": "2009-07-31",
+   "depth": -0.48641,
+   "rs63": -0.03041,
+   "ret40": 0.08418,
+   "excess40": -0.00433,
+   "mae40": -0.01285,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2010-W01",
+   "date": "2010-01-08",
+   "depth": -0.4534,
+   "rs63": 0.00133,
+   "ret40": 0.0623,
+   "excess40": 0.02544,
+   "mae40": -0.039,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2010-W49",
+   "date": "2010-12-10",
+   "depth": -0.39261,
+   "rs63": -0.02701,
+   "ret40": 0.07256,
+   "excess40": 0.00307,
+   "mae40": -0.01589,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2011-W24",
+   "date": "2011-06-17",
+   "depth": -0.43942,
+   "rs63": -0.05701,
+   "ret40": -0.16819,
+   "excess40": -0.06938,
+   "mae40": -0.20386,
+   "n_cmp": 16
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2011-W41",
+   "date": "2011-10-14",
+   "depth": -0.49251,
+   "rs63": -0.062,
+   "ret40": 0.07066,
+   "excess40": 0.03827,
+   "mae40": -0.00642,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2012-W11",
+   "date": "2012-03-16",
+   "depth": -0.22828,
+   "rs63": 0.0787,
+   "ret40": -0.04642,
+   "excess40": 0.01539,
+   "mae40": -0.05601,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2012-W26",
+   "date": "2012-06-29",
+   "depth": -0.23043,
+   "rs63": -0.00046,
+   "ret40": 0.01906,
+   "excess40": -0.01275,
+   "mae40": -0.02071,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2012-W35",
+   "date": "2012-08-31",
+   "depth": -0.23416,
+   "rs63": 0.02849,
+   "ret40": 0.01079,
+   "excess40": -0.008,
+   "mae40": -0.00583,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2012-W51",
+   "date": "2012-12-21",
+   "depth": -0.24748,
+   "rs63": -0.02679,
+   "ret40": 0.07613,
+   "excess40": -0.00601,
+   "mae40": -0.00932,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2013-W10",
+   "date": "2013-03-08",
+   "depth": -0.24178,
+   "rs63": 0.02453,
+   "ret40": 0.01103,
+   "excess40": -0.0374,
+   "mae40": -0.05068,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2013-W20",
+   "date": "2013-05-17",
+   "depth": -0.23269,
+   "rs63": -0.02177,
+   "ret40": 0.06895,
+   "excess40": 0.04823,
+   "mae40": -0.02203,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2019-W18",
+   "date": "2019-05-03",
+   "depth": -0.2019,
+   "rs63": -0.02337,
+   "ret40": -0.03663,
+   "excess40": -0.00994,
+   "mae40": -0.09363,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2019-W30",
+   "date": "2019-07-26",
+   "depth": -0.21849,
+   "rs63": -0.00546,
+   "ret40": -0.0266,
+   "excess40": -0.00707,
+   "mae40": -0.11846,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2020-W22",
+   "date": "2020-05-29",
+   "depth": -0.42702,
+   "rs63": -0.19614,
+   "ret40": -0.03052,
+   "excess40": -0.08838,
+   "mae40": -0.10451,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2020-W36",
+   "date": "2020-09-04",
+   "depth": -0.46515,
+   "rs63": -0.17878,
+   "ret40": 0.14089,
+   "excess40": 0.10216,
+   "mae40": -0.08398,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2021-W18",
+   "date": "2021-05-07",
+   "depth": -0.21779,
+   "rs63": 0.13908,
+   "ret40": -0.08469,
+   "excess40": -0.09898,
+   "mae40": -0.10425,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2021-W34",
+   "date": "2021-08-27",
+   "depth": -0.24835,
+   "rs63": -0.10224,
+   "ret40": 0.13423,
+   "excess40": 0.07897,
+   "mae40": -0.03215,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2023-W23",
+   "date": "2023-06-09",
+   "depth": -0.45167,
+   "rs63": -0.23636,
+   "ret40": 0.10215,
+   "excess40": 0.02277,
+   "mae40": -0.05093,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2023-W44",
+   "date": "2023-11-03",
+   "depth": -0.45411,
+   "rs63": -0.06532,
+   "ret40": 0.21627,
+   "excess40": 0.11494,
+   "mae40": -0.03375,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2024-W13",
+   "date": "2024-03-28",
+   "depth": -0.42245,
+   "rs63": -0.05896,
+   "ret40": -0.03047,
+   "excess40": -0.00429,
+   "mae40": -0.07124,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2024-W28",
+   "date": "2024-07-12",
+   "depth": -0.44964,
+   "rs63": -0.00483,
+   "ret40": 0.03926,
+   "excess40": 0.06728,
+   "mae40": -0.01839,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2024-W38",
+   "date": "2024-09-20",
+   "depth": -0.40275,
+   "rs63": 0.15427,
+   "ret40": 0.14726,
+   "excess40": 0.12693,
+   "mae40": -0.03197,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2025-W06",
+   "date": "2025-02-07",
+   "depth": -0.37024,
+   "rs63": 0.03572,
+   "ret40": -0.2363,
+   "excess40": -0.03871,
+   "mae40": -0.2363,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2025-W19",
+   "date": "2025-05-09",
+   "depth": -0.3748,
+   "rs63": -0.0804,
+   "ret40": 0.1056,
+   "excess40": 0.03503,
+   "mae40": -0.03831,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IAT",
+   "level": "industry",
+   "week": "2025-W47",
+   "date": "2025-11-21",
+   "depth": -0.36995,
+   "rs63": -0.06081,
+   "ret40": 0.13389,
+   "excess40": 0.03655,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2009-W29",
+   "date": "2009-07-17",
+   "depth": -0.64932,
+   "rs63": -0.09935,
+   "ret40": 0.25855,
+   "excess40": 0.08681,
+   "mae40": -0.00856,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2009-W52",
+   "date": "2009-12-24",
+   "depth": -0.65204,
+   "rs63": -0.08275,
+   "ret40": 0.06446,
+   "excess40": 0.05056,
+   "mae40": -0.00744,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2010-W12",
+   "date": "2010-03-26",
+   "depth": -0.54373,
+   "rs63": 0.08827,
+   "ret40": -0.04634,
+   "excess40": 0.02298,
+   "mae40": -0.05358,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2010-W35",
+   "date": "2010-09-03",
+   "depth": -0.36033,
+   "rs63": -0.06726,
+   "ret40": 0.01617,
+   "excess40": -0.08042,
+   "mae40": -0.01761,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2010-W48",
+   "date": "2010-12-03",
+   "depth": -0.40216,
+   "rs63": -0.06539,
+   "ret40": 0.10109,
+   "excess40": 0.02731,
+   "mae40": 0,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2011-W21",
+   "date": "2011-05-27",
+   "depth": -0.38843,
+   "rs63": -0.00836,
+   "ret40": -0.12437,
+   "excess40": -0.08581,
+   "mae40": -0.12437,
+   "n_cmp": 16
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2011-W42",
+   "date": "2011-10-21",
+   "depth": -0.3691,
+   "rs63": -0.07423,
+   "ret40": 0.07791,
+   "excess40": 0.09343,
+   "mae40": -0.05225,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2012-W10",
+   "date": "2012-03-09",
+   "depth": -0.2221,
+   "rs63": 0.11248,
+   "ret40": 0.06549,
+   "excess40": 0.07488,
+   "mae40": -0.0659,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2014-W26",
+   "date": "2014-06-27",
+   "depth": -0.224,
+   "rs63": -0.03496,
+   "ret40": -0.03065,
+   "excess40": -0.02777,
+   "mae40": -0.10726,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2015-W01",
+   "date": "2015-01-02",
+   "depth": -0.23592,
+   "rs63": 0.07626,
+   "ret40": 0.07677,
+   "excess40": 0.01455,
+   "mae40": -0.03622,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2015-W25",
+   "date": "2015-06-19",
+   "depth": -0.21198,
+   "rs63": -0.02095,
+   "ret40": 0.07576,
+   "excess40": 0.1232,
+   "mae40": -0.01944,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2016-W09",
+   "date": "2016-03-04",
+   "depth": -0.2322,
+   "rs63": -0.06938,
+   "ret40": 0.02892,
+   "excess40": 0.00887,
+   "mae40": -0.01905,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2018-W47",
+   "date": "2018-11-23",
+   "depth": -0.28307,
+   "rs63": -0.09023,
+   "ret40": 0.02541,
+   "excess40": 0.03772,
+   "mae40": -0.10308,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2019-W10",
+   "date": "2019-03-08",
+   "depth": -0.25225,
+   "rs63": 0.08683,
+   "ret40": 0.08361,
+   "excess40": 0.06929,
+   "mae40": -0.03467,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2019-W31",
+   "date": "2019-08-02",
+   "depth": -0.21429,
+   "rs63": 0.01147,
+   "ret40": 0.12325,
+   "excess40": 0.11311,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2020-W18",
+   "date": "2020-05-01",
+   "depth": -0.26145,
+   "rs63": -0.14473,
+   "ret40": 0.22656,
+   "excess40": 0.10788,
+   "mae40": -0.02137,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2022-W18",
+   "date": "2022-05-06",
+   "depth": -0.23073,
+   "rs63": -0.05271,
+   "ret40": -0.03011,
+   "excess40": -0.01106,
+   "mae40": -0.1593,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2022-W39",
+   "date": "2022-09-30",
+   "depth": -0.21911,
+   "rs63": 0.01137,
+   "ret40": 0.09934,
+   "excess40": -0.01211,
+   "mae40": -0.06296,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2025-W28",
+   "date": "2025-07-11",
+   "depth": -0.29419,
+   "rs63": -0.04124,
+   "ret40": 0.15711,
+   "excess40": 0.11041,
+   "mae40": -0.03918,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2025-W50",
+   "date": "2025-12-12",
+   "depth": -0.33072,
+   "rs63": -0.11521,
+   "ret40": 0.10067,
+   "excess40": 0.01341,
+   "mae40": -0.05699,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "ITB",
+   "level": "industry",
+   "week": "2026-W24",
+   "date": "2026-06-12",
+   "depth": -0.41955,
+   "rs63": -0.07076,
+   "ret40": 0.01112,
+   "excess40": -0.01989,
+   "mae40": -0.02832,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2017-W16",
+   "date": "2017-04-21",
+   "depth": -0.26693,
+   "rs63": -0.04719,
+   "ret40": -0.08426,
+   "excess40": -0.07061,
+   "mae40": -0.08426,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2017-W30",
+   "date": "2017-07-28",
+   "depth": -0.32896,
+   "rs63": -0.07143,
+   "ret40": 0.01177,
+   "excess40": -0.01357,
+   "mae40": -0.07847,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2017-W46",
+   "date": "2017-11-17",
+   "depth": -0.3511,
+   "rs63": 0.03633,
+   "ret40": 0.15242,
+   "excess40": 0.04495,
+   "mae40": -0.01378,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2018-W06",
+   "date": "2018-02-09",
+   "depth": -0.31473,
+   "rs63": 0.13396,
+   "ret40": 0.00956,
+   "excess40": -0.00334,
+   "mae40": -0.03685,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2018-W32",
+   "date": "2018-08-10",
+   "depth": -0.26153,
+   "rs63": 0.0775,
+   "ret40": -0.04339,
+   "excess40": -0.04066,
+   "mae40": -0.04419,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2018-W44",
+   "date": "2018-11-02",
+   "depth": -0.22505,
+   "rs63": 0.00382,
+   "ret40": -0.12557,
+   "excess40": -0.0166,
+   "mae40": -0.20422,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2019-W02",
+   "date": "2019-01-11",
+   "depth": -0.26276,
+   "rs63": -0.00312,
+   "ret40": 0.04252,
+   "excess40": -0.02878,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2019-W37",
+   "date": "2019-09-13",
+   "depth": -0.33185,
+   "rs63": -0.006,
+   "ret40": 0.03616,
+   "excess40": 0.0385,
+   "mae40": -0.04987,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2019-W52",
+   "date": "2019-12-27",
+   "depth": -0.28903,
+   "rs63": 0.00707,
+   "ret40": -0.11735,
+   "excess40": 0.01209,
+   "mae40": -0.11735,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2020-W18",
+   "date": "2020-05-01",
+   "depth": -0.32003,
+   "rs63": -0.05743,
+   "ret40": 0.19874,
+   "excess40": 0.08007,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2022-W29",
+   "date": "2022-07-22",
+   "depth": -0.3367,
+   "rs63": -0.06928,
+   "ret40": -0.02084,
+   "excess40": -0.00073,
+   "mae40": -0.04163,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2023-W01",
+   "date": "2023-01-06",
+   "depth": -0.33161,
+   "rs63": 0.0165,
+   "ret40": 0.05027,
+   "excess40": 0.02256,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2023-W27",
+   "date": "2023-07-07",
+   "depth": -0.39747,
+   "rs63": -0.03543,
+   "ret40": -0.02844,
+   "excess40": -0.0454,
+   "mae40": -0.05073,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2023-W43",
+   "date": "2023-10-27",
+   "depth": -0.41707,
+   "rs63": -0.04834,
+   "ret40": 0.26108,
+   "excess40": 0.06049,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2024-W07",
+   "date": "2024-02-16",
+   "depth": -0.38028,
+   "rs63": 0.03999,
+   "ret40": -0.03066,
+   "excess40": -0.02945,
+   "mae40": -0.03066,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2024-W22",
+   "date": "2024-05-31",
+   "depth": -0.3523,
+   "rs63": -0.02231,
+   "ret40": 0.00432,
+   "excess40": -0.0633,
+   "mae40": -0.06335,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2024-W46",
+   "date": "2024-11-15",
+   "depth": -0.38841,
+   "rs63": -0.02782,
+   "ret40": 0.00379,
+   "excess40": -0.0134,
+   "mae40": -0.01347,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2025-W14",
+   "date": "2025-04-04",
+   "depth": -0.27908,
+   "rs63": -0.05427,
+   "ret40": 0.19324,
+   "excess40": 0.05077,
+   "mae40": -0.0375,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2025-W49",
+   "date": "2025-12-05",
+   "depth": -0.29538,
+   "rs63": -0.06834,
+   "ret40": 0.01856,
+   "excess40": -0.05471,
+   "mae40": -0.00444,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2026-W06",
+   "date": "2026-02-06",
+   "depth": -0.27273,
+   "rs63": 0.08313,
+   "ret40": -0.0643,
+   "excess40": -0.06509,
+   "mae40": -0.11745,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "XRT",
+   "level": "industry",
+   "week": "2026-W24",
+   "date": "2026-06-12",
+   "depth": -0.2296,
+   "rs63": -0.02112,
+   "ret40": 0.01752,
+   "excess40": -0.0135,
+   "mae40": -0.03305,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2014-W48",
+   "date": "2014-11-28",
+   "depth": -0.21022,
+   "rs63": -0.0579,
+   "ret40": -0.0122,
+   "excess40": -0.00373,
+   "mae40": -0.06538,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2015-W38",
+   "date": "2015-09-18",
+   "depth": -0.22974,
+   "rs63": -0.03018,
+   "ret40": 0.03602,
+   "excess40": 0.02586,
+   "mae40": -0.08256,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2016-W16",
+   "date": "2016-04-22",
+   "depth": -0.32066,
+   "rs63": -0.03598,
+   "ret40": -0.04296,
+   "excess40": -0.04299,
+   "mae40": -0.08415,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2016-W30",
+   "date": "2016-07-29",
+   "depth": -0.3564,
+   "rs63": -0.02996,
+   "ret40": 0.01516,
+   "excess40": 0.01625,
+   "mae40": -0.02341,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2016-W40",
+   "date": "2016-10-07",
+   "depth": -0.34037,
+   "rs63": 0.07866,
+   "ret40": 0.00531,
+   "excess40": -0.04061,
+   "mae40": -0.03657,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2016-W49",
+   "date": "2016-12-09",
+   "depth": -0.29192,
+   "rs63": -0.01053,
+   "ret40": 0.01863,
+   "excess40": 0.00274,
+   "mae40": -0.0118,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2017-W20",
+   "date": "2017-05-19",
+   "depth": -0.27859,
+   "rs63": -0.00902,
+   "ret40": 0.04771,
+   "excess40": 0.02246,
+   "mae40": -0.01281,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2018-W06",
+   "date": "2018-02-09",
+   "depth": -0.20278,
+   "rs63": -0.01854,
+   "ret40": -0.01109,
+   "excess40": -0.02399,
+   "mae40": -0.05638,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2018-W38",
+   "date": "2018-09-21",
+   "depth": -0.28095,
+   "rs63": -0.08118,
+   "ret40": -0.10738,
+   "excess40": -0.0036,
+   "mae40": -0.13476,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2019-W16",
+   "date": "2019-04-18",
+   "depth": -0.23311,
+   "rs63": -0.01008,
+   "ret40": -0.0933,
+   "excess40": -0.05295,
+   "mae40": -0.13962,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2019-W37",
+   "date": "2019-09-13",
+   "depth": -0.3125,
+   "rs63": 0.01445,
+   "ret40": 0.06056,
+   "excess40": 0.06289,
+   "mae40": -0.05965,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2020-W08",
+   "date": "2020-02-21",
+   "depth": -0.34211,
+   "rs63": -0.02895,
+   "ret40": -0.24545,
+   "excess40": 0.00697,
+   "mae40": -0.3825,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2020-W19",
+   "date": "2020-05-08",
+   "depth": -0.40473,
+   "rs63": -0.07532,
+   "ret40": 0.16765,
+   "excess40": 0.08322,
+   "mae40": -0.05668,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2020-W32",
+   "date": "2020-08-07",
+   "depth": -0.34872,
+   "rs63": 0.0941,
+   "ret40": 0.11123,
+   "excess40": 0.14286,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2022-W45",
+   "date": "2022-11-11",
+   "depth": -0.23086,
+   "rs63": -0.05148,
+   "ret40": -0.00161,
+   "excess40": -0.03002,
+   "mae40": -0.11887,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2023-W20",
+   "date": "2023-05-19",
+   "depth": -0.20201,
+   "rs63": -0.00702,
+   "ret40": 0.13664,
+   "excess40": 0.02437,
+   "mae40": -0.02684,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2023-W50",
+   "date": "2023-12-15",
+   "depth": -0.21075,
+   "rs63": -0.01219,
+   "ret40": 0.01969,
+   "excess40": -0.00433,
+   "mae40": -0.03936,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2024-W09",
+   "date": "2024-03-01",
+   "depth": -0.23024,
+   "rs63": -0.01518,
+   "ret40": -0.04729,
+   "excess40": -0.02566,
+   "mae40": -0.09068,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2024-W18",
+   "date": "2024-05-03",
+   "depth": -0.23859,
+   "rs63": 0.01366,
+   "ret40": 0.04961,
+   "excess40": 0.04792,
+   "mae40": -0.01375,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2024-W39",
+   "date": "2024-09-27",
+   "depth": -0.27736,
+   "rs63": -0.04818,
+   "ret40": 0.00155,
+   "excess40": -0.0598,
+   "mae40": -0.02328,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "CARZ",
+   "level": "industry",
+   "week": "2025-W19",
+   "date": "2025-05-09",
+   "depth": -0.2447,
+   "rs63": 0.0251,
+   "ret40": 0.10403,
+   "excess40": 0.03346,
+   "mae40": -0.01583,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2007-W38",
+   "date": "2007-09-21",
+   "depth": -0.21998,
+   "rs63": -0.02895,
+   "ret40": -0.10661,
+   "excess40": -0.02553,
+   "mae40": -0.10661,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2008-W04",
+   "date": "2008-01-25",
+   "depth": -0.24914,
+   "rs63": -0.02529,
+   "ret40": 0.0078,
+   "excess40": 0.00049,
+   "mae40": -0.10063,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2008-W29",
+   "date": "2008-07-18",
+   "depth": -0.23062,
+   "rs63": -0.02495,
+   "ret40": 0.02492,
+   "excess40": 0.03169,
+   "mae40": -0.01743,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2008-W51",
+   "date": "2008-12-19",
+   "depth": -0.33202,
+   "rs63": -0.15996,
+   "ret40": -0.23088,
+   "excess40": -0.13984,
+   "mae40": -0.27728,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2009-W14",
+   "date": "2009-04-03",
+   "depth": -0.42719,
+   "rs63": -0.09334,
+   "ret40": 0.19868,
+   "excess40": 0.03085,
+   "mae40": -0.07524,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2009-W31",
+   "date": "2009-07-31",
+   "depth": -0.39691,
+   "rs63": 0.00969,
+   "ret40": 0.18585,
+   "excess40": 0.09734,
+   "mae40": 0,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2009-W49",
+   "date": "2009-12-04",
+   "depth": -0.31676,
+   "rs63": 0.07898,
+   "ret40": -0.03171,
+   "excess40": -0.04129,
+   "mae40": -0.03171,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2010-W07",
+   "date": "2010-02-19",
+   "depth": -0.29713,
+   "rs63": 0.05051,
+   "ret40": 0.13529,
+   "excess40": 0.02366,
+   "mae40": -0.00789,
+   "n_cmp": 14
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2014-W03",
+   "date": "2014-01-17",
+   "depth": -0.25452,
+   "rs63": -0.08856,
+   "ret40": 0.03347,
+   "excess40": 0.00576,
+   "mae40": -0.01858,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2014-W29",
+   "date": "2014-07-18",
+   "depth": -0.20937,
+   "rs63": 0.0062,
+   "ret40": -0.01894,
+   "excess40": -0.0243,
+   "mae40": -0.02621,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2014-W41",
+   "date": "2014-10-10",
+   "depth": -0.206,
+   "rs63": 0.01005,
+   "ret40": 0.09916,
+   "excess40": 0.00646,
+   "mae40": 0,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2015-W28",
+   "date": "2015-07-10",
+   "depth": -0.22631,
+   "rs63": -0.03987,
+   "ret40": -0.05617,
+   "excess40": 0.01098,
+   "mae40": -0.07025,
+   "n_cmp": 17
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2018-W11",
+   "date": "2018-03-16",
+   "depth": -0.28109,
+   "rs63": -0.09322,
+   "ret40": 0.01042,
+   "excess40": -0.01913,
+   "mae40": -0.0299,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2018-W21",
+   "date": "2018-05-25",
+   "depth": -0.26356,
+   "rs63": 0.05321,
+   "ret40": 0.04863,
+   "excess40": 0.02283,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2018-W31",
+   "date": "2018-08-03",
+   "depth": -0.24272,
+   "rs63": 0.01011,
+   "ret40": -0.02594,
+   "excess40": -0.02514,
+   "mae40": -0.0311,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2018-W42",
+   "date": "2018-10-19",
+   "depth": -0.26105,
+   "rs63": -0.01015,
+   "ret40": 0.00644,
+   "excess40": 0.12891,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2019-W02",
+   "date": "2019-01-11",
+   "depth": -0.20969,
+   "rs63": 0.07619,
+   "ret40": 0.10814,
+   "excess40": 0.03684,
+   "mae40": 0,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2020-W40",
+   "date": "2020-10-02",
+   "depth": -0.22036,
+   "rs63": -0.02062,
+   "ret40": 0.02382,
+   "excess40": -0.14016,
+   "mae40": -0.07542,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2021-W04",
+   "date": "2021-01-29",
+   "depth": -0.27245,
+   "rs63": -0.01786,
+   "ret40": 0.06223,
+   "excess40": -0.02989,
+   "mae40": -0.02393,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2021-W27",
+   "date": "2021-07-09",
+   "depth": -0.23333,
+   "rs63": 0.06172,
+   "ret40": 0.03636,
+   "excess40": 0.03245,
+   "mae40": -0.0211,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2022-W49",
+   "date": "2022-12-09",
+   "depth": -0.2631,
+   "rs63": -0.06695,
+   "ret40": 0.04801,
+   "excess40": -0.01595,
+   "mae40": -0.04492,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2023-W28",
+   "date": "2023-07-14",
+   "depth": -0.22133,
+   "rs63": -0.02717,
+   "ret40": -0.04709,
+   "excess40": -0.0392,
+   "mae40": -0.06945,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2023-W44",
+   "date": "2023-11-03",
+   "depth": -0.27188,
+   "rs63": -0.03643,
+   "ret40": 0.14751,
+   "excess40": 0.04617,
+   "mae40": -0.01963,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2024-W28",
+   "date": "2024-07-12",
+   "depth": -0.3475,
+   "rs63": -0.00792,
+   "ret40": 0.11015,
+   "excess40": 0.13817,
+   "mae40": -0.00185,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2025-W06",
+   "date": "2025-02-07",
+   "depth": -0.35766,
+   "rs63": -0.07073,
+   "ret40": -0.11734,
+   "excess40": 0.08025,
+   "mae40": -0.11734,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2025-W47",
+   "date": "2025-11-21",
+   "depth": -0.34681,
+   "rs63": -0.04272,
+   "ret40": 0.01805,
+   "excess40": -0.07928,
+   "mae40": -0.01396,
+   "n_cmp": 18
+  },
+  {
+   "ticker": "IYR",
+   "level": "industry",
+   "week": "2026-W24",
+   "date": "2026-06-12",
+   "depth": -0.26701,
+   "rs63": -0.04414,
+   "ret40": 0.00417,
+   "excess40": -0.02684,
+   "mae40": -0.02551,
+   "n_cmp": 18
+  }
+ ]
+}

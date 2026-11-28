@@ -8715,7 +8715,7 @@ ninguna mitad ni régimen de SPY significativo. Regla de cartera (salida al gira
 coste (t −3,6). Los filtros por separado, tampoco. El +3 pp del informe del Screener (26 eventos) era ruido. Criterio
 preregistrado no cumplido: no se vigila el S&P 500 / Nasdaq 100; `MACD_COMBO_CD/SD` siguen sin cambios.
 
-**Giro de sectores deprimidos — preregistro v2 y registro semanal (2026-11-28, borrador sin firmar).**
+**Giro de sectores deprimidos — preregistro v2 firmado, histórico ejecutado y registro semanal (2026-11-28).**
 - **Preregistro:** `wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md`. H1 es el giro (D∧G); H2, el valor añadido de
   Cycle, con veredicto propio. EE.UU. es el mercado principal.
   - Bloques: histórico de sectores (exploratorio), industrias no expuestas (generalización), Europa (secundario, sin
@@ -8753,8 +8753,16 @@ preregistrado no cumplido: no se vigila el S&P 500 / Nasdaq 100; `MACD_COMBO_CD/
       `git pull`, `verify --deep` contra las huellas publicadas y aviso por Telegram si falla.
       Registro: `private/sector_turn_mirror_check.log`.
     - Ya no se captura en local: lo hace el pipeline cada viernes.
-  - El preregistro v2 está en versión final para firma (H1-sectorial, H1-ampliada y H2 con criterios
-    confirmatorios), sin firmar.
+- **Firmado el 2026-11-28** (huellas en `research/sector_turnaround_v2/freeze.json`, `freeze.js --verify`).
+- **Bloques A y A′ ejecutados una vez** (`historical.js --final`, informe en `research/sector_turnaround_v2/README.md`):
+  - A, sectores: +0,64 pp (IC −0,44 a +1,75), INCONCLUYENTE y NO ROBUSTA. Sin los 5 mejores eventos (XLE 2020-2022,
+    XLF 2009) queda en −0,06.
+  - A′, industrias: −0,44 pp, DESFAVORABLE.
+  - E_amp: +0,10 pp, DESFAVORABLE.
+  - B0 no es positivo: no se atribuye nada al giro.
+  - H2 descriptivo: en sectores no hay señal; en industrias, β +1,5 pp con el IC incluyendo el 0.
+  - No hay ventaja histórica de +1 pp. El registro prospectivo C sigue igual y es el único confirmatorio.
+  - Europa (bloque B) sin ejecutar: el v2 no fija los ETFs ni el índice de referencia.
 
 **Combo MACD + filtros — sin ventaja (2026-11-10, `research/macd_combo_filters_v1/`).** Preregistrado: 7 filtros solos y
 sumados al combo MACD (A Koncorde 3D/W no en distribución, B Early Flow ≥ 4 con `shared/flow-score.js`, C sector GICS
