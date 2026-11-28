@@ -374,6 +374,31 @@ jobs:
         working-directory: ${{ github.workspace }}
         continue-on-error: true
 
+      # Registro semanal prospectivo de giros sectoriales (2026-11-28,
+      # wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md §10). Corre todos los dias pero solo
+      # actua cuando hay una semana bursatil completa sin registrar (normalmente el run
+      # del viernes por la noche, antes de la apertura del lunes = "a tiempo"). Orden:
+      # capturar -> guardar en el repositorio privado market-tracker-registry -> publicar
+      # la huella en docs/data/sector_turn_anchors.jsonl (la sube "Commit updated data")
+      # y por Telegram. El clon privado vive en RUNNER_TEMP, fuera del repo publico.
+      # Cualquier fallo avisa por Telegram; continue-on-error para no tumbar el resto.
+      # Recuperacion manual: workflow sector-turn-registry.yml (mode=run).
+      - name: Run pipeline - Step 9g2c Sector turn weekly registry (private + anchors)
+        env:
+          PRIVATE_REGISTRY_TOKEN: ${{ secrets.PRIVATE_REGISTRY_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          export SECTOR_TURN_PRIVATE_DIR="$RUNNER_TEMP/private_registry"
+          if [ -z "$PRIVATE_REGISTRY_TOKEN" ]; then
+            node scripts/sector_turn/registry.js alert "falta el secreto PRIVATE_REGISTRY_TOKEN"; exit 1
+          fi
+          git clone -q "https://x-access-token:${PRIVATE_REGISTRY_TOKEN}@github.com/xoserubal/market-tracker-registry.git" "$SECTOR_TURN_PRIVATE_DIR" \
+            || { node scripts/sector_turn/registry.js alert "no se pudo clonar el registro privado (¿token revocado o sin permisos?)"; exit 1; }
+          node scripts/sector_turn/registry.js run-weekly --private-git --alert
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+
       # Fase 2 de la automatizacion del analisis de mercado (2026-09-14,
       # wiki/PROMPT_MARKET_ANALYST_SOL.md) -- llama a openai/gpt-5.6-sol
       # (reasoning_effort=high) con el snapshot de hoy + deltas vs ayer,
