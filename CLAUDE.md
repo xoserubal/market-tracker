@@ -7085,6 +7085,21 @@ que leer el fichero entero.
   reconciliación cambió `micro/manifest.py` (`localize`). `verify` con la copia instalada: ok, sin avisos.
 - Mientras dure el piloto no se toca nada del manifiesto del vigilante (`micro/`, `tests/`, `catalog/`, `lab/`, `e3_*.py`).
 
+**Ampliación y reconstrucción pendiente (2026-11-28, aprobado por el usuario):**
+- **Piloto ampliado a 8 jornadas** con 2, 3 y 4-dic, porque las 5 iniciales caen en la semana de Thanksgiving
+  (lunes-miércoles, media sesión del 27 y lunes siguiente). En 2016-2021 esas sesiones dieron menos alertas: la media
+  sesión, un tercio de un día normal. El informe debe comparar cada jornada con la misma de años anteriores.
+- Cambiados a la vez `pilot.json` (`amendments`) y `guard/guard.json → pilot_days` (copia previa en
+  `pilot/_before_extension_2026-11-28/`); la huella del código no cambia (`7a5801f0…`).
+- **El histórico de cat-v1 quedó a medias tras el incidente:** fase 1 con 139 de 629 entidades (se cortó con el apagón
+  de DESPACHOB del 23-nov a las 06:47).
+- `cv1_rebuild_after_pilot.py` + tarea `MicroCV1Rebuild`:
+  - empieza cuando el piloto está `complete` y sin tick vivo, con el cerrojo de procesos intensivos;
+  - reanuda `cv1_build.py` (fase 1 y 2) con huellas `cv1_integrity` antes y después;
+  - comprueba 235 634 alertas y 97 089 episodios (los del 21-nov) y sin discrepancias;
+  - avisa por Telegram y se deshabilita sola; tras 2 fallos se rinde.
+  - Estado: `results/cat_v1/rebuild_after_pilot_state.json`; registro: `rebuild_after_pilot.log`.
+
 **Prevención:** desactivar el inicio rápido en los dos equipos (`powercfg /h off` como administrador) y expulsar siempre
 el disco antes de cambiarlo de equipo. En LAWNMOWER el inicio rápido ya está deshabilitado por directiva; queda DESPACHOB.
 
@@ -8699,6 +8714,38 @@ frente a la media del universo −0,04/−0,02/−0,07 pp a 5/10/21 sesiones, ac
 ninguna mitad ni régimen de SPY significativo. Regla de cartera (salida al girar el histograma): exceso −0,36 pp tras 0,2 % de
 coste (t −3,6). Los filtros por separado, tampoco. El +3 pp del informe del Screener (26 eventos) era ruido. Criterio
 preregistrado no cumplido: no se vigila el S&P 500 / Nasdaq 100; `MACD_COMBO_CD/SD` siguen sin cambios.
+
+**Giro de sectores deprimidos — preregistro v2 y registro semanal (2026-11-28, borrador sin firmar).**
+- **Preregistro:** `wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md`. H1 es el giro (D∧G); H2, el valor añadido de
+  Cycle, con veredicto propio. EE.UU. es el mercado principal.
+  - Bloques: histórico de sectores (exploratorio), industrias no expuestas (generalización), Europa (secundario, sin
+    veto) y prospectivo (único confirmatorio).
+  - Recuento sin resultados en `research/sector_turnaround_v2/counts.json`: 148 eventos independientes en sectores y
+    409 en industrias. H2 histórica, solo descriptiva.
+  - Auditoría de exposición de los ETFs: `exposure_audit.py`.
+- **Registro semanal prospectivo:** `scripts/sector_turn/` (`registry.js capture|verify|status|anchor-backlog`).
+  - Fichero que solo se amplía, con cadena de huellas, en `private/sector_turn_registry/` (fuera de git).
+  - Anclajes públicos en `docs/data/sector_turn_anchors.jsonl` y por Telegram, solo con `--publish`.
+  - Cycle real verificado contra el código original de `cycle.html`, extraído y ejecutado (`cycle_original.js`)
+    frente a la copia congelada (`cycle_copy.js`, huella de fragmentos `57bf3c57…`). Si `cycle.html` cambia, la
+    captura se detiene.
+  - Pruebas: `test_registry.js` (31) y `test_cycle_equivalence.js` (sintéticos, mutaciones y `--live` contra
+    `/api/quote`).
+  - **Reconstrucción exacta:** cada semana guarda `inputs/<semana>.json.gz` (900 sesiones por ETF y cierres base de
+    Cycle; unos 480 KB) con su sha256 en el registro. La lectura se calcula siempre desde ese fichero, y
+    `verify --deep` la recalcula. Motivo: Yahoo varía los precios ajustados entre consultas (hasta 2,4·10⁻⁶ en horas).
+  - **Captura y publicación separadas:**
+    - `capture` guarda;
+    - `publish` ancla, solo tras guardar en privado; `anchored_late` si se ancla después de la apertura de la sesión
+      siguiente, y siempre en los registros de esquema 1;
+    - `run-weekly --private-git` hace capture → push privado (con rebase, y falla si hay un conflicto real) → publish.
+  - **2026-11-28:** el usuario aprueba el almacenamiento (repositorio privado `market-tracker-registry` +
+    `PRIVATE_REGISTRY_TOKEN`, que crea él) y una segunda copia espejo.
+    - La W48 (esquema 1, sin entradas) tiene un suplemento aproximado que reproduce señales, listas y Cycle; queda
+      pendiente de encadenarse en W49. Se anclará como tardía.
+    - Sin integrar en el pipeline hasta probar con el repositorio real.
+  - El preregistro v2 está en versión final para firma (H1-sectorial, H1-ampliada y H2 con criterios
+    confirmatorios), sin firmar.
 
 **Combo MACD + filtros — sin ventaja (2026-11-10, `research/macd_combo_filters_v1/`).** Preregistrado: 7 filtros solos y
 sumados al combo MACD (A Koncorde 3D/W no en distribución, B Early Flow ≥ 4 con `shared/flow-score.js`, C sector GICS
