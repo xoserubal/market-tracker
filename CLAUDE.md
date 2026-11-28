@@ -8757,12 +8757,26 @@ preregistrado no cumplido: no se vigila el S&P 500 / Nasdaq 100; `MACD_COMBO_CD/
 - **Bloques A y A′ ejecutados una vez** (`historical.js --final`, informe en `research/sector_turnaround_v2/README.md`):
   - A, sectores: +0,64 pp (IC −0,44 a +1,75), INCONCLUYENTE y NO ROBUSTA. Sin los 5 mejores eventos (XLE 2020-2022,
     XLF 2009) queda en −0,06.
-  - A′, industrias: −0,44 pp, DESFAVORABLE.
-  - E_amp: +0,10 pp, DESFAVORABLE.
-  - B0 no es positivo: no se atribuye nada al giro.
+  - A, sectores: INCONCLUYENTE. No se ha demostrado un efecto, pero tampoco se ha excluido uno de +1 pp.
+  - A′, industrias: −0,44 pp (IC −1,14 a +0,26), DESFAVORABLE.
+  - E_amp: +0,10 pp (IC −0,56 a +0,77), DESFAVORABLE.
+  - En A′ y en E_amp, +1 pp queda por encima del límite superior del intervalo.
+  - B0: no se ha demostrado un valor incremental del giro, frente a estar deprimido sin giro, estadísticamente
+    distinguible de cero.
+  - B1/B2 (frente al azar y al momentum) son exploratorios: no son una señal validada.
   - H2 descriptivo: en sectores no hay señal; en industrias, β +1,5 pp con el IC incluyendo el 0.
-  - No hay ventaja histórica de +1 pp. El registro prospectivo C sigue igual y es el único confirmatorio.
-  - Europa (bloque B) sin ejecutar: el v2 no fija los ETFs ni el índice de referencia.
+- **Estudio histórico CERRADO (aceptado por el usuario el 2026-11-28).** Sección «Cierre» del README.
+  - La hipótesis mecánica D∧G no tiene respaldo histórico suficiente para incorporarse como señal operativa.
+  - No refuta la rotación sectorial ni Cycle: H1 solo prueba esta regla.
+  - **Prohibido:**
+    - volver a ejecutar el contraste;
+    - ajustar D, G, horizontes, costes o la correspondencia de Cycle;
+    - integrar D∧G en producción;
+    - volver a descargar los precios para sustituir los del caché.
+  - **Caché original:** copia de solo lectura en `private/sector_turnaround_v2/prices_max_2026-11-28.json`, con
+    `MANIFEST.json`. Su sha256 `a989938f…` coincide con `freeze.json`.
+  - El registro prospectivo C sigue activo con su protocolo y es el único confirmatorio.
+  - Europa (bloque B) queda pendiente y fuera de la prioridad inmediata.
 
 **Combo MACD + filtros — sin ventaja (2026-11-10, `research/macd_combo_filters_v1/`).** Preregistrado: 7 filtros solos y
 sumados al combo MACD (A Koncorde 3D/W no en distribución, B Early Flow ≥ 4 con `shared/flow-score.js`, C sector GICS

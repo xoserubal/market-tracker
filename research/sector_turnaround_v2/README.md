@@ -60,10 +60,13 @@ Exceso neto a 40 sesiones frente a la media del nivel. IC 95 % por bootstrap de 
 | B2: D∧G − momentum (tercio superior por fuerza relativa 63) | **+1,35 (+0,21 a +2,48)** | −0,20 (−1,11 a +0,71) |
 | B3: D∧G − G sin D | +1,39 (−0,54 a +3,72), 57 semanas | −0,63 (−2,42 a +1,27), 132 semanas |
 
-- **B0 no es positivo en ningún nivel.** Una eventual ventaja de los sectores deprimidos que giran **no puede
-  atribuirse específicamente al giro**. Esperar a G no aporta frente a estar solo deprimido.
-- En los sectores, lo que bate a D∧G es sobre todo el mal resultado del momentum: el tercio con más fuerza relativa
-  rinde −0,72 pp esas mismas semanas. Es reversión, no un mérito del giro.
+- **B0:** no se ha demostrado un valor incremental del giro estadísticamente distinguible de cero frente a estar
+  deprimido sin giro. Sectores: +0,39 pp, IC −0,77 a +1,63. Industrias: +0,31 pp, IC −0,51 a +1,15.
+- **B1 y B2 son exploratorios:** no son una señal validada ni cambian el veredicto principal.
+  - En los sectores, D∧G queda en el percentil 95,5 frente al azar y bate al momentum por +1,35 pp.
+  - Esa diferencia se debe sobre todo al mal resultado del momentum: el tercio con más fuerza relativa rinde −0,72 pp
+    esas mismas semanas.
+  - En las industrias no aparece nada parecido.
 
 ### H2 histórico: solo descriptivo (Cycle simplificado, §7.6)
 
@@ -97,10 +100,36 @@ Exceso neto a 40 sesiones frente a la media del nivel. IC 95 % por bootstrap de 
 
 ## Lectura
 
-- **En el histórico no hay ventaja económicamente relevante.** En los sectores la estimación es positiva pero pequeña,
-  depende de pocos eventos de energía y finanzas y no se atribuye al giro. En las industrias es negativa.
-- **DESFAVORABLE** significa que no hay evidencia de un efecto de +1 pp o más, no que no exista ningún efecto.
-- **Nada cambia en el registro prospectivo C:** sigue siendo el único contraste confirmatorio, con las reglas firmadas.
-- **Pendiente:**
-  - Europa (bloque B, secundario y descriptivo): sin ejecutar. El v2 no fija la lista de los 19 ETFs ni su índice de
-    referencia, así que hace falta decidirlo antes de mirar.
+- **Sectores (A), INCONCLUYENTE:** +0,64 pp (IC −0,44 a +1,75).
+  - No se ha demostrado un efecto, pero tampoco se ha excluido uno de +1 pp: el límite superior está por encima.
+  - La estimación depende de pocos eventos de energía y finanzas.
+- **Industrias (A′) y combinado (E_amp), DESFAVORABLE:** −0,44 pp (IC −1,14 a +0,26) y +0,10 pp (IC −0,56 a +0,77).
+  - En los dos, +1 pp queda por encima del límite superior del intervalo.
+  - Eso no demuestra que el efecto sea nulo: se descarta que sea de +1 pp o más.
+- **Frente a estar deprimido sin giro (B0):** no se ha demostrado un valor incremental estadísticamente distinguible de
+  cero.
+
+## Cierre del estudio histórico (aceptado por el usuario el 2026-11-28)
+
+- **Conclusión:** la hipótesis mecánica D∧G **no ha obtenido respaldo histórico suficiente para incorporarse como señal
+  operativa**. No se integra en Market Tracker, ni en Cycle, ni en ninguna cartera.
+- **Alcance:** esto no refuta la rotación sectorial en general ni el modelo Cycle. H1 solo prueba esta regla concreta
+  (D = 20 % bajo el máximo de 3 años frente al SPY; G = cruce de la SMA50 semanal), con estos horizontes y costes.
+- **Sin segunda oportunidad:**
+  - no se ajustan D, G, horizontes, costes ni la correspondencia de Cycle para buscar un resultado favorable;
+  - no se vuelve a ejecutar el contraste. `historical.js --final` se niega a ejecutarse si ya existe
+    `historical_results.json`.
+- **Se conservan sin cambios:**
+  - el preregistro firmado (`wiki/PREREGISTRO_GIRO_SECTORES_REZAGADOS_V2.md`) y sus huellas (`freeze.json`);
+  - el script tal como se subió antes de ejecutarlo (`historical.js`, commit `325f6ed5`);
+  - los resultados (`historical_results.json`) y este informe.
+- **Fuente de precios:** el caché original `_work/prices_max.json` (16,3 MB, no se sube a git por licencia) queda copiado
+  en `private/sector_turnaround_v2/prices_max_2026-11-28.json`.
+  - La copia es privada y de solo lectura, con respaldo en Dropbox.
+  - Su sha256 (`a989938f…0755`) coincide con `freeze.json`; está anotado en `MANIFEST.json`.
+  - El original también es de solo lectura.
+  - No se vuelve a descargar para sustituirlo.
+- **Registro prospectivo C:** sigue activo con su protocolo original, con las mismas definiciones y la copia congelada de
+  Cycle. Se guardan todas las semanas, también las que no tienen señal. Sigue siendo el único contraste confirmatorio.
+- **Europa (bloque B):** pendiente y fuera de la prioridad inmediata. El v2 no fija la lista de los 19 ETFs ni su
+  índice de referencia, y no se ejecuta por ahora.
