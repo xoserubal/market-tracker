@@ -1,8 +1,10 @@
 # PREREGISTRO — Giro de sectores deprimidos v2
 
-> **VERSIÓN FINAL PARA FIRMA (2026-11-28). Sin firmar.**
+> **FIRMADO por el usuario el 2026-11-28.** Huellas (sha256) en `research/sector_turnaround_v2/freeze.json`.
 > - Sustituye al borrador v2 del mismo día y a la v1 (2026-11-25).
-> - Incorpora las decisiones del usuario sobre el §12 del borrador y sus cuatro precisiones.
+> - Incorpora las decisiones del usuario sobre el §12 del borrador, sus cuatro precisiones y las siete precisiones
+>   finales del asesor (ponderación 50/50 por nivel, solo resultados completos, lectura de los umbrales, robustez
+>   separada del veredicto, dependencia temporal).
 > - No se ha calculado ningún resultado posterior a las señales. Solo se han contado observaciones, semanas,
 >   trimestres y comparaciones identificables, y una dispersión incondicional para la potencia (§9).
 > - Al firmar se guarda la huella (sha256) de este fichero y de `scripts/sector_turn/lib.js`. Cada contraste se
@@ -191,37 +193,64 @@
 
 ### 6.1 Estimando y tratamiento de las señales contemporáneas
 
-Los eventos de una misma semana están correlacionados (un sector y sus industrias, varias industrias de una misma
-posición). Por eso el estimando pondera por semana, no por evento.
+Los eventos de una misma semana están correlacionados: un sector y sus industrias, o varias industrias de una misma
+posición. Por eso los estimandos promedian semanas, no eventos.
 
-- **H1-sectorial y bloque A:**
-  - Exceso de cada semana = media de los excesos a 40 sesiones de sus eventos independientes.
-  - Estimando = media de esos valores semanales, con el mismo peso para cada semana.
-- **H1-ampliada:**
-  - Cada semana con eventos pesa lo mismo.
-  - Dentro de la semana, sectores e industrias pesan **50 % y 50 %** cuando hay eventos de ambos niveles, y 100 % el
-    nivel presente si solo hay uno.
-  - Dentro de cada nivel, todos los eventos pesan igual.
-  - Se fija así para que las 25 industrias no anulen a los 11 sectores.
-  - **Sensibilidad:** el mismo cálculo con el mismo peso para cada evento.
-- **Bloque A′:** como H1-sectorial, solo con industrias.
-- **Solape:** se informa de qué parte de los eventos de industria coincide en semana con un evento de su sector.
+- **Media semanal de un nivel:**
+  - el exceso de cada semana es la media de los excesos a 40 sesiones de sus eventos independientes de ese nivel con
+    resultado completo (§6.2);
+  - la media del nivel es la media de esos valores semanales, con el mismo peso para cada semana.
+- **H1-sectorial y bloque A:** E_sect = media semanal del nivel sector.
+- **Bloque A′:** media semanal del nivel industria, con las 18 industrias no expuestas.
+- **H1-ampliada (principal):** **E_amp = 0,5 · E_sect + 0,5 · E_ind**, donde E_ind es la media semanal del nivel
+  industria (en C, las 25 industrias).
+  - Las dos medias se recalculan sobre la misma remuestra del bootstrap (§6.3), así que su dependencia temporal se
+    trata de forma conjunta.
+  - **Motivo:** la regla anterior (cada semana igual y 50/50 dentro de la semana) no reparte el peso al 50/50
+    global. Con los recuentos históricos (134 semanas con eventos de sector, 289 de industria y 57 con ambos), los
+    sectores pesaban un 28,8 % y las industrias un 71,2 %.
+  - **Sensibilidades:**
+    - la regla anterior;
+    - el mismo peso para cada evento.
+  - **Para que E_amp esté definido, cada nivel necesita al menos 10 eventos con resultado completo.** Si no se
+    llega, H1-ampliada no es evaluable en ese momento. Es el único elemento nuevo de esta revisión, añadido por
+    coherencia: con un nivel vacío el estimando no existe.
+- **Solape entre niveles:** se informa de qué parte de los eventos de industria coincide en semana con un evento de su
+  sector.
 - **Siempre se informa de:**
-  - número de eventos, **semanas distintas** y **trimestres distintos**;
+  - eventos registrados y eventos con resultado completo;
+  - semanas distintas y trimestres distintos;
   - rentabilidad absoluta, coste y sensibilidad al coste;
   - desviación y % de eventos positivos;
   - peor caída intermedia en las 40 sesiones (MAE);
-  - resultado sin los 5 mejores eventos;
-  - exclusión de un ETF cada vez.
+  - las pruebas de robustez de §6.7.
 
-### 6.2 Inferencia
+### 6.2 Eventos registrados y eventos con resultado observado
 
-- **Bootstrap por bloques de trimestre natural:** se remuestrean trimestres enteros con todos sus eventos, así que se
-  conservan la dependencia entre ETFs de una misma fecha y el solape de ventanas.
-- 10 000 remuestras.
-- Sensibilidad con bloques de semestre y de año.
+- Un evento está **registrado** desde su semana de decisión.
+- Tiene **resultado completo** para un horizonte cuando, en la fecha del análisis, ya existen la sesión de entrada
+  (la siguiente a la decisión) y las 40 sesiones posteriores. Para los horizontes de 20 y 60 sesiones se aplica lo
+  mismo con su número de sesiones.
+- **Solo los eventos con resultado completo a 40 sesiones cuentan** para la evaluabilidad y para los contrastes
+  confirmatorios.
+- Los informes muestran siempre las dos cifras.
 
-### 6.3 Comparadores (todos con eventos independientes y las mismas fechas)
+### 6.3 Inferencia y dependencia temporal
+
+- **Principal:** bootstrap por bloques de trimestre natural, con 10 000 remuestras. Se remuestrean trimestres enteros
+  con todos sus eventos, así que se conserva la dependencia entre ETFs de un mismo trimestre.
+- **Lo que no garantiza:** remuestrear trimestres **no conserva toda la dependencia entre trimestres contiguos**. Las
+  ventanas de 40 sesiones de los eventos de las últimas semanas de un trimestre se solapan con las del trimestre
+  siguiente. Por eso:
+  - se informa de qué parte de los eventos tiene una ventana que entra en el trimestre siguiente y se solapa con la
+    de otro evento de ese bloque;
+  - se repite el bootstrap con bloques de semestre y de año;
+  - se informa de cómo cambian los límites del intervalo entre esas longitudes de bloque, sobre todo si hay menos de
+    20 trimestres.
+  - **Si el veredicto estadístico cambia con otra longitud de bloque,** se indica junto al veredicto como «sensible a
+    la dependencia temporal». El veredicto principal sigue siendo el de bloques trimestrales.
+
+### 6.4 Comparadores (todos con eventos independientes con resultado completo y las mismas fechas)
 
 | Código | Pregunta | Método y población que lo identifica | Identificables en A / A′ |
 |---|---|---|---|
@@ -231,68 +260,80 @@ posición). Por eso el estimando pondera por semana, no por evento.
 | B2 | Momentum | Tercio superior por fuerza relativa a 63 sesiones | todas |
 | B3 | ¿Importa estar deprimido? (G sin D) | Semanas con ambos | — |
 
-- Los comparadores **informan, no deciden**. El veredicto de H1 depende del estimando de §6.1.
+- Los comparadores **no son condición** de ningún veredicto.
+- **El informe distingue expresamente dos afirmaciones:**
+  1. «los eventos D∧G tienen exceso positivo», que es el estimando de H1;
+  2. «esperar al giro G aporta valor frente a estar solo deprimido», que es B0.
+- **Solo se puede atribuir la ventaja al giro** si B0 es evaluable y su intervalo queda por encima de 0. Si B0 no es
+  positivo o no es evaluable, el informe dice expresamente que la eventual ventaja **no puede atribuirse
+  específicamente al giro**.
 - Si en algún comparador los efectos fijos no tienen suficiente variación, se declara **no evaluable**. Los efectos
   fijos no suplen la falta de comparadores.
 
-### 6.4 Multiplicidad
+### 6.5 Multiplicidad
 
-- **Familia confirmatoria (bloque C):** {H1-sectorial, H1-ampliada, H2}, con Bonferroni.
-  - α = 0,05/3 por contraste.
-  - Intervalos de confianza al **98,33 %**.
+- **Familia confirmatoria (bloque C):** {H1-sectorial, H1-ampliada, H2}, con Bonferroni: α = 0,05/3 por contraste e
+  intervalos de confianza al **98,33 %**.
 - **Bloques A y A′ (exploratorios):** IC 95 %, sin pretensión confirmatoria.
 - Horizontes secundarios, comparadores, sensibilidades, Europa y Pring: IC 95 %, solo descriptivos.
 
-### 6.5 Efecto mínimo relevante
+### 6.6 Efecto mínimo relevante y cómo leerlo
 
-- **H1: +1,0 pp** de exceso neto a 40 sesiones.
+- **H1: +1,0 pp** de exceso neto a 40 sesiones. Es un umbral inicial.
+- **Estimación ≥ +1,0 pp con el límite inferior del intervalo por encima de 0** indica un efecto positivo con una
+  estimación económicamente relevante. **No demuestra que el efecto verdadero supere +1,0 pp.** Para eso el límite
+  inferior tendría que ser ≥ +1,0 pp; se informa aparte de si lo es.
+- **NO SOPORTADA o DESFAVORABLE** (límite superior < +1,0 pp) significa que no hay evidencia suficiente de un efecto
+  de la magnitud económicamente exigida. **No significa que no exista ningún efecto positivo.**
 
-### 6.6 Criterios exploratorios (A, A′)
+### 6.7 Veredicto estadístico y robustez operativa, por separado
 
-- **FAVORABLE** si se cumplen las cuatro condiciones:
-  1. estimando ≥ +1,0 pp con IC 95 % por encima de 0;
-  2. positivo en al menos 3 de cada 4 exclusiones de un ETF;
-  3. positivo sin los 5 mejores eventos;
-  4. positivo con el coste triple.
-- **DESFAVORABLE** si el límite superior del IC 95 % es menor que +1,0 pp.
-- **INCONCLUYENTE** en el resto.
+**Veredicto estadístico** (solo estimación e intervalo):
 
-### 6.7 Criterios confirmatorios (C)
-
-**Evaluabilidad mínima:**
-
-| Hipótesis | Eventos independientes | Trimestres distintos | Plazo |
+| Bloque | Positivo | Negativo | Resto |
 |---|---|---|---|
-| H1-ampliada | ≥ 60 | ≥ 12 | 3 años desde 2026-W48 |
+| A, A′ (exploratorio, IC 95 %) | **FAVORABLE:** estimación ≥ +1,0 pp y límite inferior > 0 | **DESFAVORABLE:** límite superior < +1,0 pp | **INCONCLUYENTE** |
+| C (confirmatorio, IC 98,33 %) | **SOPORTADA:** estimación ≥ +1,0 pp y límite inferior > 0 | **NO SOPORTADA:** límite superior < +1,0 pp | **INCONCLUYENTE** |
+
+**Robustez operativa** (no es un veto científico):
+- Siempre se informa de tres pruebas:
+  1. estimación > 0 con el **coste triple**;
+  2. estimación > 0 **sin los 5 mejores eventos**;
+  3. estimación > 0 en **al menos el 75 % de las exclusiones individuales de un ETF evaluables**. Una exclusión es
+     evaluable si, después de quitar ese ETF, se siguen cumpliendo los mínimos de §6.1 y §6.8.
+- **ROBUSTA** si se cumplen las tres; **NO ROBUSTA** en otro caso.
+- **Lectura:** SOPORTADA y NO ROBUSTA indica un efecto estadístico que no basta para uso operativo sin más
+  evidencia.
+
+### 6.8 Evaluabilidad y punto de decisión (C)
+
+| Hipótesis | Eventos independientes **con resultado completo** | Trimestres distintos | Plazo |
+|---|---|---|---|
+| H1-ampliada | ≥ 60 (y ≥ 10 por nivel, §6.1) | ≥ 12 | 3 años desde 2026-W48 |
 | H1-sectorial | ≥ 30 | ≥ 10 | 5 años |
 
 - **Punto de decisión:** cuando se cumple la evaluabilidad o vence el plazo, lo que ocurra primero. El contraste se
   ejecuta una sola vez.
 - **Si vence el plazo sin evaluabilidad: INCONCLUYENTE.** No se fuerza ninguna conclusión.
-- **Antes del punto de decisión:** solo informes descriptivos, que no cambian nada.
-
-**Veredictos** (con la evaluabilidad cumplida):
-- **SOPORTADA** si se cumplen las cuatro condiciones:
-  1. estimando ≥ +1,0 pp y límite inferior del IC 98,33 % > 0;
-  2. positivo en al menos 3 de cada 4 exclusiones de un ETF;
-  3. positivo sin los 5 mejores eventos;
-  4. positivo con el coste triple.
-- **NO SOPORTADA** si el límite superior del IC 98,33 % es menor que +1,0 pp, es decir, si se descarta un efecto
-  relevante.
-- **INCONCLUYENTE** en el resto.
+- **Antes del punto de decisión:** solo informes descriptivos, con eventos registrados y con resultado completo, que
+  no cambian nada.
 
 ## 7. H2 — valor añadido de Cycle
 
 ### 7.1 Estimando
 
-- Coeficiente β de concordancia en una regresión, sobre los eventos D∧G independientes con posición asignada:
+- Coeficiente β de concordancia en una regresión, sobre los eventos D∧G independientes con posición asignada y con
+  resultado completo:
   - variable explicada: exceso a 40 sesiones;
   - variable de interés: concordante (0/1);
-  - controles: profundidad (`dist_max756`), fuerza relativa a 63 sesiones, momentum a 21 sesiones y nivel (sector o
-    industria);
-  - en el histórico, además, efectos de año;
-  - pesos de §6.1 (los de H1-ampliada);
-  - inferencia por bootstrap de trimestres (§6.2).
+  - controles: profundidad (`dist_max756`), fuerza relativa a 63 sesiones, momentum a 21 sesiones y nivel;
+  - en el histórico, además, efectos de año.
+- **Pesos**, con el mismo principio que E_amp:
+  - cada nivel suma el 50 % del peso;
+  - dentro de un nivel, cada semana pesa lo mismo;
+  - dentro de una semana, cada evento pesa lo mismo.
+  - **Sensibilidad:** el mismo peso para cada evento.
+- **Inferencia:** bootstrap de trimestres, con las comprobaciones de §6.3.
 - Se informa de la correlación de la concordancia con cada control. Si la concordancia solo replica la fuerza
   relativa, el coeficiente controlado lo mostrará. Dos medidas derivadas de precios que coinciden no cuentan como
   evidencia independiente.
@@ -304,23 +345,29 @@ posición). Por eso el estimando pondera por semana, no por evento.
 - **Se informa además, solo de forma descriptiva:** sectores solos, sin XLRE, sin IBB/IHI/XHS, y con el Cycle
   simplificado.
 
-### 7.3 Efecto mínimo relevante
+### 7.3 Efecto mínimo relevante y cómo leerlo
 
-- **H2: +2,0 pp** de exceso a 40 sesiones.
+- **H2: +2,0 pp** de exceso a 40 sesiones. Es un umbral inicial.
+- Se lee igual que en §6.6:
+  - β ≥ +2,0 pp con el límite inferior por encima de 0 no demuestra que el efecto verdadero supere +2,0 pp;
+  - NO SOPORTADA significa falta de evidencia de un efecto de esa magnitud, no ausencia de cualquier efecto.
 
 ### 7.4 Evaluabilidad y punto de revisión
 
-- **Evaluabilidad:** ≥ 30 eventos concordantes **y** ≥ 30 no concordantes, cada grupo repartido en ≥ 10 trimestres
-  distintos.
-- **Punto de revisión:** 30 concordantes o 5 años, lo que ocurra antes.
-- Llegar al punto de revisión no garantiza potencia. Por eso se informa del efecto mínimo detectable alcanzado,
-  calculado con la dispersión incondicional (§9), y el veredicto lo deciden los intervalos de confianza.
+- **Evaluabilidad:** ≥ 30 eventos concordantes **y** ≥ 30 no concordantes, todos con resultado completo y cada
+  grupo repartido en ≥ 10 trimestres distintos.
+- **Punto de revisión:** 30 concordantes con resultado completo, o 5 años, lo que ocurra antes.
+- **Llegar al punto de revisión no garantiza potencia.** Por eso:
+  - se informa del efecto mínimo detectable alcanzado, calculado con la dispersión incondicional (§9);
+  - el veredicto lo deciden los intervalos de confianza.
 
-### 7.5 Veredictos (con la evaluabilidad cumplida)
+### 7.5 Veredicto estadístico y robustez (por separado, como en §6.7)
 
-- **SOPORTADA:** β ≥ +2,0 pp y límite inferior del IC 98,33 % > 0.
-- **NO SOPORTADA:** límite superior del IC 98,33 % < +2,0 pp.
-- **INCONCLUYENTE:** en el resto, o si no se cumple la evaluabilidad en el punto de revisión.
+- **Veredicto estadístico** (con la evaluabilidad cumplida):
+  - **SOPORTADA:** β ≥ +2,0 pp y límite inferior del IC 98,33 % > 0.
+  - **NO SOPORTADA:** límite superior del IC 98,33 % < +2,0 pp.
+  - **INCONCLUYENTE:** en el resto, o si no se cumple la evaluabilidad en el punto de revisión.
+- **Robustez operativa:** las tres pruebas de §6.7 aplicadas a β, con la etiqueta ROBUSTA o NO ROBUSTA.
 
 ### 7.6 Histórico (A, A′): solo descriptivo
 
@@ -371,7 +418,7 @@ posición). Por eso el estimando pondera por semana, no por evento.
 | H2 sectores (concordantes) | 28 | — | 24 | — | ~4 pp |
 
 - **Solape entre niveles:** 103 de los 409 eventos de industria (25 %) caen en una semana con algún evento de sector.
-  Por eso H1-ampliada pondera por semana y por nivel (§6.1).
+  Por eso H1-ampliada combina al 50/50 las medias semanales de cada nivel (§6.1).
 
 - **Ritmo prospectivo** (media 2015-2025): unos 7 eventos al año en los sectores y unos 26 en las 18 industrias A′;
   el registro sigue además las 7 expuestas.
@@ -472,15 +519,20 @@ posición). Por eso el estimando pondera por semana, no por evento.
 
 - **Mismas definiciones en todo el código:** D, G, evento e independencia (§3) son las de `lib.js`, que usan tanto el
   recuento histórico como el registro.
-- **Exceso:** siempre frente al mismo nivel. Cada estimando especifica su ponderación (§6.1).
+- **Exceso:** siempre frente al mismo nivel. H1-ampliada = 0,5·E_sect + 0,5·E_ind (§6.1). H2 usa el mismo principio
+  de pesos (§7.1).
 - **Comparadores:** informan sin decidir, en los bloques exploratorios y en el confirmatorio. Así ningún veredicto
   depende de un comparador que puede no ser identificable.
-- **Puntos de decisión** (§6.7, §7.4): fijados en eventos, trimestres y plazo. Al vencer el plazo sin evaluabilidad, el
-  resultado es INCONCLUYENTE.
-- **Umbrales:** el efecto mínimo relevante (+1,0 pp en H1, +2,0 pp en H2) se usa igual en SOPORTADA y en NO SOPORTADA.
+- **Puntos de decisión** (§6.8, §7.4): fijados en eventos **con resultado completo** (§6.2), trimestres y plazo. Al
+  vencer el plazo sin evaluabilidad, el resultado es INCONCLUYENTE.
+- **Umbrales:** el efecto mínimo relevante (+1,0 pp en H1, +2,0 pp en H2) se usa igual en el veredicto positivo y en
+  el negativo, con la lectura de §6.6 y §7.3.
+- **Veredicto y robustez:** el veredicto estadístico solo depende de la estimación y el intervalo. Las tres pruebas de
+  robustez dan una etiqueta aparte (§6.7). Exploratorio y confirmatorio siguen la misma lógica.
+- **Dependencia temporal:** bloques trimestrales como principal, con comprobación de solapes y sensibilidad de
+  semestre y año (§6.3).
 - **Multiplicidad:** solo afecta al bloque C (98,33 %). A y A′ usan el 95 % y nunca se llaman confirmación.
 - **Cycle:** el H2 confirmatorio usa solo la serie `cycle-copy-1` con la Cycle real. El simplificado nunca sustituye a
   la real.
-- **Cambio respecto al borrador:** B0 deja de ser condición para FAVORABLE o SOPORTADA. Pasa a informar, porque en el
-  prospectivo puede no ser identificable y bloquearía el veredicto. Responde a la pregunta secundaria de si el giro
-  aporta algo sobre estar deprimido.
+- **B0:** no es condición de ningún veredicto, porque en el prospectivo puede no ser identificable. Sin B0 positivo y
+  evaluable, el informe no atribuye la ventaja al giro (§6.4).
