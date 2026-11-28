@@ -29,10 +29,13 @@ jobs:
     timeout-minutes: 30
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      SECTOR_TURN_PRIVATE_DIR: ${{ runner.temp }}/private_registry
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
+      # Clon del registro privado en la carpeta temporal del runner, fuera del repositorio.
+      - name: Set private registry dir
+        run: echo "SECTOR_TURN_PRIVATE_DIR=$RUNNER_TEMP/private_registry" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
