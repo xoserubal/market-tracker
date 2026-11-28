@@ -8739,11 +8739,20 @@ preregistrado no cumplido: no se vigila el S&P 500 / Nasdaq 100; `MACD_COMBO_CD/
     - `publish` ancla, solo tras guardar en privado; `anchored_late` si se ancla después de la apertura de la sesión
       siguiente, y siempre en los registros de esquema 1;
     - `run-weekly --private-git` hace capture → push privado (con rebase, y falla si hay un conflicto real) → publish.
-  - **2026-11-28:** el usuario aprueba el almacenamiento (repositorio privado `market-tracker-registry` +
-    `PRIVATE_REGISTRY_TOKEN`, que crea él) y una segunda copia espejo.
-    - La W48 (esquema 1, sin entradas) tiene un suplemento aproximado que reproduce señales, listas y Cycle; queda
-      pendiente de encadenarse en W49. Se anclará como tardía.
-    - Sin integrar en el pipeline hasta probar con el repositorio real.
+  - **Integrado el 2026-11-28:**
+    - **Almacenamiento:** repositorio privado `xoserubal/market-tracker-registry`, con
+      `.gitattributes` `* -text`. Token de grano fino, sin caducidad: escribe solo ahí (probado: 403 en
+      `market-tracker`). Se guarda como secreto `PRIVATE_REGISTRY_TOKEN` en `market-tracker`.
+    - **Paso del pipeline:** Step 9g2c de `market-update.yml`. Clona el registro en `RUNNER_TEMP` y ejecuta
+      `run-weekly --private-git --alert`; las huellas las sube «Commit updated data».
+    - **Recuperación y comprobación manuales:** `.github/workflows/sector-turn-registry.yml` (`mode=check|run`).
+      `check` en Actions: clonado, `verify --deep`, ensayo y escritura correctos.
+    - **W48 anclada como tardía** (commit `e93d84b9`). Su suplemento aproximado se encadena en W49.
+    - **Segunda copia:** `private/sector_turn_registry` es un clon (`core.autocrlf=false`). La tarea
+      `MicroSectorTurnMirror` de LAWNMOWER (sábado y lunes, 13:00) ejecuta `scripts/sector_turn/mirror_check.js`:
+      `git pull`, `verify --deep` contra las huellas publicadas y aviso por Telegram si falla.
+      Registro: `private/sector_turn_mirror_check.log`.
+    - Ya no se captura en local: lo hace el pipeline cada viernes.
   - El preregistro v2 está en versión final para firma (H1-sectorial, H1-ampliada y H2 con criterios
     confirmatorios), sin firmar.
 
