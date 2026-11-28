@@ -7086,7 +7086,11 @@ que leer el fichero entero.
 - Mientras dure el piloto no se toca nada del manifiesto del vigilante (`micro/`, `tests/`, `catalog/`, `lab/`, `e3_*.py`).
 
 **Ampliación y reconstrucción pendiente (2026-11-28, aprobado por el usuario):**
-- **Piloto ampliado a 8 jornadas** con 2, 3 y 4-dic, porque las 5 iniciales caen en la semana de Thanksgiving
+- **Piloto ampliado a 9 jornadas:**
+  - Primero se añadieron el 2, el 3 y el 4-dic.
+  - El 1-dic se omitió por error y se añadió después el mismo día: segunda enmienda en `pilot.json`, copia previa en
+    `pilot/_before_add_2026-12-01/` y `verify` del vigilante correcto.
+  - Motivo de la ampliación:  las 5 iniciales caen en la semana de Thanksgiving
   (lunes-miércoles, media sesión del 27 y lunes siguiente). En 2016-2021 esas sesiones dieron menos alertas: la media
   sesión, un tercio de un día normal. El informe debe comparar cada jornada con la misma de años anteriores.
 - Cambiados a la vez `pilot.json` (`amendments`) y `guard/guard.json → pilot_days` (copia previa en
